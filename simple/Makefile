@@ -26,10 +26,10 @@ Main.o: Main.C $(BINARY).decl.h
 Reader.o: Reader.C $(BINARY).decl.h
 	$(CHARMC) -c $<
 
-Particle.o: Particle.C $(BINARY).decl.h
+Particle.o: Particle.C
 	$(CHARMC) -c $<
 
-BoundingBox.o: BoundingBox.C $(BINARY).decl.h
+BoundingBox.o: BoundingBox.C
 	$(CHARMC) -c $<
 
 test: all

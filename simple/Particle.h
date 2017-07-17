@@ -2,7 +2,6 @@
 #define SIMPLE_PARTICLE_H_
 
 #include "common.h"
-#include "Vector3D.h"
 
 struct Particle {
   Key key;

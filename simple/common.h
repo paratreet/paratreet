@@ -3,6 +3,7 @@
 
 #include <string>
 #include <vector>
+#include "Vector3D.h"
 
 #ifndef USE_DOUBLE_FP
 typedef float Real;

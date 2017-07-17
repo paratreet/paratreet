@@ -2,8 +2,7 @@
 #define SIMPLE_BOUNDING_BOX_H_
 
 #include "OrientedBox.h"
-#include "Vector3D.h"
-#include "pup.h"
+#include "common.h"
 
 /*
  * BoundingBox:
