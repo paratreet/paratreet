@@ -3,12 +3,15 @@
 
 #include "simple.decl.h"
 #include "common.h"
+#include "Particle.h"
 
 class Reader : public CBase_Reader {
+  std::vector<Particle> particles;
+
   public:
     Reader();
 
-    void load(std::string input_file);
+    void load(std::string);
 };
 
 #endif // SIMPLE_READER_H_

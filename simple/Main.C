@@ -4,6 +4,7 @@
 
 /* readonly */ CProxy_Main mainProxy;
 /* readonly */ int initial_depth;
+/* readonly */ int n_readers;
 
 class Main : public CBase_Main {
   CProxy_Reader readers;
@@ -41,10 +42,16 @@ class Main : public CBase_Main {
       start_time = CkWallTimer();
 
       // create readers
+      n_readers = CkNumNodes();
       readers = CProxy_Reader::ckNew();
 
       // load Tipsy data
       readers.load(input_file);
+    }
+
+    void terminate() {
+      CkPrintf("Elapsed time: %lf\n", CkWallTimer() - start_time);
+      CkExit();
     }
 };
 

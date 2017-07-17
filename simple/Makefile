@@ -4,7 +4,7 @@ CHARMC = $(CHARM_HOME)/bin/charmc $(OPTS)
 LD_LIBS = -L../utility/structures -lTipsy
 
 BINARY = simple
-OBJS = Main.o Reader.o
+OBJS = Main.o Reader.o Particle.o BoundingBox.o
 
 all: $(BINARY)
 
@@ -24,6 +24,12 @@ Main.o: Main.C $(BINARY).decl.h
 	$(CHARMC) -c $<
 
 Reader.o: Reader.C $(BINARY).decl.h
+	$(CHARMC) -c $<
+
+Particle.o: Particle.C $(BINARY).decl.h
+	$(CHARMC) -c $<
+
+BoundingBox.o: BoundingBox.C $(BINARY).decl.h
 	$(CHARMC) -c $<
 
 test: all

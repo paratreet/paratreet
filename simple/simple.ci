@@ -1,9 +1,11 @@
 mainmodule simple {
   readonly CProxy_Main mainProxy;
   readonly int initial_depth;
+  readonly int n_readers;
 
   mainchare Main {
     entry Main(CkArgMsg* m);
+    entry [reductiontarget] void terminate();
   };
 
   nodegroup Reader {
