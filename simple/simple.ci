@@ -6,7 +6,7 @@ mainmodule simple {
     entry Main(CkArgMsg* m);
   };
 
-  group Reader {
+  nodegroup Reader {
     entry Reader();
     entry void load(std::string input_file);
   };

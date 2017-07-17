@@ -4,7 +4,7 @@ CHARMC = $(CHARM_HOME)/bin/charmc $(OPTS)
 LD_LIBS = -L../utility/structures -lTipsy
 
 BINARY = simple
-OBJS = $(BINARY).o
+OBJS = Main.o Reader.o
 
 all: $(BINARY)
 
@@ -20,8 +20,11 @@ $(BINARY).decl.h: $(BINARY).ci
 clean:
 	rm -f *.decl.h *.def.h conv-host *.o $(BINARY) charmrun
 
-$(BINARY).o: $(BINARY).C $(BINARY).decl.h
-	$(CHARMC) -c $(BINARY).C
+Main.o: Main.C $(BINARY).decl.h
+	$(CHARMC) -c $<
+
+Reader.o: Reader.C $(BINARY).decl.h
+	$(CHARMC) -c $<
 
 test: all
 	$(call run, ./$(BINARY) +p4 4)

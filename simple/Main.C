@@ -1,6 +1,6 @@
 #include "simple.decl.h"
-#include "TipsyFile.h"
-#include <string>
+#include "common.h"
+#include "Reader.h"
 
 /* readonly */ CProxy_Main mainProxy;
 /* readonly */ int initial_depth;
@@ -45,19 +45,6 @@ class Main : public CBase_Main {
 
       // load Tipsy data
       readers.load(input_file);
-    }
-};
-
-class Reader : public CBase_Reader {
-  public:
-    Reader() {}
-
-    void load(std::string input_file) {
-      Tipsy::TipsyReader r(input_file);
-      if (!r.status()) {
-        CkPrintf("[%u] Could not open tipsy file (%s)\n", thisIndex, input_file.c_str());
-        CkExit();
-      }
     }
 };
 
