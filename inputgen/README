@@ -1,0 +1,13 @@
+1) Get the utility repository from the ChaNGa collection. This is located at:
+
+          git://charm.cs.illinois.edu/cosmo/utility
+
+2) Edit the Makefile to set STRUCTURES_PATH to point to the structures
+directory under the utility repository that you just cloned
+
+3) Build to generate the plummer and tipsyPlummer executables (eg: make -j8)
+
+4) Generate a dataset: ./plummer 0 numparticles datafilename
+   eg: ./plummer 0 1000 1k.dat
+
+5) Generate the corresponding tipsy format dataset: ./tipsyPlummer 1k.dat 1k.tispy

@@ -1,0 +1,3 @@
+This depends on the "structures" module.
+Be sure to change STRUCTURES_PATH in the Makefile to point to this
+module.

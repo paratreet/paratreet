@@ -1,0 +1,38 @@
+CXXFLAGS += -O3 -DMACOSX
+CXX = @CXX@
+
+NAME = structures
+VERSION = 1.1
+TARGETS = TipsyReader.o TipsyFile.o SS.o
+
+all: libTipsy.a($(TARGETS)) SFC.o
+	ranlib libTipsy.a
+
+TipsyFile.o: TipsyFile.h TipsyParticles.h TipsyFile.cpp Vector3D.h OrientedBox.h
+
+TipsyReader.o: TipsyReader.h TipsyReader.cpp TipsyParticles.h Vector3D.h xdr_template.h
+
+SS.o: xdr_template.h Vector3D.h
+
+.PHONY: all debug tools docs dist clean
+
+debug:
+	make "CXXFLAGS += -g" clean all
+
+SFC.o: SFC.cpp SFC.h
+	$(CXX) $(CXXFLAGS) -ffloat-store -c SFC.cpp
+
+tools:
+	cd tools && make
+
+docs:
+	doxygen structures.doxygen
+
+dist:
+	mkdir $(NAME)-$(VERSION)
+	cp Makefile *.h *.cpp structures.doxygen $(NAME)-$(VERSION)/
+	tar zcf $(NAME)-$(VERSION).tar.gz $(NAME)-$(VERSION)
+	rm -Rf $(NAME)-$(VERSION)
+	
+clean:
+	rm -f core* *.o *~ $(TARGETS) libTipsy.a

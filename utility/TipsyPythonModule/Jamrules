@@ -1,0 +1,44 @@
+# Copyright David Abrahams 2003. See accompanying LICENSE for terms
+# and conditions of use.
+
+# If you move this example from its place in the Boost tree, edit this
+# path to point at the root directory of your Boost installation (the
+# one containing a subdirectory called "boost/" and a sub-subdirectory
+# "boost/python/" full of .hpp files).  Absolute paths work, too.
+#
+path-global BOOST_ROOT : $(HOME)/Projects/boost ;
+
+# Boost.Python configuration variables, as described in
+# http://www.boost.org/libs/python/doc/building.html#configuration.
+# Usually you don't need to set these; the defaults will work.  If you
+# do set them, try to change as few of them as possible, starting with
+# the first ones.
+
+  # PYTHON_VERSION = <the two-part Major.Minor version number, e.g. 2.2> ;
+  # PYTHON_ROOT = <root directory of your Python installation, e.g. /usr> ;
+  # PYTHON_INCLUDES = <path to Python #include directories> ;
+  # PYTHON_LIB_PATH = <path to Python library object> ;
+
+# You may need to configure your compiler toolset, especially if you
+# want to build with a compiler that is not the "system default" or if
+# it is installed in a nonstandard place; see
+# http://www.boost.org/more/getting_started.html#Configuring for
+# details.  
+
+# Makes a project id for boost so that other Boost.Build projects can
+# refer to it by name.
+#
+project boost : $(BOOST_ROOT) ;
+
+# By default, boost_python and your extension/application will get build 
+# in the 'bin' subdirectory of this project.  Thus, multiple projects
+# will each build and use their own copy of boost_python.
+# You can change this setting to specify a different tree to build in
+# using the variable ALL_LOCATE_TARGET.  If multiple projects have 
+# ALL_LOCATE_TARGET set the same, they will build into the same tree,
+# sharing a single copy of the boost_python library.  Alternatively,
+# you can use the technique shown in the examples of the Jamfile to build
+# projects separately, all linking against a single copy of the boost_python
+# library.
+# For example:
+# ALL_LOCATE_TARGET = $(HOME)/boost_projects ;

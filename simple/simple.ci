@@ -1,0 +1,13 @@
+mainmodule simple {
+  readonly CProxy_Main mainProxy;
+  readonly int initial_depth;
+
+  mainchare Main {
+    entry Main(CkArgMsg* m);
+  };
+
+  group Reader {
+    entry Reader();
+    entry void load(std::string input_file);
+  };
+};
