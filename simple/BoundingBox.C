@@ -59,3 +59,16 @@ ostream &operator<<(ostream &os, const BoundingBox &bb){
       
   return os;
 }
+
+CkReductionMsg* BoundingBox::reduceFn(int n_msgs, CkReductionMsg** msgs) {
+  BoundingBox* b = static_cast<BoundingBox*>(msgs[0]->getData());
+  if (n_msgs > 1) {
+    BoundingBox* msgb;
+    for (int i = 1; i < n_msgs; i++) {
+      msgb = static_cast<BoundingBox*>(msgs[i]->getData());
+      *b += *msgb;
+    }
+  }
+
+  return CkReductionMsg::buildNew(sizeof(BoundingBox), b);
+}

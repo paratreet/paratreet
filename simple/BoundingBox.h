@@ -17,6 +17,7 @@ struct BoundingBox {
   Real pe;
   Real ke;
   Real mass;
+  static CkReduction::reducerType boxReducer;
 
   BoundingBox();
   void pup(PUP::er &p);
@@ -29,10 +30,22 @@ struct BoundingBox {
     grow(other);
     return *this;
   }
+
+  static void registerReducer() {
+    boxReducer = CkReduction::addReducer(reduceFn);
+  }
+
+  static CkReductionMsg* reduceFn(int n_msgs, CkReductionMsg** msgs);
+
+  static CkReduction::reducerType reducer() {
+    return boxReducer;
+  }
 };
 
 #include <iostream>
 using namespace std;
 ostream &operator<<(ostream &os, const BoundingBox &bb);
+
+CkReductionMsg *reduceBoxes(int n_msg, CkReductionMsg** msgs);
 
 #endif // SIMPLE_BOUNDING_BOX_H_

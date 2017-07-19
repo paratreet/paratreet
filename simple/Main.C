@@ -1,6 +1,7 @@
 #include "simple.decl.h"
 #include "common.h"
 #include "Reader.h"
+#include "BoundingBox.h"
 
 /* readonly */ CProxy_Main mainProxy;
 /* readonly */ int initial_depth;
@@ -12,6 +13,10 @@ class Main : public CBase_Main {
   std::string input_file;
 
   public:
+    static void initialize() {
+      BoundingBox::registerReducer();
+    }
+    
     Main(CkArgMsg* m) {
       mainProxy = thisProxy;
 
@@ -38,15 +43,20 @@ class Main : public CBase_Main {
       // print settings
       CkPrintf("\nInitial Depth: %d\nInput file: %s\n\n", initial_depth, input_file.c_str());
 
-      // record start time
-      start_time = CkWallTimer();
-
       // create readers
       n_readers = CkNumNodes();
       readers = CProxy_Reader::ckNew();
 
+      thisProxy.commence();
+   }
+
+    void commence() {
+      // record start time
+      start_time = CkWallTimer();
+
       // load Tipsy data
-      readers.load(input_file);
+      CkReductionMsg *result = NULL;
+      readers.load(input_file, CkCallbackResumeThread((void*&)result));
     }
 
     void terminate() {

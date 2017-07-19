@@ -4,12 +4,14 @@ mainmodule simple {
   readonly int n_readers;
 
   mainchare Main {
+    initnode void initialize();
     entry Main(CkArgMsg* m);
+    entry [threaded] void commence();
     entry [reductiontarget] void terminate();
   };
 
   nodegroup Reader {
     entry Reader();
-    entry void load(std::string input_file);
+    entry void load(std::string input_file, const CkCallback& cb);
   };
 };

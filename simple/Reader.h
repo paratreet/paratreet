@@ -4,14 +4,17 @@
 #include "simple.decl.h"
 #include "common.h"
 #include "Particle.h"
+#include "BoundingBox.h"
 
 class Reader : public CBase_Reader {
   std::vector<Particle> particles;
+  BoundingBox box;
 
   public:
     Reader();
 
-    void load(std::string);
+    void load(std::string, const CkCallback&);
+    void assignKeys(BoundingBox&, const CkCallback&);
 };
 
 #endif // SIMPLE_READER_H_

@@ -6,7 +6,7 @@ extern int n_readers;
 
 Reader::Reader() {}
 
-void Reader::load(std::string input_file) {
+void Reader::load(std::string input_file, const CkCallback& cb) {
   // open tipsy file
   Tipsy::TipsyReader r(input_file);
   if (!r.status()) {
@@ -32,10 +32,15 @@ void Reader::load(std::string input_file) {
     start_particle += excess;
   }
 
+  // prepare bounding box
+  box.reset();
+  box.pe = 0.0;
+  box.ke = 0.0;
+
   // reserve space
   particles.resize(n_particles);
 
-  // read particles
+  // read particles and grow bounding box
   if (!r.seekParticleNum(start_particle)) {
     CkAbort("Could not seek to particle\n");
   }
@@ -71,9 +76,16 @@ void Reader::load(std::string input_file) {
     }
     particles[i].order = start_particle + i;
     particles[i].potential = 0.0;
+    
+    box.grow(particles[i].position);
+    box.mass += particles[i].mass;
+    box.ke += particles[i].mass * particles[i].velocity.lengthSquared();
+    box.pe = 0.0;
   }
+  
+  box.ke /= 2.0;
+  box.n_particles = particles.size();
 
-  // reduction
-  CkCallback cb(CkReductionTarget(Main, terminate), mainProxy);
-  contribute(cb);
+  // reduce to universal bounding box
+  contribute(sizeof(BoundingBox), &box, BoundingBox::reducer(), cb);
 }
