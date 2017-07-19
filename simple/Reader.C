@@ -82,9 +82,13 @@ void Reader::load(std::string input_file, const CkCallback& cb) {
     box.ke += particles[i].mass * particles[i].velocity.lengthSquared();
     box.pe = 0.0;
   }
-  
+
   box.ke /= 2.0;
   box.n_particles = particles.size();
+
+#ifdef DEBUG
+  cout << "[Reader " << thisIndex << "] Built bounding box: " << box << endl;
+#endif
 
   // reduce to universal bounding box
   contribute(sizeof(BoundingBox), &box, BoundingBox::reducer(), cb);

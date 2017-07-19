@@ -1,5 +1,5 @@
 CHARM_HOME = ~/work/charm
-OPTS = -O3 -I../utility/structures
+OPTS = -O3 -I../utility/structures -DDEBUG
 CHARMC = $(CHARM_HOME)/bin/charmc $(OPTS)
 LD_LIBS = -L../utility/structures -lTipsy
 

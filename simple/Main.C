@@ -57,6 +57,16 @@ class Main : public CBase_Main {
       // load Tipsy data
       CkReductionMsg *result = NULL;
       readers.load(input_file, CkCallbackResumeThread((void*&)result));
+
+      // built universe
+      BoundingBox universe = *((BoundingBox*)result->getData());
+      delete result;
+
+#ifdef DEBUG
+      cout << "[Main] Universal bounding box: " << universe << endl;
+#endif
+
+      terminate();
     }
 
     void terminate() {
