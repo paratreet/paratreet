@@ -1,5 +1,7 @@
 #include "BoundingBox.h"
 
+CkReduction::reducerType BoundingBox::boxReducer;
+
 BoundingBox::BoundingBox(){
   reset();
 }
