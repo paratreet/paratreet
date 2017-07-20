@@ -7,7 +7,7 @@
 #include "BoundingBox.h"
 
 class Reader : public CBase_Reader {
-  std::vector<Particle> particles;
+  CkVec<Particle> particles;
   BoundingBox box;
 
   public:

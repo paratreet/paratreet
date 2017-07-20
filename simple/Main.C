@@ -66,11 +66,14 @@ class Main : public CBase_Main {
       cout << "[Main] Universal bounding box: " << universe << endl;
 #endif
 
+      // assign keys and sort particles locally
+      readers.assignKeys(universe, CkCallbackResumeThread());
+
       terminate();
     }
 
     void terminate() {
-      CkPrintf("Elapsed time: %lf\n", CkWallTimer() - start_time);
+      CkPrintf("\nElapsed time: %lf s\n", CkWallTimer() - start_time);
       CkExit();
     }
 };

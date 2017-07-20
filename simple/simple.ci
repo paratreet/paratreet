@@ -1,4 +1,6 @@
 mainmodule simple {
+  include "BoundingBox.h";
+
   readonly CProxy_Main mainProxy;
   readonly int initial_depth;
   readonly int n_readers;
@@ -13,5 +15,6 @@ mainmodule simple {
   nodegroup Reader {
     entry Reader();
     entry void load(std::string input_file, const CkCallback& cb);
+    entry void assignKeys(BoundingBox& universe, const CkCallback& cb);
   };
 };
