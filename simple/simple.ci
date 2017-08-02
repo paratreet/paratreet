@@ -1,9 +1,12 @@
 mainmodule simple {
   include "BoundingBox.h";
+  include "Splitter.h";
 
   readonly CProxy_Main mainProxy;
   readonly int initial_depth;
   readonly int n_readers;
+  readonly int max_ppc;
+  readonly int max_ppl;
 
   mainchare Main {
     initnode void initialize();
@@ -16,5 +19,7 @@ mainmodule simple {
     entry Reader();
     entry void load(std::string input_file, const CkCallback& cb);
     entry void assignKeys(BoundingBox& universe, const CkCallback& cb);
+    entry void count(CkVec<Key>&, const CkCallback&);
+    entry void setSplitters(CkVec<Splitter>&, const CkCallback&);
   };
 };

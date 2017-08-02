@@ -1,5 +1,6 @@
 #include "TipsyFile.h"
 #include "Reader.h"
+#include "Utility.h"
 
 extern CProxy_Main mainProxy;
 extern int n_readers;
@@ -101,7 +102,7 @@ void Reader::assignKeys(BoundingBox& universe, const CkCallback& cb) {
   // prepare mask to set MSB to 1
   Key prepend = 1L << (KEY_BITS-1);
 
-  // TODO heavy work for a single PE to handle
+  // FIXME heavy work for a single PE to handle
   for (unsigned int i = 0; i < particles.size(); i++) {
     // compute key
     relative_pos = (particles[i].position - universe.box.lesser_corner) / universe_diag * ((Real)BOXES_PER_DIM);
@@ -133,5 +134,51 @@ void Reader::assignKeys(BoundingBox& universe, const CkCallback& cb) {
   particles.quickSort();
 
   // back to Main
+  contribute(cb);
+}
+
+void Reader::count(CkVec<Key>& keys, const CkCallback& cb) {
+  // search for the first particle whose key is greater or equal to the input key,
+  // in the range [start, finish)
+  int start = 0;
+  int finish = particles.size();
+
+  // convert keys to splitters
+  for (int i = 0; i < keys.size(); i++) {
+    // ignore largest key as it is a splitter
+    if (keys[i] == (~Key(0)))
+        continue;
+
+    Key& k = keys[i];
+    k = Splitter::convertKey(k);
+  }
+
+  CkVec<int> counts(keys.size() / 2);
+  CkAssert(counts.size() * 2 == keys.size());
+
+  if (finish > start) {
+    for (int i = 0; i < counts.size(); i++) {
+      Key from = keys[2*i];
+      Key to = keys[2*i+1];
+
+      int begin = Utility::binarySearchGE(from, &particles[0], start, finish);
+      int end = Utility::binarySearchGE(to, &particles[0], begin, finish);
+      counts[i] = end - begin;
+
+      start = end;
+    }
+  }
+  else {
+    // no particles
+    for(int i = 0; i < counts.size(); i++){
+      counts[i] = 0;
+    }
+  }
+
+  contribute(sizeof(int) * counts.size(), &counts[0], CkReduction::sum_int, cb);
+}
+
+void Reader::setSplitters(CkVec<Splitter>& sp, const CkCallback& cb) {
+  splitters = sp;
   contribute(cb);
 }

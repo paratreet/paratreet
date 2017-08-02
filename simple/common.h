@@ -14,9 +14,13 @@ typedef double Real;
 
 #define NDIM 3
 
+#define LOG_BRANCH_FACTOR 1 // binary tree
+
 typedef uint64_t Key;
 #define KEY_BITS (sizeof(Key)*CHAR_BIT)
 #define BITS_PER_DIM (KEY_BITS/NDIM)
 #define BOXES_PER_DIM (1<<(BITS_PER_DIM))
+
+#define TOLERANCE 1.0
 
 #endif // SIMPLE_COMMON_H_
