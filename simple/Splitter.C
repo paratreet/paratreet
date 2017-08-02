@@ -28,7 +28,7 @@ bool Splitter::operator>=(const Key& k) const {
   return from >= k;
 }
 
-static Key Splitter::convertKey(Key k) {
-  int depth = Utility::getDepthFroMKey(k);
+Key Splitter::convertKey(Key k) {
+  int depth = Utility::getDepthFromKey(k);
   return (Utility::getParticleLevelKey(k, depth));
 }

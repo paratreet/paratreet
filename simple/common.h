@@ -17,6 +17,9 @@ typedef double Real;
 #define LOG_BRANCH_FACTOR 1 // binary tree
 
 typedef uint64_t Key;
+#ifndef CHAR_BIT
+#define CHAR_BIT 8
+#endif
 #define KEY_BITS (sizeof(Key)*CHAR_BIT)
 #define BITS_PER_DIM (KEY_BITS/NDIM)
 #define BOXES_PER_DIM (1<<(BITS_PER_DIM))

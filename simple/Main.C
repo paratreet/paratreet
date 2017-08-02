@@ -21,13 +21,13 @@ class Main : public CBase_Main {
     static void initialize() {
       BoundingBox::registerReducer();
     }
-    
+
     Main(CkArgMsg* m) {
       mainProxy = thisProxy;
 
       // default values
       initial_depth = 3;
-      max_ppc = 1024;
+      max_ppc = 128;
       max_ppl = 10;
 
       // handle arguments
@@ -78,6 +78,23 @@ class Main : public CBase_Main {
       readers.assignKeys(universe, CkCallbackResumeThread());
 
       // create splitters
+      int n_pieces = createSplitters();
+#ifdef DEBUG
+      cout << "[Main] Number of splitters (TreePiece chares): " << n_pieces << endl;
+#endif
+
+      // TODO create TreePiece chare array
+
+      // TODO have readers distribute particles to pieces
+
+      // all done
+      terminate();
+    }
+
+    int createSplitters() {
+      CkReductionMsg* result = NULL;
+      int num_splitters;
+
       BufferedVec<Key> keys;
       keys.add(Key(1));
       keys.add(~Key(0));
@@ -109,7 +126,7 @@ class Main : public CBase_Main {
             }
           }
           else {
-            splitters.push_back(Splitter(Splitter::convertKey(from), Splitter::convertKey(to), from, np)); // TODO
+            splitters.push_back(Splitter(Splitter::convertKey(from), Splitter::convertKey(to), from, np));
           }
         }
 
@@ -120,15 +137,15 @@ class Main : public CBase_Main {
           break;
       }
 
-      // send sorted splitters to readers
+      // save number of splitters
+      num_splitters = splitters.size();
+
+      // sort splitters and send them to readers
       splitters.quickSort();
       readers.setSplitters(splitters, CkCallbackResumeThread());
       splitters.resize(0);
 
-      // TODO create chares and have readers send particles
-
-      // all done
-      terminate();
+      return num_splitters;
     }
 
     void terminate() {

@@ -138,11 +138,6 @@ void Reader::assignKeys(BoundingBox& universe, const CkCallback& cb) {
 }
 
 void Reader::count(CkVec<Key>& keys, const CkCallback& cb) {
-  // search for the first particle whose key is greater or equal to the input key,
-  // in the range [start, finish)
-  int start = 0;
-  int finish = particles.size();
-
   // convert keys to splitters
   for (int i = 0; i < keys.size(); i++) {
     // ignore largest key as it is a splitter
@@ -156,7 +151,11 @@ void Reader::count(CkVec<Key>& keys, const CkCallback& cb) {
   CkVec<int> counts(keys.size() / 2);
   CkAssert(counts.size() * 2 == keys.size());
 
-  if (finish > start) {
+  // search for the first particle whose key is greater or equal to the input key,
+  // in the range [start, finish)
+  int start = 0;
+  int finish = particles.size();
+  if (particles.size() > 0) {
     for (int i = 0; i < counts.size(); i++) {
       Key from = keys[2*i];
       Key to = keys[2*i+1];
@@ -168,8 +167,7 @@ void Reader::count(CkVec<Key>& keys, const CkCallback& cb) {
       start = end;
     }
   }
-  else {
-    // no particles
+  else { // no particles
     for(int i = 0; i < counts.size(); i++){
       counts[i] = 0;
     }
