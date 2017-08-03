@@ -4,7 +4,7 @@ CHARMC = $(CHARM_HOME)/bin/charmc $(OPTS)
 LD_LIBS = -L../utility/structures -lTipsy
 
 BINARY = simple
-OBJS = Main.o Reader.o Particle.o BoundingBox.o Splitter.o
+OBJS = Main.o Reader.o Particle.o BoundingBox.o Splitter.o Decomposer.o TreePiece.o
 
 all: $(BINARY)
 
@@ -20,7 +20,7 @@ $(BINARY).decl.h: $(BINARY).ci
 clean:
 	rm -f *.decl.h *.def.h conv-host *.o $(BINARY) charmrun
 
-Main.o: Main.C $(BINARY).decl.h common.h Reader.h BoundingBox.h BufferedVec.h Splitter.h
+Main.o: Main.C $(BINARY).decl.h common.h Reader.h BoundingBox.h BufferedVec.h Splitter.h TreePiece.h
 	$(CHARMC) -c $<
 
 Reader.o: Reader.C Reader.h Utility.h
@@ -33,6 +33,12 @@ BoundingBox.o: BoundingBox.C BoundingBox.h
 	$(CHARMC) -c $<
 
 Splitter.o: Splitter.C Splitter.h Utility.h
+	$(CHARMC) -c $<
+
+Decomposer.o: Decomposer.C Decomposer.h
+	$(CHARMC) -c $<
+
+TreePiece.o: TreePiece.C TreePiece.h
 	$(CHARMC) -c $<
 
 test: all

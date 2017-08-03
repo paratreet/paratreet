@@ -133,7 +133,7 @@ void Reader::assignKeys(BoundingBox& universe, const CkCallback& cb) {
   // sort particles using their keys
   particles.quickSort();
 
-  // back to Main
+  // back to callee
   contribute(cb);
 }
 

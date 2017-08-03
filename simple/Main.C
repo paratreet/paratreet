@@ -1,21 +1,26 @@
 #include "simple.decl.h"
 #include "common.h"
+
 #include "Reader.h"
+#include "Decomposer.h"
+#include "TreePiece.h"
+
 #include "BoundingBox.h"
 #include "BufferedVec.h"
 #include "Splitter.h"
 
 /* readonly */ CProxy_Main mainProxy;
-/* readonly */ int initial_depth;
+/* readonly */ CProxy_Reader readers;
+/* readonly */ CProxy_Decomposer decomposer;
+/* readonly */ CProxy_TreePiece treepieces;
 /* readonly */ int n_readers;
 /* readonly */ int max_ppc; // particles per chare
 /* readonly */ int max_ppl; // particles per leaf
 
 class Main : public CBase_Main {
-  CProxy_Reader readers;
   double start_time;
   std::string input_file;
-  CkVec<Splitter> splitters;
+  int n_treepieces;
 
   public:
     static void initialize() {
@@ -26,126 +31,56 @@ class Main : public CBase_Main {
       mainProxy = thisProxy;
 
       // default values
-      initial_depth = 3;
       max_ppc = 128;
       max_ppl = 10;
 
       // handle arguments
       int c;
-      while ((c = getopt(m->argc, m->argv, "d:f:")) != -1) {
+      while ((c = getopt(m->argc, m->argv, "f:c:l:")) != -1) {
         switch (c) {
-          case 'd':
-            initial_depth = atoi(optarg);
-            break;
           case 'f':
             input_file = optarg;
             break;
+          case 'c':
+            max_ppc = atoi(optarg);
+            break;
+          case 'l':
+            max_ppl = atoi(optarg);
+            break;
           default:
-            CkPrintf("Usage: %s -d [initial depth] -f [input file]\n", m->argv[0]);
+            CkPrintf("Usage: %s -f [input file] -c [max # of particles per chare] -l [max # of particles per leaf]\n", m->argv[0]);
             CkExit();
         }
       }
       delete m;
 
       // print settings
-      CkPrintf("\nInitial Depth: %d\nInput file: %s\n\n", initial_depth, input_file.c_str());
+      CkPrintf("\n[SIMPLE TREE]\nInput file: %s\nMax # of particles per chare: %d\nMax # of particles per leaf: %d\n\n", input_file.c_str(), max_ppc, max_ppl);
 
       // create readers
       n_readers = CkNumNodes();
       readers = CProxy_Reader::ckNew();
 
+      // create decomposer
+      decomposer = CProxy_Decomposer::ckNew();
+
+      // start!
+      start_time = CkWallTimer();
       thisProxy.commence();
    }
 
     void commence() {
-      CkReductionMsg* result = NULL;
+      int* result = NULL;
+      decomposer.run(input_file, CkCallbackResumeThread((void*&)result));
+      int n_treepieces = *result;
 
-      // record start time
-      start_time = CkWallTimer();
-
-      // load Tipsy data
-      readers.load(input_file, CkCallbackResumeThread((void*&)result));
-
-      // built universe
-      BoundingBox universe = *((BoundingBox*)result->getData());
-      delete result;
-
-#ifdef DEBUG
-      cout << "[Main] Universal bounding box: " << universe << endl;
-#endif
-
-      // assign keys and sort particles locally
-      readers.assignKeys(universe, CkCallbackResumeThread());
-
-      // create splitters
-      int n_pieces = createSplitters();
-#ifdef DEBUG
-      cout << "[Main] Number of splitters (TreePiece chares): " << n_pieces << endl;
-#endif
-
-      // TODO create TreePiece chare array
+      // create TreePiece chare array
+      treepieces = CProxy_TreePiece::ckNew(n_treepieces);
 
       // TODO have readers distribute particles to pieces
 
       // all done
       terminate();
-    }
-
-    int createSplitters() {
-      CkReductionMsg* result = NULL;
-      int num_splitters;
-
-      BufferedVec<Key> keys;
-      keys.add(Key(1));
-      keys.add(~Key(0));
-      keys.buffer();
-
-      while (1) {
-        readers.count(keys.get(), CkCallbackResumeThread((void*&)result));
-        int* counts = (int*)result->getData();
-        int n_counts = result->getSize() / sizeof(int);
-
-        CkAssert(2 * n_counts == keys.size());
-
-        Real threshold = (Real)max_ppc * TOLERANCE;
-        for (int i = 0; i < n_counts; i++) {
-          Key from = keys.get(2*i);
-          Key to = keys.get(2*i+1);
-
-          int np = counts[i];
-          if ((Real)np > threshold) {
-            keys.add(from << 1);
-            keys.add((from << 1)+1);
-            keys.add((from << 1)+1);
-
-            if (to == (~Key(0))) {
-              keys.add(~Key(0));
-            }
-            else {
-              keys.add(to << 1);
-            }
-          }
-          else {
-            splitters.push_back(Splitter(Splitter::convertKey(from), Splitter::convertKey(to), from, np));
-          }
-        }
-
-        keys.buffer();
-        delete result;
-
-        if (keys.size() == 0)
-          break;
-      }
-
-      // save number of splitters
-      num_splitters = splitters.size();
-
-      // sort splitters and send them to readers
-      splitters.quickSort();
-      readers.setSplitters(splitters, CkCallbackResumeThread());
-      splitters.resize(0);
-
-      return num_splitters;
     }
 
     void terminate() {

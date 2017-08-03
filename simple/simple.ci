@@ -3,7 +3,7 @@ mainmodule simple {
   include "Splitter.h";
 
   readonly CProxy_Main mainProxy;
-  readonly int initial_depth;
+  readonly CProxy_Reader readers;
   readonly int n_readers;
   readonly int max_ppc;
   readonly int max_ppl;
@@ -15,11 +15,20 @@ mainmodule simple {
     entry [reductiontarget] void terminate();
   };
 
+  chare Decomposer {
+    entry Decomposer();
+    entry [threaded] void run(std::string, const CkCallback&);
+  };
+
   nodegroup Reader {
     entry Reader();
-    entry void load(std::string input_file, const CkCallback& cb);
-    entry void assignKeys(BoundingBox& universe, const CkCallback& cb);
+    entry void load(std::string, const CkCallback&);
+    entry void assignKeys(BoundingBox&, const CkCallback&);
     entry void count(CkVec<Key>&, const CkCallback&);
     entry void setSplitters(CkVec<Splitter>&, const CkCallback&);
+  };
+
+  array [1d] TreePiece {
+    entry TreePiece();
   };
 };
