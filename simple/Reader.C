@@ -102,7 +102,7 @@ void Reader::assignKeys(BoundingBox& universe, const CkCallback& cb) {
   // prepare mask to set MSB to 1
   Key prepend = 1L << (KEY_BITS-1);
 
-  // FIXME heavy work for a single PE to handle
+  // FIXME could be heavy work for a single PE to handle
   for (unsigned int i = 0; i < particles.size(); i++) {
     // compute key
     relative_pos = (particles[i].position - universe.box.lesser_corner) / universe_diag * ((Real)BOXES_PER_DIM);

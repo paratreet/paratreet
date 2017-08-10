@@ -4,6 +4,7 @@
 #include <string>
 #include "Vector3D.h"
 
+/* Floating point type */
 #ifndef USE_DOUBLE_FP
 typedef float Real;
 #define REAL_MAX FLT_MAX
@@ -11,6 +12,10 @@ typedef float Real;
 typedef double Real;
 #define REAL_MAX DBL_MAX
 #endif
+
+/* Tree types */
+#define OCT_TREE 10
+#define SFC_TREE 11
 
 #define NDIM 3
 

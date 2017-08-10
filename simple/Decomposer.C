@@ -2,11 +2,13 @@
 #include "BufferedVec.h"
 
 extern CProxy_Reader readers;
+extern std::string input_file;
 extern int max_ppc;
+extern int tree_type;
 
 Decomposer::Decomposer() {}
 
-void Decomposer::run(std::string input_file, const CkCallback& cb) {
+void Decomposer::run(const CkCallback& cb) {
   CkReductionMsg* result = NULL;
 
   // load Tipsy data and build universe
@@ -62,6 +64,7 @@ void Decomposer::createSplitters() {
 
       int np = counts[i];
       if ((Real)np > threshold) {
+        // add keys to halve the space
         keys.add(from << 1);
         keys.add((from << 1)+1);
         keys.add((from << 1)+1);

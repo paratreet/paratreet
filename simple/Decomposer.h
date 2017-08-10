@@ -12,7 +12,7 @@ class Decomposer : public CBase_Decomposer {
 
   public:
     Decomposer();
-    void run(std::string, const CkCallback&);
+    void run(const CkCallback&);
     void createSplitters();
 };
 

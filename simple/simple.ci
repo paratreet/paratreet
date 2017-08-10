@@ -4,9 +4,11 @@ mainmodule simple {
 
   readonly CProxy_Main mainProxy;
   readonly CProxy_Reader readers;
+  readonly std::string input_file;
   readonly int n_readers;
   readonly int max_ppc;
   readonly int max_ppl;
+  readonly int tree_type;
 
   mainchare Main {
     initnode void initialize();
@@ -17,7 +19,7 @@ mainmodule simple {
 
   chare Decomposer {
     entry Decomposer();
-    entry [threaded] void run(std::string, const CkCallback&);
+    entry [threaded] void run(const CkCallback&);
   };
 
   nodegroup Reader {
