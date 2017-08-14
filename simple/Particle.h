@@ -17,7 +17,7 @@ struct Particle {
 
   Particle();
 
-  void pup(PUP::er &P);
+  void pup(PUP::er&);
 
   void reset();
 

@@ -99,7 +99,10 @@ class Main : public CBase_Main {
       // create TreePiece chare array
       treepieces = CProxy_TreePiece::ckNew(n_treepieces);
 
-      // TODO have readers distribute particles to pieces
+      // distribute particles to pieces
+      decomposer.flush(CkCallbackResumeThread());
+
+      // TODO build tree
 
       // all done
       terminate();

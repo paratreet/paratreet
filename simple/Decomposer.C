@@ -94,3 +94,8 @@ void Decomposer::createSplitters() {
   n_splitters = splitters.size();
   splitters.resize(0);
 }
+
+void Decomposer::flush(const CkCallback& cb) {
+  readers.flush(CkCallbackResumeThread());
+  cb.send();
+}

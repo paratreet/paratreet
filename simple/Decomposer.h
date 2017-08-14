@@ -14,6 +14,7 @@ class Decomposer : public CBase_Decomposer {
     Decomposer();
     void run(const CkCallback&);
     void createSplitters();
+    void flush(const CkCallback&);
 };
 
 #endif // SIMPLE_DECOMPOSER_H_

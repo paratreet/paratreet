@@ -3,6 +3,7 @@
 #include "Utility.h"
 
 extern CProxy_Main mainProxy;
+extern CProxy_TreePiece treepieces;
 extern int n_readers;
 
 Reader::Reader() {}
@@ -178,5 +179,42 @@ void Reader::count(CkVec<Key>& keys, const CkCallback& cb) {
 
 void Reader::setSplitters(CkVec<Splitter>& sp, const CkCallback& cb) {
   splitters = sp;
+  contribute(cb);
+}
+
+const CkVec<Splitter>& Reader::getSplitters() {
+  return splitters;
+}
+
+void Reader::flush(const CkCallback& cb) {
+  int start = 0;
+  int finish = particles.size();
+  int flush_count = 0;
+
+  // send particles to owner TreePieces
+  for (int i = 0; i < splitters.size(); i++) {
+    Key from = splitters[i].from;
+    Key to = splitters[i].to;
+
+    int begin = Utility::binarySearchGE(from, &particles[0], start, finish);
+    int end = Utility::binarySearchGE(to, &particles[0], begin, finish);
+
+    int n_particles = end - begin;
+
+    if (n_particles > 0) {
+      treepieces[i].receive(n_particles, &particles[begin]);
+      flush_count += n_particles;
+    }
+
+    start = end;
+  }
+
+  if (flush_count != particles.size()) {
+    CkPrintf("[Reader %d] flushed %d out of %d particles\n", thisIndex, flush_count, particles.size());
+    CkAbort("Flush failure");
+  }
+
+  splitters.resize(0);
+
   contribute(cb);
 }

@@ -1,6 +1,7 @@
 mainmodule simple {
   include "BoundingBox.h";
   include "Splitter.h";
+  include "Particle.h";
 
   readonly CProxy_Main mainProxy;
   readonly CProxy_Reader readers;
@@ -20,6 +21,7 @@ mainmodule simple {
   chare Decomposer {
     entry Decomposer();
     entry [threaded] void run(const CkCallback&);
+    entry [threaded] void flush(const CkCallback&);
   };
 
   nodegroup Reader {
@@ -28,9 +30,11 @@ mainmodule simple {
     entry void assignKeys(BoundingBox&, const CkCallback&);
     entry void count(CkVec<Key>&, const CkCallback&);
     entry void setSplitters(CkVec<Splitter>&, const CkCallback&);
+    entry void flush(const CkCallback&);
   };
 
   array [1d] TreePiece {
     entry TreePiece();
+    entry void receive(int n, Particle p[n]);
   };
 };
