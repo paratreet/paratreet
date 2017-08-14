@@ -202,7 +202,8 @@ void Reader::flush(const CkCallback& cb) {
     int n_particles = end - begin;
 
     if (n_particles > 0) {
-      treepieces[i].receive(n_particles, &particles[begin]);
+      ParticleMsg *msg = new (n_particles) ParticleMsg(&particles[begin], n_particles);
+      treepieces[i].receive(msg);
       flush_count += n_particles;
     }
 

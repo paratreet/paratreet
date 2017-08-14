@@ -39,3 +39,12 @@ bool Particle::operator<=(const Key& k) const {
 bool Particle::operator>=(const Key& k) const {
   return key >= k;
 }
+
+ParticleMsg::ParticleMsg() {
+  particles = NULL;
+  n_particles = 0;
+}
+
+ParticleMsg::ParticleMsg(Particle* p, int n) {
+  memcpy(particles, p, n * sizeof(Particle));
+}

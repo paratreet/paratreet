@@ -85,6 +85,8 @@ class Main : public CBase_Main {
       // create decomposer
       decomposer = CProxy_Decomposer::ckNew();
 
+      treepieces = CProxy_TreePiece::ckNew(128);
+
       // start!
       start_time = CkWallTimer();
       thisProxy.commence();
@@ -97,7 +99,7 @@ class Main : public CBase_Main {
       int n_treepieces = *result;
 
       // create TreePiece chare array
-      treepieces = CProxy_TreePiece::ckNew(n_treepieces);
+      //treepieces = CProxy_TreePiece::ckNew(n_treepieces);
 
       // distribute particles to pieces
       decomposer.flush(CkCallbackResumeThread());

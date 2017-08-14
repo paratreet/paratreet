@@ -2,6 +2,7 @@
 #include "BufferedVec.h"
 
 extern CProxy_Reader readers;
+extern CProxy_TreePiece treepieces;
 extern std::string input_file;
 extern int max_ppc;
 extern int tree_type;
@@ -92,10 +93,14 @@ void Decomposer::createSplitters() {
   splitters.quickSort();
   readers.setSplitters(splitters, CkCallbackResumeThread());
   n_splitters = splitters.size();
-  splitters.resize(0);
 }
 
 void Decomposer::flush(const CkCallback& cb) {
+  treepieces.initialize(CkCallbackResumeThread());
+
   readers.flush(CkCallbackResumeThread());
+
+  splitters.resize(0);
+
   cb.send();
 }

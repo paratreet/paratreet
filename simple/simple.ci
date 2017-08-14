@@ -1,10 +1,10 @@
 mainmodule simple {
   include "BoundingBox.h";
   include "Splitter.h";
-  include "Particle.h";
 
   readonly CProxy_Main mainProxy;
   readonly CProxy_Reader readers;
+  readonly CProxy_TreePiece treepieces;
   readonly std::string input_file;
   readonly int n_readers;
   readonly int max_ppc;
@@ -24,7 +24,7 @@ mainmodule simple {
     entry [threaded] void flush(const CkCallback&);
   };
 
-  nodegroup Reader {
+  group Reader {
     entry Reader();
     entry void load(std::string, const CkCallback&);
     entry void assignKeys(BoundingBox&, const CkCallback&);
@@ -33,8 +33,13 @@ mainmodule simple {
     entry void flush(const CkCallback&);
   };
 
+  message ParticleMsg {
+    Particle particles[];
+  };
+
   array [1d] TreePiece {
     entry TreePiece();
-    entry void receive(int n, Particle p[n]);
+    entry void initialize(const CkCallback&);
+    entry void receive(ParticleMsg*);
   };
 };
