@@ -1,6 +1,7 @@
 #include "Decomposer.h"
 #include "BufferedVec.h"
 
+extern CProxy_Main mainProxy;
 extern CProxy_Reader readers;
 extern CProxy_TreePiece treepieces;
 extern std::string input_file;
@@ -9,7 +10,7 @@ extern int tree_type;
 
 Decomposer::Decomposer() {}
 
-void Decomposer::run(const CkCallback& cb) {
+void Decomposer::run() {
   CkReductionMsg* result = NULL;
 
   // load Tipsy data and build universe
@@ -38,8 +39,10 @@ void Decomposer::run(const CkCallback& cb) {
   cout << "[Decomposer] Number of splitters: " << n_splitters << endl;
 #endif
 
-  // back to callee
-  cb.send(&n_splitters);
+  // create TreePieces on demand
+  for (int i = 0; i < n_splitters; i++) {
+    treepieces[i].create(CkCallback(CkIndex_Decomposer::flush(), thisProxy));
+  }
 }
 
 void Decomposer::createSplitters() {
@@ -51,6 +54,7 @@ void Decomposer::createSplitters() {
   keys.add(~Key(0));
   keys.buffer();
 
+  // SFC decomposition
   while (1) {
     readers.count(keys.get(), CkCallbackResumeThread((void*&)result));
     int* counts = (int*)result->getData();
@@ -65,7 +69,6 @@ void Decomposer::createSplitters() {
 
       int np = counts[i];
       if ((Real)np > threshold) {
-        // add keys to halve the space
         keys.add(from << 1);
         keys.add((from << 1)+1);
         keys.add((from << 1)+1);
@@ -95,12 +98,25 @@ void Decomposer::createSplitters() {
   n_splitters = splitters.size();
 }
 
-void Decomposer::flush(const CkCallback& cb) {
-  treepieces.initialize(CkCallbackResumeThread());
+void Decomposer::flush() {
+  // have the readers distribute particles to treepieces
+  readers.flush();
 
-  readers.flush(CkCallbackResumeThread());
+  // wait for all particles to be flushed
+  CkStartQD(CkCallbackResumeThread());
 
+#ifdef DEBUG
+  treepieces.check(CkCallbackResumeThread());
+#endif
+
+  // free splitter memory
   splitters.resize(0);
 
-  cb.send();
+  // start tree building
+  thisProxy.build();
+}
+
+void Decomposer::build() {
+  // TODO
+  mainProxy.terminate();
 }

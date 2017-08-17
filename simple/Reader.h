@@ -20,7 +20,7 @@ class Reader : public CBase_Reader {
     void count(CkVec<Key>&, const CkCallback&);
     void setSplitters(CkVec<Splitter>&, const CkCallback&);
     const CkVec<Splitter>& getSplitters();
-    void flush(const CkCallback&);
+    void flush();
 };
 
 #endif // SIMPLE_READER_H_

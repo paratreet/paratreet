@@ -186,7 +186,7 @@ const CkVec<Splitter>& Reader::getSplitters() {
   return splitters;
 }
 
-void Reader::flush(const CkCallback& cb) {
+void Reader::flush() {
   int start = 0;
   int finish = particles.size();
   int flush_count = 0;
@@ -216,6 +216,4 @@ void Reader::flush(const CkCallback& cb) {
   }
 
   splitters.resize(0);
-
-  contribute(cb);
 }

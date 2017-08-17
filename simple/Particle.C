@@ -47,4 +47,5 @@ ParticleMsg::ParticleMsg() {
 
 ParticleMsg::ParticleMsg(Particle* p, int n) {
   memcpy(particles, p, n * sizeof(Particle));
+  n_particles = n;
 }

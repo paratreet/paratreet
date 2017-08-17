@@ -12,9 +12,10 @@ class Decomposer : public CBase_Decomposer {
 
   public:
     Decomposer();
-    void run(const CkCallback&);
+    void run();
     void createSplitters();
-    void flush(const CkCallback&);
+    void flush();
+    void build();
 };
 
 #endif // SIMPLE_DECOMPOSER_H_

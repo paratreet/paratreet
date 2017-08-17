@@ -34,7 +34,7 @@ class Main : public CBase_Main {
 
       // default values
       input_file = "";
-      max_ppc = 128;
+      max_ppc = 16;
       max_ppl = 10;
       tree_type = OCT_TREE;
 
@@ -78,37 +78,21 @@ class Main : public CBase_Main {
       CkPrintf("Max # of particles per leaf: %d\n", max_ppl);
       CkPrintf("Tree type: %s\n\n", (tree_type == OCT_TREE) ? "OCT" : "SFC");
 
-      // create readers
+      // create Readers
       n_readers = CkNumNodes();
       readers = CProxy_Reader::ckNew();
 
-      // create decomposer
+      // create Decomposer
       decomposer = CProxy_Decomposer::ckNew();
 
-      treepieces = CProxy_TreePiece::ckNew(128);
+      // create placeholder for TreePieces
+      treepieces = CProxy_TreePiece::ckNew();
+      treepieces.doneInserting();
 
       // start!
       start_time = CkWallTimer();
-      thisProxy.commence();
+      decomposer.run();
    }
-
-    void commence() {
-      // call ParaTreeT decomposer
-      int* result = NULL;
-      decomposer.run(CkCallbackResumeThread((void*&)result));
-      int n_treepieces = *result;
-
-      // create TreePiece chare array
-      //treepieces = CProxy_TreePiece::ckNew(n_treepieces);
-
-      // distribute particles to pieces
-      decomposer.flush(CkCallbackResumeThread());
-
-      // TODO build tree
-
-      // all done
-      terminate();
-    }
 
     void terminate() {
       CkPrintf("\nElapsed time: %lf s\n", CkWallTimer() - start_time);
