@@ -42,5 +42,6 @@ mainmodule simple {
     entry [createhome] void create(const CkCallback&);
     entry void receive(ParticleMsg*);
     entry void check(const CkCallback&);
+    entry void build(const CkCallback&);
   };
 };

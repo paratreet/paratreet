@@ -118,5 +118,8 @@ void Decomposer::flush() {
 
 void Decomposer::build() {
   // TODO
+  // start local build of trees in all treepieces
+  treepieces.build(CkCallbackResumeThread());
+
   mainProxy.terminate();
 }

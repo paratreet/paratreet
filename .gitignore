@@ -1,0 +1,5 @@
+*.decl.h
+*.def.h
+*.o
+charmrun
+simple
