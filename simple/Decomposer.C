@@ -62,7 +62,7 @@ void Decomposer::createSplitters() {
 
     CkAssert(2 * n_counts == keys.size());
 
-    Real threshold = (Real)max_ppc * TOLERANCE;
+    Real threshold = (Real)max_ppc * DECOMP_TOLERANCE;
     for (int i = 0; i < n_counts; i++) {
       Key from = keys.get(2*i);
       Key to = keys.get(2*i+1);
