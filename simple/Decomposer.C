@@ -17,7 +17,7 @@ void Decomposer::run() {
   start_time = CkWallTimer();
   readers.load(input_file, CkCallbackResumeThread((void*&)result));
   CkPrintf("[Decomposer] Loading Tipsy data and building universe: %lf seconds\n", CkWallTimer() - start_time);
-  
+
   BoundingBox universe = *((BoundingBox*)result->getData());
   delete result;
 
@@ -117,9 +117,6 @@ void Decomposer::flush() {
 }
 
 void Decomposer::build() {
-  // TODO
   // start local build of trees in all treepieces
-  treepieces.build(CkCallbackResumeThread());
-
-  mainProxy.terminate();
+  treepieces.build(CkCallback(CkIndex_Main::terminate(), mainProxy));
 }
