@@ -13,7 +13,7 @@
 #include "OrientedBox.h"
 
 #ifndef PEANO
-#define PEANO
+//#define PEANO
 #endif
 
 #ifdef PEANO
