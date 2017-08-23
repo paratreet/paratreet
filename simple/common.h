@@ -2,7 +2,9 @@
 #define SIMPLE_COMMON_H_
 
 #include <string>
+#include <vector>
 #include "Vector3D.h"
+#include "SFC.h"
 
 /* Floating point type */
 #ifndef USE_DOUBLE_FP
@@ -22,7 +24,7 @@ typedef double Real;
 #define BRANCH_FACTOR 2
 #define LOG_BRANCH_FACTOR 1 // binary tree
 
-typedef uint64_t Key;
+typedef SFC::Key Key;
 #ifndef CHAR_BIT
 #define CHAR_BIT 8
 #endif

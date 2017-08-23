@@ -1,13 +1,13 @@
 mainmodule simple {
   include "BoundingBox.h";
-  include "Splitter.h";
 
   readonly CProxy_Main mainProxy;
   readonly CProxy_Reader readers;
   readonly CProxy_TreePiece treepieces;
   readonly std::string input_file;
   readonly int n_readers;
-  readonly int max_ppc;
+  readonly int n_chares;
+  readonly double decomp_tolerance;
   readonly int max_ppl;
   readonly int tree_type;
 
@@ -20,8 +20,6 @@ mainmodule simple {
   chare Decomposer {
     entry Decomposer();
     entry [threaded] void run();
-    entry [threaded] void flush();
-    entry void build();
   };
 
   group Reader {
@@ -29,7 +27,6 @@ mainmodule simple {
     entry void load(std::string, const CkCallback&);
     entry void assignKeys(BoundingBox&, const CkCallback&);
     entry void count(CkVec<Key>&, const CkCallback&);
-    entry void setSplitters(CkVec<Splitter>&, const CkCallback&);
     entry void flush();
   };
 
@@ -39,7 +36,7 @@ mainmodule simple {
 
   array [1d] TreePiece {
     entry TreePiece();
-    entry [createhome] void create(const CkCallback&);
+    entry void initialize(const CkCallback&);
     entry void receive(ParticleMsg*);
     entry void check(const CkCallback&);
     entry void build(const CkCallback&);

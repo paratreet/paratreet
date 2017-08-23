@@ -3,19 +3,19 @@
 
 #include "simple.decl.h"
 #include "common.h"
-#include "Splitter.h"
 
 class Decomposer : public CBase_Decomposer {
-  CkVec<Splitter> splitters;
-  int n_splitters;
   double start_time;
+  CkReductionMsg* result;
+  BoundingBox universe;
+  CkVec<Key> splitters;
+  std::vector<int> bin_counts;
+  int tol_diff;
 
   public:
     Decomposer();
     void run();
-    void createSplitters();
-    void flush();
-    void build();
+    void findSplitters();
 };
 
 #endif // SIMPLE_DECOMPOSER_H_

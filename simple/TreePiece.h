@@ -10,25 +10,19 @@
 
 class TreePiece : public CBase_TreePiece {
   CkVec<Particle> particles;
-  Key root;
   int n_expected;
+  Key root_key;
+  Node *root_node;
   CkCallback callback_;
-  int nPieces;
-  Node *root_;
-  // needed while building the local tree
-  // to see which nodes are off the path from global
-  // root to local root
-  // populated in TreePiece::create
-  Key tpRootKey_;
 
   public:
     TreePiece();
-    void create(const CkCallback&);
+    void initialize(const CkCallback&);
     void receive(ParticleMsg*);
     void check(const CkCallback&);
     void build(const CkCallback&);
     void print(Node*);
-    bool build(const CkVec<Splitter> &splitters, Node *node, bool rootLiesOnPath);
+    bool build(Node*, bool);
 };
 
 #endif // SIMPLE_TREEPIECE_H_

@@ -5,21 +5,20 @@
 #include "common.h"
 #include "Particle.h"
 #include "BoundingBox.h"
-#include "Splitter.h"
 
 class Reader : public CBase_Reader {
   CkVec<Particle> particles;
   BoundingBox box;
-  CkVec<Splitter> splitters;
 
   public:
-    Reader();
+    CkVec<Key> splitters;
+    CkVec<int> splitter_counts;
 
+    Reader();
     void load(std::string, const CkCallback&);
     void assignKeys(BoundingBox&, const CkCallback&);
     void count(CkVec<Key>&, const CkCallback&);
-    void setSplitters(CkVec<Splitter>&, const CkCallback&);
-    const CkVec<Splitter>& getSplitters();
+    const CkVec<Key>& getSplitters();
     void flush();
 };
 

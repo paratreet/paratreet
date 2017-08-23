@@ -1,24 +1,26 @@
 #include "Decomposer.h"
 #include "BufferedVec.h"
+#include <algorithm>
 
 extern CProxy_Main mainProxy;
 extern CProxy_Reader readers;
 extern CProxy_TreePiece treepieces;
 extern std::string input_file;
-extern int max_ppc;
+extern int n_chares;
+extern double decomp_tolerance;
 extern int tree_type;
 
-Decomposer::Decomposer() {}
+Decomposer::Decomposer() {
+  result = NULL;
+}
 
 void Decomposer::run() {
-  CkReductionMsg* result = NULL;
-
   // load Tipsy data and build universe
   start_time = CkWallTimer();
   readers.load(input_file, CkCallbackResumeThread((void*&)result));
   CkPrintf("[Decomposer] Loading Tipsy data and building universe: %lf seconds\n", CkWallTimer() - start_time);
 
-  BoundingBox universe = *((BoundingBox*)result->getData());
+  universe = *((BoundingBox*)result->getData());
   delete result;
 
 #ifdef DEBUG
@@ -30,22 +32,77 @@ void Decomposer::run() {
   readers.assignKeys(universe, CkCallbackResumeThread());
   CkPrintf("[Decomposer] Assigning keys and sorting particles: %lf seconds\n", CkWallTimer() - start_time);
 
-  // create splitters
+  // TODO find splitters that (almost) equally split particles
   start_time = CkWallTimer();
-  createSplitters();
-  CkPrintf("[Decomposer] Creating splitters: %lf seconds\n", CkWallTimer() - start_time);
+  findSplitters();
+  CkPrintf("[Decomposer] Finding right splitters: %lf seconds\n", CkWallTimer() - start_time);
+
+  // initialize TreePieces
+  treepieces.initialize(CkCallbackResumeThread());
+
+  // have the readers distribute particles to treepieces
+  readers.flush();
+
+  // wait for all particles to be flushed
+  CkStartQD(CkCallbackResumeThread());
 
 #ifdef DEBUG
-  cout << "[Decomposer] Number of splitters: " << n_splitters << endl;
+  // check if all treepieces have received the right number of particles
+  treepieces.check(CkCallbackResumeThread());
 #endif
 
-  // create TreePieces on demand
-  for (int i = 0; i < n_splitters; i++) {
-    treepieces[i].create(CkCallback(CkIndex_Decomposer::flush(), thisProxy));
-  }
+  // free splitter memory
+  splitters.resize(0);
+
+  // start local build of trees in all treepieces
+  treepieces.build(CkCallback(CkIndex_Main::terminate(), mainProxy));
 }
 
-void Decomposer::createSplitters() {
+void Decomposer::findSplitters() {
+  // create initial splitters
+  Key delta = (SFC::lastPossibleKey - SFC::firstPossibleKey) / n_chares;
+  Key splitter = SFC::firstPossibleKey;
+  for (int i = 0; i < n_chares; i++, splitter += delta) {
+    splitters.push_back(splitter);
+  }
+  splitters.push_back(SFC::lastPossibleKey);
+
+  // find desired number of particles preceding each splitter
+  int* splitter_goals = new int[n_chares];
+  int avg = universe.n_particles / n_chares;
+  int rem = universe.n_particles % n_chares;
+  int prev = 0;
+  for (int i = 0; i < rem; i++) {
+    splitter_goals[i] = prev + avg + 1;
+    prev = splitter_goals[i];
+  }
+  for (int i = rem; i < n_chares; i++) {
+    splitter_goals[i] = prev + avg;
+    prev = splitter_goals[i];
+  }
+
+  // calculate tolerated difference in # of particles
+  tol_diff = static_cast<int>(avg * decomp_tolerance);
+
+  // repeat until convergence
+  while (1) {
+    // histogramming
+    readers.count(splitters, CkCallbackResumeThread((void*&)result));
+    int* counts = static_cast<int*>(result->getData());
+    int n_counts = result->getSize() / sizeof(int);
+    bin_counts.resize(n_counts+1);
+    bin_counts[0] = 0;
+    std::copy(counts, counts + n_counts, bin_counts.begin()+1);
+    delete result;
+
+    // prefix sum
+    std::partial_sum(bin_counts.begin(), bin_counts.end(), bin_counts.begin());
+
+    // TODO adjustSplitters
+    break;
+  }
+
+  /*
   CkReductionMsg* result = NULL;
   int num_splitters;
 
@@ -96,27 +153,5 @@ void Decomposer::createSplitters() {
   splitters.quickSort();
   readers.setSplitters(splitters, CkCallbackResumeThread());
   n_splitters = splitters.size();
-}
-
-void Decomposer::flush() {
-  // have the readers distribute particles to treepieces
-  readers.flush();
-
-  // wait for all particles to be flushed
-  CkStartQD(CkCallbackResumeThread());
-
-#ifdef DEBUG
-  treepieces.check(CkCallbackResumeThread());
-#endif
-
-  // free splitter memory
-  splitters.resize(0);
-
-  // start tree building
-  thisProxy.build();
-}
-
-void Decomposer::build() {
-  // start local build of trees in all treepieces
-  treepieces.build(CkCallback(CkIndex_Main::terminate(), mainProxy));
+  */
 }

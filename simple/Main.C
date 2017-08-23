@@ -7,7 +7,6 @@
 
 #include "BoundingBox.h"
 #include "BufferedVec.h"
-#include "Splitter.h"
 
 /* readonly */ CProxy_Main mainProxy;
 /* readonly */ CProxy_Reader readers;
@@ -15,7 +14,8 @@
 /* readonly */ CProxy_TreePiece treepieces;
 /* readonly */ std::string input_file;
 /* readonly */ int n_readers;
-/* readonly */ int max_ppc; // particles per chare
+/* readonly */ int n_chares;
+/* readonly */ double decomp_tolerance;
 /* readonly */ int max_ppl; // particles per leaf
 /* readonly */ int tree_type;
 
@@ -34,7 +34,8 @@ class Main : public CBase_Main {
 
       // default values
       input_file = "";
-      max_ppc = 16;
+      n_chares = 128;
+      decomp_tolerance = 0.1;
       max_ppl = 10;
       tree_type = OCT_TREE;
 
@@ -46,7 +47,7 @@ class Main : public CBase_Main {
             input_file = optarg;
             break;
           case 'c':
-            max_ppc = atoi(optarg);
+            n_chares = atoi(optarg);
             break;
           case 'l':
             max_ppl = atoi(optarg);
@@ -63,7 +64,7 @@ class Main : public CBase_Main {
           default:
             CkPrintf("Usage:\n");
             CkPrintf("\t-f [input file]\n");
-            CkPrintf("\t-c [max # of particles per chare]\n");
+            CkPrintf("\t-c [# of chares]\n");
             CkPrintf("\t-l [max # of particles per leaf]\n");
             CkPrintf("\t-t [tree type: oct, sfc]\n");
             CkExit();
@@ -74,7 +75,7 @@ class Main : public CBase_Main {
       // print settings
       CkPrintf("\n[SIMPLE TREE]\n");
       CkPrintf("Input file: %s\n", input_file.c_str());
-      CkPrintf("Max # of particles per chare: %d\n", max_ppc);
+      CkPrintf("# of chares: %d\n", n_chares);
       CkPrintf("Max # of particles per leaf: %d\n", max_ppl);
       CkPrintf("Tree type: %s\n\n", (tree_type == OCT_TREE) ? "OCT" : "SFC");
 
@@ -85,9 +86,8 @@ class Main : public CBase_Main {
       // create Decomposer
       decomposer = CProxy_Decomposer::ckNew();
 
-      // create placeholder for TreePieces
-      treepieces = CProxy_TreePiece::ckNew();
-      treepieces.doneInserting();
+      // create TreePieces
+      treepieces = CProxy_TreePiece::ckNew(n_chares);
 
       // start!
       start_time = CkWallTimer();

@@ -1,24 +1,20 @@
 #include "TreePiece.h"
-#include "Splitter.h"
 #include "Reader.h"
 
 extern CProxy_Reader readers;
+extern int n_chares;
 extern int max_ppl;
 
 TreePiece::TreePiece() {}
 
-void TreePiece::create(const CkCallback& cb) {
-  const CkVec<Splitter>& splitters = readers.ckLocalBranch()->getSplitters();
-  nPieces = splitters.size();
-  if (thisIndex < nPieces) {
-    n_expected = splitters[thisIndex].n_particles;
-    root = splitters[thisIndex].root;
-    tpRootKey_ = splitters[thisIndex].root;
+void TreePiece::initialize(const CkCallback& cb) {
+  if (thisIndex < n_chares) {
+    n_expected = readers.ckLocalBranch()->splitter_counts[thisIndex];
+    root_key = readers.ckLocalBranch()->splitters[thisIndex];
   }
   else {
     n_expected = 0;
-    root = 0;
-    tpRootKey_ = Key(0);
+    root_key = 0;
   }
 
   contribute(cb);
@@ -51,39 +47,37 @@ void TreePiece::check(const CkCallback& cb) {
 void TreePiece::build(const CkCallback &cb){
   callback_ = cb;
 
-  if(thisIndex < nPieces){
-    Particle *localParticles = NULL;
+  if(thisIndex < n_chares){
+    Particle* local_particles = NULL;
     if(particles.size() > 0){
-      localParticles = &particles[0];
+      local_particles = &particles[0];
     }
 
     // arguments to constructor of Node are:
     // key, depth, particle start index, num particles 
-    root_ = new Node(Key(1), 0, localParticles, particles.size());
+    root_node = new Node(Key(1), 0, local_particles, particles.size());
     // global root is shared by all (useful) tree pieces
-    root_->setOwnerStart(0);
-    root_->setOwnerEnd(nPieces);
+    root_node->setOwnerStart(0);
+    root_node->setOwnerEnd(n_chares);
 
-    root_->setParent(NULL);
-
-    const CkVec<Splitter> &splitters = readers.ckLocalBranch()->getSplitters();
+    root_node->setParent(NULL);
 
     // do only local build; don't ask for remote nodes'
     // payloads, but ensure they are correctly labeled;
     // submit tree to manager when done
 
-    build(splitters, root_, false);
+    build(root_node, false);
 
-    //treeHandle.registration(root_, this);
+    //treeHandle.registration(root_node, this);
   }
   else{
-    root_ = NULL;
+    root_node = NULL;
     CkAssert(particles.size() == 0);
   }
 
 #if DEBUG
   CkPrintf("[TP %d] Build done\n", thisIndex);
-  if (thisIndex == 0) print(root_);
+  if (thisIndex == 0) print(root_node);
 #endif
   contribute(cb);
 }
@@ -99,15 +93,14 @@ void TreePiece::print(Node *root){
   out.close();
 }
 
-
 // returns whether node and everything below it is entirely local
-bool TreePiece::build(const CkVec<Splitter> &splitters, Node *node, bool rootLiesOnPath){
+bool TreePiece::build(Node *node, bool rootLiesOnPath){
   node->tp() = thisIndex;
   // if we haven't seen the root of the tp yet, check whether
   // current node is the root; otherwise, don't perform this check:
   // once the tp root has been seen along a path, it stays that way
   if(!rootLiesOnPath){
-    rootLiesOnPath = (node->getKey() == tpRootKey_);
+    rootLiesOnPath = (node->getKey() == root_key);
   }
 
   int nodeNumParticles = node->getNumParticles();
@@ -122,7 +115,7 @@ bool TreePiece::build(const CkVec<Splitter> &splitters, Node *node, bool rootLie
     return true;
   }
   else if(isLight && !Utility::isPrefix(node->getKey(), node->getDepth(),
-              tpRootKey_, Utility::getDepthFromKey(tpRootKey_))){
+              root_key, Utility::getDepthFromKey(root_key))){
     // if we haven't seen the tp root yet, but encounter a light node,
     // this node could still be on the path from the global root to the
     // tp root; therefore, we do the Utility::isPrefix check. if in 
@@ -146,7 +139,7 @@ bool TreePiece::build(const CkVec<Splitter> &splitters, Node *node, bool rootLie
     if(ownerStart + 1 == ownerEnd){
       // single owner, i.e. is a tree piece root
       // how many particles were assigned to this tree piece?
-      int nParticlesAssigned = splitters[ownerStart].n_particles;
+      int nParticlesAssigned = readers.ckLocalBranch()->splitter_counts[ownerStart];
       if(nParticlesAssigned == 0){
         node->setType(RemoteEmptyLeaf);
       }
@@ -196,7 +189,7 @@ bool TreePiece::build(const CkVec<Splitter> &splitters, Node *node, bool rootLie
   for(int i = 0; i < nNodeChildren; i++){
     int firstGeIdx;
 
-    Key siblingSplitterKey = Splitter::convertKey(childKey + 1);
+    Key siblingSplitterKey = childKey + 1;
     if(i < nNodeChildren-1){
       firstGeIdx = Utility::binarySearchGE(siblingSplitterKey, nodeParticles, start, finish);
     }
@@ -219,7 +212,7 @@ bool TreePiece::build(const CkVec<Splitter> &splitters, Node *node, bool rootLie
         // if you have a right sibling, search through array of assigned
         // splitters and find the  index of the splitter that has the first key
         // GEQ the right sibling's, i.e. the first key not underneath this child
-        int firstGeTp = Utility::binarySearchGE(siblingSplitterKey, &splitters[0], ownerStart, ownerEnd); 
+        int firstGeTp = Utility::binarySearchGE(siblingSplitterKey, &(readers.ckLocalBranch()->splitters)[0], ownerStart, ownerEnd); 
         child->setOwnerEnd(firstGeTp);
         ownerStart = firstGeTp;
       }
@@ -230,7 +223,7 @@ bool TreePiece::build(const CkVec<Splitter> &splitters, Node *node, bool rootLie
       }
     }
 
-    bool local = build(splitters, child, rootLiesOnPath);
+    bool local = build(child, rootLiesOnPath);
 
     if (!local) {
       nonLocalChildren++;

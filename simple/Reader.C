@@ -97,6 +97,12 @@ void Reader::load(std::string input_file, const CkCallback& cb) {
 }
 
 void Reader::assignKeys(BoundingBox& universe, const CkCallback& cb) {
+  // generate particle keys
+  for (unsigned int i = 0; i < particles.size(); i++) {
+    particles[i].key = SFC::generateKey(particles[i].position, universe.box);
+  }
+
+  /*
   Vector3D<Real> universe_diag = universe.box.greater_corner - universe.box.lesser_corner;
   Vector3D<Real> relative_pos;
 
@@ -130,6 +136,7 @@ void Reader::assignKeys(BoundingBox& universe, const CkCallback& cb) {
     // save key
     particles[i].key = k;
   }
+  */
 
   // sort particles using their keys
   particles.quickSort();
@@ -138,19 +145,8 @@ void Reader::assignKeys(BoundingBox& universe, const CkCallback& cb) {
   contribute(cb);
 }
 
-void Reader::count(CkVec<Key>& keys, const CkCallback& cb) {
-  // convert keys to splitters
-  for (int i = 0; i < keys.size(); i++) {
-    // ignore largest key as it is a splitter
-    if (keys[i] == (~Key(0)))
-        continue;
-
-    Key& k = keys[i];
-    k = Splitter::convertKey(k);
-  }
-
-  CkVec<int> counts(keys.size() / 2);
-  CkAssert(counts.size() * 2 == keys.size());
+void Reader::count(CkVec<Key>& splitters, const CkCallback& cb) {
+  CkVec<int> counts(splitters.size()-1);
 
   // search for the first particle whose key is greater or equal to the input key,
   // in the range [start, finish)
@@ -158,8 +154,8 @@ void Reader::count(CkVec<Key>& keys, const CkCallback& cb) {
   int finish = particles.size();
   if (particles.size() > 0) {
     for (int i = 0; i < counts.size(); i++) {
-      Key from = keys[2*i];
-      Key to = keys[2*i+1];
+      Key from = splitters[i];
+      Key to = splitters[i+1];
 
       int begin = Utility::binarySearchGE(from, &particles[0], start, finish);
       int end = Utility::binarySearchGE(to, &particles[0], begin, finish);
@@ -177,24 +173,15 @@ void Reader::count(CkVec<Key>& keys, const CkCallback& cb) {
   contribute(sizeof(int) * counts.size(), &counts[0], CkReduction::sum_int, cb);
 }
 
-void Reader::setSplitters(CkVec<Splitter>& sp, const CkCallback& cb) {
-  splitters = sp;
-  contribute(cb);
-}
-
-const CkVec<Splitter>& Reader::getSplitters() {
-  return splitters;
-}
-
 void Reader::flush() {
   int start = 0;
   int finish = particles.size();
   int flush_count = 0;
 
   // send particles to owner TreePieces
-  for (int i = 0; i < splitters.size(); i++) {
-    Key from = splitters[i].from;
-    Key to = splitters[i].to;
+  for (int i = 0; i < splitters.size()-1; i++) {
+    Key from = splitters[i];
+    Key to = splitters[i+1];
 
     int begin = Utility::binarySearchGE(from, &particles[0], start, finish);
     int end = Utility::binarySearchGE(to, &particles[0], begin, finish);
