@@ -70,8 +70,8 @@ void Decomposer::findSplitters() {
   splitters.push_back(SFC::lastPossibleKey);
 
   // find desired number of particles preceding each splitter
-  splitter_goals = new int[n_chares];
-  num_goals_pending = n_chares;
+  num_goals_pending = n_chares - 1;
+  splitter_goals = new int[num_goals_pending];
 
   int avg = universe.n_particles / n_chares;
   int rem = universe.n_particles % n_chares;
@@ -91,6 +91,7 @@ void Decomposer::findSplitters() {
   // repeat until convergence
   while (1) {
     // histogramming
+    num_iterations++;
     readers.count(splitters, CkCallbackResumeThread((void*&)result));
     int* counts = static_cast<int*>(result->getData());
     int n_counts = result->getSize() / sizeof(int);
@@ -104,7 +105,38 @@ void Decomposer::findSplitters() {
 
     // TODO adjustSplitters
     adjustSplitters();
-    break;
+
+#if DEBUG
+    CkPrintf("[Decomposer] Probing %d  splitter keys\n", splitters.size());
+    CkPrintf("[Decomposer] Decided on %d splitting keys\n", final_splitters.size() -1);
+#endif
+
+    if (sorted) {
+        CkPrintf("[Decomposer] Histograms balanced after %d iterations\n", num_iterations);
+
+        std::sort(final_splitters.begin() + 1, final_splitters.end());
+        final_splitters.push_back(SFC::lastPossibleKey);
+        accumulated_bin_counts.push_back(bin_counts.back());
+        std::sort(accumulated_bin_counts.begin(), accumulated_bin_counts.end());
+        bin_counts.resize(accumulated_bin_counts.size());
+        std::adjacent_difference(accumulated_bin_counts.begin(), accumulated_bin_counts.end(), bin_counts.begin());
+        accumulated_bin_counts.clear();
+
+
+#if DEBUG
+        CkPrintf("0th Key: %lu, Last Key: %lu\n", final_splitters[0], final_splitters.back());
+        CkPrintf("0th Key: %lu, Last Key: %lu\n", SFC::firstPossibleKey, SFC::lastPossibleKey);
+
+
+        for (int i = 0; i < bin_counts.size(); i++) {
+            CkPrintf("[bin %d] %d particles\n", i, bin_counts[i]);
+        }
+#endif
+
+        sorted = false;
+        break;
+    }
+
   }
 
   /*

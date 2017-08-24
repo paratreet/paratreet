@@ -13,6 +13,7 @@ class Decomposer : public CBase_Decomposer {
   int* splitter_goals;
   int num_goals_pending;
   int tol_diff;
+  int num_iterations = 0;
 
   std::vector<Key> final_splitters;
   std::vector<int> accumulated_bin_counts;
