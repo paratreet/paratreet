@@ -11,14 +11,14 @@ class Reader : public CBase_Reader {
   BoundingBox box;
 
   public:
-    CkVec<Key> splitters;
-    CkVec<int> splitter_counts;
+    std::vector<Key> splitters;
+    std::vector<int> splitter_counts;
 
     Reader();
     void load(std::string, const CkCallback&);
     void assignKeys(BoundingBox&, const CkCallback&);
-    void count(CkVec<Key>&, const CkCallback&);
-    const CkVec<Key>& getSplitters();
+    void count(std::vector<Key>&, const CkCallback&);
+    const std::vector<Key>& getSplitters();
     void flush();
 };
 

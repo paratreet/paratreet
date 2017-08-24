@@ -145,8 +145,8 @@ void Reader::assignKeys(BoundingBox& universe, const CkCallback& cb) {
   contribute(cb);
 }
 
-void Reader::count(CkVec<Key>& splitters, const CkCallback& cb) {
-  CkVec<int> counts(splitters.size()-1);
+void Reader::count(std::vector<Key>& splitters, const CkCallback& cb) {
+  std::vector<int> counts(splitters.size()-1);
 
   // search for the first particle whose key is greater or equal to the input key,
   // in the range [start, finish)

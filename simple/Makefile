@@ -1,10 +1,10 @@
 CHARM_HOME ?= ~/UIUC/charm
-OPTS = -O3 -I../utility/structures -DDEBUG
+OPTS = -O3 -g -I../utility/structures -DDEBUG
 CHARMC = $(CHARM_HOME)/bin/charmc $(OPTS)
 LD_LIBS = -L../utility/structures -lTipsy
 
 BINARY = simple
-OBJS = Main.o Reader.o Particle.o BoundingBox.o Splitter.o Decomposer.o TreePiece.o Node.o
+OBJS = Main.o Reader.o Particle.o BoundingBox.o Decomposer.o TreePiece.o Node.o
 
 all: $(BINARY)
 
@@ -20,7 +20,7 @@ $(BINARY).decl.h: $(BINARY).ci
 clean:
 	rm -f *.decl.h *.def.h conv-host *.o $(BINARY) charmrun
 
-Main.o: Main.C $(BINARY).decl.h common.h Reader.h BoundingBox.h BufferedVec.h Splitter.h TreePiece.h
+Main.o: Main.C $(BINARY).decl.h common.h Reader.h BoundingBox.h BufferedVec.h TreePiece.h
 	$(CHARMC) -c $<
 
 Reader.o: Reader.C Reader.h Utility.h
@@ -30,9 +30,6 @@ Particle.o: Particle.C Particle.h
 	$(CHARMC) -c $<
 
 BoundingBox.o: BoundingBox.C BoundingBox.h
-	$(CHARMC) -c $<
-
-Splitter.o: Splitter.C Splitter.h Utility.h
 	$(CHARMC) -c $<
 
 Decomposer.o: Decomposer.C Decomposer.h

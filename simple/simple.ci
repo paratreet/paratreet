@@ -26,7 +26,7 @@ mainmodule simple {
     entry Reader();
     entry void load(std::string, const CkCallback&);
     entry void assignKeys(BoundingBox&, const CkCallback&);
-    entry void count(CkVec<Key>&, const CkCallback&);
+    entry void count(std::vector<Key>&, const CkCallback&);
     entry void flush();
   };
 
