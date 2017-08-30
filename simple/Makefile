@@ -1,5 +1,5 @@
-CHARM_HOME ?= ~/UIUC/charm
-OPTS = -O3 -g -I../utility/structures -DDEBUG
+CHARM_HOME ?= ~/charm
+OPTS = -O3 -I../utility/structures -DDEBUG
 CHARMC = $(CHARM_HOME)/bin/charmc $(OPTS)
 LD_LIBS = -L../utility/structures -lTipsy
 
