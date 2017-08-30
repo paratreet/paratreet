@@ -173,6 +173,12 @@ void Reader::count(std::vector<Key>& splitters, const CkCallback& cb) {
   contribute(sizeof(int) * counts.size(), &counts[0], CkReduction::sum_int, cb);
 }
 
+void Reader::setSplitters(const std::vector<Key>& sp, const std::vector<int>& bin_counts, const CkCallback& cb) {
+  splitters = sp;
+  splitter_counts = bin_counts;
+  contribute(cb);
+}
+
 void Reader::flush() {
   int start = 0;
   int finish = particles.size();

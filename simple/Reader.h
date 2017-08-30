@@ -18,6 +18,7 @@ class Reader : public CBase_Reader {
     void load(std::string, const CkCallback&);
     void assignKeys(BoundingBox&, const CkCallback&);
     void count(std::vector<Key>&, const CkCallback&);
+    void setSplitters(const std::vector<Key>&, const std::vector<int>&, const CkCallback&);
     const std::vector<Key>& getSplitters();
     void flush();
 };

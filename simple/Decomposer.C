@@ -33,10 +33,13 @@ void Decomposer::run() {
   readers.assignKeys(universe, CkCallbackResumeThread());
   CkPrintf("[Decomposer] Assigning keys and sorting particles: %lf seconds\n", CkWallTimer() - start_time);
 
-  // TODO find splitters that (almost) equally split particles
+  // find splitters that (almost) equally split particles
   start_time = CkWallTimer();
   findSplitters();
   CkPrintf("[Decomposer] Finding right splitters: %lf seconds\n", CkWallTimer() - start_time);
+
+  // broadcast finalized splitters and particle counts to Readers
+  readers.setSplitters(final_splitters, bin_counts, CkCallbackResumeThread());
 
   // initialize TreePieces
   treepieces.initialize(CkCallbackResumeThread());
@@ -88,6 +91,9 @@ void Decomposer::findSplitters() {
   // calculate tolerated difference in # of particles
   tol_diff = static_cast<int>(avg * decomp_tolerance);
 
+  // add first key as first splitter
+  final_splitters.push_back(SFC::firstPossibleKey);
+
   // repeat until convergence
   while (1) {
     // histogramming
@@ -103,18 +109,18 @@ void Decomposer::findSplitters() {
     // prefix sum
     std::partial_sum(bin_counts.begin(), bin_counts.end(), bin_counts.begin());
 
-    // TODO adjustSplitters
+    // adjust the splitters
     adjustSplitters();
 
 #if DEBUG
-    CkPrintf("[Decomposer] Probing %d  splitter keys\n", splitters.size());
+    CkPrintf("[Decomposer] Probing %d splitter keys\n", splitters.size());
     CkPrintf("[Decomposer] Decided on %d splitting keys\n", final_splitters.size() -1);
 #endif
 
     if (sorted) {
         CkPrintf("[Decomposer] Histograms balanced after %d iterations\n", num_iterations);
 
-        std::sort(final_splitters.begin() + 1, final_splitters.end());
+        std::sort(final_splitters.begin(), final_splitters.end());
         final_splitters.push_back(SFC::lastPossibleKey);
         accumulated_bin_counts.push_back(bin_counts.back());
         std::sort(accumulated_bin_counts.begin(), accumulated_bin_counts.end());
@@ -136,7 +142,6 @@ void Decomposer::findSplitters() {
         sorted = false;
         break;
     }
-
   }
 
   /*
@@ -200,7 +205,6 @@ void Decomposer::adjustSplitters() {
     bins_to_split.Zero();
     new_splitters.reserve(splitters.size() * 4);
     new_splitters.push_back(SFC::firstPossibleKey);
-
 
     Key left_bound, right_bound;
     vector<int>::iterator num_left_key, num_right_key = bin_counts.begin();
