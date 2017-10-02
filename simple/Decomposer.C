@@ -38,13 +38,13 @@ void Decomposer::run() {
   findSplitters();
   CkPrintf("[Decomposer] Finding right splitters: %lf seconds\n", CkWallTimer() - start_time);
 
-  // broadcast finalized splitters and particle counts to Readers
+  // broadcast finalized splitters and particle counts
   readers.setSplitters(final_splitters, bin_counts, CkCallbackResumeThread());
 
-  // initialize TreePieces
+  // initialize using splitters
   treepieces.initialize(CkCallbackResumeThread());
 
-  // have the readers distribute particles to treepieces
+  // distribute particles to treepieces
   readers.flush();
 
   // wait for all particles to be flushed
@@ -143,59 +143,6 @@ void Decomposer::findSplitters() {
         break;
     }
   }
-
-  /*
-  CkReductionMsg* result = NULL;
-  int num_splitters;
-
-  BufferedVec<Key> keys;
-  keys.add(Key(1));
-  keys.add(~Key(0));
-  keys.buffer();
-
-  // SFC decomposition
-  while (1) {
-    readers.count(keys.get(), CkCallbackResumeThread((void*&)result));
-    int* counts = (int*)result->getData();
-    int n_counts = result->getSize() / sizeof(int);
-
-    CkAssert(2 * n_counts == keys.size());
-
-    Real threshold = (Real)max_ppc * DECOMP_TOLERANCE;
-    for (int i = 0; i < n_counts; i++) {
-      Key from = keys.get(2*i);
-      Key to = keys.get(2*i+1);
-
-      int np = counts[i];
-      if ((Real)np > threshold) {
-        keys.add(from << 1);
-        keys.add((from << 1)+1);
-        keys.add((from << 1)+1);
-
-        if (to == (~Key(0))) {
-          keys.add(~Key(0));
-        }
-        else {
-          keys.add(to << 1);
-        }
-      }
-      else {
-        splitters.push_back(Splitter(Splitter::convertKey(from), Splitter::convertKey(to), from, np));
-      }
-    }
-
-    keys.buffer();
-    delete result;
-
-    if (keys.size() == 0)
-      break;
-  }
-
-  // sort splitters and send them to readers
-  splitters.quickSort();
-  readers.setSplitters(splitters, CkCallbackResumeThread());
-  n_splitters = splitters.size();
-  */
 }
 
 

@@ -10,6 +10,7 @@
 
 class TreePiece : public CBase_TreePiece {
   CkVec<Particle> particles;
+  int cur_idx;
   int n_expected;
   Key root_key;
   Node *root_node;

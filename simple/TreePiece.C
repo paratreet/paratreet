@@ -16,20 +16,21 @@ void TreePiece::initialize(const CkCallback& cb) {
     n_expected = 0;
     root_key = 0;
   }
+  cur_idx = 0;
 
   contribute(cb);
 }
 
 void TreePiece::receive(ParticleMsg* msg) {
+  particles.resize(particles.size() + msg->n_particles);
+  memcpy(&particles[cur_idx], msg->particles, msg->n_particles * sizeof(Particle));
+  cur_idx += msg->n_particles;
+  /*
   for (int i = 0; i < msg->n_particles; i++) {
     particles.push_back(msg->particles[i]);
   }
+  */
   delete msg;
-/*
-  particles.resize(n_particles + msg->n_particles);
-  memcpy(&particles[particle_index], msg->particles, msg->n_particles * sizeof(Particle));
-  particle_index += msg->n_particles;
-*/
 }
 
 void TreePiece::check(const CkCallback& cb) {
@@ -65,7 +66,6 @@ void TreePiece::build(const CkCallback &cb){
     // do only local build; don't ask for remote nodes'
     // payloads, but ensure they are correctly labeled;
     // submit tree to manager when done
-
     build(root_node, false);
 
     //treeHandle.registration(root_node, this);

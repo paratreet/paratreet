@@ -1,5 +1,5 @@
-#ifndef TREE_NODE_H
-#define TREE_NODE_H
+#ifndef SIMPLE_NODE_H_
+#define SIMPLE_NODE_H_
 #include <iostream>
 #include <string>
 #include "common.h"
@@ -242,4 +242,4 @@ class LeafIterator {
 };
 
 
-#endif // TREE_NODE_H
+#endif // SIMPLE_NODE_H_
