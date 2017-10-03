@@ -4,7 +4,7 @@ CHARMC = $(CHARM_HOME)/bin/charmc $(OPTS)
 LD_LIBS = -L../utility/structures -lTipsy
 
 BINARY = simple
-OBJS = Main.o Reader.o Particle.o BoundingBox.o Decomposer.o TreePiece.o Node.o
+OBJS = Main.o Reader.o Particle.o BoundingBox.o Decomposer.o TreePiece.o
 
 all: $(BINARY)
 
@@ -36,9 +36,6 @@ Decomposer.o: Decomposer.C Decomposer.h
 	$(CHARMC) -c $<
 
 TreePiece.o: TreePiece.C TreePiece.h
-	$(CHARMC) -c $<
-
-Node.o: Node.C Node.h
 	$(CHARMC) -c $<
 
 test: all

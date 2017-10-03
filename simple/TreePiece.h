@@ -6,15 +6,13 @@
 #include "Particle.h"
 #include "Node.h"
 #include "Utility.h"
-#include <fstream>
 
 class TreePiece : public CBase_TreePiece {
   CkVec<Particle> particles;
   int cur_idx;
   int n_expected;
-  Key root_key;
-  Node *root_node;
-  CkCallback callback_;
+  Key first_key;
+  Node* root;
 
   public:
     TreePiece();
@@ -22,8 +20,8 @@ class TreePiece : public CBase_TreePiece {
     void receive(ParticleMsg*);
     void check(const CkCallback&);
     void build(const CkCallback&);
+    void recursiveBuild(Node*);
     void print(Node*);
-    bool build(Node*, bool);
 };
 
 #endif // SIMPLE_TREEPIECE_H_
