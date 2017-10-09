@@ -78,7 +78,7 @@ void Reader::load(std::string input_file, const CkCallback& cb) {
     }
     particles[i].order = start_particle + i;
     particles[i].potential = 0.0;
-    
+
     box.grow(particles[i].position);
     box.mass += particles[i].mass;
     box.ke += particles[i].mass * particles[i].velocity.lengthSquared();

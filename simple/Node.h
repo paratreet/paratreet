@@ -8,8 +8,10 @@ typedef struct Node {
   int depth;
   int n_particles;
   int n_children;
-  Node* children;
+  std::vector<Node*> children;
   Node* parent;
+
+  Node() {}
 
   Node(Key start, Key end, int depth, int n_particles, Node* parent) {
     this->start = start;

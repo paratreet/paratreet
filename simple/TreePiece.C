@@ -5,6 +5,7 @@
 extern CProxy_Reader readers;
 extern int n_chares;
 extern int max_ppl;
+extern int tree_type;
 
 TreePiece::TreePiece() {}
 
@@ -47,7 +48,9 @@ void TreePiece::check(const CkCallback& cb) {
 }
 
 void TreePiece::build(const CkCallback &cb){
+  // create global root and recurse
   root = new Node(SFC::firstPossibleKey, SFC::lastPossibleKey, 0, particles.size(), NULL);
+  recursiveBuild(root);
 
   /*
   if(thisIndex < n_chares){
@@ -88,5 +91,12 @@ void TreePiece::recursiveBuild(Node* node) {
   // check if number of particles is below threshold
   if (node->n_particles > max_ppl) {
     // create children and check if bounding box has been divided
+    if (tree_type == OCT_TREE) {
+      node->n_children = 8;
+      for (int i = 0; i < node->n_children; i++) {
+        Node* child = new Node();
+        node->children.push_back(child);
+      }
+    }
   }
 }

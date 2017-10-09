@@ -118,101 +118,101 @@ void Decomposer::findSplitters() {
 #endif
 
     if (sorted) {
-        CkPrintf("[Decomposer] Histograms balanced after %d iterations\n", num_iterations);
+      CkPrintf("[Decomposer] Histograms balanced after %d iterations\n", num_iterations);
 
-        std::sort(final_splitters.begin(), final_splitters.end());
-        final_splitters.push_back(SFC::lastPossibleKey);
-        accumulated_bin_counts.push_back(bin_counts.back());
-        std::sort(accumulated_bin_counts.begin(), accumulated_bin_counts.end());
-        bin_counts.resize(accumulated_bin_counts.size());
-        std::adjacent_difference(accumulated_bin_counts.begin(), accumulated_bin_counts.end(), bin_counts.begin());
-        accumulated_bin_counts.clear();
+      std::sort(final_splitters.begin(), final_splitters.end());
+      final_splitters.push_back(SFC::lastPossibleKey);
+      accumulated_bin_counts.push_back(bin_counts.back());
+      std::sort(accumulated_bin_counts.begin(), accumulated_bin_counts.end());
+      bin_counts.resize(accumulated_bin_counts.size());
+      std::adjacent_difference(accumulated_bin_counts.begin(), accumulated_bin_counts.end(), bin_counts.begin());
+      accumulated_bin_counts.clear();
 
 
 #if DEBUG
-        CkPrintf("0th Key: %lu, Last Key: %lu\n", final_splitters[0], final_splitters.back());
-        CkPrintf("0th Key: %lu, Last Key: %lu\n", SFC::firstPossibleKey, SFC::lastPossibleKey);
+      CkPrintf("0th Key: %lu, Last Key: %lu\n", final_splitters[0], final_splitters.back());
+      CkPrintf("0th Key: %lu, Last Key: %lu\n", SFC::firstPossibleKey, SFC::lastPossibleKey);
 
 
-        for (int i = 0; i < bin_counts.size(); i++) {
-            CkPrintf("[bin %d] %d particles\n", i, bin_counts[i]);
-        }
+      for (int i = 0; i < bin_counts.size(); i++) {
+        CkPrintf("[bin %d] %d particles\n", i, bin_counts[i]);
+      }
 #endif
 
-        sorted = false;
-        break;
+      sorted = false;
+      break;
     }
   }
 }
 
 
 void Decomposer::adjustSplitters() {
-    std::vector<Key> new_splitters;
-    bins_to_split.Resize(splitters.size() - 1);
-    bins_to_split.Zero();
-    new_splitters.reserve(splitters.size() * 4);
-    new_splitters.push_back(SFC::firstPossibleKey);
+  std::vector<Key> new_splitters;
+  bins_to_split.Resize(splitters.size() - 1);
+  bins_to_split.Zero();
+  new_splitters.reserve(splitters.size() * 4);
+  new_splitters.push_back(SFC::firstPossibleKey);
 
-    Key left_bound, right_bound;
-    vector<int>::iterator num_left_key, num_right_key = bin_counts.begin();
+  Key left_bound, right_bound;
+  vector<int>::iterator num_left_key, num_right_key = bin_counts.begin();
 
-    int num_active_goals = 0;
-    // for each goal not achieved yet (i.e splitter key not found)
-    for (int i = 0; i < num_goals_pending; i++) {
-        //find positions that bracket the goal
-        num_right_key = std::lower_bound(num_right_key, bin_counts.end(), splitter_goals[i]);
-        num_left_key = num_right_key - 1;
+  int num_active_goals = 0;
+  // for each goal not achieved yet (i.e splitter key not found)
+  for (int i = 0; i < num_goals_pending; i++) {
+    //find positions that bracket the goal
+    num_right_key = std::lower_bound(num_right_key, bin_counts.end(), splitter_goals[i]);
+    num_left_key = num_right_key - 1;
 
-        if (num_right_key == bin_counts.begin())
-            ckerr << "Decomposer : Looking for " << splitter_goals[i] << "This is at beginning?" << endl;
-        if (num_right_key == bin_counts.end())
-            ckerr << "Decomposer : Looking for " << splitter_goals[i] << "This is at end?" << endl;
+    if (num_right_key == bin_counts.begin())
+      ckerr << "Decomposer : Looking for " << splitter_goals[i] << "This is at beginning?" << endl;
+    if (num_right_key == bin_counts.end())
+      ckerr << "Decomposer : Looking for " << splitter_goals[i] << "This is at end?" << endl;
 
-        //translate positions into bracketing keys
-        left_bound = splitters[num_left_key - bin_counts.begin()];
-        right_bound = splitters[num_right_key - bin_counts.begin()];
+    //translate positions into bracketing keys
+    left_bound = splitters[num_left_key - bin_counts.begin()];
+    right_bound = splitters[num_right_key - bin_counts.begin()];
 
-        //check if one of the bounds is close enough to the goal
-        if (abs(*num_left_key - splitter_goals[i]) <= tol_diff) {
-            // add this key to the list of final splitters
-            final_splitters.push_back(left_bound);
-            accumulated_bin_counts.push_back(*num_left_key);
-        }
-        else if (abs(*num_right_key - splitter_goals[i]) <= tol_diff) {
-            final_splitters.push_back(right_bound);
-            accumulated_bin_counts.push_back(*num_right_key);
-        }
-        else {
-            //not close enough yet, add the bounds and the middle to the probes
-            //bottom bits are set to avoid deep trees
-            if (new_splitters.back() != (right_bound | 7L)) {
-                if (new_splitters.back() != (left_bound | 7L)) {
-                    new_splitters.push_back(left_bound | 7L);
-                }
-
-                new_splitters.push_back((left_bound / 4 * 3 + right_bound / 4) | 7L);
-                new_splitters.push_back((left_bound / 2 + right_bound / 2) | 7L);
-                new_splitters.push_back((left_bound / 4 + right_bound / 4 * 3) | 7L);
-                new_splitters.push_back(right_bound  | 7L);
-            }
-
-            splitter_goals[num_active_goals++] = splitter_goals[i];
-            bins_to_split.Set(num_left_key - bin_counts.begin());
-        }
+    //check if one of the bounds is close enough to the goal
+    if (abs(*num_left_key - splitter_goals[i]) <= tol_diff) {
+      // add this key to the list of final splitters
+      final_splitters.push_back(left_bound);
+      accumulated_bin_counts.push_back(*num_left_key);
     }
-
-    num_goals_pending = num_active_goals;
-
-    if (num_goals_pending == 0) {
-        sorted = true;
-        delete [] splitter_goals;
+    else if (abs(*num_right_key - splitter_goals[i]) <= tol_diff) {
+      final_splitters.push_back(right_bound);
+      accumulated_bin_counts.push_back(*num_right_key);
     }
     else {
-        if (new_splitters.back() != SFC::lastPossibleKey) {
-            new_splitters.push_back(SFC::lastPossibleKey);
+      //not close enough yet, add the bounds and the middle to the probes
+      //bottom bits are set to avoid deep trees
+      if (new_splitters.back() != (right_bound | 7L)) {
+        if (new_splitters.back() != (left_bound | 7L)) {
+          new_splitters.push_back(left_bound | 7L);
         }
-        splitters.reserve(new_splitters.size());
-        splitters.assign(new_splitters.begin(), new_splitters.end());
+
+        new_splitters.push_back((left_bound / 4 * 3 + right_bound / 4) | 7L);
+        new_splitters.push_back((left_bound / 2 + right_bound / 2) | 7L);
+        new_splitters.push_back((left_bound / 4 + right_bound / 4 * 3) | 7L);
+        new_splitters.push_back(right_bound  | 7L);
+      }
+
+      splitter_goals[num_active_goals++] = splitter_goals[i];
+      bins_to_split.Set(num_left_key - bin_counts.begin());
     }
+  }
+
+  num_goals_pending = num_active_goals;
+
+  if (num_goals_pending == 0) {
+    sorted = true;
+    delete [] splitter_goals;
+  }
+  else {
+    if (new_splitters.back() != SFC::lastPossibleKey) {
+      new_splitters.push_back(SFC::lastPossibleKey);
+    }
+    splitters.reserve(new_splitters.size());
+    splitters.assign(new_splitters.begin(), new_splitters.end());
+  }
 }
 
