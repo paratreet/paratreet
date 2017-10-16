@@ -102,42 +102,6 @@ void Reader::assignKeys(BoundingBox& universe, const CkCallback& cb) {
     particles[i].key = SFC::generateKey(particles[i].position, universe.box);
   }
 
-  /*
-  Vector3D<Real> universe_diag = universe.box.greater_corner - universe.box.lesser_corner;
-  Vector3D<Real> relative_pos;
-
-  // prepare mask to set MSB to 1
-  Key prepend = 1L << (KEY_BITS-1);
-
-  // FIXME could be heavy work for a single PE to handle
-  for (unsigned int i = 0; i < particles.size(); i++) {
-    // compute key
-    relative_pos = (particles[i].position - universe.box.lesser_corner) / universe_diag * ((Real)BOXES_PER_DIM);
-
-    Key xint = (Key)relative_pos.x;
-    Key yint = (Key)relative_pos.y;
-    Key zint = (Key)relative_pos.z;
-
-    // interleave bits
-    Key mask = Key(0x1);
-    Key k = Key(0x0);
-    int shift_by = 0;
-    for (int j = 0; j < BITS_PER_DIM; j++) {
-      k |= (zint & mask) << shift_by;
-      k |= (yint & mask) << (shift_by+1);
-      k |= (xint & mask) << (shift_by+2);
-      mask <<= 1;
-      shift_by += (NDIM-1);
-    }
-
-    // set MSB to 1
-    k |= prepend;
-
-    // save key
-    particles[i].key = k;
-  }
-  */
-
   // sort particles using their keys
   particles.quickSort();
 

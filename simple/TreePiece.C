@@ -1,4 +1,5 @@
 #include <fstream>
+#include <bitset>
 #include "TreePiece.h"
 #include "Reader.h"
 
@@ -10,28 +11,27 @@ extern int tree_type;
 TreePiece::TreePiece() {}
 
 void TreePiece::initialize(const CkCallback& cb) {
-  if (thisIndex < n_chares) {
-    n_expected = readers.ckLocalBranch()->splitter_counts[thisIndex];
-    first_key = readers.ckLocalBranch()->splitters[thisIndex];
-  }
-  else {
-    n_expected = 0;
-    first_key = 0;
-  }
+  n_expected = readers.ckLocalBranch()->splitter_counts[thisIndex];
+  splitter_key = readers.ckLocalBranch()->splitters[thisIndex];
+  splitter_key |= (Key)1 << (KEY_BITS-1); // add placeholder bit
+
   cur_idx = 0;
 
   contribute(cb);
 }
 
 void TreePiece::receive(ParticleMsg* msg) {
+  // copy particles to local vector
   particles.resize(particles.size() + msg->n_particles);
   memcpy(&particles[cur_idx], msg->particles, msg->n_particles * sizeof(Particle));
-  cur_idx += msg->n_particles;
-  /*
+
+  // add placeholder bit to particle keys for tree building
   for (int i = 0; i < msg->n_particles; i++) {
-    particles.push_back(msg->particles[i]);
+    particles[cur_idx + i].key |= (Key)1 << (KEY_BITS-1);
   }
-  */
+
+  cur_idx += msg->n_particles;
+
   delete msg;
 }
 
@@ -48,55 +48,47 @@ void TreePiece::check(const CkCallback& cb) {
 }
 
 void TreePiece::build(const CkCallback &cb){
+  // store first and last keys
+  first_key = particles[0].key;
+  last_key = particles[particles.size()-1].key;
+#if DEBUG
+  std::cout << "[TP " << thisIndex << "] " << std::bitset<64>(splitter_key) << ", " << std::bitset<64>(first_key) << " -> " << std::bitset<64>(last_key) << std::endl;
+#endif
+
   // create global root and recurse
-  root = new Node(SFC::firstPossibleKey, SFC::lastPossibleKey, 0, particles.size(), NULL);
-  recursiveBuild(root);
-
-  /*
-  if(thisIndex < n_chares){
-    Particle* local_particles = NULL;
-    if(particles.size() > 0){
-      local_particles = &particles[0];
-    }
-
-    // arguments to constructor of Node are:
-    // key, depth, particle start index, num particles
-    root_node = new Node(Key(1), 0, local_particles, particles.size());
-    // global root is shared by all (useful) tree pieces
-    root_node->setOwnerStart(0);
-    root_node->setOwnerEnd(n_chares);
-
-    root_node->setParent(NULL);
-
-    // do only local build; don't ask for remote nodes'
-    // payloads, but ensure they are correctly labeled;
-    // submit tree to manager when done
-    build(root_node, false);
-
-    //treeHandle.registration(root_node, this);
-  }
-  else{
-    root_node = NULL;
-    CkAssert(particles.size() == 0);
-  }
-  */
+  root = new Node(1, SFC::firstPossibleKey, SFC::lastPossibleKey, 0, particles.size(), NULL);
+  recursiveBuild(root, false);
 
 #if DEBUG
-  CkPrintf("[TP %d] Build done\n", thisIndex);
+  //CkPrintf("[TP %d] Build done\n", thisIndex);
 #endif
   contribute(cb);
 }
 
-void TreePiece::recursiveBuild(Node* node) {
-  // check if number of particles is below threshold
-  if (node->n_particles > max_ppl) {
-    // create children and check if bounding box has been divided
-    if (tree_type == OCT_TREE) {
-      node->n_children = 8;
-      for (int i = 0; i < node->n_children; i++) {
-        Node* child = new Node();
-        node->children.push_back(child);
-      }
-    }
+void TreePiece::recursiveBuild(Node* node, bool saw_splitter_key) {
+  // TODO BIG PROBLEM: splitter key in our case is different from tpRootKey in Distree, where it is a Oct decomposition node key
+  // Distree is using Binary decomposition based on SFC keys, but we are using SFC decomposition on SFC keys
+
+  // check if we have seen splitter key
+  if (!saw_splitter_key) {
+    saw_splitter_key = (node->key == splitter_key);
+  }
+
+  // check if node has less particles than threshold
+  bool is_light = (node->n_particles <= BUCKET_TOLERANCE * max_ppl);
+
+  // check if the node's key is a prefix to the TreePiece's root
+  bool is_prefix = Utility::isPrefix(node->key, Utility::getDepthFromKey(node->key), splitter_key, Utility::getDepthFromKey(splitter_key));
+
+  if (saw_splitter_key && is_light) {
+    // we are under the splitter key in the tree and the node is light,
+    // so we can make the node a local leaf
+    if (node->n_particles == 0)
+      node->type = Node::EmptyLeaf;
+    else
+      node->type = Node::Leaf;
+  }
+  else if (is_light && !is_prefix) {
+    // the node is light but we haven't seen the splitter key yet, 
   }
 }
