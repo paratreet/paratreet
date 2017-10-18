@@ -36,6 +36,7 @@ void Decomposer::run() {
   // assign keys and sort particles locally
   start_time = CkWallTimer();
   readers.assignKeys(universe, CkCallbackResumeThread());
+        //color[3] = Math.floor(new_points[x][y] * 255);
   CkPrintf("[Decomposer] Assigning keys and sorting particles: %lf seconds\n", CkWallTimer() - start_time);
 
   // find splitters for decomposition
@@ -65,6 +66,8 @@ void Decomposer::run() {
   // wait for all particles to be flushed
   CkStartQD(CkCallbackResumeThread());
 
+  CkExit();
+/*
 #ifdef DEBUG
   // check if all treepieces have received the right number of particles
   if (decomp_type == SFC_DECOMP) {
@@ -77,6 +80,7 @@ void Decomposer::run() {
 
   // start local build of trees in all treepieces
   treepieces.build(CkCallback(CkIndex_Main::terminate(), mainProxy));
+  */
 }
 
 void Decomposer::findSplitters() {
@@ -89,6 +93,8 @@ void Decomposer::findSplitters() {
     keys.add(~Key(0));
     keys.buffer();
 
+    int decomp_sum = 0;
+
     CkReductionMsg *msg;
     while (true) {
       // send splitters to readers for histogramming
@@ -96,7 +102,7 @@ void Decomposer::findSplitters() {
       int* counts = (int*)msg->getData();
       int n_counts = msg->getSize() / sizeof(int);
 
-      // check counts and adjust splitters if necessary
+      // check counts and create splitters if necessary
       Real threshold = (DECOMP_TOLERANCE * Real(max_ppc));
       for (int i = 0; i < n_counts; i++) {
         Key from = keys.get(2*i);
@@ -104,38 +110,24 @@ void Decomposer::findSplitters() {
 
         int n_particles = counts[i];
         if ((Real)n_particles > threshold) {
-          keys.add(from << 3);
-          keys.add(from << 3 + 1);
-
-          keys.add(from << 3 + 1);
-          keys.add(from << 3 + 2);
-
-          keys.add(from << 3 + 2);
-          keys.add(from << 3 + 3);
-
-          keys.add(from << 3 + 3);
-          keys.add(from << 3 + 4);
-
-          keys.add(from << 3 + 4);
-          keys.add(from << 3 + 5);
-
-          keys.add(from << 3 + 5);
-          keys.add(from << 3 + 6);
-
-          keys.add(from << 3 + 6);
-          keys.add(from << 3 + 7);
-
-          keys.add(from << 3 + 7);
+          keys.add(from << 1);
+          keys.add((from << 1) + 1);
+          keys.add((from << 1) + 1);
           if (to == (~Key(0)))
             keys.add(~Key(0));
           else
-            keys.add(to << 3);
+            keys.add(to << 1);
         }
         else {
-          splitters.push_back(Utility::shiftLeadingZerosLeft(from)); // for flushing
-          final_splitters.push_back(from); // for tree building
+          // for flushing
+          splitters.push_back(Utility::shiftLeadingZerosLeft(from));
+          splitters.push_back(Utility::shiftLeadingZerosLeft(to));
+          // for tree build
+          final_splitters.push_back(from);
+
+          // store number of particles
           bin_counts.push_back(n_particles);
-          std::cout << "splitter: " << std::bitset<64>(from) << ", " << n_particles << std::endl;
+          decomp_sum += n_particles;
         }
       }
 
@@ -146,11 +138,9 @@ void Decomposer::findSplitters() {
         break;
     }
 
-    // add largest key as last splitter, used in flushing
-    splitters.push_back(~Key(0));
-
-    n_treepieces = final_splitters.size() - 1;
+    n_treepieces = final_splitters.size();
 #if DEBUG
+    CkPrintf("[Decomposer] %d particles decomposed\n", decomp_sum);
     CkPrintf("[Decomposer] Number of TreePieces with OCT decomposition: %d\n", n_treepieces);
 #endif
 

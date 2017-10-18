@@ -1,7 +1,8 @@
-CHARM_HOME ?= ~/work/charm
-OPTS = -O3 -I../utility/structures -DDEBUG
+CHARM_HOME ?= ~/charm
+STRUCTURE_PATH = ../utility/structures
+OPTS = -O3 -I$(STRUCTURE_PATH) -DDEBUG
 CHARMC = $(CHARM_HOME)/bin/charmc $(OPTS)
-LD_LIBS = -L../utility/structures -lTipsy
+LD_LIBS = -L$(STRUCTURE_PATH) -lTipsy
 
 BINARY = simple
 OBJS = Main.o Reader.o Particle.o BoundingBox.o Decomposer.o TreePiece.o
@@ -20,22 +21,34 @@ $(BINARY).decl.h: $(BINARY).ci
 clean:
 	rm -f *.decl.h *.def.h conv-host *.o $(BINARY) charmrun
 
-Main.o: Main.C $(BINARY).decl.h common.h Reader.h BoundingBox.h BufferedVec.h TreePiece.h
+common.h: $(STRUCTURE_PATH)/Vector3D.h $(STRUCTURE_PATH)/SFC.h
+
+Main.o: Main.C $(BINARY).decl.h common.h Reader.h Decomposer.h TreePiece.h BoundingBox.h BufferedVec.h
 	$(CHARMC) -c $<
 
-Reader.o: Reader.C Reader.h Utility.h
+Reader.h: $(BINARY).decl.h common.h Particle.h BoundingBox.h
+
+Reader.o: Reader.C Reader.h
 	$(CHARMC) -c $<
+
+Particle.h: $(BINARY).decl.h common.h
 
 Particle.o: Particle.C Particle.h
 	$(CHARMC) -c $<
 
+BoundingBox.h: $(STRUCTURE_PATH)/OrientedBox.h common.h
+
 BoundingBox.o: BoundingBox.C BoundingBox.h
 	$(CHARMC) -c $<
 
-Decomposer.o: Decomposer.C Decomposer.h
+Decomposer.h: $(BINARY).decl.h common.h
+
+Decomposer.o: Decomposer.C Decomposer.h BufferedVec.h Utility.h
 	$(CHARMC) -c $<
 
-TreePiece.o: TreePiece.C TreePiece.h
+TreePiece.h: $(BINARY).decl.h common.h Particle.h Node.h Utility.h
+
+TreePiece.o: TreePiece.C TreePiece.h Reader.h
 	$(CHARMC) -c $<
 
 test: all

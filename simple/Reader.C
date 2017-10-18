@@ -1,6 +1,8 @@
 #include "TipsyFile.h"
 #include "Reader.h"
 #include "Utility.h"
+#include <bitset>
+#include <iostream>
 
 extern CProxy_Main mainProxy;
 extern CProxy_TreePiece treepieces;
@@ -183,9 +185,23 @@ void Reader::flush() {
   int flush_count = 0;
 
   // send particles to owner TreePieces
-  for (int i = 0; i < splitters.size()-1; i++) {
-    Key from = splitters[i];
-    Key to = splitters[i+1];
+  int max;
+  Key from, to;
+  if (decomp_type == OCT_DECOMP)
+    max = splitters.size() / 2;
+  else if (decomp_type == SFC_DECOMP)
+    max = splitters.size() - 1;
+  std::cout << "max: " << max << std::endl;
+  for (int i = 0; i < max; i++) {
+    if (decomp_type == OCT_DECOMP) {
+      from = splitters[2*i];
+      to = splitters[2*i+1];
+      std::cout << std::bitset<64>(Utility::shiftLeadingZerosLeft(from)) << ", " << std::bitset<64>(Utility::shiftLeadingZerosLeft(to)) << std::endl;
+    }
+    else if (decomp_type == SFC_DECOMP) {
+      from = splitters[i];
+      to = splitters[i+1];
+    }
 
     int begin = Utility::binarySearchGE(from, &particles[0], start, finish);
     int end = Utility::binarySearchGE(to, &particles[0], begin, finish);

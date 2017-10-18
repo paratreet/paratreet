@@ -1,8 +1,8 @@
 #ifndef SIMPLE_PARTICLE_H_
 #define SIMPLE_PARTICLE_H_
 
-#include "common.h"
 #include "simple.decl.h"
+#include "common.h"
 
 struct Particle {
   Key key;
