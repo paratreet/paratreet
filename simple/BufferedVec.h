@@ -1,17 +1,17 @@
 #ifndef SIMPLE_BUFFERED_VEC_H_
 #define SIMPLE_BUFFERED_VEC_H_
 
-#include "cklists.h"
+#include "common.h"
 
 template<typename T>
 class BufferedVec {
-  CkVec<T> *new_vec;
-  CkVec<T> *buf_vec;
+  std::vector<T> *new_vec;
+  std::vector<T> *buf_vec;
 
   public:
   BufferedVec(){
-    new_vec = new CkVec<T>;
-    buf_vec = new CkVec<T>;
+    new_vec = new std::vector<T>;
+    buf_vec = new std::vector<T>;
   }
 
   void add(T &t){
@@ -23,7 +23,7 @@ class BufferedVec {
   }
 
   void buffer(){
-    CkVec<T> *tmp = new_vec;
+    std::vector<T> *tmp = new_vec;
     new_vec = buf_vec;;
     buf_vec = tmp;
     new_vec->resize(0);
@@ -33,7 +33,7 @@ class BufferedVec {
     return (*buf_vec)[i];
   }
 
-  CkVec<T> &get(){
+  std::vector<T> &get(){
     return *buf_vec;
   }
 

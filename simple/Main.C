@@ -16,12 +16,14 @@
 /* readonly */ int n_readers;
 /* readonly */ int n_chares;
 /* readonly */ double decomp_tolerance;
+/* readonly */ int max_ppc; // particles per chare (treepiece)
 /* readonly */ int max_ppl; // particles per leaf
+/* readonly */ int decomp_type;
 /* readonly */ int tree_type;
 
 class Main : public CBase_Main {
   double start_time;
-  std::string tree_str;
+  std::string input_str;
   int n_treepieces;
 
   public:
@@ -36,12 +38,14 @@ class Main : public CBase_Main {
       input_file = "";
       n_chares = 128;
       decomp_tolerance = 0.1;
+      max_ppc = 10;
       max_ppl = 10;
+      decomp_type = OCT_DECOMP;
       tree_type = OCT_TREE;
 
       // handle arguments
       int c;
-      while ((c = getopt(m->argc, m->argv, "f:c:l:t:")) != -1) {
+      while ((c = getopt(m->argc, m->argv, "f:c:p:l:d:t:")) != -1) {
         switch (c) {
           case 'f':
             input_file = optarg;
@@ -49,15 +53,27 @@ class Main : public CBase_Main {
           case 'c':
             n_chares = atoi(optarg);
             break;
+          case 'p':
+            max_ppc = atoi(optarg);
+            break;
           case 'l':
             max_ppl = atoi(optarg);
             break;
+          case 'd':
+            input_str = optarg;
+            if (input_str.compare("oct") == 0) {
+              decomp_type = OCT_DECOMP;
+            }
+            else if (input_str.compare("sfc") == 0) {
+              decomp_type = SFC_DECOMP;
+            }
+            break;
           case 't':
-            tree_str = optarg;
-            if (tree_str.compare("oct") == 0) {
+            input_str = optarg;
+            if (input_str.compare("oct") == 0) {
               tree_type = OCT_TREE;
             }
-            else if (tree_str.compare("sfc") == 0) {
+            else if (input_str.compare("sfc") == 0) {
               tree_type = SFC_TREE;
             }
             break;
@@ -75,9 +91,15 @@ class Main : public CBase_Main {
       // print settings
       CkPrintf("\n[SIMPLE TREE]\n");
       CkPrintf("Input file: %s\n", input_file.c_str());
-      CkPrintf("# of chares: %d\n", n_chares);
-      CkPrintf("Max # of particles per leaf: %d\n", max_ppl);
-      CkPrintf("Tree type: %s\n\n", (tree_type == OCT_TREE) ? "OCT" : "SFC");
+      CkPrintf("Decomposition type: %s\n", (decomp_type == OCT_DECOMP) ? "OCT" : "SFC");
+      CkPrintf("Tree type: %s\n", (tree_type == OCT_TREE) ? "OCT" : "SFC");
+      if (decomp_type == SFC_DECOMP) {
+        CkPrintf("# of chares: %d\n", n_chares);
+      }
+      if (decomp_type == OCT_DECOMP) {
+        CkPrintf("Max # of particles per chare: %d\n", max_ppc);
+      }
+      CkPrintf("Max # of particles per leaf: %d\n\n", max_ppl);
 
       // create Readers
       n_readers = CkNumNodes();
@@ -86,8 +108,14 @@ class Main : public CBase_Main {
       // create Decomposer
       decomposer = CProxy_Decomposer::ckNew();
 
-      // create TreePieces
-      treepieces = CProxy_TreePiece::ckNew(n_chares);
+      // create TreePieces or placeholder for them
+      if (decomp_type == OCT_DECOMP) {
+        treepieces = CProxy_TreePiece::ckNew();
+        treepieces.doneInserting();
+      }
+      else if (decomp_type == SFC_DECOMP) {
+        treepieces = CProxy_TreePiece::ckNew(n_chares);
+      }
 
       // start!
       start_time = CkWallTimer();

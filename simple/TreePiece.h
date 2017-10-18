@@ -11,7 +11,7 @@ class TreePiece : public CBase_TreePiece {
   CkVec<Particle> particles;
   int cur_idx;
   int n_expected;
-  Key splitter_key; // all local particles' keys should be greater than this
+  Key tp_key; // all local particles' keys should be greater than this
   Key first_key; // key of first local particle in SFC order
   Key last_key; // key of last local particle
   Node* root;
@@ -19,6 +19,7 @@ class TreePiece : public CBase_TreePiece {
   public:
     TreePiece();
     void initialize(const CkCallback&);
+    void create();
     void receive(ParticleMsg*);
     void check(const CkCallback&);
     void build(const CkCallback&);

@@ -5,6 +5,7 @@
 extern CProxy_Main mainProxy;
 extern CProxy_TreePiece treepieces;
 extern int n_readers;
+extern int decomp_type;
 
 Reader::Reader() {}
 
@@ -100,6 +101,9 @@ void Reader::assignKeys(BoundingBox& universe, const CkCallback& cb) {
   // generate particle keys
   for (unsigned int i = 0; i < particles.size(); i++) {
     particles[i].key = SFC::generateKey(particles[i].position, universe.box);
+
+    // add placeholder bit
+    particles[i].key |= (Key)1 << (KEY_BITS-1);
   }
 
   // sort particles using their keys
@@ -110,7 +114,19 @@ void Reader::assignKeys(BoundingBox& universe, const CkCallback& cb) {
 }
 
 void Reader::count(std::vector<Key>& splitters, const CkCallback& cb) {
-  std::vector<int> counts(splitters.size()-1);
+  std::vector<int> counts;
+  if (decomp_type == OCT_DECOMP) {
+    counts.resize(splitters.size() / 2);
+    for (int i = 0; i < splitters.size(); i++) {
+      if (splitters[i] == (~Key(0)))
+        continue;
+      else
+        splitters[i] = Utility::shiftLeadingZerosLeft(splitters[i]);
+    }
+  }
+  else if (decomp_type == SFC_DECOMP) {
+    counts.resize(splitters.size()-1);
+  }
 
   // search for the first particle whose key is greater or equal to the input key,
   // in the range [start, finish)
@@ -118,8 +134,15 @@ void Reader::count(std::vector<Key>& splitters, const CkCallback& cb) {
   int finish = particles.size();
   if (particles.size() > 0) {
     for (int i = 0; i < counts.size(); i++) {
-      Key from = splitters[i];
-      Key to = splitters[i+1];
+      Key from, to;
+      if (decomp_type == OCT_DECOMP) {
+        from = splitters[2*i];
+        to = splitters[2*i+1];
+      }
+      else if (decomp_type == SFC_DECOMP) {
+        from = splitters[i];
+        to = splitters[i+1];
+      }
 
       int begin = Utility::binarySearchGE(from, &particles[0], start, finish);
       int end = Utility::binarySearchGE(to, &particles[0], begin, finish);
@@ -135,6 +158,17 @@ void Reader::count(std::vector<Key>& splitters, const CkCallback& cb) {
   }
 
   contribute(sizeof(int) * counts.size(), &counts[0], CkReduction::sum_int, cb);
+}
+
+void Reader::setTPKeysAndSplitters(const std::vector<Key>& keys, const std::vector<Key>& sp, const CkCallback& cb) {
+  tp_keys = keys;
+  splitters = sp;
+  contribute(cb);
+}
+
+void Reader::setSplitters(const std::vector<Key>& sp, const CkCallback& cb) {
+  splitters = sp;
+  contribute(cb);
 }
 
 void Reader::setSplitters(const std::vector<Key>& sp, const std::vector<int>& bin_counts, const CkCallback& cb) {

@@ -18,6 +18,8 @@ class Decomposer : public CBase_Decomposer {
   std::vector<Key> final_splitters;
   std::vector<int> accumulated_bin_counts;
 
+  int n_treepieces; // OCT decomposition
+
   bool sorted; // flag to tell if we are done
 
   // members added for adjustSplitters

@@ -8,7 +8,9 @@ mainmodule simple {
   readonly int n_readers;
   readonly int n_chares;
   readonly double decomp_tolerance;
+  readonly int max_ppc;
   readonly int max_ppl;
+  readonly int decomp_type;
   readonly int tree_type;
 
   mainchare Main {
@@ -27,6 +29,8 @@ mainmodule simple {
     entry void load(std::string, const CkCallback&);
     entry void assignKeys(BoundingBox&, const CkCallback&);
     entry void count(std::vector<Key>&, const CkCallback&);
+    entry void setTPKeysAndSplitters(const std::vector<Key>&, const std::vector<Key>&, const CkCallback&);
+    entry void setSplitters(const std::vector<Key>&, const CkCallback&);
     entry void setSplitters(const std::vector<Key>&, const std::vector<int>&, const CkCallback&);
     entry void flush();
   };
@@ -38,6 +42,7 @@ mainmodule simple {
   array [1d] TreePiece {
     entry TreePiece();
     entry void initialize(const CkCallback&);
+    entry [createhome] void create();
     entry void receive(ParticleMsg*);
     entry void check(const CkCallback&);
     entry void build(const CkCallback&);

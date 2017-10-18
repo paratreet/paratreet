@@ -15,9 +15,13 @@ typedef double Real;
 #define REAL_MAX DBL_MAX
 #endif
 
+/* Decomposition types */
+#define OCT_DECOMP 10
+#define SFC_DECOMP 11
+
 /* Tree types */
-#define OCT_TREE 10
-#define SFC_TREE 11
+#define OCT_TREE 20
+#define SFC_TREE 21
 
 #define NDIM 3
 
