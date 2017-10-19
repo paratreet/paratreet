@@ -36,7 +36,6 @@ void Decomposer::run() {
   // assign keys and sort particles locally
   start_time = CkWallTimer();
   readers.assignKeys(universe, CkCallbackResumeThread());
-        //color[3] = Math.floor(new_points[x][y] * 255);
   CkPrintf("[Decomposer] Assigning keys and sorting particles: %lf seconds\n", CkWallTimer() - start_time);
 
   // find splitters for decomposition
@@ -122,6 +121,8 @@ void Decomposer::findSplitters() {
           // for flushing
           splitters.push_back(Utility::shiftLeadingZerosLeft(from));
           splitters.push_back(Utility::shiftLeadingZerosLeft(to));
+          std::cout << "[" << std::bitset<64>(Utility::shiftLeadingZerosLeft(from)) << ", " << std::bitset<64>(Utility::shiftLeadingZerosLeft(to)) << "] - " << n_particles << std::endl;
+
           // for tree build
           final_splitters.push_back(from);
 

@@ -196,7 +196,7 @@ void Reader::flush() {
     if (decomp_type == OCT_DECOMP) {
       from = splitters[2*i];
       to = splitters[2*i+1];
-      std::cout << std::bitset<64>(Utility::shiftLeadingZerosLeft(from)) << ", " << std::bitset<64>(Utility::shiftLeadingZerosLeft(to)) << std::endl;
+      std::cout << "[" << std::bitset<64>(from) << ", " << std::bitset<64>(to) << "]" << std::endl;
     }
     else if (decomp_type == SFC_DECOMP) {
       from = splitters[i];
@@ -210,8 +210,11 @@ void Reader::flush() {
 
     if (n_particles > 0) {
       ParticleMsg *msg = new (n_particles) ParticleMsg(&particles[begin], n_particles);
-      treepieces[i].receive(msg);
+      //treepieces[i].receive(msg);
       flush_count += n_particles;
+      for (int j = 0; j < n_particles; j++) {
+        std::cout << std::bitset<64>(particles[begin+j].key) << std::endl;
+      }
     }
 
     start = end;
