@@ -18,7 +18,7 @@ class TreePiece : public CBase_TreePiece {
 
   public:
     TreePiece();
-    void initialize(const CkCallback&);
+    //void initialize(const CkCallback&);
     void create();
     void receive(ParticleMsg*);
     void check(const CkCallback&);

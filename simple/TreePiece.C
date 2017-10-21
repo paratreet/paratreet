@@ -9,6 +9,7 @@ extern int max_ppl;
 
 TreePiece::TreePiece() {}
 
+/*
 void TreePiece::initialize(const CkCallback& cb) {
   n_expected = readers.ckLocalBranch()->splitter_counts[thisIndex];
   tp_key = readers.ckLocalBranch()->splitters[thisIndex];
@@ -17,10 +18,11 @@ void TreePiece::initialize(const CkCallback& cb) {
 
   contribute(cb);
 }
+*/
 
 void TreePiece::create() {
-  tp_key = readers.ckLocalBranch()->tp_keys[thisIndex];
-  tp_key |= (Key)1 << (KEY_BITS-1); // add placeholder bit
+  n_expected = readers.ckLocalBranch()->splitters[thisIndex].n_particles;
+  tp_key = readers.ckLocalBranch()->splitters[thisIndex].tp_key;
   cur_idx = 0;
 }
 
@@ -39,9 +41,6 @@ void TreePiece::check(const CkCallback& cb) {
     CkPrintf("[TP %d] ERROR! Not enough particles received\n", thisIndex);
     CkExit();
   }
-#if DEBUG
-  CkPrintf("[TP %d] Has %d particles\n", thisIndex, particles.size());
-#endif
 
   contribute(cb);
 }

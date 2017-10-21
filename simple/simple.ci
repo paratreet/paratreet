@@ -1,5 +1,6 @@
 mainmodule simple {
   include "BoundingBox.h";
+  include "Splitter.h";
 
   readonly CProxy_Main mainProxy;
   readonly CProxy_Reader readers;
@@ -28,10 +29,8 @@ mainmodule simple {
     entry Reader();
     entry void load(std::string, const CkCallback&);
     entry void assignKeys(BoundingBox&, const CkCallback&);
-    entry void count(std::vector<Key>&, const CkCallback&);
-    entry void setTPKeysAndSplitters(const std::vector<Key>&, const std::vector<Key>&, const CkCallback&);
-    entry void setSplitters(const std::vector<Key>&, const CkCallback&);
-    entry void setSplitters(const std::vector<Key>&, const std::vector<int>&, const CkCallback&);
+    entry void count(CkVec<Key>&, const CkCallback&);
+    entry void setSplitters(CkVec<Splitter>&, const CkCallback&);
     entry void flush();
   };
 
@@ -41,7 +40,6 @@ mainmodule simple {
 
   array [1d] TreePiece {
     entry TreePiece();
-    entry void initialize(const CkCallback&);
     entry [createhome] void create();
     entry void receive(ParticleMsg*);
     entry void check(const CkCallback&);

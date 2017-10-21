@@ -81,7 +81,7 @@ class Utility {
     return k1 == k2;
   }
 
-  static Key shiftLeadingZerosLeft(Key k) {
+  static Key removeLeadingZeros(Key k) {
     int depth = getDepthFromKey(k);
     return getParticleLevelKey(k, depth);
   }

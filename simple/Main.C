@@ -1,10 +1,8 @@
 #include "simple.decl.h"
 #include "common.h"
-
 #include "Reader.h"
 #include "Decomposer.h"
 #include "TreePiece.h"
-
 #include "BoundingBox.h"
 #include "BufferedVec.h"
 

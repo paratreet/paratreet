@@ -115,15 +115,12 @@ void Reader::assignKeys(BoundingBox& universe, const CkCallback& cb) {
   contribute(cb);
 }
 
-void Reader::count(std::vector<Key>& splitters, const CkCallback& cb) {
+void Reader::count(CkVec<Key>& splitters, const CkCallback& cb) {
   std::vector<int> counts;
   if (decomp_type == OCT_DECOMP) {
     counts.resize(splitters.size() / 2);
     for (int i = 0; i < splitters.size(); i++) {
-      if (splitters[i] == (~Key(0)))
-        continue;
-      else
-        splitters[i] = Utility::shiftLeadingZerosLeft(splitters[i]);
+        splitters[i] = Utility::removeLeadingZeros(splitters[i]);
     }
   }
   else if (decomp_type == SFC_DECOMP) {
@@ -134,9 +131,9 @@ void Reader::count(std::vector<Key>& splitters, const CkCallback& cb) {
   // in the range [start, finish)
   int start = 0;
   int finish = particles.size();
+  Key from, to;
   if (particles.size() > 0) {
     for (int i = 0; i < counts.size(); i++) {
-      Key from, to;
       if (decomp_type == OCT_DECOMP) {
         from = splitters[2*i];
         to = splitters[2*i+1];
@@ -162,12 +159,12 @@ void Reader::count(std::vector<Key>& splitters, const CkCallback& cb) {
   contribute(sizeof(int) * counts.size(), &counts[0], CkReduction::sum_int, cb);
 }
 
-void Reader::setTPKeysAndSplitters(const std::vector<Key>& keys, const std::vector<Key>& sp, const CkCallback& cb) {
-  tp_keys = keys;
-  splitters = sp;
+void Reader::setSplitters(CkVec<Splitter>& splitters, const CkCallback& cb) {
+  this->splitters = splitters;
   contribute(cb);
 }
 
+/*
 void Reader::setSplitters(const std::vector<Key>& sp, const CkCallback& cb) {
   splitters = sp;
   contribute(cb);
@@ -178,29 +175,30 @@ void Reader::setSplitters(const std::vector<Key>& sp, const std::vector<int>& bi
   splitter_counts = bin_counts;
   contribute(cb);
 }
+*/
 
 void Reader::flush() {
+  // send particles to owner TreePieces
   int start = 0;
   int finish = particles.size();
   int flush_count = 0;
-
-  // send particles to owner TreePieces
-  int max;
   Key from, to;
-  if (decomp_type == OCT_DECOMP)
-    max = splitters.size() / 2;
-  else if (decomp_type == SFC_DECOMP)
-    max = splitters.size() - 1;
-  std::cout << "max: " << max << std::endl;
+
+  int max;
+  if (decomp_type == OCT_DECOMP) {
+    max = splitters.size();
+  }
+  else if (decomp_type == SFC_DECOMP) {
+    // TODO
+  }
+
   for (int i = 0; i < max; i++) {
     if (decomp_type == OCT_DECOMP) {
-      from = splitters[2*i];
-      to = splitters[2*i+1];
-      std::cout << "[" << std::bitset<64>(from) << ", " << std::bitset<64>(to) << "]" << std::endl;
+      from = splitters[i].from;
+      to = splitters[i].to;
     }
     else if (decomp_type == SFC_DECOMP) {
-      from = splitters[i];
-      to = splitters[i+1];
+      // TODO
     }
 
     int begin = Utility::binarySearchGE(from, &particles[0], start, finish);
@@ -210,11 +208,8 @@ void Reader::flush() {
 
     if (n_particles > 0) {
       ParticleMsg *msg = new (n_particles) ParticleMsg(&particles[begin], n_particles);
-      //treepieces[i].receive(msg);
+      treepieces[i].receive(msg);
       flush_count += n_particles;
-      for (int j = 0; j < n_particles; j++) {
-        std::cout << std::bitset<64>(particles[begin+j].key) << std::endl;
-      }
     }
 
     start = end;

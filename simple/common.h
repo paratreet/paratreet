@@ -2,7 +2,7 @@
 #define SIMPLE_COMMON_H_
 
 #include <string>
-#include <vector>
+//#include <vector>
 #include "Vector3D.h"
 #include "SFC.h"
 

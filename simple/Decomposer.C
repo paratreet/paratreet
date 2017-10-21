@@ -43,37 +43,47 @@ void Decomposer::run() {
   findSplitters();
   CkPrintf("[Decomposer] Finding right splitters: %lf seconds\n", CkWallTimer() - start_time);
 
-  // broadcast finalized splitters and create/initialize treepieces
+  // sort splitters for correct flushing
+  start_time = CkWallTimer();
+  splitters.quickSort();
+  CkPrintf("[Decomposer] Sorting splitters: %lf seconds\n", CkWallTimer() - start_time);
+
+  // send finalized splitters to readers
+  readers.setSplitters(splitters, CkCallbackResumeThread());
+
+  // create treepieces
   if (decomp_type == OCT_DECOMP) {
-    readers.setTPKeysAndSplitters(final_splitters, splitters, CkCallbackResumeThread());
-
-    for (int i = 0; i < n_treepieces; i++) {
+    for (int i = 0; i < n_treepieces; i++)
       treepieces[i].create();
-    }
+  }
 
-    CkStartQD(CkCallbackResumeThread());
+  // flush particles with finalized splitters
+  start_time = CkWallTimer();
+  if (decomp_type == OCT_DECOMP) {
+    readers.flush();
   }
   else if (decomp_type == SFC_DECOMP) {
+    /*
     readers.setSplitters(final_splitters, bin_counts, CkCallbackResumeThread());
 
     treepieces.initialize(CkCallbackResumeThread());
-  }
 
-  // distribute particles to treepieces
-  readers.flush();
+    readers.flush();
+    */
+  }
 
   // wait for all particles to be flushed
   CkStartQD(CkCallbackResumeThread());
+  CkPrintf("[Decomposer] Flushing particles: %lf seconds\n", CkWallTimer() - start_time);
 
-  CkExit();
-/*
 #ifdef DEBUG
   // check if all treepieces have received the right number of particles
-  if (decomp_type == SFC_DECOMP) {
-    treepieces.check(CkCallbackResumeThread());
-  }
+  treepieces.check(CkCallbackResumeThread());
 #endif
 
+  CkExit();
+
+  /*
   // free splitter memory
   splitters.resize(0);
 
@@ -118,16 +128,11 @@ void Decomposer::findSplitters() {
             keys.add(to << 1);
         }
         else {
-          // for flushing
-          splitters.push_back(Utility::shiftLeadingZerosLeft(from));
-          splitters.push_back(Utility::shiftLeadingZerosLeft(to));
-          std::cout << "[" << std::bitset<64>(Utility::shiftLeadingZerosLeft(from)) << ", " << std::bitset<64>(Utility::shiftLeadingZerosLeft(to)) << "] - " << n_particles << std::endl;
+          // create and store splitter set
+          Splitter sp(Utility::removeLeadingZeros(from), Utility::removeLeadingZeros(to), from, n_particles);
+          splitters.push_back(sp);
 
-          // for tree build
-          final_splitters.push_back(from);
-
-          // store number of particles
-          bin_counts.push_back(n_particles);
+          // add up number of particles to check if all are flushed
           decomp_sum += n_particles;
         }
       }
@@ -139,16 +144,15 @@ void Decomposer::findSplitters() {
         break;
     }
 
-    n_treepieces = final_splitters.size();
+    n_treepieces = splitters.size();
 #if DEBUG
     CkPrintf("[Decomposer] %d particles decomposed\n", decomp_sum);
     CkPrintf("[Decomposer] Number of TreePieces with OCT decomposition: %d\n", n_treepieces);
 #endif
-
-    // TODO need to sort splitters?
   }
   else if (decomp_type == SFC_DECOMP) {
     /***** SFC DECOMPOSITION *****/
+    /*
     sorted = false;
     // create initial splitters
     Key delta = (SFC::lastPossibleKey - SFC::firstPossibleKey) / n_chares;
@@ -229,9 +233,11 @@ void Decomposer::findSplitters() {
         break;
       }
     }
+    */
   }
 }
 
+/*
 void Decomposer::adjustSplitters() {
   std::vector<Key> new_splitters;
   bins_to_split.Resize(splitters.size() - 1);
@@ -301,4 +307,4 @@ void Decomposer::adjustSplitters() {
     splitters.assign(new_splitters.begin(), new_splitters.end());
   }
 }
-
+*/

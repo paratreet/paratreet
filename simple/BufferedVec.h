@@ -5,13 +5,13 @@
 
 template<typename T>
 class BufferedVec {
-  std::vector<T> *new_vec;
-  std::vector<T> *buf_vec;
+  CkVec<T>* new_vec;
+  CkVec<T>* buf_vec;
 
   public:
   BufferedVec(){
-    new_vec = new std::vector<T>;
-    buf_vec = new std::vector<T>;
+    new_vec = new CkVec<T>;
+    buf_vec = new CkVec<T>;
   }
 
   void add(T &t){
@@ -23,7 +23,7 @@ class BufferedVec {
   }
 
   void buffer(){
-    std::vector<T> *tmp = new_vec;
+    CkVec<T>* tmp = new_vec;
     new_vec = buf_vec;;
     buf_vec = tmp;
     new_vec->resize(0);
@@ -33,7 +33,7 @@ class BufferedVec {
     return (*buf_vec)[i];
   }
 
-  std::vector<T> &get(){
+  CkVec<T>& get(){
     return *buf_vec;
   }
 
