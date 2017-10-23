@@ -1,6 +1,6 @@
-CHARM_HOME ?= ~/work/charm
+CHARM_HOME ?= ~/charm
 STRUCTURE_PATH = ../utility/structures
-OPTS = -O3 -I$(STRUCTURE_PATH) -DDEBUG
+OPTS = -g -I$(STRUCTURE_PATH) -DDEBUG
 CHARMC = $(CHARM_HOME)/bin/charmc $(OPTS)
 LD_LIBS = -L$(STRUCTURE_PATH) -lTipsy
 

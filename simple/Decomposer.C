@@ -81,15 +81,15 @@ void Decomposer::run() {
   treepieces.check(CkCallbackResumeThread());
 #endif
 
-  CkExit();
-
-  /*
   // free splitter memory
   splitters.resize(0);
 
   // start local build of trees in all treepieces
-  treepieces.build(CkCallback(CkIndex_Main::terminate(), mainProxy));
-  */
+  start_time = CkWallTimer();
+  treepieces.build(CkCallbackResumeThread());
+  CkPrintf("[Decomposer] Local tree build: %lf seconds\n", CkWallTimer() - start_time);
+
+  mainProxy.terminate();
 }
 
 void Decomposer::findSplitters() {
@@ -119,6 +119,33 @@ void Decomposer::findSplitters() {
 
         int n_particles = counts[i];
         if ((Real)n_particles > threshold) {
+          keys.add(from << 3);
+          keys.add((from << 3) + 1);
+
+          keys.add((from << 3) + 1);
+          keys.add((from << 3) + 2);
+
+          keys.add((from << 3) + 2);
+          keys.add((from << 3) + 3);
+
+          keys.add((from << 3) + 3);
+          keys.add((from << 3) + 4);
+
+          keys.add((from << 3) + 4);
+          keys.add((from << 3) + 5);
+
+          keys.add((from << 3) + 5);
+          keys.add((from << 3) + 6);
+
+          keys.add((from << 3) + 6);
+          keys.add((from << 3) + 7);
+
+          keys.add((from << 3) + 7);
+          if (to == (~Key(0)))
+            keys.add(~Key(0));
+          else
+            keys.add(to << 3);
+          /*
           keys.add(from << 1);
           keys.add((from << 1) + 1);
           keys.add((from << 1) + 1);
@@ -126,11 +153,13 @@ void Decomposer::findSplitters() {
             keys.add(~Key(0));
           else
             keys.add(to << 1);
+          */
         }
         else {
           // create and store splitter set
           Splitter sp(Utility::removeLeadingZeros(from), Utility::removeLeadingZeros(to), from, n_particles);
           splitters.push_back(sp);
+          //std::cout << "[" << std::bitset<64>(Utility::removeLeadingZeros(from)) << ", " << std::bitset<64>(Utility::removeLeadingZeros(to)) << "]" << std::endl;
 
           // add up number of particles to check if all are flushed
           decomp_sum += n_particles;

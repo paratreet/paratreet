@@ -37,7 +37,7 @@ class Main : public CBase_Main {
       n_chares = 128;
       decomp_tolerance = 0.1;
       max_ppc = 10;
-      max_ppl = 10;
+      max_ppl = 1;
       decomp_type = OCT_DECOMP;
       tree_type = OCT_TREE;
 

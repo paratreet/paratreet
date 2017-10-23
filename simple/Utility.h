@@ -75,7 +75,9 @@ class Utility {
   }
 
   // is k1 a prefix of k2?
-  static bool isPrefix(Key k1, int d1, Key k2, int d2){
+  static bool isPrefix(Key k1, Key k2){
+    int d1 = getDepthFromKey(k1);
+    int d2 = getDepthFromKey(k2);
     if(d1 > d2) return false;
     k2 = (k2 >> (d2 - d1));
     return k1 == k2;

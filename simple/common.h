@@ -23,10 +23,10 @@ typedef double Real;
 #define OCT_TREE 20
 #define SFC_TREE 21
 
-#define NDIM 3
+#define BRANCH_FACTOR 8
+#define LOG_BRANCH_FACTOR 3
 
-#define BRANCH_FACTOR 2
-#define LOG_BRANCH_FACTOR 1
+#define NDIM 3
 
 typedef SFC::Key Key;
 #ifndef CHAR_BIT
