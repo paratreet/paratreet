@@ -58,7 +58,7 @@ void TreePiece::build(const CkCallback &cb){
   //print(root);
   Node* cur = root;
   int sib = 0;
-  CkPrintf("[TP %d] Tree with %d particles\n", thisIndex, particles.size());
+  std::cout << "[TP " << thisIndex << "] key: " << std::bitset<64>(tp_key) << " particles: " << particles.size() << std::endl;
   while (1) {
     std::cout << "[Level " << cur->depth << "] cur: " << std::bitset<64>(cur->key) << ", " << cur->n_particles << " particles" << std::endl;
     if (cur->parent == NULL) { // root
