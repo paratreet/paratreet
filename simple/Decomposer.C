@@ -8,7 +8,6 @@
 
 extern CProxy_Main mainProxy;
 extern CProxy_Reader readers;
-extern CProxy_TreePiece treepieces;
 extern std::string input_file;
 extern int n_chares;
 extern int max_ppc;
@@ -53,14 +52,13 @@ void Decomposer::run() {
 
   // create treepieces
   if (decomp_type == OCT_DECOMP) {
-    for (int i = 0; i < n_treepieces; i++)
-      treepieces[i].create();
+    treepieces = CProxy_TreePiece::ckNew(CkCallbackResumeThread(), n_treepieces);
   }
 
   // flush particles with finalized splitters
   start_time = CkWallTimer();
   if (decomp_type == OCT_DECOMP) {
-    readers.flush();
+    readers.flush(treepieces);
   }
   else if (decomp_type == SFC_DECOMP) {
     /*
@@ -86,7 +84,7 @@ void Decomposer::run() {
 
   // start local build of trees in all treepieces
   start_time = CkWallTimer();
-  treepieces.build(CkCallbackResumeThread());
+  //treepieces.build(CkCallbackResumeThread());
   CkPrintf("[Decomposer] Local tree build: %lf seconds\n", CkWallTimer() - start_time);
 
   mainProxy.terminate();

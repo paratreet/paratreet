@@ -9,7 +9,6 @@
 /* readonly */ CProxy_Main mainProxy;
 /* readonly */ CProxy_Reader readers;
 /* readonly */ CProxy_Decomposer decomposer;
-/* readonly */ CProxy_TreePiece treepieces;
 /* readonly */ std::string input_file;
 /* readonly */ int n_readers;
 /* readonly */ int n_chares;
@@ -22,7 +21,6 @@
 class Main : public CBase_Main {
   double start_time;
   std::string input_str;
-  int n_treepieces;
 
   public:
     static void initialize() {
@@ -106,13 +104,9 @@ class Main : public CBase_Main {
       // create Decomposer
       decomposer = CProxy_Decomposer::ckNew();
 
-      // create TreePieces or placeholder for them
-      if (decomp_type == OCT_DECOMP) {
-        treepieces = CProxy_TreePiece::ckNew();
-        treepieces.doneInserting();
-      }
-      else if (decomp_type == SFC_DECOMP) {
-        treepieces = CProxy_TreePiece::ckNew(n_chares);
+      // create TreePieces for SFC decomposition
+      if (decomp_type == SFC_DECOMP) {
+        //treepieces = CProxy_TreePiece::ckNew(n_chares);
       }
 
       // start!

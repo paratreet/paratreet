@@ -9,7 +9,13 @@ extern int n_chares;
 extern int max_ppl;
 extern int tree_type;
 
-TreePiece::TreePiece() {}
+TreePiece::TreePiece(const CkCallback& cb) {
+  n_expected = readers.ckLocalBranch()->splitters[thisIndex].n_particles;
+  n_treepieces = readers.ckLocalBranch()->splitters.size();
+  tp_key = readers.ckLocalBranch()->splitters[thisIndex].tp_key;
+  cur_idx = 0;
+  contribute(cb);
+}
 
 /*
 void TreePiece::initialize(const CkCallback& cb) {
@@ -21,13 +27,6 @@ void TreePiece::initialize(const CkCallback& cb) {
   contribute(cb);
 }
 */
-
-void TreePiece::create() {
-  n_expected = readers.ckLocalBranch()->splitters[thisIndex].n_particles;
-  n_treepieces = readers.ckLocalBranch()->splitters.size();
-  tp_key = readers.ckLocalBranch()->splitters[thisIndex].tp_key;
-  cur_idx = 0;
-}
 
 void TreePiece::receive(ParticleMsg* msg) {
   // copy particles to local vector
@@ -44,7 +43,6 @@ void TreePiece::check(const CkCallback& cb) {
     CkPrintf("[TP %d] ERROR! Not enough particles received\n", thisIndex);
     CkExit();
   }
-  //std::cout << "[TP " << thisIndex << "] key: " << std::bitset<64>(tp_key) << " particles: " << particles.size() << std::endl;
 
   contribute(cb);
 }
@@ -54,6 +52,7 @@ void TreePiece::build(const CkCallback &cb){
   root = new Node(1, 0, &particles[0], particles.size(), 0, n_treepieces - 1, NULL);
   recursiveBuild(root, false);
 
+  /*
 #ifdef DEBUG
   //print(root);
   Node* cur = root;
@@ -88,6 +87,7 @@ void TreePiece::build(const CkCallback &cb){
     }
   }
 #endif
+*/
 
   contribute(cb);
 }

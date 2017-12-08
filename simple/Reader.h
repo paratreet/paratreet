@@ -23,7 +23,7 @@ class Reader : public CBase_Reader {
     void assignKeys(BoundingBox&, const CkCallback&);
     void count(CkVec<Key>&, const CkCallback&);
     void setSplitters(CkVec<Splitter>&, const CkCallback&);
-    void flush();
+    void flush(CProxy_TreePiece);
     //void setSplitters(const std::vector<Key>&, const CkCallback&);
     //void setSplitters(const std::vector<Key>&, const std::vector<int>&, const CkCallback&);
 };

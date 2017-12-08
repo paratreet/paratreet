@@ -4,7 +4,6 @@ mainmodule simple {
 
   readonly CProxy_Main mainProxy;
   readonly CProxy_Reader readers;
-  readonly CProxy_TreePiece treepieces;
   readonly std::string input_file;
   readonly int n_readers;
   readonly int n_chares;
@@ -25,24 +24,23 @@ mainmodule simple {
     entry [threaded] void run();
   };
 
+  message ParticleMsg {
+    Particle particles[];
+  };
+
+  array [1d] TreePiece {
+    entry TreePiece(const CkCallback&);
+    entry void receive(ParticleMsg*);
+    entry void check(const CkCallback&);
+    entry void build(const CkCallback&);
+  };
+
   group Reader {
     entry Reader();
     entry void load(std::string, const CkCallback&);
     entry void assignKeys(BoundingBox&, const CkCallback&);
     entry void count(CkVec<Key>&, const CkCallback&);
     entry void setSplitters(CkVec<Splitter>&, const CkCallback&);
-    entry void flush();
-  };
-
-  message ParticleMsg {
-    Particle particles[];
-  };
-
-  array [1d] TreePiece {
-    entry TreePiece();
-    entry [createhome] void create();
-    entry void receive(ParticleMsg*);
-    entry void check(const CkCallback&);
-    entry void build(const CkCallback&);
+    entry void flush(CProxy_TreePiece);
   };
 };

@@ -10,6 +10,8 @@ class Decomposer : public CBase_Decomposer {
   CkReductionMsg* result;
   BoundingBox universe;
   CkVec<Splitter> splitters;
+
+  CProxy_TreePiece treepieces; // cannot be a global variable
   int n_treepieces; // OCT decomposition
 
   /*

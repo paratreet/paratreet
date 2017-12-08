@@ -5,7 +5,6 @@
 #include <iostream>
 
 extern CProxy_Main mainProxy;
-extern CProxy_TreePiece treepieces;
 extern int n_readers;
 extern int decomp_type;
 
@@ -177,7 +176,7 @@ void Reader::setSplitters(const std::vector<Key>& sp, const std::vector<int>& bi
 }
 */
 
-void Reader::flush() {
+void Reader::flush(CProxy_TreePiece treepieces) {
   // send particles to owner TreePieces
   int start = 0;
   int finish = particles.size();
