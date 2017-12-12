@@ -3,16 +3,36 @@
 #include <bitset>
 #include "TreePiece.h"
 #include "Reader.h"
+#include "TreeElements.h"
 
 extern CProxy_Reader readers;
 extern int n_chares;
 extern int max_ppl;
 extern int tree_type;
 
-TreePiece::TreePiece(const CkCallback& cb) {
-  n_expected = readers.ckLocalBranch()->splitters[thisIndex].n_particles;
-  n_treepieces = readers.ckLocalBranch()->splitters.size();
-  tp_key = readers.ckLocalBranch()->splitters[thisIndex].tp_key;
+
+void TreePiece::calculateData(CProxy_TreeElements tree_array) {
+  Vector3D<Real> moment;
+  Real summass = 0;
+  for (int i = 0; i < particles.size(); i++) {
+    moment += particles[i].position * particles[i].mass;
+    summass += particles[i].mass;
+  }
+  tree_array[tp_key].receiveData(moment, summass);
+}
+
+
+TreePiece::TreePiece(const CkCallback& cb, bool if_OCT_DECOMP) {
+  if (if_OCT_DECOMP) {
+    n_expected = readers.ckLocalBranch()->splitters[thisIndex].n_particles;
+    n_treepieces = readers.ckLocalBranch()->splitters.size();
+    tp_key = readers.ckLocalBranch()->splitters[thisIndex].tp_key;
+  }
+  else {
+    n_expected = readers.ckLocalBranch()->splitter_counts[thisIndex];
+    tp_key = readers.ckLocalBranch()->ksplitters[thisIndex];
+    tp_key |= (Key)1 << (KEY_BITS-1); // add placeholder bit
+  }
   cur_idx = 0;
   contribute(cb);
 }
@@ -25,8 +45,8 @@ void TreePiece::initialize(const CkCallback& cb) {
   cur_idx = 0;
 
   contribute(cb);
-}
-*/
+}*/
+
 
 void TreePiece::receive(ParticleMsg* msg) {
   // copy particles to local vector

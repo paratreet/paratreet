@@ -16,9 +16,10 @@ class TreePiece : public CBase_TreePiece {
   Node* root;
 
   public:
-    TreePiece(const CkCallback&);
+    TreePiece(const CkCallback&, bool if_OCT_DECOMP);
     //void initialize(const CkCallback&);
     void receive(ParticleMsg*);
+    void calculateData(CProxy_TreeElements tree_array);
     void check(const CkCallback&);
     void build(const CkCallback&);
     bool recursiveBuild(Node*, bool);

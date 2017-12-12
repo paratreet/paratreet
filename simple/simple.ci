@@ -29,10 +29,16 @@ mainmodule simple {
   };
 
   array [1d] TreePiece {
-    entry TreePiece(const CkCallback&);
+    entry TreePiece(const CkCallback&, bool if_OCT_DECOMP);
     entry void receive(ParticleMsg*);
     entry void check(const CkCallback&);
     entry void build(const CkCallback&);
+  };
+
+  array [1d] TreeElements {
+    entry void TreeElements();
+    entry [createhome] void exist(bool ifTPi);
+    entry void receiveData(Vector3D<Real> momenti, Real summassi);
   };
 
   group Reader {
@@ -40,7 +46,9 @@ mainmodule simple {
     entry void load(std::string, const CkCallback&);
     entry void assignKeys(BoundingBox&, const CkCallback&);
     entry void count(CkVec<Key>&, const CkCallback&);
+    entry void count(const std::vector<Key>&, const CkCallback&);
     entry void setSplitters(CkVec<Splitter>&, const CkCallback&);
+    entry void setSplitters(const std::vector<Key>&, const std::vector<int>&, const CkCallback&);
     entry void flush(CProxy_TreePiece);
   };
 };

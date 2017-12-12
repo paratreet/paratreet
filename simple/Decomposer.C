@@ -41,34 +41,21 @@ void Decomposer::run() {
   start_time = CkWallTimer();
   findSplitters();
   CkPrintf("[Decomposer] Finding right splitters: %lf seconds\n", CkWallTimer() - start_time);
-
+ 
   // sort splitters for correct flushing
-  start_time = CkWallTimer();
-  splitters.quickSort();
+  if (decomp_type == OCT_DECOMP) splitters.quickSort(); // final_splitters are already sorted
   CkPrintf("[Decomposer] Sorting splitters: %lf seconds\n", CkWallTimer() - start_time);
 
   // send finalized splitters to readers
-  readers.setSplitters(splitters, CkCallbackResumeThread());
+  if (decomp_type == OCT_DECOMP) readers.setSplitters(splitters, CkCallbackResumeThread());
+  else if (decomp_type == SFC_DECOMP) readers.setSplitters(final_splitters, bin_counts, CkCallbackResumeThread());
 
   // create treepieces
-  if (decomp_type == OCT_DECOMP) {
-    treepieces = CProxy_TreePiece::ckNew(CkCallbackResumeThread(), n_treepieces);
-  }
+  treepieces = CProxy_TreePiece::ckNew(CkCallbackResumeThread(), decomp_type == OCT_DECOMP, n_treepieces);
 
   // flush particles with finalized splitters
   start_time = CkWallTimer();
-  if (decomp_type == OCT_DECOMP) {
-    readers.flush(treepieces);
-  }
-  else if (decomp_type == SFC_DECOMP) {
-    /*
-    readers.setSplitters(final_splitters, bin_counts, CkCallbackResumeThread());
-
-    treepieces.initialize(CkCallbackResumeThread());
-
-    readers.flush();
-    */
-  }
+  readers.flush(treepieces);
 
   // wait for all particles to be flushed
   CkStartQD(CkCallbackResumeThread());
@@ -102,6 +89,8 @@ void Decomposer::findSplitters() {
 
     int decomp_sum = 0;
 
+    tree_array = CProxy_TreeElements::ckNew();
+
     CkReductionMsg *msg;
     while (true) {
       // send splitters to readers for histogramming
@@ -117,6 +106,8 @@ void Decomposer::findSplitters() {
 
         int n_particles = counts[i];
         if ((Real)n_particles > threshold) {
+          tree_array[from].exist(false);
+
           keys.add(from << 3);
           keys.add((from << 3) + 1);
 
@@ -154,6 +145,10 @@ void Decomposer::findSplitters() {
           */
         }
         else {
+
+            // this is a splitter/treepiece, again from is the index that matters
+          tree_array[from].exist(true);
+
           // create and store splitter set
           Splitter sp(Utility::removeLeadingZeros(from), Utility::removeLeadingZeros(to), from, n_particles);
           splitters.push_back(sp);
@@ -179,15 +174,16 @@ void Decomposer::findSplitters() {
   }
   else if (decomp_type == SFC_DECOMP) {
     /***** SFC DECOMPOSITION *****/
-    /*
+
     sorted = false;
     // create initial splitters
-    Key delta = (SFC::lastPossibleKey - SFC::firstPossibleKey) / n_chares;
+    Key delta = (SFC::lastPossibleKey - SFC::firstPossibleKey) / n_chares; // decide how much distance to cover
     Key splitter = SFC::firstPossibleKey;
     for (int i = 0; i < n_chares; i++, splitter += delta) {
-      splitters.push_back(splitter);
+      ksplitters.push_back(splitter); // splitter[i] = delta * i
     }
-    splitters.push_back(SFC::lastPossibleKey);
+    ksplitters.push_back(SFC::lastPossibleKey);
+      // there are n + 1 because they are used as a range
 
     // find desired number of particles preceding each splitter
     num_goals_pending = n_chares - 1;
@@ -197,29 +193,32 @@ void Decomposer::findSplitters() {
     int rem = universe.n_particles % n_chares;
     int prev = 0;
     for (int i = 0; i < rem; i++) {
-      splitter_goals[i] = prev + avg + 1;
+      splitter_goals[i] = prev + avg + 1; // add the prev so we can use prefix sum
       prev = splitter_goals[i];
     }
     for (int i = rem; i < n_chares; i++) {
       splitter_goals[i] = prev + avg;
       prev = splitter_goals[i];
     }
+      // determine how many particles should be in each chare
 
     // calculate tolerated difference in # of particles
     tol_diff = static_cast<int>(avg * decomp_tolerance);
+      // difference scaled by average
 
     // add first key as first splitter
     final_splitters.push_back(SFC::firstPossibleKey);
+      // the first one is used as beginning of a range
 
     // repeat until convergence
     while (1) {
       // histogramming
-      num_iterations++;
-      readers.count(splitters, CkCallbackResumeThread((void*&)result));
-      int* counts = static_cast<int*>(result->getData());
+      num_iterations++; // just a record
+      readers.count(ksplitters, CkCallbackResumeThread((void*&)result)); // let it see how many fit into each bin
+      int* counts = static_cast<int*>(result->getData()); // we got result, now lets access it
       int n_counts = result->getSize() / sizeof(int);
-      bin_counts.resize(n_counts+1);
-      bin_counts[0] = 0;
+      bin_counts.resize(n_counts+1); //  this stuff just makes our own copy of result
+      bin_counts[0] = 0; // range causes n + 1, so we set the first one to 0. i think ??
       std::copy(counts, counts + n_counts, bin_counts.begin()+1);
       delete result;
 
@@ -227,16 +226,17 @@ void Decomposer::findSplitters() {
       std::partial_sum(bin_counts.begin(), bin_counts.end(), bin_counts.begin());
 
       // adjust the splitters
-      adjustSplitters();
+      adjustSplitters(); // is adjusting the best word? it seems like they're just spreading things out
 
 #if DEBUG
-      CkPrintf("[Decomposer] Probing %d splitter keys\n", splitters.size());
+      CkPrintf("[Decomposer] Probing %d splitter keys\n", ksplitters.size());
       CkPrintf("[Decomposer] Decided on %d splitting keys\n", final_splitters.size() -1);
 #endif
 
       if (sorted) {
         CkPrintf("[Decomposer] Histograms balanced after %d iterations\n", num_iterations);
 
+        ksplitters.resize(0);
         std::sort(final_splitters.begin(), final_splitters.end());
         final_splitters.push_back(SFC::lastPossibleKey);
         accumulated_bin_counts.push_back(bin_counts.back());
@@ -260,16 +260,18 @@ void Decomposer::findSplitters() {
         break;
       }
     }
-    */
+
   }
 }
 
-/*
+
 void Decomposer::adjustSplitters() {
   std::vector<Key> new_splitters;
-  bins_to_split.Resize(splitters.size() - 1);
+  bins_to_split.Resize(ksplitters.size() - 1);
   bins_to_split.Zero();
-  new_splitters.reserve(splitters.size() * 4);
+  new_splitters.reserve(ksplitters.size() * 4); // there are 4 because were adding four more
+    // but when do we get rid of them?
+    // perhaps using accumulated bin counts
   new_splitters.push_back(SFC::firstPossibleKey);
 
   Key left_bound, right_bound;
@@ -281,6 +283,10 @@ void Decomposer::adjustSplitters() {
     //find positions that bracket the goal
     num_right_key = std::lower_bound(num_right_key, bin_counts.end(), splitter_goals[i]);
     num_left_key = num_right_key - 1;
+      // dividing the ones whose bin count is high is great, but what if
+      // there aren't any bin counts greater than the goal? they are too fine then?
+      // ordering of the acc bin counts, ordering of final splitters, might have problems
+      // the order is probably what makes the flushing so difficult
 
     if (num_right_key == bin_counts.begin())
       ckerr << "Decomposer : Looking for " << splitter_goals[i] << "This is at beginning?" << endl;
@@ -288,8 +294,8 @@ void Decomposer::adjustSplitters() {
       ckerr << "Decomposer : Looking for " << splitter_goals[i] << "This is at end?" << endl;
 
     //translate positions into bracketing keys
-    left_bound = splitters[num_left_key - bin_counts.begin()];
-    right_bound = splitters[num_right_key - bin_counts.begin()];
+    left_bound = ksplitters[num_left_key - bin_counts.begin()];
+    right_bound = ksplitters[num_right_key - bin_counts.begin()];
 
     //check if one of the bounds is close enough to the goal
     if (abs(*num_left_key - splitter_goals[i]) <= tol_diff) {
@@ -306,13 +312,13 @@ void Decomposer::adjustSplitters() {
       //bottom bits are set to avoid deep trees
       if (new_splitters.back() != (right_bound | 7L)) {
         if (new_splitters.back() != (left_bound | 7L)) {
-          new_splitters.push_back(left_bound | 7L);
+          new_splitters.push_back(left_bound | 7L); // this is left
         }
 
-        new_splitters.push_back((left_bound / 4 * 3 + right_bound / 4) | 7L);
-        new_splitters.push_back((left_bound / 2 + right_bound / 2) | 7L);
-        new_splitters.push_back((left_bound / 4 + right_bound / 4 * 3) | 7L);
-        new_splitters.push_back(right_bound  | 7L);
+        new_splitters.push_back((left_bound / 4 * 3 + right_bound / 4) | 7L); // this is left heavy
+        new_splitters.push_back((left_bound / 2 + right_bound / 2) | 7L); // this is halfway
+        new_splitters.push_back((left_bound / 4 + right_bound / 4 * 3) | 7L); // this is right heavy
+        new_splitters.push_back(right_bound  | 7L); // this is right
       }
 
       splitter_goals[num_active_goals++] = splitter_goals[i];
@@ -330,8 +336,8 @@ void Decomposer::adjustSplitters() {
     if (new_splitters.back() != SFC::lastPossibleKey) {
       new_splitters.push_back(SFC::lastPossibleKey);
     }
-    splitters.reserve(new_splitters.size());
-    splitters.assign(new_splitters.begin(), new_splitters.end());
+    ksplitters.reserve(new_splitters.size());
+    ksplitters.assign(new_splitters.begin(), new_splitters.end());
   }
 }
-*/
+

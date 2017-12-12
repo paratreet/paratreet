@@ -114,16 +114,42 @@ void Reader::assignKeys(BoundingBox& universe, const CkCallback& cb) {
   contribute(cb);
 }
 
+void Reader::count(const std::vector<Key>& splitters, const CkCallback& cb) {
+    std::vector<int> counts;
+    counts.resize(splitters.size()-1); // splitters's size is n + 1, so this is now n
+
+    // search for the first particle whose key is greater or equal to the input key,
+    // in the range [start, finish)
+    int start = 0;
+    int finish = particles.size();
+    Key from, to;
+    if (particles.size() > 0) {
+      for (int i = 0; i < counts.size(); i++) {
+        from = ksplitters[i];
+        to = ksplitters[i+1];
+
+        int begin = Utility::binarySearchGE(from, &particles[0], start, finish); // hmm how does this work for OCT
+        int end = Utility::binarySearchGE(to, &particles[0], begin, finish);
+        counts[i] = end - begin;
+
+        start = end;
+
+      }
+    }
+    else { // no particles
+        for (int i = 0; i < counts.size(); i++){
+            counts[i] = 0;
+        }
+    }
+
+    contribute(sizeof(int) * counts.size(), &counts[0], CkReduction::sum_int, cb);
+}
+
 void Reader::count(CkVec<Key>& splitters, const CkCallback& cb) {
   std::vector<int> counts;
-  if (decomp_type == OCT_DECOMP) {
-    counts.resize(splitters.size() / 2);
-    for (int i = 0; i < splitters.size(); i++) {
-        splitters[i] = Utility::removeLeadingZeros(splitters[i]);
-    }
-  }
-  else if (decomp_type == SFC_DECOMP) {
-    counts.resize(splitters.size()-1);
+  counts.resize(splitters.size() / 2);
+  for (int i = 0; i < splitters.size(); i++) {
+    splitters[i] = Utility::removeLeadingZeros(splitters[i]);
   }
 
   // search for the first particle whose key is greater or equal to the input key,
@@ -133,16 +159,10 @@ void Reader::count(CkVec<Key>& splitters, const CkCallback& cb) {
   Key from, to;
   if (particles.size() > 0) {
     for (int i = 0; i < counts.size(); i++) {
-      if (decomp_type == OCT_DECOMP) {
-        from = splitters[2*i];
-        to = splitters[2*i+1];
-      }
-      else if (decomp_type == SFC_DECOMP) {
-        from = splitters[i];
-        to = splitters[i+1];
-      }
+      from = splitters[2*i];
+      to = splitters[2*i+1];
 
-      int begin = Utility::binarySearchGE(from, &particles[0], start, finish);
+      int begin = Utility::binarySearchGE(from, &particles[0], start, finish); // hmm how does this work for OCT
       int end = Utility::binarySearchGE(to, &particles[0], begin, finish);
       counts[i] = end - begin;
 
@@ -150,12 +170,12 @@ void Reader::count(CkVec<Key>& splitters, const CkCallback& cb) {
     }
   }
   else { // no particles
-    for(int i = 0; i < counts.size(); i++){
+    for (int i = 0; i < counts.size(); i++){
       counts[i] = 0;
     }
   }
 
-  contribute(sizeof(int) * counts.size(), &counts[0], CkReduction::sum_int, cb);
+    contribute(sizeof(int) * counts.size(), &counts[0], CkReduction::sum_int, cb);
 }
 
 void Reader::setSplitters(CkVec<Splitter>& splitters, const CkCallback& cb) {
@@ -167,14 +187,14 @@ void Reader::setSplitters(CkVec<Splitter>& splitters, const CkCallback& cb) {
 void Reader::setSplitters(const std::vector<Key>& sp, const CkCallback& cb) {
   splitters = sp;
   contribute(cb);
-}
+}*/
 
 void Reader::setSplitters(const std::vector<Key>& sp, const std::vector<int>& bin_counts, const CkCallback& cb) {
-  splitters = sp;
+  ksplitters = sp; // different type tho
   splitter_counts = bin_counts;
   contribute(cb);
 }
-*/
+
 
 void Reader::flush(CProxy_TreePiece treepieces) {
   // send particles to owner TreePieces
@@ -188,7 +208,8 @@ void Reader::flush(CProxy_TreePiece treepieces) {
     max = splitters.size();
   }
   else if (decomp_type == SFC_DECOMP) {
-    // TODO
+    // TODO ?
+    max = splitters.size();
   }
 
   for (int i = 0; i < max; i++) {
@@ -197,7 +218,9 @@ void Reader::flush(CProxy_TreePiece treepieces) {
       to = splitters[i].to;
     }
     else if (decomp_type == SFC_DECOMP) {
-      // TODO
+      // TODO ?? why not the same?
+      from = ksplitters[i];
+      to = ksplitters[i+1];
     }
 
     int begin = Utility::binarySearchGE(from, &particles[0], start, finish);

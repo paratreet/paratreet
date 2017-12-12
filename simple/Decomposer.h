@@ -4,6 +4,7 @@
 #include "simple.decl.h"
 #include "common.h"
 #include "Splitter.h"
+#include "TreeElements.h"
 
 class Decomposer : public CBase_Decomposer {
   double start_time;
@@ -12,10 +13,11 @@ class Decomposer : public CBase_Decomposer {
   CkVec<Splitter> splitters;
 
   CProxy_TreePiece treepieces; // cannot be a global variable
+  CProxy_TreeElements tree_array;
   int n_treepieces; // OCT decomposition
 
-  /*
-  std::vector<Key> splitters;
+  
+  std::vector<Key> ksplitters;
   std::vector<int> bin_counts;
   int* splitter_goals;
   int num_goals_pending;
@@ -28,13 +30,14 @@ class Decomposer : public CBase_Decomposer {
 
   std::vector<Key> final_splitters;
   std::vector<int> accumulated_bin_counts;
-  */
+  
 
   public:
     Decomposer();
     void run();
+    void sortSplitters();
     void findSplitters();
-    //void adjustSplitters();
+    void adjustSplitters();
 };
 
 #endif // SIMPLE_DECOMPOSER_H_
