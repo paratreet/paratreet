@@ -57,4 +57,4 @@ TreeElements.o: TreeElements.C TreeElements.h
 	$(CHARMC) -c $<
 
 test: all
-	$(call run, ./$(BINARY) +p4 4)
+	./charmrun ++local ./simple -f ../inputgen/1k.tipsy +p4
