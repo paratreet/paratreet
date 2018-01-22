@@ -14,9 +14,8 @@ class Decomposer : public CBase_Decomposer {
 
   CProxy_TreePiece treepieces; // cannot be a global variable
   CProxy_TreeElements tree_array;
-  int n_treepieces; // OCT decomposition
+  int n_treepieces;
 
-  
   std::vector<Key> ksplitters;
   std::vector<int> bin_counts;
   int* splitter_goals;
@@ -30,10 +29,9 @@ class Decomposer : public CBase_Decomposer {
 
   std::vector<Key> final_splitters;
   std::vector<int> accumulated_bin_counts;
-  
 
   public:
-    Decomposer();
+    Decomposer(int n_treepieces);
     void run();
     void sortSplitters();
     void findSplitters();

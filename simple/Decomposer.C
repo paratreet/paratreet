@@ -9,14 +9,14 @@
 extern CProxy_Main mainProxy;
 extern CProxy_Reader readers;
 extern std::string input_file;
-extern int n_chares;
-extern int max_ppc;
+extern int max_particles_per_tp;
 extern double decomp_tolerance;
 extern int decomp_type;
 extern int tree_type;
 
-Decomposer::Decomposer() {
+Decomposer::Decomposer(int n_treepieces) {
   result = NULL;
+  this->n_treepieces = n_treepieces;
 }
 
 void Decomposer::run() {
@@ -52,6 +52,7 @@ void Decomposer::run() {
 
   // create treepieces
   treepieces = CProxy_TreePiece::ckNew(CkCallbackResumeThread(), decomp_type == OCT_DECOMP, n_treepieces);
+  CkPrintf("[Decomposer] Created %d TreePieces\n");
 
   // flush particles with finalized splitters
   start_time = CkWallTimer();
@@ -99,7 +100,7 @@ void Decomposer::findSplitters() {
       int n_counts = msg->getSize() / sizeof(int);
 
       // check counts and create splitters if necessary
-      Real threshold = (DECOMP_TOLERANCE * Real(max_ppc));
+      Real threshold = (DECOMP_TOLERANCE * Real(max_particles_per_tp));
       for (int i = 0; i < n_counts; i++) {
         Key from = keys.get(2*i);
         Key to = keys.get(2*i+1);
@@ -177,26 +178,26 @@ void Decomposer::findSplitters() {
 
     sorted = false;
     // create initial splitters
-    Key delta = (SFC::lastPossibleKey - SFC::firstPossibleKey) / n_chares; // decide how much distance to cover
+    Key delta = (SFC::lastPossibleKey - SFC::firstPossibleKey) / n_treepieces; // decide how much distance to cover
     Key splitter = SFC::firstPossibleKey;
-    for (int i = 0; i < n_chares; i++, splitter += delta) {
+    for (int i = 0; i < n_treepieces; i++, splitter += delta) {
       ksplitters.push_back(splitter); // splitter[i] = delta * i
     }
     ksplitters.push_back(SFC::lastPossibleKey);
       // there are n + 1 because they are used as a range
 
     // find desired number of particles preceding each splitter
-    num_goals_pending = n_chares - 1;
+    num_goals_pending = n_treepieces - 1;
     splitter_goals = new int[num_goals_pending];
 
-    int avg = universe.n_particles / n_chares;
-    int rem = universe.n_particles % n_chares;
+    int avg = universe.n_particles / n_treepieces;
+    int rem = universe.n_particles % n_treepieces;
     int prev = 0;
     for (int i = 0; i < rem; i++) {
       splitter_goals[i] = prev + avg + 1; // add the prev so we can use prefix sum
       prev = splitter_goals[i];
     }
-    for (int i = rem; i < n_chares; i++) {
+    for (int i = rem; i < n_treepieces; i++) {
       splitter_goals[i] = prev + avg;
       prev = splitter_goals[i];
     }

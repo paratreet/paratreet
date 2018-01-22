@@ -6,10 +6,9 @@ mainmodule simple {
   readonly CProxy_Reader readers;
   readonly std::string input_file;
   readonly int n_readers;
-  readonly int n_chares;
   readonly double decomp_tolerance;
-  readonly int max_ppc;
-  readonly int max_ppl;
+  readonly int max_particles_per_tp;
+  readonly int max_particles_per_leaf;
   readonly int decomp_type;
   readonly int tree_type;
 
@@ -20,7 +19,7 @@ mainmodule simple {
   };
 
   chare Decomposer {
-    entry Decomposer();
+    entry Decomposer(int);
     entry [threaded] void run();
   };
 

@@ -6,10 +6,8 @@
 #include "TreeElements.h"
 
 extern CProxy_Reader readers;
-extern int n_chares;
-extern int max_ppl;
+extern int max_particles_per_leaf;
 extern int tree_type;
-
 
 void TreePiece::calculateData(CProxy_TreeElements tree_array) {
   Vector3D<Real> moment;
@@ -122,7 +120,7 @@ bool TreePiece::recursiveBuild(Node* node, bool saw_tp_key) {
       saw_tp_key = (node->key == tp_key);
     }
 
-    bool is_light = (node->n_particles <= BUCKET_TOLERANCE * max_ppl);
+    bool is_light = (node->n_particles <= BUCKET_TOLERANCE * max_particles_per_leaf);
     bool is_prefix = Utility::isPrefix(node->key, tp_key);
     int owner_start = node->owner_tp_start;
     int owner_end = node->owner_tp_end;
@@ -149,7 +147,7 @@ bool TreePiece::recursiveBuild(Node* node, bool saw_tp_key) {
           if (assigned == 0) {
             node->type = Node::RemoteEmptyLeaf;
           }
-          else if (assigned <= BUCKET_TOLERANCE * max_ppl) {
+          else if (assigned <= BUCKET_TOLERANCE * max_particles_per_leaf) {
             node->type = Node::RemoteLeaf;
           }
           else {
