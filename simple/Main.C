@@ -95,7 +95,7 @@ class Main : public CBase_Main {
         }
         CkPrintf("Number of treepieces: %d\n", n_treepieces);
       }
-      if (decomp_type == OCT_DECOMP) {
+      else if (decomp_type == OCT_DECOMP) {
         CkPrintf("Maximum number of particles per treepiece: %d\n", max_particles_per_tp);
       }
       CkPrintf("Maximum number of particles per leaf: %d\n\n", max_particles_per_leaf);

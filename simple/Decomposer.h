@@ -34,7 +34,8 @@ class Decomposer : public CBase_Decomposer {
     Decomposer(int n_treepieces);
     void run();
     void sortSplitters();
-    void findSplitters();
+    void findSplittersOCT();
+    void findSplittersSFC();
     void adjustSplitters();
 };
 
