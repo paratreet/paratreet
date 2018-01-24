@@ -12,8 +12,8 @@
 /* readonly */ std::string input_file;
 /* readonly */ int n_readers;
 /* readonly */ double decomp_tolerance;
-/* readonly */ int max_particles_per_tp;
-/* readonly */ int max_particles_per_leaf;
+/* readonly */ int max_particles_per_tp; // for OCT decomposition
+/* readonly */ int max_particles_per_leaf; // for local tree build
 /* readonly */ int decomp_type;
 /* readonly */ int tree_type;
 

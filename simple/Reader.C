@@ -114,7 +114,7 @@ void Reader::assignKeys(BoundingBox& universe, const CkCallback& cb) {
   contribute(cb);
 }
 
-void Reader::countOct(const std::vector<Key>& splitter_keys, const CkCallback& cb) {
+void Reader::countOct(std::vector<Key>& splitter_keys, const CkCallback& cb) {
   std::vector<int> counts;
   counts.resize(splitter_keys.size()/2);
   for (int i = 0; i < splitter_keys.size(); i++) {
@@ -123,6 +123,7 @@ void Reader::countOct(const std::vector<Key>& splitter_keys, const CkCallback& c
 
   // search for the first particle whose key is greater or equal to the input key,
   // in the range [start, finish)
+  // should also work for OCT as the particle keys are SFC keys
   int start = 0;
   int finish = particles.size();
   Key from, to;
@@ -131,7 +132,7 @@ void Reader::countOct(const std::vector<Key>& splitter_keys, const CkCallback& c
       from = splitter_keys[2*i];
       to = splitter_keys[2*i+1];
 
-      int begin = Utility::binarySearchGE(from, &particles[0], start, finish); // hmm how does this work for OCT
+      int begin = Utility::binarySearchGE(from, &particles[0], start, finish);
       int end = Utility::binarySearchGE(to, &particles[0], begin, finish);
       counts[i] = end - begin;
 
@@ -147,7 +148,7 @@ void Reader::countOct(const std::vector<Key>& splitter_keys, const CkCallback& c
     contribute(sizeof(int) * counts.size(), &counts[0], CkReduction::sum_int, cb);
 }
 
-void Reader::countSfc(const CkVec<Splitter>& splitters, const CkCallback& cb) {
+void Reader::countSfc(const std::vector<Key>& splitter_keys, const CkCallback& cb) {
   std::vector<int> counts;
   counts.resize(splitters.size()-1); // size equal to number of TreePieces
 
@@ -159,8 +160,8 @@ void Reader::countSfc(const CkVec<Splitter>& splitters, const CkCallback& cb) {
   Key from, to;
   if (particles.size() > 0) {
     for (int i = 0; i < counts.size(); i++) {
-      from = splitters[i].key;
-      to = splitters[i+1].key;
+      from = splitter_keys[i];
+      to = splitter_keys[i+1];
 
       int begin = Utility::binarySearchGE(from, &particles[0], start, finish);
       int end = Utility::binarySearchGE(to, &particles[0], begin, finish);
@@ -178,24 +179,12 @@ void Reader::countSfc(const CkVec<Splitter>& splitters, const CkCallback& cb) {
   contribute(sizeof(int) * counts.size(), &counts[0], CkReduction::sum_int, cb);
 }
 
-void Reader::setSplitters(CkVec<Splitter>& splitters, const CkCallback& cb) {
+void Reader::setSplitters(const CkVec<Splitter>& splitters, const CkCallback& cb) {
   this->splitters = splitters;
   contribute(cb);
 }
 
 /*
-void Reader::setSplitters(const std::vector<Key>& sp, const CkCallback& cb) {
-  splitters = sp;
-  contribute(cb);
-}*/
-
-void Reader::setSplitters(const std::vector<Key>& sp, const std::vector<int>& bin_counts, const CkCallback& cb) {
-  ksplitters = sp; // different type tho
-  splitter_counts = bin_counts;
-  contribute(cb);
-}
-
-
 void Reader::flush(CProxy_TreePiece treepieces) {
   // send particles to owner TreePieces
   int start = 0;
@@ -244,3 +233,4 @@ void Reader::flush(CProxy_TreePiece treepieces) {
 
   splitters.resize(0);
 }
+*/

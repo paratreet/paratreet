@@ -5,6 +5,7 @@
 #include "Reader.h"
 #include "TreeElements.h"
 
+/*
 extern CProxy_Reader readers;
 extern int max_particles_per_leaf;
 extern int tree_type;
@@ -35,17 +36,6 @@ TreePiece::TreePiece(const CkCallback& cb, bool if_OCT_DECOMP) {
   contribute(cb);
 }
 
-/*
-void TreePiece::initialize(const CkCallback& cb) {
-  n_expected = readers.ckLocalBranch()->splitter_counts[thisIndex];
-  tp_key = readers.ckLocalBranch()->splitters[thisIndex];
-  tp_key |= (Key)1 << (KEY_BITS-1); // add placeholder bit
-  cur_idx = 0;
-
-  contribute(cb);
-}*/
-
-
 void TreePiece::receive(ParticleMsg* msg) {
   // copy particles to local vector
   particles.resize(particles.size() + msg->n_particles);
@@ -70,7 +60,6 @@ void TreePiece::build(const CkCallback &cb){
   root = new Node(1, 0, &particles[0], particles.size(), 0, n_treepieces - 1, NULL);
   recursiveBuild(root, false);
 
-  /*
 #ifdef DEBUG
   //print(root);
   Node* cur = root;
@@ -105,7 +94,6 @@ void TreePiece::build(const CkCallback &cb){
     }
   }
 #endif
-*/
 
   contribute(cb);
 }
@@ -237,3 +225,4 @@ void TreePiece::print(Node* root) {
   out << "}" << endl;
   out.close();
 }
+*/

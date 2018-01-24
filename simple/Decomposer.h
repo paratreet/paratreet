@@ -8,20 +8,22 @@
 
 class Decomposer : public CBase_Decomposer {
   BoundingBox universe;
+  Key smallest_particle_key;
+  Key largest_particle_key;
 
-  CProxy_TreePiece treepieces; // cannot be a global variable
+  //CProxy_TreePiece treepieces; // cannot be a global variable
   CProxy_TreeElements tree_array;
   int n_treepieces;
 
-  CkVec<Splitter> oct_splitters;
-  CkVec<Splitter> sfc_splitters;
+  CkVec<Splitter> splitters;
 
   public:
     Decomposer(int n_treepieces);
     void run();
     void findOctSplitters();
     void findSfcSplitters();
-    bool adjustSplitters();
+    bool modifySfcSplitters(std::vector<Key>&, std::vector<Key>&, std::vector<int>&,
+        int&, std::vector<int>&, std::vector<int>&, const int);
 };
 
 #endif // SIMPLE_DECOMPOSER_H_

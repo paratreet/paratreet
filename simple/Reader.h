@@ -14,18 +14,16 @@ class Reader : public CBase_Reader {
     CkVec<Splitter> splitters;
 
     //std::vector<Key> tp_keys;
-    std::vector<Key> ksplitters;
-    std::vector<int> splitter_counts;
+    //std::vector<Key> ksplitters;
+    //std::vector<int> splitter_counts;
 
     Reader();
     void load(std::string, const CkCallback&);
     void assignKeys(BoundingBox&, const CkCallback&);
-    void countSfc(const CkVec<Splitter>&, const CkCallback&);
-    void countOct(const std::vector<Key>&, const CkCallback&);
-    void setSplitters(CkVec<Splitter>&, const CkCallback&);
-    void flush(CProxy_TreePiece);
-    //void setSplitters(const std::vector<Key>&, const CkCallback&);
-    void setSplitters(const std::vector<Key>&, const std::vector<int>&, const CkCallback&);
+    void countOct(std::vector<Key>&, const CkCallback&);
+    void countSfc(const std::vector<Key>&, const CkCallback&);
+    void setSplitters(const CkVec<Splitter>&, const CkCallback&);
+    //void flush(CProxy_TreePiece);
 };
 
 #endif // SIMPLE_READER_H_

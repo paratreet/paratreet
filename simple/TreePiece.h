@@ -7,6 +7,7 @@
 #include "Node.h"
 #include "Utility.h"
 
+  /*
 class TreePiece : public CBase_TreePiece {
   CkVec<Particle> particles;
   int cur_idx;
@@ -25,5 +26,6 @@ class TreePiece : public CBase_TreePiece {
     bool recursiveBuild(Node*, bool);
     void print(Node*);
 };
+    */
 
 #endif // SIMPLE_TREEPIECE_H_

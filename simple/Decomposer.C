@@ -16,6 +16,8 @@ extern int tree_type;
 
 Decomposer::Decomposer(int n_treepieces) {
   this->n_treepieces = n_treepieces;
+  smallest_particle_key = Utility::removeLeadingZeros(Key(1));
+  largest_particle_key = (~Key(0));
 }
 
 void Decomposer::run() {
@@ -143,7 +145,6 @@ void Decomposer::findOctSplitters() {
           keys.add(~Key(0));
         else
           keys.add(to << 3);
-        }
       }
       else {
         // this is a splitter/TreePiece, again from is the index that matters
@@ -152,12 +153,7 @@ void Decomposer::findOctSplitters() {
         // create and store splitter
         Splitter sp(Utility::removeLeadingZeros(from),
                     Utility::removeLeadingZeros(to), from, n_particles);
-        oct_splitters.push_back(sp);
-        /*
-        std::cout << "[" << std::bitset<64>(Utility::removeLeadingZeros(from)) <<
-          ", " << std::bitset<64>(Utility::removeLeadingZeros(to)) << "]" <<
-          std::endl;
-        */
+        splitters.push_back(sp);
 
         // add up number of particles to check if all are flushed
         decomp_particle_sum += n_particles;
@@ -175,24 +171,24 @@ void Decomposer::findOctSplitters() {
   }
 
   // determine number of TreePieces
-  n_treepieces = oct_splitters.size();
+  n_treepieces = splitters.size();
 }
 
 void Decomposer::findSfcSplitters() {
   // create candidate splitters that are equally apart
   // there are n + 1 splliters because they are used as a range
   std::vector<Key> candidate_splitter_keys;
-  Key delta = (SFC::lastPossibleKey - SFC::firstPossibleKey) / n_treepieces;
-  Key splitter_key = SFC::firstPossibleKey;
+  Key delta = (largest_particle_key - smallest_particle_key) / n_treepieces;
+  Key splitter_key = smallest_particle_key;
   for (int i = 0; i < n_treepieces; i++, splitter_key += delta) {
-    candidate_splitter_keys.push_back(Splitter(splitter_key));
+    candidate_splitter_keys.push_back(splitter_key);
   }
-  candidate_splitter_keys.push_back(Splitter(SFC::lastPossibleKey));
+  candidate_splitter_keys.push_back(largest_particle_key);
 
-  // find desired number of particles preceding each splitter
-  // (determine how many particles should be in each TreePiece)
-  int n_goals_pending = n_treepieces - 1;
-  int* splitter_goals = new int[n_goals_pending];
+  // determine how many particles should be in each TreePiece,
+  // perform prefix-sum and store in splitter_goals
+  int n_goals_pending = n_treepieces;
+  std::vector<int> splitter_goals(n_goals_pending);
 
   int avg = universe.n_particles / n_treepieces;
   int rem = universe.n_particles % n_treepieces;
@@ -201,10 +197,11 @@ void Decomposer::findSfcSplitters() {
     splitter_goals[i] = prev + avg + 1;
     prev = splitter_goals[i];
   }
-  for (int i = rem; i < n_treepieces; i++) {
+  for (int i = rem; i < n_goals_pending; i++) {
     splitter_goals[i] = prev + avg;
     prev = splitter_goals[i];
   }
+
 #if DEBUG
   CkPrintf("[Decomposer] %d splitter goals:", n_treepieces);
   for (int i = 0; i < n_treepieces; i++) {
@@ -217,7 +214,8 @@ void Decomposer::findSfcSplitters() {
   int tol_diff = static_cast<int>(avg * decomp_tolerance);
 
   // first SFC key serves as the starting range
-  sfc_splitters.push_back(SFC::firstPossibleKey);
+  std::vector<Key> final_splitter_keys;
+  final_splitter_keys.push_back(smallest_particle_key);
 
   // prepare histogramming
   bool histogram_balanced = false;
@@ -233,7 +231,7 @@ void Decomposer::findSfcSplitters() {
     CkReductionMsg* result;
     readers.countSfc(candidate_splitter_keys, CkCallbackResumeThread((void*&)result));
 
-    // prepare bin_counts for exclusive prefix sum
+    // prepare bin_counts for prefix sum
     int* counts = static_cast<int*>(result->getData());
     int n_counts = result->getSize() / sizeof(int);
     bin_counts.resize(n_counts+1);
@@ -244,25 +242,26 @@ void Decomposer::findSfcSplitters() {
     // perform exclusive prefix sum
     std::partial_sum(bin_counts.begin(), bin_counts.end(), bin_counts.begin());
 
-    // adjust the splitters to get a better balanced histogram
+    // modify the splitters to get a better balanced histogram
     // TODO need to revisit algorithm
-    histogram_balanced = adjustSplitters(candidate_splitter_keys, splitter_goals,
-        n_goals_pending, bin_counts, accumulated_bin_counts, tol_diff);
+    histogram_balanced = modifySfcSplitters(candidate_splitter_keys,
+        final_splitter_keys, splitter_goals, n_goals_pending,
+        bin_counts, accumulated_bin_counts, tol_diff);
 
 #if DEBUG
     CkPrintf("[Decomposer] Histogram iteration %d\n", n_iters);
     CkPrintf("[Decomposer] Probing %d candidate splitters\n",
         candidate_splitter_keys.size());
     CkPrintf("[Decomposer] Decided on %d splitting keys\n",
-        sfc_splitters.size()-1);
+        final_splitter_keys.size()-1);
 #endif
   }
 
   CkPrintf("[Decomposer] Histograms balanced after %d iterations\n", n_iters);
 
   // TODO check if these work as intended
-  std::sort(sfc_splitters.begin(), sfc_splitters.end());
-  sfc_splitters.push_back(SFC::lastPossibleKey);
+  std::sort(final_splitter_keys.begin(), final_splitter_keys.end());
+  final_splitter_keys.push_back(SFC::lastPossibleKey);
   accumulated_bin_counts.push_back(bin_counts.back());
   std::sort(accumulated_bin_counts.begin(), accumulated_bin_counts.end());
   bin_counts.resize(accumulated_bin_counts.size());
@@ -270,51 +269,53 @@ void Decomposer::findSfcSplitters() {
   accumulated_bin_counts.clear();
 }
 
-bool Decomposer::adjustSplitters(std::vector<Key>& candidate_splitter_keys,
-    int* splitter_goals, int& n_goals_pending, std::vector<int>& bin_counts,
+bool Decomposer::modifySfcSplitters(std::vector<Key>& candidate_splitter_keys,
+    std::vector<Key>& final_splitter_keys, std::vector<int>& splitter_goals,
+    int& n_goals_pending, std::vector<int>& bin_counts,
     std::vector<int>& accumulated_bin_counts, const int tol_diff) {
+  // new set of splitter keys
+  std::vector<Key> new_splitter_keys;
+  new_splitter_keys.reserve(candidate_splitter_keys.size() * 4);
+  new_splitter_keys.push_back(smallest_particle_key);
+
+  // keys and iterators for bracketing the goal
+  Key left_bound, right_bound;
+  std::vector<int>::iterator bin_it_left, bin_it_right = bin_counts.begin();
+
   CkBitVector bins_to_split;
   bins_to_split.Resize(candidate_splitter_keys.size() - 1);
   bins_to_split.Zero();
-
-  std::vector<Key> new_splitter_keys;
-  new_splitter_keys.reserve(candidate_splitter_keys.size() * 4); // there are 4 because were adding four more
-    // but when do we get rid of them?
-    // perhaps using accumulated bin counts
-  new_splitter_keys.push_back(SFC::firstPossibleKey);
-
-  Key left_bound, right_bound;
-  vector<int>::iterator n_left_key, n_right_key = bin_counts.begin();
 
   int n_active_goals = 0;
   // for each goal not achieved yet (i.e. splitter key not finalized)
   for (int i = 0; i < n_goals_pending; i++) {
     // find positions that bracket the goal
-    n_right_key = std::lower_bound(n_right_key, bin_counts.end(), splitter_goals[i]);
-    n_left_key = n_right_key - 1;
-      // dividing the ones whose bin count is high is great, but what if
-      // there aren't any bin counts greater than the goal? they are too fine then?
-      // ordering of the acc bin counts, ordering of final splitters, might have problems
-      // the order is probably what makes the flushing so difficult
+    bin_it_right = std::lower_bound(bin_it_right, bin_counts.end(), splitter_goals[i]);
+    bin_it_left = bin_it_right - 1;
 
-    if (n_right_key == bin_counts.begin())
+    // dividing the ones whose bin count is high is great, but what if
+    // there aren't any bin counts greater than the goal? they are too fine then?
+    // ordering of the acc bin counts, ordering of final splitters, might have problems
+    // the order is probably what makes the flushing so difficult
+
+    if (bin_it_right == bin_counts.begin())
       CkPrintf("[Decomposer] Looking for %d, this is at beginning?\n", splitter_goals[i]);
-    else if (n_right_key == bin_counts.end())
+    else if (bin_it_right == bin_counts.end())
       CkPrintf("[Decomposer] Looking for %d, this is at end?\n", splitter_goals[i]);
 
     // translate positions into bracketing keys
-    left_bound = candidate_splitter_keys[n_left_key - bin_counts.begin()];
-    right_bound = candidate_splitter_keys[n_right_key - bin_counts.begin()];
+    left_bound = candidate_splitter_keys[bin_it_left - bin_counts.begin()];
+    right_bound = candidate_splitter_keys[bin_it_right - bin_counts.begin()];
 
     // check if one of the bounds is close enough to the goal
-    if (abs(*n_left_key - splitter_goals[i]) <= tol_diff) {
+    if (abs(*bin_it_left - splitter_goals[i]) <= tol_diff) {
       // add this key to the list of final splitters
-      sfc_splitters.push_back(left_bound);
-      accumulated_bin_counts.push_back(*n_left_key);
+      final_splitter_keys.push_back(left_bound);
+      accumulated_bin_counts.push_back(*bin_it_left);
     }
-    else if (abs(*n_right_key - splitter_goals[i]) <= tol_diff) {
-      sfc_splitters.push_back(right_bound);
-      accumulated_bin_counts.push_back(*n_right_key);
+    else if (abs(*bin_it_right - splitter_goals[i]) <= tol_diff) {
+      final_splitter_keys.push_back(right_bound);
+      accumulated_bin_counts.push_back(*bin_it_right);
     }
     else {
       // not close enough yet, add the bounds and the middle to the probes
@@ -331,24 +332,22 @@ bool Decomposer::adjustSplitters(std::vector<Key>& candidate_splitter_keys,
       }
 
       splitter_goals[n_active_goals++] = splitter_goals[i];
-      bins_to_split.Set(n_left_key - bin_counts.begin());
+      bins_to_split.Set(bin_it_left - bin_counts.begin());
     }
   }
 
   n_goals_pending = n_active_goals;
 
   if (n_goals_pending == 0) {
-    delete [] splitter_goals;
     return true;
   }
   else {
     if (new_splitter_keys.back() != SFC::lastPossibleKey) {
       new_splitter_keys.push_back(SFC::lastPossibleKey);
     }
-    sfc_splitters.reserve(new_splitter_keys.size());
-    sfc_splitters.assign(new_splitter_keys.begin(), new_splitter_keys.end());
+    final_splitter_keys.reserve(new_splitter_keys.size());
+    final_splitter_keys.assign(new_splitter_keys.begin(), new_splitter_keys.end());
   }
 
   return false;
 }
-
