@@ -44,8 +44,8 @@ mainmodule simple {
     entry Reader();
     entry void load(std::string, const CkCallback&);
     entry void assignKeys(BoundingBox&, const CkCallback&);
-    entry void count(CkVec<Key>&, const CkCallback&);
-    entry void count(const std::vector<Key>&, const CkCallback&);
+    entry void countOct(const std::vector<Key>&, const CkCallback&);
+    entry void countSfc(const CkVec<Splitter>&, const CkCallback&);
     entry void setSplitters(CkVec<Splitter>&, const CkCallback&);
     entry void setSplitters(const std::vector<Key>&, const std::vector<int>&, const CkCallback&);
     entry void flush(CProxy_TreePiece);

@@ -10,12 +10,8 @@ struct Splitter {
   int n_particles;
 
   Splitter() {}
-  Splitter(Key from, Key to, Key tp_key, int n_particles) {
-    this->from = from;
-    this->to = to;
-    this->tp_key = tp_key;
-    this->n_particles = n_particles;
-  }
+  Splitter(Key from_, Key to_, Key tp_key_, int n_particles_) :
+    from(from_), to(to_), tp_key(tp_key), n_particles(n_particles_) {}
 
   bool pup(PUP::er &p) {
     p | from;
