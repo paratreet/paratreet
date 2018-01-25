@@ -21,7 +21,6 @@ typedef double Real;
 
 /* Tree types */
 #define OCT_TREE 20
-#define SFC_TREE 21
 
 #define BRANCH_FACTOR 8
 #define LOG_BRANCH_FACTOR 3

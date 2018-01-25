@@ -68,9 +68,6 @@ class Main : public CBase_Main {
             if (input_str.compare("oct") == 0) {
               tree_type = OCT_TREE;
             }
-            else if (input_str.compare("sfc") == 0) {
-              tree_type = SFC_TREE;
-            }
             break;
           default:
             CkPrintf("Usage:\n");
