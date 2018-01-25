@@ -47,7 +47,7 @@ void Decomposer::run() {
 
   /*
   // sort splitters for correct flushing
-  if (decomp_type == OCT_DECOMP) oct_splitters.quickSort(); // final_splitters are already sorted
+  if (decomp_type == OCT_DECOMP) oct_splitters.quickSort();
   CkPrintf("[Decomposer] Sorting splitters: %lf seconds\n", CkWallTimer() - start_time);
 
   // send finalized splitters to readers
@@ -243,7 +243,7 @@ void Decomposer::findSfcSplitters() {
     std::partial_sum(bin_counts.begin(), bin_counts.end(), bin_counts.begin());
 
     // modify the splitters to get a better balanced histogram
-    // TODO need to revisit algorithm
+    // TODO need to revisit algorithm - it might be better to do a parallel sort instead
     histogram_balanced = modifySfcSplitters(candidate_splitter_keys,
         final_splitter_keys, splitter_goals, n_goals_pending,
         bin_counts, accumulated_bin_counts, tol_diff);
