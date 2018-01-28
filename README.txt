@@ -4,7 +4,7 @@
 * Dependent git repositories are tracked as git submodules.
   Changes for the ParaTreeT project are made in branch 'paratreet'.
 
-1) Intialize and update all submodule folders (utility).
+1) Intialize and update all submodule folders (utility, psortingV).
     $ cd [submodule folder]
     $ git submodule init
     $ git submodule update
