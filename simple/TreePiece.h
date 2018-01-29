@@ -9,7 +9,7 @@
 
   /*
 class TreePiece : public CBase_TreePiece {
-  CkVec<Particle> particles;
+  std::vector<Particle> particles;
   int cur_idx;
   int n_expected;
   int n_treepieces;

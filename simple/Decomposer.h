@@ -15,7 +15,7 @@ class Decomposer : public CBase_Decomposer {
   CProxy_TreeElements tree_array;
   int n_treepieces;
 
-  CkVec<Splitter> splitters;
+  std::vector<Splitter> splitters;
 
   public:
     Decomposer(int n_treepieces);

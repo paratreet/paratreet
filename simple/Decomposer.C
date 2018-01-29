@@ -222,7 +222,8 @@ void Decomposer::findSfcSplitters() {
   readers.redistribute();
   CkStartQD(CkCallbackResumeThread());
 
-  // TODO sort particles in local bucket
+  // sort particles in local bucket
+  readers.localSort(CkCallbackResumeThread());
 
   /*
   // create candidate splitters that are equally apart

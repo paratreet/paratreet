@@ -100,7 +100,7 @@ void TreePiece::build(const CkCallback &cb){
 
 bool TreePiece::recursiveBuild(Node* node, bool saw_tp_key) {
   // store reference to splitters
-  CkVec<Splitter>& splitters = readers.ckLocalBranch()->splitters;
+  std::vector<Splitter>& splitters = readers.ckLocalBranch()->splitters;
 
   if (tree_type == OCT_TREE) {
     // check if we are inside the subtree rooted at the treepiece's key

@@ -4,6 +4,7 @@
 #include <bitset>
 #include <iostream>
 #include <cstring>
+#include <algorithm>
 
 extern CProxy_Main mainProxy;
 extern int n_readers;
@@ -109,7 +110,7 @@ void Reader::assignKeys(BoundingBox& universe, const CkCallback& cb) {
   }
 
   // sort particles using their keys
-  particles.quickSort();
+  std::sort(particles.begin(), particles.end());
 
   // back to callee
   contribute(cb);
@@ -206,8 +207,12 @@ void Reader::prepMessages(const std::vector<Key>& splitter_keys, const CkCallbac
   }
 
   // prepare particle messages
+  int old_total = particles.size();
+  int new_total = 0;
   for (int bucket = 0; bucket < n_readers; bucket++) {
     int n_particles = send_vectors[bucket].size();
+    new_total += n_particles;
+
     if (n_particles > 0) {
       ParticleMsg* msg = new (n_particles) ParticleMsg(&send_vectors[bucket][0], n_particles);
       particle_messages.push_back(msg);
@@ -216,6 +221,10 @@ void Reader::prepMessages(const std::vector<Key>& splitter_keys, const CkCallbac
       particle_messages.push_back(NULL);
     }
   }
+
+  // check if all particles are assigned to buckets
+  if (new_total != old_total)
+    CkAbort("Failed to move all particles into buckets");
 
   // zero out local particle vector to receive new particles
   particles.resize(0);
@@ -247,7 +256,18 @@ void Reader::receiveMessage(ParticleMsg* msg) {
   delete msg;
 }
 
-void Reader::setSplitters(const CkVec<Splitter>& splitters, const CkCallback& cb) {
+void Reader::localSort(const CkCallback& cb) {
+  std::sort(particles.begin(), particles.end());
+
+  std::cout << "[Reader " << thisIndex << "] Sorted particles:" << std::endl;
+  for (auto& particle : particles) {
+    std::cout << "< " << std::bitset<64>(particle.key) << std::endl;
+  }
+
+  contribute(cb);
+}
+
+void Reader::setSplitters(const std::vector<Splitter>& splitters, const CkCallback& cb) {
   this->splitters = splitters;
   contribute(cb);
 }

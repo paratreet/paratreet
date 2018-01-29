@@ -9,10 +9,9 @@
 
 class Reader : public CBase_Reader {
   public:
-    CkVec<Particle> particles;
     BoundingBox box;
-    CkVec<Splitter> splitters;
-
+    std::vector<Particle> particles;
+    std::vector<Splitter> splitters;
     std::vector<ParticleMsg*> particle_messages;
 
     //std::vector<Key> tp_keys;
@@ -28,7 +27,8 @@ class Reader : public CBase_Reader {
     void prepMessages(const std::vector<Key>&, const CkCallback&);
     void redistribute();
     void receiveMessage(ParticleMsg* msg);
-    void setSplitters(const CkVec<Splitter>&, const CkCallback&);
+    void localSort(const CkCallback& cb);
+    void setSplitters(const std::vector<Splitter>&, const CkCallback&);
     //void flush(CProxy_TreePiece);
 };
 
