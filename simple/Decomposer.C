@@ -8,6 +8,7 @@
 
 extern CProxy_Main mainProxy;
 extern CProxy_Reader readers;
+extern int n_readers;
 extern std::string input_file;
 extern int max_particles_per_tp;
 extern double decomp_tolerance;
@@ -175,6 +176,56 @@ void Decomposer::findOctSplitters() {
 }
 
 void Decomposer::findSfcSplitters() {
+  // perform parallel sample sort of all particle keys
+  int avg_n_particles = universe.n_particles / n_treepieces;
+  int oversampling_ratio = 10;
+  if (avg_n_particles < oversampling_ratio)
+    oversampling_ratio = avg_n_particles;
+
+#if DEBUG
+  std::cout << "[Decomposer] Oversampling ratio: " << oversampling_ratio << std::endl;
+#endif
+
+  // gather samples
+  CkReductionMsg* msg;
+  readers.pickSamples(oversampling_ratio, CkCallbackResumeThread((void*&)msg));
+
+  Key* sample_keys = (Key*)msg->getData();
+  const int n_samples = msg->getSize() / sizeof(Key);
+  std::cout << "n_samples: " << n_samples << std::endl;
+
+  // sort samples
+  std::sort(sample_keys, sample_keys + n_samples);
+
+  // finalize splitters
+  std::vector<Key> splitter_keys(n_readers + 1);
+  splitter_keys[0] = smallest_particle_key;
+  for (int i = 1; i < n_readers; i++) {
+    int index = (n_samples / n_readers) * i;
+    splitter_keys[i] = sample_keys[index];
+  }
+  splitter_keys[n_readers] = largest_particle_key;
+
+#if DEBUG
+  std::cout << "[Decomposer] Splitter keys for sorting:" << std::endl;
+  for (int i = 0; i < splitter_keys.size(); i++) {
+    std::cout << "> " << std::bitset<64>(splitter_keys[i]) << std::endl;
+  }
+#endif
+
+  // free reduction message
+  delete msg;
+
+  // TODO prepare particle messages using splitters
+  readers.prepMessages(splitter_keys, CkCallbackResumeThread());
+
+  // redistribute particles to right buckets
+  readers.redistribute();
+  CkStartQD(CkCallbackResumeThread());
+
+  // TODO sort particles in local bucket
+
+  /*
   // create candidate splitters that are equally apart
   // there are n + 1 splliters because they are used as a range
   std::vector<Key> candidate_splitter_keys;
@@ -247,6 +298,7 @@ void Decomposer::findSfcSplitters() {
     histogram_balanced = modifySfcSplitters(candidate_splitter_keys,
         final_splitter_keys, splitter_goals, n_goals_pending,
         bin_counts, accumulated_bin_counts, tol_diff);
+    readers.globalSampleSort(
 
 #if DEBUG
     CkPrintf("[Decomposer] Histogram iteration %d\n", n_iters);
@@ -267,6 +319,7 @@ void Decomposer::findSfcSplitters() {
   bin_counts.resize(accumulated_bin_counts.size());
   std::adjacent_difference(accumulated_bin_counts.begin(), accumulated_bin_counts.end(), bin_counts.begin());
   accumulated_bin_counts.clear();
+  */
 }
 
 bool Decomposer::modifySfcSplitters(std::vector<Key>& candidate_splitter_keys,

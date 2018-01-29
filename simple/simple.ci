@@ -48,6 +48,10 @@ mainmodule simple {
     entry void assignKeys(BoundingBox&, const CkCallback&);
     entry void countOct(std::vector<Key>&, const CkCallback&);
     entry void countSfc(const std::vector<Key>&, const CkCallback&);
+    entry void pickSamples(const int, const CkCallback&);
+    entry void prepMessages(const std::vector<Key>&, const CkCallback&);
+    entry void redistribute();
+    entry void receiveMessage(ParticleMsg*);
     entry void setSplitters(const CkVec<Splitter>&, const CkCallback&);
     //entry void flush(CProxy_TreePiece);
   };

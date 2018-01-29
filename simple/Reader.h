@@ -13,6 +13,8 @@ class Reader : public CBase_Reader {
     BoundingBox box;
     CkVec<Splitter> splitters;
 
+    std::vector<ParticleMsg*> particle_messages;
+
     //std::vector<Key> tp_keys;
     //std::vector<Key> ksplitters;
     //std::vector<int> splitter_counts;
@@ -22,6 +24,10 @@ class Reader : public CBase_Reader {
     void assignKeys(BoundingBox&, const CkCallback&);
     void countOct(std::vector<Key>&, const CkCallback&);
     void countSfc(const std::vector<Key>&, const CkCallback&);
+    void pickSamples(const int, const CkCallback&);
+    void prepMessages(const std::vector<Key>&, const CkCallback&);
+    void redistribute();
+    void receiveMessage(ParticleMsg* msg);
     void setSplitters(const CkVec<Splitter>&, const CkCallback&);
     //void flush(CProxy_TreePiece);
 };

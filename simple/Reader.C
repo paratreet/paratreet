@@ -3,6 +3,7 @@
 #include "Utility.h"
 #include <bitset>
 #include <iostream>
+#include <cstring>
 
 extern CProxy_Main mainProxy;
 extern int n_readers;
@@ -145,7 +146,7 @@ void Reader::countOct(std::vector<Key>& splitter_keys, const CkCallback& cb) {
     }
   }
 
-    contribute(sizeof(int) * counts.size(), &counts[0], CkReduction::sum_int, cb);
+  contribute(sizeof(int) * counts.size(), &counts[0], CkReduction::sum_int, cb);
 }
 
 void Reader::countSfc(const std::vector<Key>& splitter_keys, const CkCallback& cb) {
@@ -177,6 +178,66 @@ void Reader::countSfc(const std::vector<Key>& splitter_keys, const CkCallback& c
   }
 
   contribute(sizeof(int) * counts.size(), &counts[0], CkReduction::sum_int, cb);
+}
+
+void Reader::pickSamples(const int oversampling_ratio, const CkCallback& cb) {
+  Key* sample_keys = new Key[oversampling_ratio];
+
+  // TODO not random, just equal intervals
+  for (int i = 0; i < oversampling_ratio; i++) {
+    int index = (particles.size() / (oversampling_ratio + 1)) * (i + 1);
+    sample_keys[i] = particles[index].key;
+  }
+
+  // accumulate samples
+  contribute(sizeof(Key) * oversampling_ratio, sample_keys, CkReduction::concat, cb);
+  delete[] sample_keys;
+}
+
+void Reader::prepMessages(const std::vector<Key>& splitter_keys, const CkCallback& cb) {
+  // FIXME locally sort particles and then redistribute?
+  // place particles in respective buckets
+  std::vector<std::vector<Particle>> send_vectors(n_readers);
+  for (int i = 0; i < particles.size(); i++) {
+    // TODO
+    int bucket = Utility::binarySearchLE(particles[i], &splitter_keys[0], 0, splitter_keys.size());
+    send_vectors[bucket].push_back(particles[i]);
+  }
+
+  // prepare particle messages
+  for (int bucket = 0; bucket < n_readers; bucket++) {
+    int n_particles = send_vectors[bucket].size();
+    if (n_particles > 0) {
+      ParticleMsg* msg = new (n_particles) ParticleMsg(&send_vectors[bucket][0], n_particles);
+      particle_messages.push_back(msg);
+    }
+    else {
+      particle_messages.push_back(NULL);
+    }
+  }
+
+  // zero out local particle vector to receive new particles
+  particles.resize(0);
+
+  contribute(cb);
+}
+
+void Reader::redistribute() {
+  // send particles home
+  for (int bucket = 0; bucket < n_readers; bucket++) {
+    if (particle_messages[bucket] != NULL)
+      thisProxy[bucket].receiveMessage(particle_messages[bucket]);
+  }
+}
+
+void Reader::receiveMessage(ParticleMsg* msg) {
+  static int n_particles = 0;
+
+  // copy particles to local vector
+  particles.resize(n_particles + msg->n_particles);
+  std::memcpy(&particles[n_particles], msg->particles, msg->n_particles * sizeof(Particle));
+  n_particles += msg->n_particles;
+  delete msg;
 }
 
 void Reader::setSplitters(const CkVec<Splitter>& splitters, const CkCallback& cb) {

@@ -30,6 +30,24 @@ class Utility {
     return(x & ~(x >> 1));
   }
 
+  // TODO
+  template<typename KEY_TYPE, typename OBJ_TYPE>
+  static int binarySearchLE(const KEY_TYPE &check, const OBJ_TYPE *objects, int start, int end){
+    int lo = start;
+    int hi = end;
+    int mid;
+    while(lo < hi) {
+      mid = lo+((hi-lo)>>1);
+      if(check <= objects[mid]){
+        hi = mid;
+      }
+      else{
+        lo = mid+1;
+      }
+    }
+    return lo;
+  }
+
   template<typename KEY_TYPE, typename OBJ_TYPE>
   static int binarySearchGE(const KEY_TYPE &check, const OBJ_TYPE *particles, int start, int end){
     int lo = start;
