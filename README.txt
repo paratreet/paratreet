@@ -5,7 +5,7 @@
   Changes for the ParaTreeT project are made in branch 'paratreet'.
 
 1) Intialize and update all submodule folders (utility, psortingV).
-    $ cd [submodule folder]
+    From top directory (paratreet):
     $ git submodule init
     $ git submodule update
 
