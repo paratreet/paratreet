@@ -199,8 +199,9 @@ void Reader::prepMessages(const std::vector<Key>& splitter_keys, const CkCallbac
   // place particles in respective buckets
   std::vector<std::vector<Particle>> send_vectors(n_readers);
   for (int i = 0; i < particles.size(); i++) {
-    // TODO
-    int bucket = Utility::binarySearchLE(particles[i], &splitter_keys[0], 0, splitter_keys.size());
+    // use upper bound splitter index to determine Reader index
+    // [lower splitter, upper splitter)
+    int bucket = Utility::binarySearchG(particles[i], &splitter_keys[0], 0, splitter_keys.size()) - 1;
     send_vectors[bucket].push_back(particles[i]);
   }
 
@@ -225,8 +226,14 @@ void Reader::prepMessages(const std::vector<Key>& splitter_keys, const CkCallbac
 void Reader::redistribute() {
   // send particles home
   for (int bucket = 0; bucket < n_readers; bucket++) {
-    if (particle_messages[bucket] != NULL)
+    if (particle_messages[bucket] != NULL) {
+#if DEBUG
+      std::cout << "[Reader " << thisIndex << "] Sending " <<
+        particle_messages[bucket]->n_particles << " particles to Reader " <<
+        bucket << std::endl;
+#endif
       thisProxy[bucket].receiveMessage(particle_messages[bucket]);
+    }
   }
 }
 

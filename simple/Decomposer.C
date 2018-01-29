@@ -192,7 +192,6 @@ void Decomposer::findSfcSplitters() {
 
   Key* sample_keys = (Key*)msg->getData();
   const int n_samples = msg->getSize() / sizeof(Key);
-  std::cout << "n_samples: " << n_samples << std::endl;
 
   // sort samples
   std::sort(sample_keys, sample_keys + n_samples);
@@ -216,7 +215,7 @@ void Decomposer::findSfcSplitters() {
   // free reduction message
   delete msg;
 
-  // TODO prepare particle messages using splitters
+  // prepare particle messages using splitters
   readers.prepMessages(splitter_keys, CkCallbackResumeThread());
 
   // redistribute particles to right buckets
