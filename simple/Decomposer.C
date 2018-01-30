@@ -51,7 +51,7 @@ void Decomposer::run() {
   else if (decomp_type == SFC_DECOMP) {
     //findSfcSplitters();
     globalSampleSort();
-    CkPrintf("[Decomposer] Global sample sort of partifcles: %lf seconds\n",
+    CkPrintf("[Decomposer] Global sample sort of particles: %lf seconds\n",
         CkWallTimer() - start_time);
   }
 
