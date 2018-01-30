@@ -52,7 +52,8 @@ mainmodule simple {
     entry void prepMessages(const std::vector<Key>&, const CkCallback&);
     entry void redistribute();
     entry void receiveMessage(ParticleMsg*);
-    entry void localSort(const CkCallback& cb);
+    entry void localSort(const CkCallback&);
+    entry void checkSort(const Key, const CkCallback&);
     entry void setSplitters(const std::vector<Splitter>&, const CkCallback&);
     //entry void flush(CProxy_TreePiece);
   };

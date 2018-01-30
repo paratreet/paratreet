@@ -226,9 +226,6 @@ void Reader::prepMessages(const std::vector<Key>& splitter_keys, const CkCallbac
   if (new_total != old_total)
     CkAbort("Failed to move all particles into buckets");
 
-  // zero out local particle vector to receive new particles
-  particles.resize(0);
-
   contribute(cb);
 }
 
@@ -258,13 +255,44 @@ void Reader::receiveMessage(ParticleMsg* msg) {
 void Reader::localSort(const CkCallback& cb) {
   std::sort(particles.begin(), particles.end());
 
-  // FIXME remove this
-  CkPrintf("[Reader %d] Sorted particles:", thisIndex);
-  for (int i = 0; i < particles.size(); i++) {
-    CkPrintf("0x%" PRIx64 "\n", particles[i].key);
+  contribute(cb);
+}
+
+void Reader::checkSort(const Key last, const CkCallback& cb) {
+  bool sorted = true;
+
+  if (particles.size() > 0) {
+    if (last > particles[0]) {
+      sorted = false;
+    }
+    else {
+      for (int i = 0; i < particles.size()-1; i++) {
+        if (particles[i] > particles[i+1]) {
+          sorted = false;
+          break;
+        }
+      }
+    }
   }
 
-  contribute(cb);
+  if (sorted)
+    CkPrintf("[Reader %d] Particles sorted\n", thisIndex);
+  else
+    CkPrintf("[Reader %d] Particles NOT sorted\n", thisIndex);
+
+  if (thisIndex < n_readers-1) {
+    Key my_last;
+    if (particles.size() > 0)
+      my_last = particles.back().key;
+    else
+      my_last = Key(0);
+
+    thisProxy[thisIndex+1].checkSort(my_last, cb);
+    contribute(cb);
+  }
+  else {
+    contribute(cb);
+  }
 }
 
 void Reader::setSplitters(const std::vector<Splitter>& splitters, const CkCallback& cb) {

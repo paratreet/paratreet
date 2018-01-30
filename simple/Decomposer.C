@@ -53,6 +53,11 @@ void Decomposer::run() {
     globalSampleSort();
     CkPrintf("[Decomposer] Global sample sort of particles: %lf seconds\n",
         CkWallTimer() - start_time);
+
+#ifdef DEBUG
+    // check if particles are correctly sorted globally
+    readers[0].checkSort(Key(0), CkCallbackResumeThread());
+#endif
   }
 
   /*
