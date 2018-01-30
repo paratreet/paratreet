@@ -21,9 +21,12 @@ class Decomposer : public CBase_Decomposer {
     Decomposer(int n_treepieces);
     void run();
     void findOctSplitters();
+    void globalSampleSort();
+    /*
     void findSfcSplitters();
     bool modifySfcSplitters(std::vector<Key>&, std::vector<Key>&, std::vector<int>&,
         int&, std::vector<int>&, std::vector<int>&, const int);
+    */
 };
 
 #endif // SIMPLE_DECOMPOSER_H_

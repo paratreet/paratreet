@@ -40,11 +40,20 @@ void Decomposer::run() {
   readers.assignKeys(universe, CkCallbackResumeThread());
   CkPrintf("[Decomposer] Assigning keys and sorting particles: %lf seconds\n", CkWallTimer() - start_time);
 
-  // find splitters for decomposition
+  // OCT decomposition: find splitters
+  // SFC decomposition: globally sort particles (sample sort)
   start_time = CkWallTimer();
-  if (decomp_type == OCT_DECOMP) findOctSplitters();
-  else if (decomp_type == SFC_DECOMP) findSfcSplitters();
-  CkPrintf("[Decomposer] Finding right splitters: %lf seconds\n", CkWallTimer() - start_time);
+  if (decomp_type == OCT_DECOMP) {
+    findOctSplitters();
+    CkPrintf("[Decomposer] Determining splitters: %lf seconds\n",
+        CkWallTimer() - start_time);
+  }
+  else if (decomp_type == SFC_DECOMP) {
+    //findSfcSplitters();
+    globalSampleSort();
+    CkPrintf("[Decomposer] Global sample sort of partifcles: %lf seconds\n",
+        CkWallTimer() - start_time);
+  }
 
   /*
   // sort splitters for correct flushing
@@ -175,7 +184,7 @@ void Decomposer::findOctSplitters() {
   n_treepieces = splitters.size();
 }
 
-void Decomposer::findSfcSplitters() {
+void Decomposer::globalSampleSort() {
   // perform parallel sample sort of all particle keys
   int avg_n_particles = universe.n_particles / n_treepieces;
   int oversampling_ratio = 10;
@@ -224,8 +233,10 @@ void Decomposer::findSfcSplitters() {
 
   // sort particles in local bucket
   readers.localSort(CkCallbackResumeThread());
+}
 
-  /*
+/*
+void Decomposer::findSfcSplitters() {
   // create candidate splitters that are equally apart
   // there are n + 1 splliters because they are used as a range
   std::vector<Key> candidate_splitter_keys;
@@ -319,7 +330,6 @@ void Decomposer::findSfcSplitters() {
   bin_counts.resize(accumulated_bin_counts.size());
   std::adjacent_difference(accumulated_bin_counts.begin(), accumulated_bin_counts.end(), bin_counts.begin());
   accumulated_bin_counts.clear();
-  */
 }
 
 bool Decomposer::modifySfcSplitters(std::vector<Key>& candidate_splitter_keys,
@@ -404,3 +414,4 @@ bool Decomposer::modifySfcSplitters(std::vector<Key>& candidate_splitter_keys,
 
   return false;
 }
+*/
