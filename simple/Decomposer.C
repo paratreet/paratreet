@@ -32,7 +32,7 @@ void Decomposer::run() {
   delete result;
 
 #ifdef DEBUG
-  std::cout << "[Decomposer] Universal bounding box: " << universe << endl;
+  std::cout << "[Decomposer] Universal bounding box: " << universe << std::endl;
 #endif
 
   // assign keys and sort particles locally
@@ -192,7 +192,7 @@ void Decomposer::globalSampleSort() {
     oversampling_ratio = avg_n_particles;
 
 #if DEBUG
-  std::cout << "[Decomposer] Oversampling ratio: " << oversampling_ratio << std::endl;
+  CkPrintf("[Decomposer] Oversampling ratio: %d\n", oversampling_ratio);
 #endif
 
   // gather samples
@@ -215,9 +215,9 @@ void Decomposer::globalSampleSort() {
   splitter_keys[n_readers] = largest_particle_key;
 
 #if DEBUG
-  std::cout << "[Decomposer] Splitter keys for sorting:" << std::endl;
+  CkPrintf("[Decomposer] Splitter keys for sorting:\n");
   for (int i = 0; i < splitter_keys.size(); i++) {
-    std::cout << "> " << std::bitset<64>(splitter_keys[i]) << std::endl;
+    CkPrintf("0x%" PRIx64 "\n", splitter_keys[i]);
   }
 #endif
 

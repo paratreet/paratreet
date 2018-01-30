@@ -2,6 +2,7 @@
 #define SIMPLE_COMMON_H_
 
 #include <string>
+#include <cinttypes> // for printing keys in hex
 //#include <vector>
 #include "Vector3D.h"
 #include "SFC.h"

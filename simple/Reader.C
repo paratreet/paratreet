@@ -93,7 +93,7 @@ void Reader::load(std::string input_file, const CkCallback& cb) {
   box.n_particles = particles.size();
 
 #ifdef DEBUG
-  cout << "[Reader " << thisIndex << "] Built bounding box: " << box << endl;
+  std::cout << "[Reader " << thisIndex << "] Built bounding box: " << box << std::endl;
 #endif
 
   // reduce to universal bounding box
@@ -237,9 +237,8 @@ void Reader::redistribute() {
   for (int bucket = 0; bucket < n_readers; bucket++) {
     if (particle_messages[bucket] != NULL) {
 #if DEBUG
-      std::cout << "[Reader " << thisIndex << "] Sending " <<
-        particle_messages[bucket]->n_particles << " particles to Reader " <<
-        bucket << std::endl;
+      CkPrintf("[Reader %d] Sending %d particles to Reader %d\n", thisIndex,
+          particle_messages[bucket]->n_particles, bucket);
 #endif
       thisProxy[bucket].receiveMessage(particle_messages[bucket]);
     }
@@ -259,9 +258,10 @@ void Reader::receiveMessage(ParticleMsg* msg) {
 void Reader::localSort(const CkCallback& cb) {
   std::sort(particles.begin(), particles.end());
 
-  std::cout << "[Reader " << thisIndex << "] Sorted particles:" << std::endl;
-  for (auto& particle : particles) {
-    std::cout << "< " << std::bitset<64>(particle.key) << std::endl;
+  // FIXME remove this
+  CkPrintf("[Reader %d] Sorted particles:", thisIndex);
+  for (int i = 0; i < particles.size(); i++) {
+    CkPrintf("0x%" PRIx64 "\n", particles[i].key);
   }
 
   contribute(cb);

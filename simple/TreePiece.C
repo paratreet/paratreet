@@ -64,9 +64,9 @@ void TreePiece::build(const CkCallback &cb){
   //print(root);
   Node* cur = root;
   int sib = 0;
-  std::cout << "[TP " << thisIndex << "] key: " << std::bitset<64>(tp_key) << " particles: " << particles.size() << std::endl;
+  CkPrintf("[TP %d] key: 0x%" PRIx64 " particles: %d\n", thisIndex, tp_key, particles.size());
   while (1) {
-    std::cout << "[Level " << cur->depth << "] cur: " << std::bitset<64>(cur->key) << ", " << cur->n_particles << " particles" << std::endl;
+    CkPrintf("[Level %d] cur: 0x%" PRIx64 " particles: %d\n", cur->depth, cur->key, cur->n_particles);
     if (cur->parent == NULL) { // root
       if (cur->children.size() > 0) {
         // go down one level
