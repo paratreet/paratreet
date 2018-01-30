@@ -40,16 +40,19 @@ void Decomposer::run() {
   readers.assignKeys(universe, CkCallbackResumeThread());
   CkPrintf("[Decomposer] Assigning keys and sorting particles: %lf seconds\n", CkWallTimer() - start_time);
 
-  // OCT decomposition: find splitters
+  // OCT decomposition: find and sort splitters, send them to Readers for flushing
   // SFC decomposition: globally sort particles (sample sort)
   start_time = CkWallTimer();
   if (decomp_type == OCT_DECOMP) {
     findOctSplitters();
-    CkPrintf("[Decomposer] Determining splitters: %lf seconds\n",
+    oct_splitters.quickSort();
+    CkPrintf("[Decomposer] Finding and sorting splitters: %lf seconds\n",
         CkWallTimer() - start_time);
+    readers.setSplitters(oct_splitters, CkCallbackResumeThread());
   }
   else if (decomp_type == SFC_DECOMP) {
     //findSfcSplitters();
+    //readers.setSplitters(sfc_splitters, bin_counts, CkCallbackResumeThread());
     globalSampleSort();
     CkPrintf("[Decomposer] Global sample sort of particles: %lf seconds\n",
         CkWallTimer() - start_time);
@@ -61,14 +64,6 @@ void Decomposer::run() {
   }
 
   /*
-  // sort splitters for correct flushing
-  if (decomp_type == OCT_DECOMP) oct_splitters.quickSort();
-  CkPrintf("[Decomposer] Sorting splitters: %lf seconds\n", CkWallTimer() - start_time);
-
-  // send finalized splitters to readers
-  if (decomp_type == OCT_DECOMP) readers.setSplitters(oct_splitters, CkCallbackResumeThread());
-  else if (decomp_type == SFC_DECOMP) readers.setSplitters(sfc_splitters, bin_counts, CkCallbackResumeThread());
-
   // create treepieces
   treepieces = CProxy_TreePiece::ckNew(CkCallbackResumeThread(), decomp_type == OCT_DECOMP, n_treepieces);
   CkPrintf("[Decomposer] Created %d TreePieces\n");
@@ -114,7 +109,7 @@ void Decomposer::findOctSplitters() {
 
   // main decomposition loop
   while (keys.size() != 0) {
-    // send splitters to readers for histogramming
+    // send splitters to Readers for histogramming
     CkReductionMsg *msg;
     readers.countOct(keys.get(), CkCallbackResumeThread((void*&)msg));
     int* counts = (int*)msg->getData();
