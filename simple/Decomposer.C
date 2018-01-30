@@ -191,7 +191,7 @@ void Decomposer::globalSampleSort() {
   if (avg_n_particles < oversampling_ratio)
     oversampling_ratio = avg_n_particles;
 
-#if DEBUG
+#ifdef DEBUG
   CkPrintf("[Decomposer] Oversampling ratio: %d\n", oversampling_ratio);
 #endif
 
@@ -214,7 +214,7 @@ void Decomposer::globalSampleSort() {
   }
   splitter_keys[n_readers] = largest_particle_key;
 
-#if DEBUG
+#ifdef DEBUG
   CkPrintf("[Decomposer] Splitter keys for sorting:\n");
   for (int i = 0; i < splitter_keys.size(); i++) {
     CkPrintf("0x%" PRIx64 "\n", splitter_keys[i]);
@@ -264,7 +264,7 @@ void Decomposer::findSfcSplitters() {
     prev = splitter_goals[i];
   }
 
-#if DEBUG
+#ifdef DEBUG
   CkPrintf("[Decomposer] %d splitter goals:", n_treepieces);
   for (int i = 0; i < n_treepieces; i++) {
     CkPrintf(" %d", splitter_goals[i]);
@@ -311,7 +311,7 @@ void Decomposer::findSfcSplitters() {
         bin_counts, accumulated_bin_counts, tol_diff);
     readers.globalSampleSort(
 
-#if DEBUG
+#ifdef DEBUG
     CkPrintf("[Decomposer] Histogram iteration %d\n", n_iters);
     CkPrintf("[Decomposer] Probing %d candidate splitters\n",
         candidate_splitter_keys.size());

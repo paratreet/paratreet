@@ -236,7 +236,7 @@ void Reader::redistribute() {
   // send particles home
   for (int bucket = 0; bucket < n_readers; bucket++) {
     if (particle_messages[bucket] != NULL) {
-#if DEBUG
+#ifdef DEBUG
       CkPrintf("[Reader %d] Sending %d particles to Reader %d\n", thisIndex,
           particle_messages[bucket]->n_particles, bucket);
 #endif
