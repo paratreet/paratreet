@@ -171,7 +171,7 @@ class Main : public CBase_Main {
 
     // flush particles to home TreePieces
     start_time = CkWallTimer();
-    readers.flush(treepieces);
+    readers.flush(universe.n_particles, n_treepieces, treepieces);
     CkStartQD(CkCallbackResumeThread());
     CkPrintf("[Main] Flushing particles to TreePieces: %lf seconds\n", CkWallTimer() - start_time);
 
@@ -184,8 +184,8 @@ class Main : public CBase_Main {
     if (decomp_type == OCT_DECOMP)
       splitters.resize(0);
 
-    /*
-    // start local build of trees in all treepieces
+    /* TODO
+    // start local tree build in TreePieces
     start_time = CkWallTimer();
     //treepieces.build(CkCallbackResumeThread());
     CkPrintf("[Main] Local tree build: %lf seconds\n", CkWallTimer() - start_time);

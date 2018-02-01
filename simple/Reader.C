@@ -108,8 +108,11 @@ void Reader::assignKeys(BoundingBox& universe, const CkCallback& cb) {
     particles[i].key |= (Key)1 << (KEY_BITS-1);
   }
 
-  // sort particles using their keys
-  std::sort(particles.begin(), particles.end());
+  if (decomp_type == OCT_DECOMP) {
+    // sort particles for decomposition
+    // no need for SFC, as particles will be sorted globally
+    std::sort(particles.begin(), particles.end());
+  }
 
   // back to callee
   contribute(cb);
@@ -298,7 +301,7 @@ void Reader::setSplitters(const std::vector<Splitter>& splitters, const CkCallba
   contribute(cb);
 }
 
-void Reader::flush(CProxy_TreePiece treepieces) {
+void Reader::flush(int n_total_particles, int n_treepieces, CProxy_TreePiece treepieces) {
   int flush_count = 0;
 
   if (decomp_type == OCT_DECOMP) {
@@ -306,6 +309,7 @@ void Reader::flush(CProxy_TreePiece treepieces) {
     int start = 0;
     int finish = particles.size();
 
+    // find particles that belong to each splitter range and flush them
     for (int i = 0; i < splitters.size(); i++) {
       int begin = Utility::binarySearchGE(splitters[i].from, &particles[0], start, finish);
       int end = Utility::binarySearchGE(splitters[i].to, &particles[0], begin, finish);
@@ -326,6 +330,31 @@ void Reader::flush(CProxy_TreePiece treepieces) {
   }
   else if (decomp_type == SFC_DECOMP) {
     // TODO SFC decomposition
+    // probably need to use prefix sum
+    int n_particles_left = particles.size();
+    for (int i = 0; i < n_treepieces; i++) {
+      int n_need = n_total_particles / n_treepieces;
+      if (i < (n_total_particles % n_treepieces))
+        n_need++;
+
+      if (n_particles_left > n_need) {
+        ParticleMsg* msg = new (n_need) ParticleMsg(&particles[flush_count], n_need);
+        treepieces[i].receive(msg);
+        flush_count += n_need;
+        n_particles_left -= n_need;
+      }
+      else {
+        if (n_particles_left > 0) {
+          ParticleMsg* msg = new (n_particles_left) ParticleMsg(&particles[flush_count], n_particles_left);
+          treepieces[i].receive(msg);
+          flush_count += n_particles_left;
+          n_particles_left = 0;
+        }
+      }
+
+      if (n_particles_left == 0)
+        break;
+    }
   }
 
   if (flush_count != particles.size()) {

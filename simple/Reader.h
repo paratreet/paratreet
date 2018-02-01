@@ -36,7 +36,7 @@ class Reader : public CBase_Reader {
     void checkSort(const Key, const CkCallback&);
 
     // sending particles to home TreePieces
-    void flush(CProxy_TreePiece);
+    void flush(int, int, CProxy_TreePiece);
 };
 
 #endif // SIMPLE_READER_H_
