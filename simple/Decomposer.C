@@ -1,10 +1,9 @@
+#include <algorithm>
+#include <numeric>
+#include <iostream>
 #include "Decomposer.h"
 #include "BufferedVec.h"
 #include "Utility.h"
-#include <algorithm>
-#include <numeric>
-#include <bitset>
-#include <iostream>
 
 extern CProxy_Main mainProxy;
 extern CProxy_Reader readers;
@@ -15,8 +14,7 @@ extern double decomp_tolerance;
 extern int decomp_type;
 extern int tree_type;
 
-Decomposer::Decomposer(int n_treepieces) {
-  this->n_treepieces = n_treepieces;
+Decomposer::Decomposer(int n_treepieces_) : n_treepieces(n_treepieces_) {
   smallest_particle_key = Utility::removeLeadingZeros(Key(1));
   largest_particle_key = (~Key(0));
 }
@@ -63,18 +61,15 @@ void Decomposer::run() {
 #endif
   }
 
-  /*
   // create treepieces
-  treepieces = CProxy_TreePiece::ckNew(CkCallbackResumeThread(), decomp_type == OCT_DECOMP, n_treepieces);
+  treepieces = CProxy_TreePiece::ckNew(CkCallbackResumeThread(), universe.n_particles, n_treepieces, n_treepieces);
   CkPrintf("[Decomposer] Created %d TreePieces\n");
 
-  // flush particles with finalized splitters
+  // flush particles to home TreePieces
   start_time = CkWallTimer();
   readers.flush(treepieces);
-
-  // wait for all particles to be flushed
   CkStartQD(CkCallbackResumeThread());
-  CkPrintf("[Decomposer] Flushing particles: %lf seconds\n", CkWallTimer() - start_time);
+  CkPrintf("[Decomposer] Flushing particles to TreePieces: %lf seconds\n", CkWallTimer() - start_time);
 
 #ifdef DEBUG
   // check if all treepieces have received the right number of particles
@@ -82,9 +77,10 @@ void Decomposer::run() {
 #endif
 
   // free splitter memory
-  if (decomp_type == OCT_DECOMP) splitters.resize(0);
-  else if (decomp_type == SFC_DECOMP) sfc_splitters.resize(0);
+  if (decomp_type == OCT_DECOMP)
+    splitters.resize(0);
 
+  /*
   // start local build of trees in all treepieces
   start_time = CkWallTimer();
   //treepieces.build(CkCallbackResumeThread());
@@ -175,7 +171,7 @@ void Decomposer::findOctSplitters() {
   }
 
   if (decomp_particle_sum != universe.n_particles) {
-    CkPrintf("[Decomposer] Only %d particles out of %d were decomposed!\n",
+    CkPrintf("[Decomposer] ERROR! Only %d particles out of %d decomposed\n",
         decomp_particle_sum, universe.n_particles);
     CkAbort("Decomposition error");
   }

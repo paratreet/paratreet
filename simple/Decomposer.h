@@ -11,14 +11,14 @@ class Decomposer : public CBase_Decomposer {
   Key smallest_particle_key;
   Key largest_particle_key;
 
-  //CProxy_TreePiece treepieces; // cannot be a global variable
+  CProxy_TreePiece treepieces; // cannot be a global variable
   CProxy_TreeElements tree_array;
   int n_treepieces;
 
   std::vector<Splitter> splitters;
 
   public:
-    Decomposer(int n_treepieces);
+    Decomposer(int);
     void run();
     void findOctSplitters();
     void globalSampleSort();
