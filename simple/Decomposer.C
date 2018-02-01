@@ -45,7 +45,7 @@ void Decomposer::run() {
   start_time = CkWallTimer();
   if (decomp_type == OCT_DECOMP) {
     findOctSplitters();
-    splitters.quickSort();
+    std::sort(splitters.begin(), splitters.end());
     CkPrintf("[Decomposer] Finding and sorting splitters: %lf seconds\n",
         CkWallTimer() - start_time);
     readers.setSplitters(splitters, CkCallbackResumeThread());
@@ -181,6 +181,7 @@ void Decomposer::findOctSplitters() {
   }
 
   // determine number of TreePieces
+  // override input from user if there was one
   n_treepieces = splitters.size();
 }
 

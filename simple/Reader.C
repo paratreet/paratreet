@@ -184,7 +184,7 @@ void Reader::countSfc(const std::vector<Key>& splitter_keys, const CkCallback& c
 void Reader::pickSamples(const int oversampling_ratio, const CkCallback& cb) {
   Key* sample_keys = new Key[oversampling_ratio];
 
-  // TODO not random, just equal intervals
+  // not random, just equal intervals
   for (int i = 0; i < oversampling_ratio; i++) {
     int index = (particles.size() / (oversampling_ratio + 1)) * (i + 1);
     sample_keys[i] = particles[index].key;
@@ -196,7 +196,6 @@ void Reader::pickSamples(const int oversampling_ratio, const CkCallback& cb) {
 }
 
 void Reader::prepMessages(const std::vector<Key>& splitter_keys, const CkCallback& cb) {
-  // FIXME locally sort particles and then redistribute?
   // place particles in respective buckets
   std::vector<std::vector<Particle>> send_vectors(n_readers);
   for (int i = 0; i < particles.size(); i++) {

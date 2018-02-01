@@ -24,8 +24,16 @@ struct Splitter {
     return from <= other.from;
   }
 
+  bool operator>(const Splitter& other) const {
+    return !(*this <= other);
+  }
+
   bool operator>=(const Splitter& other) const {
     return from >= other.from;
+  }
+
+  bool operator<(const Splitter& other) const {
+    return !(*this >= other);
   }
 
   bool operator<=(const Key& k) const {
