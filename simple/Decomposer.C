@@ -45,10 +45,10 @@ void Decomposer::run() {
   start_time = CkWallTimer();
   if (decomp_type == OCT_DECOMP) {
     findOctSplitters();
-    oct_splitters.quickSort();
+    splitters.quickSort();
     CkPrintf("[Decomposer] Finding and sorting splitters: %lf seconds\n",
         CkWallTimer() - start_time);
-    readers.setSplitters(oct_splitters, CkCallbackResumeThread());
+    readers.setSplitters(splitters, CkCallbackResumeThread());
   }
   else if (decomp_type == SFC_DECOMP) {
     //findSfcSplitters();
@@ -82,7 +82,7 @@ void Decomposer::run() {
 #endif
 
   // free splitter memory
-  if (decomp_type == OCT_DECOMP) oct_splitters.resize(0);
+  if (decomp_type == OCT_DECOMP) splitters.resize(0);
   else if (decomp_type == SFC_DECOMP) sfc_splitters.resize(0);
 
   // start local build of trees in all treepieces
