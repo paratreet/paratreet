@@ -26,7 +26,7 @@ class Reader : public CBase_Reader {
     void pickSamples(const int, const CkCallback&);
     void prepMessages(const std::vector<Key>&, const CkCallback&);
     void redistribute();
-    void receiveMessage(ParticleMsg*);
+    void receive(ParticleMsg*);
     void localSort(const CkCallback&);
     void checkSort(const Key, const CkCallback&);
     void setSplitters(const std::vector<Splitter>&, const CkCallback&);

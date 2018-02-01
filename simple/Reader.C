@@ -236,12 +236,12 @@ void Reader::redistribute() {
       CkPrintf("[Reader %d] Sending %d particles to Reader %d\n", thisIndex,
           particle_messages[bucket]->n_particles, bucket);
 #endif
-      thisProxy[bucket].receiveMessage(particle_messages[bucket]);
+      thisProxy[bucket].receive(particle_messages[bucket]);
     }
   }
 }
 
-void Reader::receiveMessage(ParticleMsg* msg) {
+void Reader::receive(ParticleMsg* msg) {
   static int n_particles = 0;
 
   // copy particles to local vector
