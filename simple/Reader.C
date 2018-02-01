@@ -1,7 +1,6 @@
 #include "TipsyFile.h"
 #include "Reader.h"
 #include "Utility.h"
-#include <bitset>
 #include <iostream>
 #include <cstring>
 #include <algorithm>
@@ -10,7 +9,7 @@ extern CProxy_Main mainProxy;
 extern int n_readers;
 extern int decomp_type;
 
-Reader::Reader() {}
+Reader::Reader() : particle_index(0) {}
 
 void Reader::load(std::string input_file, const CkCallback& cb) {
   // open tipsy file
@@ -150,6 +149,7 @@ void Reader::countOct(std::vector<Key>& splitter_keys, const CkCallback& cb) {
   contribute(sizeof(int) * counts.size(), &counts[0], CkReduction::sum_int, cb);
 }
 
+/*
 void Reader::countSfc(const std::vector<Key>& splitter_keys, const CkCallback& cb) {
   std::vector<int> counts;
   counts.resize(splitters.size()-1); // size equal to number of TreePieces
@@ -180,6 +180,7 @@ void Reader::countSfc(const std::vector<Key>& splitter_keys, const CkCallback& c
 
   contribute(sizeof(int) * counts.size(), &counts[0], CkReduction::sum_int, cb);
 }
+*/
 
 void Reader::pickSamples(const int oversampling_ratio, const CkCallback& cb) {
   Key* sample_keys = new Key[oversampling_ratio];
@@ -242,12 +243,10 @@ void Reader::redistribute() {
 }
 
 void Reader::receive(ParticleMsg* msg) {
-  static int n_particles = 0;
-
   // copy particles to local vector
-  particles.resize(n_particles + msg->n_particles);
-  std::memcpy(&particles[n_particles], msg->particles, msg->n_particles * sizeof(Particle));
-  n_particles += msg->n_particles;
+  particles.resize(particle_index + msg->n_particles);
+  std::memcpy(&particles[particle_index], msg->particles, msg->n_particles * sizeof(Particle));
+  particle_index += msg->n_particles;
   delete msg;
 }
 
@@ -299,53 +298,38 @@ void Reader::setSplitters(const std::vector<Splitter>& splitters, const CkCallba
   contribute(cb);
 }
 
-/*
 void Reader::flush(CProxy_TreePiece treepieces) {
-  // send particles to owner TreePieces
-  int start = 0;
-  int finish = particles.size();
   int flush_count = 0;
-  Key from, to;
 
-  int max;
   if (decomp_type == OCT_DECOMP) {
-    max = splitters.size();
+    // OCT decomposition
+    int start = 0;
+    int finish = particles.size();
+
+    for (int i = 0; i < splitters.size(); i++) {
+      int begin = Utility::binarySearchGE(splitters[i].from, &particles[0], start, finish);
+      int end = Utility::binarySearchGE(splitters[i].to, &particles[0], begin, finish);
+
+      int n_particles = end - begin;
+
+      if (n_particles > 0) {
+        ParticleMsg* msg = new (n_particles) ParticleMsg(&particles[begin], n_particles);
+        treepieces[i].receive(msg);
+        flush_count += n_particles;
+      }
+
+      start = end;
+    }
+
+    // free splitter memory
+    splitters.resize(0);
   }
   else if (decomp_type == SFC_DECOMP) {
-    // TODO ?
-    max = splitters.size();
-  }
-
-  for (int i = 0; i < max; i++) {
-    if (decomp_type == OCT_DECOMP) {
-      from = splitters[i].from;
-      to = splitters[i].to;
-    }
-    else if (decomp_type == SFC_DECOMP) {
-      // TODO ?? why not the same?
-      from = splitters[i];
-      to = splitters[i+1];
-    }
-
-    int begin = Utility::binarySearchGE(from, &particles[0], start, finish);
-    int end = Utility::binarySearchGE(to, &particles[0], begin, finish);
-
-    int n_particles = end - begin;
-
-    if (n_particles > 0) {
-      ParticleMsg *msg = new (n_particles) ParticleMsg(&particles[begin], n_particles);
-      treepieces[i].receive(msg);
-      flush_count += n_particles;
-    }
-
-    start = end;
+    // TODO SFC decomposition
   }
 
   if (flush_count != particles.size()) {
-    CkPrintf("[Reader %d] flushed %d out of %d particles\n", thisIndex, flush_count, particles.size());
+    CkPrintf("[Reader %d] ERROR! Flushed %d out of %d particles\n", thisIndex, flush_count, particles.size());
     CkAbort("Flush failure");
   }
-
-  splitters.resize(0);
 }
-*/

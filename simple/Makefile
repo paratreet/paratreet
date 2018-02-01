@@ -5,7 +5,7 @@ CHARMC = $(CHARM_HOME)/bin/charmc $(OPTS)
 LD_LIBS = -L$(STRUCTURE_PATH) -lTipsy
 
 BINARY = simple
-OBJS = Main.o Reader.o Particle.o BoundingBox.o Decomposer.o TreePiece.o TreeElements.o
+OBJS = Main.o Reader.o Particle.o BoundingBox.o TreePiece.o TreeElements.o
 
 all: $(BINARY)
 
@@ -23,7 +23,7 @@ clean:
 
 common.h: $(STRUCTURE_PATH)/Vector3D.h $(STRUCTURE_PATH)/SFC.h
 
-Main.o: Main.C $(BINARY).decl.h common.h Reader.h Decomposer.h TreePiece.h BoundingBox.h BufferedVec.h
+Main.o: Main.C $(BINARY).decl.h common.h Reader.h TreePiece.h BoundingBox.h BufferedVec.h
 	$(CHARMC) -c $<
 
 Reader.h: $(BINARY).decl.h common.h Particle.h BoundingBox.h Splitter.h
@@ -39,11 +39,6 @@ Particle.o: Particle.C Particle.h
 BoundingBox.h: $(STRUCTURE_PATH)/OrientedBox.h common.h
 
 BoundingBox.o: BoundingBox.C BoundingBox.h
-	$(CHARMC) -c $<
-
-Decomposer.h: $(BINARY).decl.h common.h Splitter.h TreeElements.h
-
-Decomposer.o: Decomposer.C Decomposer.h BufferedVec.h Utility.h
 	$(CHARMC) -c $<
 
 TreePiece.h: $(BINARY).decl.h common.h Particle.h Node.h Utility.h

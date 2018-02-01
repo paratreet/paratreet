@@ -1,14 +1,41 @@
 #include <fstream>
 #include <sstream>
-#include <bitset>
+#include <cstring>
 #include "TreePiece.h"
 #include "Reader.h"
 #include "TreeElements.h"
 
-/*
 extern CProxy_Reader readers;
 extern int max_particles_per_leaf;
+extern int decomp_type;
 extern int tree_type;
+
+TreePiece::TreePiece(const CkCallback& cb, int n_total_particles_,
+    int n_treepieces_) : n_total_particles(n_total_particles_),
+    n_treepieces(n_treepieces_), particle_index(0) {
+  if (decomp_type == OCT_DECOMP) {
+    // OCT decomposition
+    n_expected = readers.ckLocalBranch()->splitters[thisIndex].n_particles;
+    tp_key = readers.ckLocalBranch()->splitters[thisIndex].tp_key;
+  }
+  else if (decomp_type == SFC_DECOMP) {
+    // SFC decomposition
+    n_expected = n_total_particles / n_treepieces;
+    if (thisIndex < (n_total_particles % n_treepieces))
+      n_expected++;
+    // TODO tp_key needs to be found in local tree build
+  }
+
+  contribute(cb);
+}
+
+void TreePiece::receive(ParticleMsg* msg) {
+  // copy particles to local vector
+  particles.resize(particle_index + msg->n_particles);
+  std::memcpy(&particles[particle_index], msg->particles, msg->n_particles * sizeof(Particle));
+  particle_index += msg->n_particles;
+  delete msg;
+}
 
 void TreePiece::calculateData(CProxy_TreeElements tree_array) {
   Vector3D<Real> moment;
@@ -20,36 +47,11 @@ void TreePiece::calculateData(CProxy_TreeElements tree_array) {
   tree_array[tp_key].receiveData(moment, summass);
 }
 
-
-TreePiece::TreePiece(const CkCallback& cb, bool if_OCT_DECOMP) {
-  if (if_OCT_DECOMP) {
-    n_expected = readers.ckLocalBranch()->splitters[thisIndex].n_particles;
-    n_treepieces = readers.ckLocalBranch()->splitters.size();
-    tp_key = readers.ckLocalBranch()->splitters[thisIndex].tp_key;
-  }
-  else {
-    n_expected = readers.ckLocalBranch()->splitter_counts[thisIndex];
-    tp_key = readers.ckLocalBranch()->ksplitters[thisIndex];
-    tp_key |= (Key)1 << (KEY_BITS-1); // add placeholder bit
-  }
-  cur_idx = 0;
-  contribute(cb);
-}
-
-void TreePiece::receive(ParticleMsg* msg) {
-  // copy particles to local vector
-  particles.resize(particles.size() + msg->n_particles);
-  memcpy(&particles[cur_idx], msg->particles, msg->n_particles * sizeof(Particle));
-
-  cur_idx += msg->n_particles;
-
-  delete msg;
-}
-
 void TreePiece::check(const CkCallback& cb) {
   if (n_expected != particles.size()) {
-    CkPrintf("[TP %d] ERROR! Not enough particles received\n", thisIndex);
-    CkExit();
+    CkPrintf("[TP %d] ERROR! Only %d particles out of %d received\n", thisIndex,
+        particles.size(), n_expected);
+    CkAbort("Failure on receiving particles");
   }
 
   contribute(cb);
@@ -225,4 +227,3 @@ void TreePiece::print(Node* root) {
   out << "}" << endl;
   out.close();
 }
-*/

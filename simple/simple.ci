@@ -15,11 +15,6 @@ mainmodule simple {
   mainchare Main {
     initnode void initialize();
     entry Main(CkArgMsg* m);
-    entry [reductiontarget] void terminate();
-  };
-
-  chare Decomposer {
-    entry Decomposer(int);
     entry [threaded] void run();
   };
 
@@ -27,14 +22,12 @@ mainmodule simple {
     Particle particles[];
   };
 
-  /*
   array [1d] TreePiece {
-    entry TreePiece(const CkCallback&, bool if_OCT_DECOMP);
+    entry TreePiece(const CkCallback&, int, int);
     entry void receive(ParticleMsg*);
     entry void check(const CkCallback&);
     entry void build(const CkCallback&);
   };
-  */
 
   array [1d] TreeElements {
     entry void TreeElements();
@@ -47,7 +40,7 @@ mainmodule simple {
     entry void load(std::string, const CkCallback&);
     entry void assignKeys(BoundingBox&, const CkCallback&);
     entry void countOct(std::vector<Key>&, const CkCallback&);
-    entry void countSfc(const std::vector<Key>&, const CkCallback&);
+    //entry void countSfc(const std::vector<Key>&, const CkCallback&);
     entry void pickSamples(const int, const CkCallback&);
     entry void prepMessages(const std::vector<Key>&, const CkCallback&);
     entry void redistribute();
@@ -55,6 +48,6 @@ mainmodule simple {
     entry void localSort(const CkCallback&);
     entry void checkSort(const Key, const CkCallback&);
     entry void setSplitters(const std::vector<Splitter>&, const CkCallback&);
-    //entry void flush(CProxy_TreePiece);
+    entry void flush(CProxy_TreePiece);
   };
 };
