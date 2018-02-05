@@ -27,6 +27,7 @@ mainmodule simple {
     entry void receive(ParticleMsg*);
     entry void check(const CkCallback&);
     entry void build(const CkCallback&);
+    entry void triggerRequest();
   };
 
   array [1d] TreeElements {
@@ -39,6 +40,7 @@ mainmodule simple {
     entry Reader();
     entry void load(std::string, const CkCallback&);
     entry void assignKeys(BoundingBox&, const CkCallback&);
+    entry void request(CProxyElement_TreePiece, int);
     entry void countOct(std::vector<Key>&, const CkCallback&);
     //entry void countSfc(const std::vector<Key>&, const CkCallback&);
     entry void pickSamples(const int, const CkCallback&);

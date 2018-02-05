@@ -12,10 +12,11 @@ class Reader : public CBase_Reader {
   std::vector<Particle> particles;
   std::vector<ParticleMsg*> particle_messages;
   int particle_index;
+  int num_treepieces_requested;
 
   public:
     std::vector<Splitter> splitters;
-
+    std::vector<Key> SFCsplitters;
     Reader();
 
     // loading particles and assigning keys
@@ -34,6 +35,7 @@ class Reader : public CBase_Reader {
     void receive(ParticleMsg*);
     void localSort(const CkCallback&);
     void checkSort(const Key, const CkCallback&);
+    void request(CProxyElement_TreePiece, int);
 
     // sending particles to home TreePieces
     void flush(int, int, CProxy_TreePiece);

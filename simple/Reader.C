@@ -117,7 +117,6 @@ void Reader::assignKeys(BoundingBox& universe, const CkCallback& cb) {
   // back to callee
   contribute(cb);
 }
-
 void Reader::countOct(std::vector<Key>& splitter_keys, const CkCallback& cb) {
   std::vector<int> counts;
   counts.resize(splitter_keys.size()/2);
@@ -168,7 +167,7 @@ void Reader::countSfc(const std::vector<Key>& splitter_keys, const CkCallback& c
       from = splitter_keys[i];
       to = splitter_keys[i+1];
 
-      int begin = Utility::binarySearchGE(from, &particles[0], start, finish);
+      int begin = Utility::binarySearchGE(from, &particles[0], start, finish); // hmm how does this work for OCT
       int end = Utility::binarySearchGE(to, &particles[0], begin, finish);
       counts[i] = end - begin;
 
@@ -181,7 +180,7 @@ void Reader::countSfc(const std::vector<Key>& splitter_keys, const CkCallback& c
     }
   }
 
-  contribute(sizeof(int) * counts.size(), &counts[0], CkReduction::sum_int, cb);
+    contribute(sizeof(int) * counts.size(), &counts[0], CkReduction::sum_int, cb);
 }
 */
 
@@ -251,6 +250,32 @@ void Reader::receive(ParticleMsg* msg) {
   std::memcpy(&particles[particle_index], msg->particles, msg->n_particles * sizeof(Particle));
   particle_index += msg->n_particles;
   delete msg;
+  // what's the difference between particle_index and n_particles? hmm
+  // probably need to add something that says
+  // if we have all our particles, contribute
+  // that way we can continue on
+  // but before that, call
+  SFCsplitters.push_back(Key(0)); // maybe use something different than splitters variable?
+  num_treepieces_requested = 0;
+}
+
+void Reader::request(CProxyElement_TreePiece tp_proxy, int n_treepieces) {
+  int n_particles = box.n_particles;
+  int num_to_give = n_particles / n_treepieces;
+  int extra = n_particles % n_treepieces;
+  // (should) work bc treepieces are evenly distributed
+  if (num_treepieces_requested < extra / n_readers) num_to_give++;
+  else if (thisIndex < extra % n_readers) num_to_give++;
+  ParticleMsg* msg = new (num_to_give) ParticleMsg(&particles[0], num_to_give);
+  for (int i = 0; i < n_particles - num_to_give; i++) {
+    particles[i] = particles[num_to_give + i];
+  } // maybe a function can just do this for me?
+  particles.resize(n_particles - num_to_give);
+  n_particles -= num_to_give;
+  if (n_particles) SFCsplitters.push_back(particles[0].key);
+  tp_proxy.receive(msg);
+  //flush_count += num_to_give;
+  num_treepieces_requested++;
 }
 
 void Reader::localSort(const CkCallback& cb) {

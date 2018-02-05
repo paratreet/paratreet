@@ -171,8 +171,14 @@ class Main : public CBase_Main {
 
     // flush particles to home TreePieces
     start_time = CkWallTimer();
-    readers.flush(universe.n_particles, n_treepieces, treepieces);
-    CkStartQD(CkCallbackResumeThread());
+    if (decomp_type == OCT_DECOMP) {
+      readers.flush(universe.n_particles, n_treepieces, treepieces);
+      CkStartQD(CkCallbackResumeThread());
+    }
+    else if (decomp_type == SFC_DECOMP) {
+      treepieces.triggerRequest();
+      CkStartQD(CkCallbackResumeThread()); // lol is this right
+    }
     CkPrintf("[Main] Flushing particles to TreePieces: %lf seconds\n", CkWallTimer() - start_time);
 
 #ifdef DEBUG
@@ -290,7 +296,7 @@ class Main : public CBase_Main {
   void globalSampleSort() {
     // perform parallel sample sort of all particle keys
     int avg_n_particles = universe.n_particles / n_treepieces;
-    int oversampling_ratio = 10;
+    int oversampling_ratio = 10; // std::min(10, avg_n_particles)
     if (avg_n_particles < oversampling_ratio)
       oversampling_ratio = avg_n_particles;
 

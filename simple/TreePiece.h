@@ -21,6 +21,7 @@ class TreePiece : public CBase_TreePiece {
     void receive(ParticleMsg*);
     void calculateData(CProxy_TreeElements);
     void check(const CkCallback&);
+    void triggerRequest();
     void build(const CkCallback&);
     bool recursiveBuild(Node*, bool);
     void print(Node*);
