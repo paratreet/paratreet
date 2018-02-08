@@ -12,7 +12,6 @@ class Reader : public CBase_Reader {
   std::vector<Particle> particles;
   std::vector<ParticleMsg*> particle_messages;
   int particle_index;
-  int num_treepieces_requested;
 
   public:
     std::vector<Splitter> splitters;

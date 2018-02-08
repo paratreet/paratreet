@@ -229,5 +229,5 @@ void TreePiece::print(Node* root) {
 }
 
 void TreePiece::triggerRequest() {
-  readers.ckLocalBranch()->request(thisProxy[thisIndex], n_treepieces);
+  readers.ckLocalBranch()->request(thisProxy[thisIndex], n_expected);
 }

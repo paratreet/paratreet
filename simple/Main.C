@@ -43,7 +43,7 @@ class Main : public CBase_Main {
     mainProxy = thisProxy;
 
     // default values
-    int n_treepieces = 0; // cannot be a readonly because of OCT decomposition
+    n_treepieces = 0; // cannot be a readonly because of OCT decomposition
     input_file = "";
     decomp_tolerance = 0.1;
     max_particles_per_tp = 10;

@@ -250,22 +250,11 @@ void Reader::receive(ParticleMsg* msg) {
   std::memcpy(&particles[particle_index], msg->particles, msg->n_particles * sizeof(Particle));
   particle_index += msg->n_particles;
   delete msg;
-  // what's the difference between particle_index and n_particles? hmm
-  // probably need to add something that says
-  // if we have all our particles, contribute
-  // that way we can continue on
-  // but before that, call
   SFCsplitters.push_back(Key(0)); // maybe use something different than splitters variable?
-  num_treepieces_requested = 0;
 }
 
-void Reader::request(CProxyElement_TreePiece tp_proxy, int n_treepieces) {
+void Reader::request(CProxyElement_TreePiece tp_proxy, int num_to_give) {
   int n_particles = box.n_particles;
-  int num_to_give = n_particles / n_treepieces;
-  int extra = n_particles % n_treepieces;
-  // (should) work bc treepieces are evenly distributed
-  if (num_treepieces_requested < extra / n_readers) num_to_give++;
-  else if (thisIndex < extra % n_readers) num_to_give++;
   ParticleMsg* msg = new (num_to_give) ParticleMsg(&particles[0], num_to_give);
   for (int i = 0; i < n_particles - num_to_give; i++) {
     particles[i] = particles[num_to_give + i];
@@ -274,8 +263,6 @@ void Reader::request(CProxyElement_TreePiece tp_proxy, int n_treepieces) {
   n_particles -= num_to_give;
   if (n_particles) SFCsplitters.push_back(particles[0].key);
   tp_proxy.receive(msg);
-  //flush_count += num_to_give;
-  num_treepieces_requested++;
 }
 
 void Reader::localSort(const CkCallback& cb) {
