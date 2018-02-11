@@ -19,7 +19,8 @@ class TreePiece : public CBase_TreePiece {
   public:
     TreePiece(const CkCallback&, int, int);
     void receive(ParticleMsg*);
-    void calculateData(CProxy_TreeElements);
+    void calculateCentroid();
+    // you can make the proxy a readonly if you want
     void check(const CkCallback&);
     void triggerRequest();
     void build(const CkCallback&);

@@ -11,11 +11,15 @@ mainmodule simple {
   readonly int max_particles_per_leaf;
   readonly int decomp_type;
   readonly int tree_type;
+  readonly CProxy_TraversalManager traversal_manager;
+  readonly CProxy_CentroidCalculator centroid_calculator;
 
   mainchare Main {
     initnode void initialize();
     entry Main(CkArgMsg* m);
     entry [threaded] void run();
+    entry void doneCentroid();
+    //entry [reductiontarget] void summass (float);
   };
 
   message ParticleMsg {
@@ -28,12 +32,31 @@ mainmodule simple {
     entry void check(const CkCallback&);
     entry void build(const CkCallback&);
     entry void triggerRequest();
+    entry void calculateCentroid();
   };
 
   array [1d] TreeElements {
-    entry void TreeElements();
-    entry [createhome] void exist(bool ifTPi);
-    entry void receiveData(Vector3D<Real> momenti, Real summassi);
+    entry TreeElements();
+    entry [createhere] void exist(bool); 
+    //needs to be createhere for proper construction
+    entry void node (Key);
+    entry void leaf ();
+    entry void hit ();
+    entry void miss();
+  };
+
+  array [1d] CentroidCalculator : TreeElements {
+    entry CentroidCalculator();
+    entry [createhere] void exist(bool);
+    entry void receiveCentroid(Vector3D<Real>, Real);
+    entry void node (Key);
+    entry void leaf ();
+    //entry void printCentroid();
+  };
+
+  group TraversalManager {
+    entry TraversalManager();
+    entry void getNext(CProxy_TreeElements, Key, int);
   };
 
   group Reader {

@@ -39,4 +39,6 @@ typedef SFC::Key Key;
 #define DECOMP_TOLERANCE 1.0
 #define BUCKET_TOLERANCE 1.0
 
+#define UP_ONLY 7
+
 #endif // SIMPLE_COMMON_H_

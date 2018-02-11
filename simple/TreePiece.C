@@ -3,12 +3,16 @@
 #include <cstring>
 #include "TreePiece.h"
 #include "Reader.h"
-#include "TreeElements.h"
+#include "TraversalManager.h"
+
 
 extern CProxy_Reader readers;
 extern int max_particles_per_leaf;
 extern int decomp_type;
 extern int tree_type;
+extern CProxy_TraversalManager traversal_manager;
+extern CProxy_CentroidCalculator centroid_calculator;
+extern CProxy_Main mainProxy;
 
 TreePiece::TreePiece(const CkCallback& cb, int n_total_particles_,
     int n_treepieces_) : n_total_particles(n_total_particles_),
@@ -37,14 +41,18 @@ void TreePiece::receive(ParticleMsg* msg) {
   delete msg;
 }
 
-void TreePiece::calculateData(CProxy_TreeElements tree_array) {
+void TreePiece::calculateCentroid() {
   Vector3D<Real> moment;
-  Real summass = 0;
+  Real sum_mass = 0;
   for (int i = 0; i < particles.size(); i++) {
     moment += particles[i].position * particles[i].mass;
-    summass += particles[i].mass;
+    sum_mass += particles[i].mass;
   }
-  tree_array[tp_key].receiveData(moment, summass);
+  //CkCallback cb(CkReductionTarget(Main, summass), mainProxy);
+  //contribute(sizeof(float),&sum_mass,CkReduction::sum_float, cb);
+  centroid_calculator[tp_key].exist(true);
+  centroid_calculator[tp_key].receiveCentroid(moment, sum_mass);
+  // maybe call leaf() instead? 
 }
 
 void TreePiece::check(const CkCallback& cb) {

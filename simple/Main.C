@@ -9,6 +9,8 @@
 #include "BoundingBox.h"
 #include "BufferedVec.h"
 #include "Utility.h"
+#include "TraversalManager.h"
+#include "CentroidCalculator.h"
 
 /* readonly */ CProxy_Main mainProxy;
 /* readonly */ CProxy_Reader readers;
@@ -19,6 +21,8 @@
 /* readonly */ int max_particles_per_leaf; // for local tree build
 /* readonly */ int decomp_type;
 /* readonly */ int tree_type;
+/* readonly */ CProxy_CentroidCalculator centroid_calculator;
+/* readonly */ CProxy_TraversalManager traversal_manager;
 
 class Main : public CBase_Main {
   double start_time;
@@ -31,12 +35,20 @@ class Main : public CBase_Main {
   std::vector<Splitter> splitters;
 
   CProxy_TreePiece treepieces; // cannot be a global variable
-  CProxy_TreeElements tree_array;
   int n_treepieces;
 
   public:
   static void initialize() {
     BoundingBox::registerReducer();
+  }
+  /*
+  void summass (float sm) {
+    CkPrintf("sum mass = %f\n", sm);
+  }
+  */
+  void doneCentroid() {
+    CkPrintf("[Main] Calculating Centroid: %lf seconds\n", CkWallTimer() - start_time);
+    CkExit();
   }
 
   Main(CkArgMsg* m) {
@@ -113,6 +125,9 @@ class Main : public CBase_Main {
     // create Readers
     n_readers = CkNumNodes();
     readers = CProxy_Reader::ckNew();
+
+    traversal_manager = CProxy_TraversalManager::ckNew();
+    centroid_calculator = CProxy_CentroidCalculator::ckNew();
 
     // start!
     start_time = CkWallTimer();
@@ -197,9 +212,12 @@ class Main : public CBase_Main {
     CkPrintf("[Main] Local tree build: %lf seconds\n", CkWallTimer() - start_time);
     */
 
+    start_time = CkWallTimer();
+    treepieces.calculateCentroid();
+
     // terminate
-    CkPrintf("\nElapsed time: %lf s\n", CkWallTimer() - start_time);
-    CkExit();
+    //CkPrintf("\nElapsed time: %lf s\n", CkWallTimer() - start_time);
+    //CkExit();
   }
 
   void findOctSplitters() {
@@ -210,8 +228,6 @@ class Main : public CBase_Main {
     keys.add(~Key(0)); // 1111...1
     keys.buffer();
 
-    // create placeholder for TreeElement chares
-    tree_array = CProxy_TreeElements::ckNew();
 
     int decomp_particle_sum = 0; // to check if all particles are decomposed
 
@@ -231,9 +247,6 @@ class Main : public CBase_Main {
 
         int n_particles = counts[i];
         if ((Real)n_particles > threshold) {
-          // create corresponding TreeElement (not a TreePiece)
-          tree_array[from].exist(false);
-
           // create 8 more splitter key pairs to go one level deeper
           // leading zeros will be removed in Reader::count()
           // to compare splitter key with particle keys
@@ -265,9 +278,6 @@ class Main : public CBase_Main {
             keys.add(to << 3);
         }
         else {
-          // this is a splitter/TreePiece, again from is the index that matters
-          tree_array[from].exist(true);
-
           // create and store splitter
           Splitter sp(Utility::removeLeadingZeros(from),
               Utility::removeLeadingZeros(to), from, n_particles);
