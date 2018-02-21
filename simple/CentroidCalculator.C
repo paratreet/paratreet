@@ -1,20 +1,21 @@
 #include "CentroidCalculator.h"
-#include "TraversalManager.h"
-extern CProxy_TraversalManager traversal_manager;
 
-void CentroidCalculator::receiveCentroid (Vector3D<Real> momenti, Real sum_massi) {
+extern CProxy_Main mainProxy;
+
+CentroidCalculator::CentroidCalculator() {
+  //CkPrintf("%d\n", thisIndex);
+  // set data to initial
+  moment = Vector3D<Real> (0, 0, 0);
+  sum_mass = 0;
+  wait_count = -1;
+  v = CentroidVisitor();
+}
+void CentroidCalculator::receiveCentroid (Vector3D<Real> momenti, Real sum_massi, bool if_leafi) {
+  if (wait_count == -1) wait_count = (if_leafi) ? 1 : 8;
   moment += momenti;
   sum_mass += sum_massi;
-  if (received()) {
-    traversal_manager.ckLocalBranch()->getNext(thisProxy, thisIndex, UP_ONLY);
+  wait_count--;
+  if (wait_count == 0) {
+    v.node(moment, sum_mass, thisIndex);
   }
-}
-void CentroidCalculator::node(Key key) {
-  thisProxy[key].exist(false); // needs to be called here and not
-  // in TM due to inheritance / demand creation combination problems
-  thisProxy[key].receiveCentroid(moment, sum_mass);
-}
-void CentroidCalculator::leaf() {
-  // i dont think this is needed for upward-only passes
-  // just call node() every time
 }

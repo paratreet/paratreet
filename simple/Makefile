@@ -5,7 +5,7 @@ CHARMC = $(CHARM_HOME)/bin/charmc $(OPTS)
 LD_LIBS = -L$(STRUCTURE_PATH) -lTipsy
 
 BINARY = simple
-OBJS = Main.o Reader.o Particle.o BoundingBox.o TreePiece.o TraversalManager.o CentroidCalculator.o
+OBJS = Main.o Reader.o Particle.o BoundingBox.o TreePiece.o CentroidCalculator.o CentroidVisitor.o
 
 all: $(BINARY)
 
@@ -23,7 +23,7 @@ clean:
 
 common.h: $(STRUCTURE_PATH)/Vector3D.h $(STRUCTURE_PATH)/SFC.h
 
-Main.o: Main.C $(BINARY).decl.h common.h Reader.h TreePiece.h BoundingBox.h BufferedVec.h CentroidCalculator.o TraversalManager.o
+Main.o: Main.C $(BINARY).decl.h common.h Reader.h TreePiece.h BoundingBox.h BufferedVec.h CentroidCalculator.h CentroidVisitor.h
 	$(CHARMC) -c $<
 
 Reader.h: $(BINARY).decl.h common.h Particle.h BoundingBox.h Splitter.h
@@ -41,22 +41,20 @@ BoundingBox.h: $(STRUCTURE_PATH)/OrientedBox.h common.h
 BoundingBox.o: BoundingBox.C BoundingBox.h
 	$(CHARMC) -c $<
 
-TreePiece.h: $(BINARY).decl.h common.h Particle.h Node.h Utility.h
+TreePiece.h: $(BINARY).decl.h common.h Particle.h Node.h Utility.h CentroidVisitor.h
 
-TreePiece.o: TreePiece.C TreePiece.h Reader.h TreeElements.h TraversalManager.h
+TreePiece.o: TreePiece.C TreePiece.h Reader.h
 	$(CHARMC) -c $<
 
-TreeElements.h: $(BINARY).decl.h common.h
-
-CentroidCalculator.h: $(BINARY).decl.h TraversalManager.h
+CentroidCalculator.h: $(BINARY).decl.h CentroidVisitor.h
 
 CentroidCalculator.o: CentroidCalculator.C CentroidCalculator.h
 	$(CHARMC) -c $<
 
-TraversalManager.h: $(BINARY).decl.h common.h
+CentroidVisitor.h: common.h
 
-TraversalManager.o: TraversalManager.C TraversalManager.h
+CentroidVisitor.o: CentroidVisitor.C CentroidVisitor.h CentroidCalculator.h
 	$(CHARMC) -c $<
 
 test: all
-	./charmrun ++local ./simple -f ../inputgen/1k.tipsy +p4
+	./charmrun ++local ./simple -f ../inputgen/10k.tipsy +p4

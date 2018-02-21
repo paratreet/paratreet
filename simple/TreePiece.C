@@ -3,14 +3,12 @@
 #include <cstring>
 #include "TreePiece.h"
 #include "Reader.h"
-#include "TraversalManager.h"
-
+#include "CentroidVisitor.h"
 
 extern CProxy_Reader readers;
 extern int max_particles_per_leaf;
 extern int decomp_type;
 extern int tree_type;
-extern CProxy_TraversalManager traversal_manager;
 extern CProxy_CentroidCalculator centroid_calculator;
 extern CProxy_Main mainProxy;
 
@@ -50,9 +48,8 @@ void TreePiece::calculateCentroid() {
   }
   //CkCallback cb(CkReductionTarget(Main, summass), mainProxy);
   //contribute(sizeof(float),&sum_mass,CkReduction::sum_float, cb);
-  centroid_calculator[tp_key].exist(true);
-  centroid_calculator[tp_key].receiveCentroid(moment, sum_mass);
-  // maybe call leaf() instead? 
+  CentroidVisitor v;
+  v.leaf(moment, sum_mass, tp_key);
 }
 
 void TreePiece::check(const CkCallback& cb) {

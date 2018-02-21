@@ -5,12 +5,11 @@
 #include "Reader.h"
 #include "Splitter.h"
 #include "TreePiece.h"
-#include "TreeElements.h"
 #include "BoundingBox.h"
 #include "BufferedVec.h"
 #include "Utility.h"
-#include "TraversalManager.h"
 #include "CentroidCalculator.h"
+#include "CentroidVisitor.h"
 
 /* readonly */ CProxy_Main mainProxy;
 /* readonly */ CProxy_Reader readers;
@@ -22,7 +21,6 @@
 /* readonly */ int decomp_type;
 /* readonly */ int tree_type;
 /* readonly */ CProxy_CentroidCalculator centroid_calculator;
-/* readonly */ CProxy_TraversalManager traversal_manager;
 
 class Main : public CBase_Main {
   double start_time;
@@ -126,7 +124,6 @@ class Main : public CBase_Main {
     n_readers = CkNumNodes();
     readers = CProxy_Reader::ckNew();
 
-    traversal_manager = CProxy_TraversalManager::ckNew();
     centroid_calculator = CProxy_CentroidCalculator::ckNew();
 
     // start!
@@ -214,6 +211,7 @@ class Main : public CBase_Main {
 
     start_time = CkWallTimer();
     treepieces.calculateCentroid();
+    
 
     // terminate
     //CkPrintf("\nElapsed time: %lf s\n", CkWallTimer() - start_time);

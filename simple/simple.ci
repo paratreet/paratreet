@@ -1,6 +1,7 @@
 mainmodule simple {
   include "BoundingBox.h";
   include "Splitter.h";
+  include "CentroidVisitor.h";
 
   readonly CProxy_Main mainProxy;
   readonly CProxy_Reader readers;
@@ -11,7 +12,6 @@ mainmodule simple {
   readonly int max_particles_per_leaf;
   readonly int decomp_type;
   readonly int tree_type;
-  readonly CProxy_TraversalManager traversal_manager;
   readonly CProxy_CentroidCalculator centroid_calculator;
 
   mainchare Main {
@@ -35,28 +35,10 @@ mainmodule simple {
     entry void calculateCentroid();
   };
 
-  array [1d] TreeElements {
-    entry TreeElements();
-    entry [createhere] void exist(bool); 
-    //needs to be createhere for proper construction
-    entry void node (Key);
-    entry void leaf ();
-    entry void hit ();
-    entry void miss();
-  };
-
-  array [1d] CentroidCalculator : TreeElements {
+  array [1d] CentroidCalculator {
     entry CentroidCalculator();
-    entry [createhere] void exist(bool);
-    entry void receiveCentroid(Vector3D<Real>, Real);
-    entry void node (Key);
-    entry void leaf ();
+    entry [createhere] void receiveCentroid(Vector3D<Real>, Real, bool);
     //entry void printCentroid();
-  };
-
-  group TraversalManager {
-    entry TraversalManager();
-    entry void getNext(CProxy_TreeElements, Key, int);
   };
 
   group Reader {
