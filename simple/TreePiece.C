@@ -40,16 +40,15 @@ void TreePiece::receive(ParticleMsg* msg) {
 }
 
 void TreePiece::calculateCentroid() {
-  Vector3D<Real> moment;
-  Real sum_mass = 0;
+  CentroidData cd;
   for (int i = 0; i < particles.size(); i++) {
-    moment += particles[i].position * particles[i].mass;
-    sum_mass += particles[i].mass;
+    cd.moment += particles[i].position * particles[i].mass;
+    cd.sum_mass += particles[i].mass;
   }
   //CkCallback cb(CkReductionTarget(Main, summass), mainProxy);
   //contribute(sizeof(float),&sum_mass,CkReduction::sum_float, cb);
   CentroidVisitor v;
-  v.leaf(moment, sum_mass, tp_key);
+  v.leaf(cd, tp_key);
 }
 
 void TreePiece::check(const CkCallback& cb) {

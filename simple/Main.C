@@ -44,7 +44,7 @@ class Main : public CBase_Main {
     CkPrintf("sum mass = %f\n", sm);
   }
   */
-  void doneCentroid() {
+  void doneTraversal() {
     CkPrintf("[Main] Calculating Centroid: %lf seconds\n", CkWallTimer() - start_time);
     CkExit();
   }

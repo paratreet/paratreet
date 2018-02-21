@@ -46,15 +46,17 @@ TreePiece.h: $(BINARY).decl.h common.h Particle.h Node.h Utility.h CentroidVisit
 TreePiece.o: TreePiece.C TreePiece.h Reader.h
 	$(CHARMC) -c $<
 
-CentroidCalculator.h: $(BINARY).decl.h CentroidVisitor.h
+CentroidCalculator.h: $(BINARY).decl.h CentroidVisitor.h CentroidData.h
 
 CentroidCalculator.o: CentroidCalculator.C CentroidCalculator.h
 	$(CHARMC) -c $<
 
-CentroidVisitor.h: common.h
+CentroidVisitor.h: common.h CentroidData.h
 
 CentroidVisitor.o: CentroidVisitor.C CentroidVisitor.h CentroidCalculator.h
 	$(CHARMC) -c $<
+
+CentroidData.h: common.h
 
 test: all
 	./charmrun ++local ./simple -f ../inputgen/10k.tipsy +p4

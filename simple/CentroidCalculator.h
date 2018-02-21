@@ -3,19 +3,16 @@
 
 #include "simple.decl.h"
 #include "CentroidVisitor.h"
+#include "CentroidData.h"
 
 class CentroidCalculator : public CBase_CentroidCalculator {
 private:
-  Vector3D<Real> moment;
-  Real sum_mass;
+  CentroidData cd;
   CentroidVisitor v;
   int wait_count;
 public:
   CentroidCalculator();
-  void receiveCentroid (Vector3D<Real>, Real, bool if_leafi);
-  Vector3D<Real> centroid () {
-    return moment / sum_mass;
-  }
+  void receiveCentroid (CentroidData, bool);
 };
 
 #endif

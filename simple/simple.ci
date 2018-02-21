@@ -18,7 +18,7 @@ mainmodule simple {
     initnode void initialize();
     entry Main(CkArgMsg* m);
     entry [threaded] void run();
-    entry void doneCentroid();
+    entry void doneTraversal();
     //entry [reductiontarget] void summass (float);
   };
 
@@ -37,7 +37,7 @@ mainmodule simple {
 
   array [1d] CentroidCalculator {
     entry CentroidCalculator();
-    entry [createhere] void receiveCentroid(Vector3D<Real>, Real, bool);
+    entry [createhere] void receiveCentroid(CentroidData, bool);
     //entry void printCentroid();
   };
 

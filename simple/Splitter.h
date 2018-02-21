@@ -13,7 +13,7 @@ struct Splitter {
   Splitter(Key from_, Key to_, Key tp_key_, int n_particles_) :
     from(from_), to(to_), tp_key(tp_key_), n_particles(n_particles_) {}
 
-  bool pup(PUP::er &p) {
+  void pup(PUP::er &p) {
     p | from;
     p | to;
     p | tp_key;

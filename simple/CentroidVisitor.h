@@ -3,13 +3,14 @@
 
 //#include "simple.decl.h"
 //#include "CentroidCalculator.h"
+#include "CentroidData.h"
 #include "common.h"
 
 class CentroidVisitor {
 public:
   //CentroidVisitor() {CkPrintf("hi\n");}
-  void leaf(Vector3D<Real>, Real, Key);
-  void node(Vector3D<Real>, Real, Key);
+  void leaf(CentroidData, Key);
+  void node(CentroidData, Key);
   void pup(PUP::er &p) {}
 };
 
