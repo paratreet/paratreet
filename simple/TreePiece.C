@@ -9,7 +9,7 @@ extern CProxy_Reader readers;
 extern int max_particles_per_leaf;
 extern int decomp_type;
 extern int tree_type;
-extern CProxy_CentroidCalculator centroid_calculator;
+extern CProxy_TreeElement<CentroidVisitor, CentroidData> centroid_calculator;
 extern CProxy_Main mainProxy;
 
 TreePiece::TreePiece(const CkCallback& cb, int n_total_particles_,
@@ -40,7 +40,7 @@ void TreePiece::receive(ParticleMsg* msg) {
 }
 
 template<class Data>
-void TreePiece::calculateData() {
+void TreePiece::calculateData(Data d) {
   CkAbort("calculateData needs to be specialized");
 }
 

@@ -33,8 +33,10 @@ mainmodule simple {
     entry void build(const CkCallback&);
     entry void triggerRequest();
     template<class Data>
-    entry void calculateCentroid();
+    entry void calculateData(Data);
   };
+
+  extern entry void TreePiece calculateData();
 
   template<class Visitor, class Data>
   array [1d] TreeElement {
@@ -42,7 +44,7 @@ mainmodule simple {
     entry [createhere] void TreeElement(Data, bool);
   };
 
-  array [1d] TreeElement<CentroidVisitor, CentroidData>;
+  //array [1d] TreeElement<CentroidVisitor, CentroidData>;
 
   group Reader {
     entry Reader();

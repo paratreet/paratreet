@@ -23,7 +23,7 @@ clean:
 
 common.h: $(STRUCTURE_PATH)/Vector3D.h $(STRUCTURE_PATH)/SFC.h
 
-Main.o: Main.C $(BINARY).decl.h common.h Reader.h TreePiece.h BoundingBox.h BufferedVec.h TreeElement.h CentroidVisitor.h user.decl.h user.def.h
+Main.o: Main.C $(BINARY).decl.h common.h Reader.h TreePiece.h BoundingBox.h BufferedVec.h TreeElement.h CentroidVisitor.h
 	$(CHARMC) -c $<
 
 Reader.h: $(BINARY).decl.h common.h Particle.h BoundingBox.h Splitter.h

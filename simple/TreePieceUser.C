@@ -1,7 +1,7 @@
 #include "TreePiece.h"
 
 template <>
-void TreePiece::calculateData<CentroidData>() {
+void TreePiece::calculateData<CentroidData>(CentroidData d) {
   CentroidData cd;
   for (int i = 0; i < particles.size(); i++) {
     cd.moment += particles[i].position * particles[i].mass;

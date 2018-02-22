@@ -10,9 +10,6 @@
 #include "Utility.h"
 #include "TreeElement.h"
 #include "CentroidVisitor.h"
-#define CK_TEMPLATES_ONLY
-#include "user.decl.h"
-#undef CK_TEMPLATES_ONLY
 
 /* readonly */ CProxy_Main mainProxy;
 /* readonly */ CProxy_Reader readers;
@@ -213,7 +210,8 @@ class Main : public CBase_Main {
     */
 
     start_time = CkWallTimer();
-    treepieces.calculateData<CentroidData>(); 
+    CentroidData d;
+    treepieces.calculateData(d); 
 
     // terminate
     //CkPrintf("\nElapsed time: %lf s\n", CkWallTimer() - start_time);
