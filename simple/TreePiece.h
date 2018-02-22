@@ -19,8 +19,8 @@ class TreePiece : public CBase_TreePiece {
   public:
     TreePiece(const CkCallback&, int, int);
     void receive(ParticleMsg*);
-    template<class Data>
-    void calculateData(Data);
+    //template<class Data>
+    //void calculateData(Data);
     void check(const CkCallback&);
     void triggerRequest();
     void build(const CkCallback&);

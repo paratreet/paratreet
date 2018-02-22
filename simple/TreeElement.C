@@ -13,6 +13,6 @@ void TreeElement<Visitor, Data>::receiveData (Data di, bool if_leafi) {
   d = d + di;
   wait_count--;
   if (wait_count == 0) {
-    v.node(d, thisIndex);
+    //v.node(d, thisIndex);
   }
 }
