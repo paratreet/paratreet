@@ -39,16 +39,9 @@ void TreePiece::receive(ParticleMsg* msg) {
   delete msg;
 }
 
-void TreePiece::calculateCentroid() {
-  CentroidData cd;
-  for (int i = 0; i < particles.size(); i++) {
-    cd.moment += particles[i].position * particles[i].mass;
-    cd.sum_mass += particles[i].mass;
-  }
-  //CkCallback cb(CkReductionTarget(Main, summass), mainProxy);
-  //contribute(sizeof(float),&sum_mass,CkReduction::sum_float, cb);
-  CentroidVisitor v;
-  v.leaf(cd, tp_key);
+template<class Data>
+void TreePiece::calculateData() {
+  CkAbort("calculateData needs to be specialized");
 }
 
 void TreePiece::check(const CkCallback& cb) {

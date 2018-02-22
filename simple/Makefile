@@ -5,7 +5,7 @@ CHARMC = $(CHARM_HOME)/bin/charmc $(OPTS)
 LD_LIBS = -L$(STRUCTURE_PATH) -lTipsy
 
 BINARY = simple
-OBJS = Main.o Reader.o Particle.o BoundingBox.o TreePiece.o CentroidCalculator.o CentroidVisitor.o
+OBJS = Main.o Reader.o Particle.o BoundingBox.o TreePiece.o TreeElement.o CentroidVisitor.o
 
 all: $(BINARY)
 
@@ -23,7 +23,7 @@ clean:
 
 common.h: $(STRUCTURE_PATH)/Vector3D.h $(STRUCTURE_PATH)/SFC.h
 
-Main.o: Main.C $(BINARY).decl.h common.h Reader.h TreePiece.h BoundingBox.h BufferedVec.h CentroidCalculator.h CentroidVisitor.h
+Main.o: Main.C $(BINARY).decl.h common.h Reader.h TreePiece.h BoundingBox.h BufferedVec.h TreeElement.h CentroidVisitor.h user.decl.h user.def.h
 	$(CHARMC) -c $<
 
 Reader.h: $(BINARY).decl.h common.h Particle.h BoundingBox.h Splitter.h
@@ -46,14 +46,16 @@ TreePiece.h: $(BINARY).decl.h common.h Particle.h Node.h Utility.h CentroidVisit
 TreePiece.o: TreePiece.C TreePiece.h Reader.h
 	$(CHARMC) -c $<
 
-CentroidCalculator.h: $(BINARY).decl.h CentroidVisitor.h CentroidData.h
+TreePieceUser.o: TreePieceUser.C TreePiece.h
 
-CentroidCalculator.o: CentroidCalculator.C CentroidCalculator.h
+TreeElement.h: $(BINARY).decl.h $(BINARY).def.h
+
+TreeElement.o: TreeElement.C CentroidVisitor.h
 	$(CHARMC) -c $<
 
 CentroidVisitor.h: common.h CentroidData.h
 
-CentroidVisitor.o: CentroidVisitor.C CentroidVisitor.h CentroidCalculator.h
+CentroidVisitor.o: CentroidVisitor.C CentroidVisitor.h TreeElement.h
 	$(CHARMC) -c $<
 
 CentroidData.h: common.h

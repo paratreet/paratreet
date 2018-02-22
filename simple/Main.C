@@ -8,8 +8,11 @@
 #include "BoundingBox.h"
 #include "BufferedVec.h"
 #include "Utility.h"
-#include "CentroidCalculator.h"
+#include "TreeElement.h"
 #include "CentroidVisitor.h"
+#define CK_TEMPLATES_ONLY
+#include "user.decl.h"
+#undef CK_TEMPLATES_ONLY
 
 /* readonly */ CProxy_Main mainProxy;
 /* readonly */ CProxy_Reader readers;
@@ -20,7 +23,7 @@
 /* readonly */ int max_particles_per_leaf; // for local tree build
 /* readonly */ int decomp_type;
 /* readonly */ int tree_type;
-/* readonly */ CProxy_CentroidCalculator centroid_calculator;
+/* readonly */ CProxy_TreeElement<CentroidVisitor, CentroidData> centroid_calculator;
 
 class Main : public CBase_Main {
   double start_time;
@@ -124,7 +127,7 @@ class Main : public CBase_Main {
     n_readers = CkNumNodes();
     readers = CProxy_Reader::ckNew();
 
-    centroid_calculator = CProxy_CentroidCalculator::ckNew();
+    centroid_calculator = CProxy_TreeElement<CentroidVisitor, CentroidData>::ckNew();
 
     // start!
     start_time = CkWallTimer();
@@ -210,8 +213,7 @@ class Main : public CBase_Main {
     */
 
     start_time = CkWallTimer();
-    treepieces.calculateCentroid();
-    
+    treepieces.calculateData<CentroidData>(); 
 
     // terminate
     //CkPrintf("\nElapsed time: %lf s\n", CkWallTimer() - start_time);

@@ -19,7 +19,8 @@ class TreePiece : public CBase_TreePiece {
   public:
     TreePiece(const CkCallback&, int, int);
     void receive(ParticleMsg*);
-    void calculateCentroid();
+    template<class Data>
+    void calculateData();
     void check(const CkCallback&);
     void triggerRequest();
     void build(const CkCallback&);

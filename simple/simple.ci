@@ -12,7 +12,7 @@ mainmodule simple {
   readonly int max_particles_per_leaf;
   readonly int decomp_type;
   readonly int tree_type;
-  readonly CProxy_CentroidCalculator centroid_calculator;
+  readonly CProxy_TreeElement<CentroidVisitor, CentroidData> centroid_calculator;
 
   mainchare Main {
     initnode void initialize();
@@ -32,14 +32,17 @@ mainmodule simple {
     entry void check(const CkCallback&);
     entry void build(const CkCallback&);
     entry void triggerRequest();
+    template<class Data>
     entry void calculateCentroid();
   };
 
-  array [1d] CentroidCalculator {
-    entry CentroidCalculator();
-    entry [createhere] void receiveCentroid(CentroidData, bool);
-    //entry void printCentroid();
+  template<class Visitor, class Data>
+  array [1d] TreeElement {
+    entry TreeElement();
+    entry [createhere] void TreeElement(Data, bool);
   };
+
+  array [1d] TreeElement<CentroidVisitor, CentroidData>;
 
   group Reader {
     entry Reader();
