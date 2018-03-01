@@ -1,9 +1,5 @@
 #include "TreePiece.h"
 
-#define CK_TEMPLATES_ONLY
-#include "user.def.h"
-#undef CK_TEMPLATES_ONLY
-
 template <>
 void TreePiece::calculateData<CentroidData>(CentroidData d) {
   CentroidData cd;

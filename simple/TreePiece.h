@@ -33,4 +33,9 @@ class TreePiece : public CBase_TreePiece {
 #undef CK_TEMPLATES_ONLY
 */
 
+template<typename Data>
+void TreePiece::calculateData() {
+  CkAbort("calculateData needs to be specialized");
+}
+
 #endif // SIMPLE_TREEPIECE_H_

@@ -5,7 +5,7 @@ CHARMC = $(CHARM_HOME)/bin/charmc $(OPTS)
 LD_LIBS = -L$(STRUCTURE_PATH) -lTipsy
 
 BINARY = simple
-OBJS = Main.o Reader.o Particle.o BoundingBox.o TreePiece.o TreeElement.o
+OBJS = Main.o Reader.o Particle.o BoundingBox.o TreePiece.o
 
 all: $(BINARY)
 
@@ -48,10 +48,7 @@ TreePiece.o: TreePiece.C TreePiece.h Reader.h
 
 TreePieceUser.o: TreePieceUser.C TreePiece.h
 
-TreeElement.h: $(BINARY).decl.h
-
-TreeElement.o: TreeElement.C
-	$(CHARMC) -c $<
+TreeElement.h: $(BINARY).decl.h $(BINARY).def.h
 
 CentroidData.h: common.h
 

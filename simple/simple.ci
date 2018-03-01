@@ -32,11 +32,11 @@ mainmodule simple {
     entry void check(const CkCallback&);
     entry void build(const CkCallback&);
     entry void triggerRequest();
-    //template<typename Data> 
-    //entry void calculateData();
+    template<typename Data> 
+    entry void calculateData();
   };
 
-  //extern entry void TreePiece<CentroidData> calculateData();
+  extern entry void TreePiece<CentroidData> calculateData();
  
   template<typename Visitor, typename Data>
   array [1d] TreeElement {
@@ -44,7 +44,7 @@ mainmodule simple {
     entry [createhere] void receiveData(Data, bool);
   };
 
-  //array [1d] TreeElement<CentroidVisitor, CentroidData>;
+  array [1d] TreeElement<CentroidVisitor, CentroidData>;
 
   group Reader {
     entry Reader();

@@ -124,7 +124,7 @@ class Main : public CBase_Main {
     // create Readers
     n_readers = CkNumNodes();
     readers = CProxy_Reader::ckNew();
-    centroid_calculator = CProxy_TreeElement<CentroidVisitor, CentroidData>();
+    centroid_calculator = CProxy_TreeElement<CentroidVisitor, CentroidData>::ckNew();
 
     // start!
     start_time = CkWallTimer();
@@ -209,12 +209,12 @@ class Main : public CBase_Main {
     CkPrintf("[Main] Local tree build: %lf seconds\n", CkWallTimer() - start_time);
     */
     
-    //start_time = CkWallTimer();
-    //treepieces.calculateData<CentroidData>(); 
+    start_time = CkWallTimer();
+    treepieces.calculateData<CentroidData>(); 
 
     // terminate
-    CkPrintf("\nElapsed time: %lf s\n", CkWallTimer() - start_time);
-    CkExit();
+    //CkPrintf("\nElapsed time: %lf s\n", CkWallTimer() - start_time);
+    //CkExit();
   }
 
   void findOctSplitters() {
