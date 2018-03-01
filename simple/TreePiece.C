@@ -12,6 +12,10 @@ extern int tree_type;
 extern CProxy_TreeElement<CentroidVisitor, CentroidData> centroid_calculator;
 extern CProxy_Main mainProxy;
 
+#define CK_TEMPLATES_ONLY
+#include "user.def.h"
+#undef CK_TEMPLATES_ONLY
+
 TreePiece::TreePiece(const CkCallback& cb, int n_total_particles_,
     int n_treepieces_) : n_total_particles(n_total_particles_),
     n_treepieces(n_treepieces_), particle_index(0) {
@@ -39,12 +43,11 @@ void TreePiece::receive(ParticleMsg* msg) {
   delete msg;
 }
 
-/*
-template<class Data>
-void TreePiece::calculateData(Data d) {
+
+template<typename Data>
+void TreePiece::calculateData() {
   CkAbort("calculateData needs to be specialized");
 }
-*/
 
 void TreePiece::check(const CkCallback& cb) {
   if (n_expected != particles.size()) {

@@ -19,13 +19,18 @@ class TreePiece : public CBase_TreePiece {
   public:
     TreePiece(const CkCallback&, int, int);
     void receive(ParticleMsg*);
-    //template<class Data>
-    //void calculateData(Data);
+    template<class Data>
+    void calculateData();
     void check(const CkCallback&);
     void triggerRequest();
     void build(const CkCallback&);
     bool recursiveBuild(Node*, bool);
     void print(Node*);
 };
+/*
+#define CK_TEMPLATES_ONLY
+#include "simple.def.h"
+#undef CK_TEMPLATES_ONLY
+*/
 
 #endif // SIMPLE_TREEPIECE_H_

@@ -9,7 +9,8 @@
 #include "BufferedVec.h"
 #include "Utility.h"
 #include "TreeElement.h"
-//#include "CentroidVisitor.h"
+#include "CentroidVisitor.h"
+
 
 /* readonly */ CProxy_Main mainProxy;
 /* readonly */ CProxy_Reader readers;
@@ -20,8 +21,7 @@
 /* readonly */ int max_particles_per_leaf; // for local tree build
 /* readonly */ int decomp_type;
 /* readonly */ int tree_type;
-/* readonly */ //CProxy_TreeElement<CentroidVisitor, CentroidData> centroid_calculator;
-/* readonly */ CProxy_TreeElement<int, bool> test;
+/* readonly */ CProxy_TreeElement<CentroidVisitor, CentroidData> centroid_calculator;
 
 class Main : public CBase_Main {
   double start_time;
@@ -124,9 +124,7 @@ class Main : public CBase_Main {
     // create Readers
     n_readers = CkNumNodes();
     readers = CProxy_Reader::ckNew();
-
-    //centroid_calculator = CProxy_TreeElement<CentroidVisitor, CentroidData>::ckNew();
-    test = CProxy_TreeElement<int, bool>::ckNew();
+    centroid_calculator = CProxy_TreeElement<CentroidVisitor, CentroidData>();
 
     // start!
     start_time = CkWallTimer();
@@ -152,6 +150,7 @@ class Main : public CBase_Main {
 #endif
 
     // assign keys and sort particles locally
+
     start_time = CkWallTimer();
     readers.assignKeys(universe, CkCallbackResumeThread());
     CkPrintf("[Main] Assigning keys and sorting particles: %lf seconds\n", CkWallTimer() - start_time);
@@ -203,21 +202,19 @@ class Main : public CBase_Main {
     // free splitter memory
     if (decomp_type == OCT_DECOMP)
       splitters.resize(0);
-
-    /* TODO
+    /*
     // start local tree build in TreePieces
     start_time = CkWallTimer();
-    //treepieces.build(CkCallbackResumeThread());
+    treepieces.build(CkCallbackResumeThread());
     CkPrintf("[Main] Local tree build: %lf seconds\n", CkWallTimer() - start_time);
     */
-
-    start_time = CkWallTimer();
-    CentroidData d;
-    //treepieces.calculateData(d); 
+    
+    //start_time = CkWallTimer();
+    //treepieces.calculateData<CentroidData>(); 
 
     // terminate
-    //CkPrintf("\nElapsed time: %lf s\n", CkWallTimer() - start_time);
-    //CkExit();
+    CkPrintf("\nElapsed time: %lf s\n", CkWallTimer() - start_time);
+    CkExit();
   }
 
   void findOctSplitters() {

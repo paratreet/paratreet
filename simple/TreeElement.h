@@ -3,7 +3,7 @@
 
 #include "simple.decl.h"
 
-template<class Visitor, class Data>
+template<typename Visitor, typename Data>
 class TreeElement : public CBase_TreeElement<Visitor, Data> {
 private:
   Visitor v;

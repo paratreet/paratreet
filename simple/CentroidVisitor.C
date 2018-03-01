@@ -1,8 +1,8 @@
 #include "CentroidVisitor.h"
-#include "CentroidCalculator.h"
+#include "TreeElement.h"
 
 extern CProxy_Main mainProxy;
-extern CProxy_CentroidCalculator centroid_calculator;
+//extern CProxy_TreeElement<CentroidVisitor, CentroidData> centroid_calculator;
 
 void CentroidVisitor::leaf(CentroidData cd, Key key) {
   centroid_calculator[key].receiveCentroid(cd, true);

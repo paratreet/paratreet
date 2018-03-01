@@ -1,7 +1,7 @@
 #ifndef SIMPLE_CENTROIDVISITOR_H_
 #define SIMPLE_CENTROIDVISITOR_H_
 
-//#include "simple.decl.h"
+#include "simple.decl.h"
 //#include "CentroidCalculator.h"
 #include "CentroidData.h"
 #include "common.h"
