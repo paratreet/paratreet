@@ -1,7 +1,11 @@
 #include "TreePiece.h"
+#include "CentroidData.h"
+#include "CentroidVisitor.h"
+
+extern CProxy_TreeElement<CentroidVisitor, CentroidData> centroid_calculator;
 
 template <>
-void TreePiece::calculateData<CentroidData>(CentroidData d) {
+void TreePiece::calculateData<CentroidData>() {
   CentroidData cd;
   for (int i = 0; i < particles.size(); i++) {
     cd.moment += particles[i].position * particles[i].mass;
@@ -10,5 +14,6 @@ void TreePiece::calculateData<CentroidData>(CentroidData d) {
   //CkCallback cb(CkReductionTarget(Main, summass), mainProxy);
   //contribute(sizeof(float),&sum_mass,CkReduction::sum_float, cb);
   CentroidVisitor v;
-  v.leaf(cd, tp_key); 
+  v.leaf(centroid_calculator, cd, tp_key); 
 } 
+

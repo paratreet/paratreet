@@ -1,7 +1,9 @@
 mainmodule simple {
   include "BoundingBox.h";
   include "Splitter.h";
-  include "CentroidVisitor.h";
+  include "CentroidData.h";
+  //include "CentroidVisitor.h";
+  class CentroidVisitor;
 
   readonly CProxy_Main mainProxy;
   readonly CProxy_Reader readers;
@@ -36,7 +38,7 @@ mainmodule simple {
     entry void calculateData();
   };
 
-  extern entry void TreePiece<CentroidData> calculateData();
+  extern entry void TreePiece calculateData<CentroidData>();
  
   template<typename Visitor, typename Data>
   array [1d] TreeElement {

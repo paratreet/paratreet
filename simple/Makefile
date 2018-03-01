@@ -48,9 +48,11 @@ TreePiece.o: TreePiece.C TreePiece.h Reader.h
 
 TreePieceUser.o: TreePieceUser.C TreePiece.h
 
-TreeElement.h: $(BINARY).decl.h $(BINARY).def.h
+TreeElement.h: $(BINARY).decl.h $(BINARY).def.h CentroidVisitor.h
+
+CentroidVisitor.h: $(BINARY).decl.h common.h CentroidData.h
 
 CentroidData.h: common.h
 
 test: all
-	./charmrun ++local ./simple -f ../inputgen/10k.tipsy +p4
+	./charmrun ++local ./simple -f ../inputgen/1k.tipsy +p4

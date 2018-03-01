@@ -10,7 +10,7 @@
 #include "Utility.h"
 #include "TreeElement.h"
 #include "CentroidVisitor.h"
-
+#include "TreePieceUser.h"
 
 /* readonly */ CProxy_Main mainProxy;
 /* readonly */ CProxy_Reader readers;

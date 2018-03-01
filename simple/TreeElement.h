@@ -23,13 +23,11 @@ TreeElement<Visitor, Data>::TreeElement() :
 }
 template<typename Visitor, typename Data>
 void TreeElement<Visitor, Data>::receiveData (Data di, bool if_leafi) {
-  if (if_leafi) CkPrintf("woohoo\n");
-  return;
   if (wait_count == -1) wait_count = (if_leafi) ? 1 : 8;
   d = d + di;
   wait_count--;
   if (wait_count == 0) {
-    v.node(d, this->thisIndex);
+    v.node(mainProxy, this->thisProxy, d, this->thisIndex);
   }
 }
 
