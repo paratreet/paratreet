@@ -202,19 +202,18 @@ class Main : public CBase_Main {
     // free splitter memory
     if (decomp_type == OCT_DECOMP)
       splitters.resize(0);
-    /*
+
     // start local tree build in TreePieces
     start_time = CkWallTimer();
     treepieces.build(CkCallbackResumeThread());
     CkPrintf("[Main] Local tree build: %lf seconds\n", CkWallTimer() - start_time);
-    */
     
-    start_time = CkWallTimer();
-    treepieces.calculateData<CentroidData>(); 
+    //start_time = CkWallTimer();
+    //treepieces.calculateData<CentroidData>(); 
 
     // terminate
-    //CkPrintf("\nElapsed time: %lf s\n", CkWallTimer() - start_time);
-    //CkExit();
+    CkPrintf("\nElapsed time: %lf s\n", CkWallTimer() - start_time);
+    CkExit();
   }
 
   void findOctSplitters() {

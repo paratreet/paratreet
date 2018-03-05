@@ -16,6 +16,7 @@ typedef struct Node {
   Node* parent;
   std::vector<Node*> children;
   int n_children;
+  int wait_count;
 
   Node() {}
 
@@ -29,6 +30,7 @@ typedef struct Node {
     this->owner_tp_end = owner_tp_end;
     this->parent = parent;
     this->n_children = 0;
+    this->wait_count = -1;
   }
 
   static std::string TypeDotColor(Type type){
