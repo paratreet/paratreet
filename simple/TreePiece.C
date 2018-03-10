@@ -39,11 +39,6 @@ void TreePiece::receive(ParticleMsg* msg) {
   particle_index += msg->n_particles;
   delete msg;
 }
-/*
-template<typename Data>
-void TreePiece::calculateData() {
-  CkAbort("calculateData needs to be specialized");
-}*/
 
 void TreePiece::check(const CkCallback& cb) {
   if (n_expected != particles.size()) {

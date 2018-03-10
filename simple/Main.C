@@ -10,7 +10,6 @@
 #include "Utility.h"
 #include "TreeElement.h"
 #include "CentroidVisitor.h"
-#include "TreePieceUser.h"
 
 /* readonly */ CProxy_Main mainProxy;
 /* readonly */ CProxy_Reader readers;
@@ -204,12 +203,12 @@ class Main : public CBase_Main {
       splitters.resize(0);
 
     // start local tree build in TreePieces
-    start_time = CkWallTimer();
-    treepieces.build(CkCallbackResumeThread());
-    CkPrintf("[Main] Local tree build: %lf seconds\n", CkWallTimer() - start_time);
-    
     //start_time = CkWallTimer();
-    //treepieces.calculateData<CentroidData>(); 
+    //treepieces.build(CkCallbackResumeThread());
+    //CkPrintf("[Main] Local tree build: %lf seconds\n", CkWallTimer() - start_time);
+    
+    start_time = CkWallTimer();
+    treepieces.upOnly<CentroidVisitor, CentroidData>(centroid_calculator); 
 
     // terminate
     CkPrintf("\nElapsed time: %lf s\n", CkWallTimer() - start_time);

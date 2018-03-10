@@ -2,7 +2,9 @@ mainmodule simple {
   include "BoundingBox.h";
   include "Splitter.h";
   include "CentroidData.h";
-  //include "CentroidVisitor.h";
+  //template<typename Visitor, typename Data>
+  //class DataInterface;
+  include "DataInterface.h";
   class CentroidVisitor;
 
   readonly CProxy_Main mainProxy;
@@ -28,25 +30,25 @@ mainmodule simple {
     Particle particles[];
   };
 
+  template<typename Visitor, typename Data>
+  array [1d] TreeElement {
+    entry TreeElement();
+    entry [createhere] void receiveData(Data, bool, DataInterface<Visitor, Data>);
+  };
+
+  array [1d] TreeElement<CentroidVisitor, CentroidData>;
+
   array [1d] TreePiece {
     entry TreePiece(const CkCallback&, int, int);
     entry void receive(ParticleMsg*);
     entry void check(const CkCallback&);
     entry void build(const CkCallback&);
     entry void triggerRequest();
-    template<typename Data> 
-    entry void calculateData();
+    template<typename Visitor, typename Data> 
+    entry void upOnly(CProxy_TreeElement<Visitor, Data>);
   };
 
-  extern entry void TreePiece calculateData<CentroidData>();
- 
-  template<typename Visitor, typename Data>
-  array [1d] TreeElement {
-    entry TreeElement();
-    entry [createhere] void receiveData(Data, bool);
-  };
-
-  array [1d] TreeElement<CentroidVisitor, CentroidData>;
+  extern entry void TreePiece upOnly<CentroidVisitor, CentroidData>(CProxy_TreeElement<CentroidVisitor, CentroidData>);
 
   group Reader {
     entry Reader();

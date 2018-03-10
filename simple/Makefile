@@ -23,7 +23,7 @@ clean:
 
 common.h: $(STRUCTURE_PATH)/Vector3D.h $(STRUCTURE_PATH)/SFC.h
 
-Main.o: Main.C $(BINARY).decl.h $(BINARY).def.h common.h Reader.h TreePiece.h BoundingBox.h BufferedVec.h TreeElement.h
+Main.o: Main.C $(BINARY).decl.h common.h Reader.h TreePiece.h BoundingBox.h BufferedVec.h TreeElement.h
 	$(CHARMC) -c $<
 
 Reader.h: $(BINARY).decl.h common.h Particle.h BoundingBox.h Splitter.h
@@ -46,13 +46,13 @@ TreePiece.h: $(BINARY).decl.h common.h Particle.h Node.h Utility.h
 TreePiece.o: TreePiece.C TreePiece.h Reader.h
 	$(CHARMC) -c $<
 
-TreePieceUser.o: TreePieceUser.C TreePiece.h
-
 TreeElement.h: $(BINARY).decl.h $(BINARY).def.h CentroidVisitor.h
 
 CentroidVisitor.h: $(BINARY).decl.h common.h CentroidData.h
 
 CentroidData.h: common.h
+
+DataInterface.h: common.h Utility.h
 
 test: all
 	./charmrun ++local ./simple -f ../inputgen/1k.tipsy +p4
