@@ -17,8 +17,8 @@ private:
   std::map<Key, Data> local_data;
   Key tp_key;
 public:
-  DataInterface<Data> () {}
-  DataInterface<Data> (CProxy_TreeElement<Visitor, Data> global_datai, std::map<Key, Data>& local_datai, Key tp_keyi) :
+  DataInterface<Visitor, Data> () {}
+  DataInterface<Visitor, Data> (CProxy_TreeElement<Visitor, Data> global_datai, std::map<Key, Data>& local_datai, Key tp_keyi) :
     global_data(global_datai), local_data(local_datai), tp_key(tp_keyi) {}
   bool contribute(Key key, Data data) {
     if (key == tp_key >> 3) {
