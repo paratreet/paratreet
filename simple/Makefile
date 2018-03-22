@@ -52,7 +52,7 @@ CentroidVisitor.h: $(BINARY).decl.h common.h CentroidData.h
 
 CentroidData.h: common.h
 
-GravityVisitor.h: $(BINARY).decl.h $(BINARY) CentroidData.h
+GravityVisitor.h: $(BINARY).decl.h CentroidData.h
 
 DataInterface.h: common.h Utility.h
 
