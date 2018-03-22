@@ -32,7 +32,7 @@ class Main : public CBase_Main {
 
   std::vector<Splitter> splitters;
 
-  CProxy_TreePiece treepieces; // cannot be a global variable
+  CProxy_TreePiece<CentroidVisitor, CentroidData> treepieces; // cannot be a global variable
   int n_treepieces;
 
   public:
@@ -178,7 +178,7 @@ class Main : public CBase_Main {
     }
 
     // create treepieces
-    treepieces = CProxy_TreePiece::ckNew(CkCallbackResumeThread(), universe.n_particles, n_treepieces, n_treepieces);
+    treepieces = CProxy_TreePiece<CentroidVisitor, CentroidData>::ckNew(CkCallbackResumeThread(), universe.n_particles, n_treepieces, n_treepieces);
     CkPrintf("[Main] Created %d TreePieces\n", n_treepieces);
 
     // flush particles to home TreePieces

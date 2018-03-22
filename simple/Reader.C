@@ -253,7 +253,8 @@ void Reader::receive(ParticleMsg* msg) {
   SFCsplitters.push_back(Key(0)); // maybe use something different than splitters variable?
 }
 
-void Reader::request(CProxyElement_TreePiece tp_proxy, int num_to_give) {
+template <typename Visitor, typename Data>
+void Reader::request(CProxyElement_TreePiece<Visitor, Data> tp_proxy, int num_to_give) {
   int n_particles = box.n_particles;
   ParticleMsg* msg = new (num_to_give) ParticleMsg(&particles[0], num_to_give);
   for (int i = 0; i < n_particles - num_to_give; i++) {
@@ -313,7 +314,8 @@ void Reader::setSplitters(const std::vector<Splitter>& splitters, const CkCallba
   contribute(cb);
 }
 
-void Reader::flush(int n_total_particles, int n_treepieces, CProxy_TreePiece treepieces) {
+template <typename Visitor, typename Data>
+void Reader::flush(int n_total_particles, int n_treepieces, CProxy_TreePiece<Visitor, Data> treepieces) {
   int flush_count = 0;
 
   if (decomp_type == OCT_DECOMP) {

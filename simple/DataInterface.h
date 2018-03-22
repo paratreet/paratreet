@@ -7,10 +7,13 @@
 //#include "TreeElement.h"
 #include "Utility.h"
 
-template<typename Visitor, typename Data>
+template <typename Visitor, typename Data>
 class CProxy_TreeElement;
 
-template<typename Visitor, typename Data>
+template <typename Visitor, typename Data>
+class CProxy_TreePiece;
+
+template <typename Visitor, typename Data>
 class DataInterface {
 private:
   CProxy_TreeElement<Visitor, Data> global_data;

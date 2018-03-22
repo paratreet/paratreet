@@ -2,7 +2,7 @@ mainmodule simple {
   include "BoundingBox.h";
   include "Splitter.h";
   include "CentroidData.h";
-  //template<typename Visitor, typename Data>
+  //template <typename Visitor, typename Data>
   //class DataInterface;
   include "DataInterface.h";
   class CentroidVisitor;
@@ -30,7 +30,7 @@ mainmodule simple {
     Particle particles[];
   };
 
-  template<typename Visitor, typename Data>
+  template <typename Visitor, typename Data>
   array [1d] TreeElement {
     entry TreeElement();
     entry [createhere] void receiveData(Data, bool, DataInterface<Visitor, Data>);
@@ -38,23 +38,24 @@ mainmodule simple {
 
   array [1d] TreeElement<CentroidVisitor, CentroidData>;
 
+  template <typename Visitor, typename Data>
   array [1d] TreePiece {
     entry TreePiece(const CkCallback&, int, int);
     entry void receive(ParticleMsg*);
     entry void check(const CkCallback&);
     entry void build(const CkCallback&);
     entry void triggerRequest();
-    template<typename Visitor, typename Data> 
     entry void upOnly(CProxy_TreeElement<Visitor, Data>);
   };
 
-  extern entry void TreePiece upOnly<CentroidVisitor, CentroidData>(CProxy_TreeElement<CentroidVisitor, CentroidData>);
+  array [1d] TreePiece<CentroidVisitor, CentroidData>;
 
   group Reader {
     entry Reader();
     entry void load(std::string, const CkCallback&);
     entry void assignKeys(BoundingBox&, const CkCallback&);
-    entry void request(CProxyElement_TreePiece, int);
+    template <typename Visitor, typename Data>
+    entry void request(CProxyElement_TreePiece<Visitor, Data>, int);
     entry void countOct(std::vector<Key>&, const CkCallback&);
     //entry void countSfc(const std::vector<Key>&, const CkCallback&);
     entry void pickSamples(const int, const CkCallback&);
@@ -64,6 +65,10 @@ mainmodule simple {
     entry void localSort(const CkCallback&);
     entry void checkSort(const Key, const CkCallback&);
     entry void setSplitters(const std::vector<Splitter>&, const CkCallback&);
-    entry void flush(int, int, CProxy_TreePiece);
+    template <typename Visitor, typename Data>
+    entry void flush(int, int, CProxy_TreePiece<Visitor, Data>);
   };
+
+  extern entry void Reader request<Visitor, Data>(CProxyElement_TreePiece<Visitor, Data>, int);
+  extern entry void Reader flush<Visitor, Data>(int, int, CProxy_TreePiece<Visitor, Data>);
 };

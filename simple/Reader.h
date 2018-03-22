@@ -34,10 +34,12 @@ class Reader : public CBase_Reader {
     void receive(ParticleMsg*);
     void localSort(const CkCallback&);
     void checkSort(const Key, const CkCallback&);
-    void request(CProxyElement_TreePiece, int);
+    template <typename Visitor, typename Data>
+    void request(CProxyElement_TreePiece<Visitor, Data>, int);
 
     // sending particles to home TreePieces
-    void flush(int, int, CProxy_TreePiece);
+    template <typename Visitor, typename Data>
+    void flush(int, int, CProxy_TreePiece<Visitor, Data>);
 };
 
 #endif // SIMPLE_READER_H_

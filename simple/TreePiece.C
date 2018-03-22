@@ -12,8 +12,8 @@ extern int tree_type;
 extern CProxy_TreeElement<CentroidVisitor, CentroidData> centroid_calculator;
 extern CProxy_Main mainProxy;
 
-
-TreePiece::TreePiece(const CkCallback& cb, int n_total_particles_,
+template <typename Visitor, typename Data>
+TreePiece<Visitor, Data>::TreePiece(const CkCallback& cb, int n_total_particles_,
     int n_treepieces_) : n_total_particles(n_total_particles_),
     n_treepieces(n_treepieces_), particle_index(0) {
   if (decomp_type == OCT_DECOMP) {
@@ -32,7 +32,8 @@ TreePiece::TreePiece(const CkCallback& cb, int n_total_particles_,
   contribute(cb);
 }
 
-void TreePiece::receive(ParticleMsg* msg) {
+template <typename Visitor, typename Data>
+void TreePiece<Visitor, Data>::receive(ParticleMsg* msg) {
   // copy particles to local vector
   particles.resize(particle_index + msg->n_particles);
   std::memcpy(&particles[particle_index], msg->particles, msg->n_particles * sizeof(Particle));
@@ -40,7 +41,8 @@ void TreePiece::receive(ParticleMsg* msg) {
   delete msg;
 }
 
-void TreePiece::check(const CkCallback& cb) {
+template <typename Visitor, typename Data>
+void TreePiece<Visitor, Data>::check(const CkCallback& cb) {
   if (n_expected != particles.size()) {
     CkPrintf("[TP %d] ERROR! Only %d particles out of %d received\n", thisIndex,
         particles.size(), n_expected);
@@ -50,14 +52,20 @@ void TreePiece::check(const CkCallback& cb) {
   contribute(cb);
 }
 
-void TreePiece::build(const CkCallback &cb){
+template <typename Visitor, typename Data>
+void TreePiece<Visitor, Data>::triggerRequest() {
+  readers.ckLocalBranch()->request(thisProxy[thisIndex], n_expected);
+}
+
+template <typename Visitor, typename Data>
+void TreePiece<Visitor, Data>::build(const CkCallback &cb){
   // create global root and recurse
-  root = new Node(1, 0, &particles[0], particles.size(), 0, n_treepieces - 1, NULL);
+  root = new Node<Data>(1, 0, &particles[0], particles.size(), 0, n_treepieces - 1, NULL);
   recursiveBuild(root, false);
 
 #ifdef DEBUG
   //print(root);
-  Node* cur = root;
+  Node<Data>* cur = root;
   int sib = 0;
   CkPrintf("[TP %d] key: 0x%" PRIx64 " particles: %d\n", thisIndex, tp_key, particles.size());
   while (1) {
@@ -93,7 +101,8 @@ void TreePiece::build(const CkCallback &cb){
   contribute(cb);
 }
 
-bool TreePiece::recursiveBuild(Node* node, bool saw_tp_key) {
+template <typename Visitor, typename Data>
+bool TreePiece<Visitor, Data>::recursiveBuild(Node<Data>* node, bool saw_tp_key) {
   // store reference to splitters
   std::vector<Splitter>& splitters = readers.ckLocalBranch()->splitters;
 
@@ -113,9 +122,9 @@ bool TreePiece::recursiveBuild(Node* node, bool saw_tp_key) {
       if (saw_tp_key) {
         // we can make the node a local leaf
         if (node->n_particles == 0)
-          node->type = Node::EmptyLeaf;
+          node->type = Node<Data>::EmptyLeaf;
         else
-          node->type = Node::Leaf;
+          node->type = Node<Data>::Leaf;
 
         return true;
       }
@@ -128,18 +137,18 @@ bool TreePiece::recursiveBuild(Node* node, bool saw_tp_key) {
         if (single_owner) {
           int assigned = splitters[owner_start].n_particles;
           if (assigned == 0) {
-            node->type = Node::RemoteEmptyLeaf;
+            node->type = Node<Data>::RemoteEmptyLeaf;
           }
           else if (assigned <= BUCKET_TOLERANCE * max_particles_per_leaf) {
-            node->type = Node::RemoteLeaf;
+            node->type = Node<Data>::RemoteLeaf;
           }
           else {
-            node->type = Node::Remote;
+            node->type = Node<Data>::Remote;
             node->n_children = BRANCH_FACTOR;
           }
         }
         else {
-          node->type = Node::Remote;
+          node->type = Node<Data>::Remote;
           node->n_children = BRANCH_FACTOR;
         }
 
@@ -185,7 +194,7 @@ bool TreePiece::recursiveBuild(Node* node, bool saw_tp_key) {
       }
 
       // create child and store in vector
-      Node* child = new Node(child_key, node->depth + 1, node->particles + start, n_particles, child_owner_start, child_owner_end, node);
+      Node<Data>* child = new Node<Data>(child_key, node->depth + 1, node->particles + start, n_particles, child_owner_start, child_owner_end, node);
       node->children.push_back(child);
 
       // recursive tree build
@@ -200,17 +209,55 @@ bool TreePiece::recursiveBuild(Node* node, bool saw_tp_key) {
     }
 
     if (non_local_children == 0) {
-      node->type = Node::Internal;
+      node->type = Node<Data>::Internal;
     }
     else {
-      node->type = Node::Boundary;
+      node->type = Node<Data>::Boundary;
     }
 
     return (non_local_children == 0);
   }
 }
 
-void TreePiece::print(Node* root) {
+template <typename Visitor, typename Data>
+void TreePiece<Visitor, Data>::upOnly(CProxy_TreeElement<Visitor, Data> global_data) {
+  std::queue<Node<Data>*> nodes;
+  nodes.push(root);
+  std::map<Key, Data> local_data;
+  DataInterface <Visitor, Data> d (global_data, local_data, tp_key);
+  Visitor v (d);
+  while (nodes.size()) {
+    Node<Data>* node = nodes.front();
+    nodes.pop();
+    if (!local_data.count(node->key)) { // on way down
+      CentroidData cd;
+      local_data.insert(std::make_pair(node->key, cd));
+      if (node->type == Node<Data>::Internal || node->type == Node<Data>::Boundary) {
+        for (int i = 0; i < node->children.size(); i++) {
+          nodes.push(node->children[i]);
+        }
+      }
+    }
+    if (node->type == Node<Data>::Leaf) {
+      v.leaf(node->key, node->n_particles, node->particles);
+      node->wait_count = 0;
+      if (node->parent) {
+        if (node->parent->wait_count < 0) node->parent->wait_count = 0;
+        node->parent->wait_count++;
+      }
+    }
+    if (node->wait_count == 0) {
+      if (node->parent && v.node(local_data[node->key], node->parent->key)) {
+        if (node->parent->wait_count < 0) node->parent->wait_count = node->parent->n_children;
+        node->parent->wait_count--;
+        if (node->parent->wait_count == 0) nodes.push(node->parent);
+      }
+    }
+  }
+}
+
+template <typename Visitor, typename Data>
+void TreePiece<Visitor, Data>::print(Node<Data>* root) {
   ostringstream oss;
   oss << "tree." << thisIndex << ".dot";
   ofstream out(oss.str().c_str());
@@ -219,8 +266,4 @@ void TreePiece::print(Node* root) {
   root->dot(out);
   out << "}" << endl;
   out.close();
-}
-
-void TreePiece::triggerRequest() {
-  readers.ckLocalBranch()->request(thisProxy[thisIndex], n_expected);
 }

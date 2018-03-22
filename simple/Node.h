@@ -3,13 +3,15 @@
 
 #include "common.h"
 
-typedef struct Node {
+template <typename Data>
+struct Node {
   enum Type { Invalid = 0, Leaf, EmptyLeaf, RemoteLeaf, RemoteEmptyLeaf, Remote, Internal, Boundary };
 
   Type type;
   Key key;
   int depth;
   Particle* particles;
+  Data* data;
   int n_particles;
   int owner_tp_start;
   int owner_tp_end;
@@ -25,6 +27,7 @@ typedef struct Node {
     this->key = key;
     this->depth = depth;
     this->particles = particles;
+    this->data = NULL;
     this->n_particles = n_particles;
     this->owner_tp_start = owner_tp_start;
     this->owner_tp_end = owner_tp_end;
@@ -74,7 +77,6 @@ typedef struct Node {
       child->dot(out);
     }
   }
-
-} Node;
+};
 
 #endif // SIMPLE_NODE_H_

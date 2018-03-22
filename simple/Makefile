@@ -41,7 +41,7 @@ BoundingBox.h: $(STRUCTURE_PATH)/OrientedBox.h common.h
 BoundingBox.o: BoundingBox.C BoundingBox.h
 	$(CHARMC) -c $<
 
-TreePiece.h: $(BINARY).decl.h common.h Particle.h Node.h Utility.h
+TreePiece.h: $(BINARY).decl.h $(BINARY).def.h common.h Particle.h Node.h Utility.h
 
 TreePiece.o: TreePiece.C TreePiece.h Reader.h
 	$(CHARMC) -c $<
