@@ -208,7 +208,7 @@ class Main : public CBase_Main {
     //CkPrintf("[Main] Local tree build: %lf seconds\n", CkWallTimer() - start_time);
     
     start_time = CkWallTimer();
-    treepieces.upOnly<CentroidVisitor>(centroid_calculator); 
+    treepieces.upOnly<CentroidVisitor>(); 
 
     // terminate
     CkPrintf("\nElapsed time: %lf s\n", CkWallTimer() - start_time);

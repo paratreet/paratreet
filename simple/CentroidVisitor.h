@@ -6,33 +6,35 @@
 #include "common.h"
 
 extern CProxy_Main mainProxy;
+extern CProxy_TreeElement<CentroidVisitor, CentroidData> centroid_calculator;
 
 class CentroidVisitor {
 private:
-  DataInterface<CentroidVisitor, CentroidData> d;
+  Key tp_key;
 public:
-  CentroidVisitor() {}
-  CentroidVisitor(DataInterface<CentroidVisitor, CentroidData> di) : d(di) {}
-  void leaf(Key key, int n_particles, Particle* particles) {
-    CentroidData cd;
-    for (int i = 0; i < n_particles; i++) {
-      Particle p = particles[i];
-      cd.moment += particles[i].mass * particles[i].position;
-      cd.sum_mass += particles[i].mass;
+  CentroidVisitor(Key tp_keyi = 0) : tp_key(tp_keyi) {}
+  void leaf(Node<CentroidData>* node) {
+    for (int i = 0; i < node->n_particles; i++) {
+      Particle p = node->particles[i];
+      node->data->moment += node->particles[i].mass * node->particles[i].position;
+      node->data->sum_mass += node->particles[i].mass;
     }
-    d.contribute(key, cd);
   }
-  bool node(CentroidData cd, Key key) {
-    if (key == 1) {
-      //CkPrintf("%f %f %f %f\n", cd.sum_mass, cd.moment.x, cd.moment.y, cd.moment.x);
+  bool node(Node<CentroidData>* node) {
+    /*if (key == 1) {
+      //CkPrintf("%f %f %f %f\n", cd.sum_mass, cd.moment.x, cd.moment.y, cd.moment.z);
       mainProxy.doneTraversal();
       return false;
+    }*/
+    if (tp_key && node->key == tp_key >> 3) {
+      centroid_calculator[node->key].receiveData(*node->data, true);
+      return false;
     }
-    return d.contribute(key, cd);
+    *node->parent->data = *node->parent->data + *node->data;
+    return true;
   }
   void pup(PUP::er& p) {
-    p | d;
+    p | tp_key;
   }
 };
-
 #endif //SIMPLE_CENTROIDVISITOR_H_

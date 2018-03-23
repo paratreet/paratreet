@@ -2,8 +2,6 @@ mainmodule simple {
   include "BoundingBox.h";
   include "Splitter.h";
   include "CentroidData.h";
-  //template <typename Visitor, typename Data>
-  //class DataInterface;
   include "DataInterface.h";
   class CentroidVisitor;
 
@@ -33,7 +31,7 @@ mainmodule simple {
   template <typename Visitor, typename Data>
   array [1d] TreeElement {
     entry TreeElement();
-    entry [createhere] void receiveData(Data, bool, DataInterface<Visitor, Data>);
+    entry [createhere] void receiveData(Data, bool);
   };
 
   array [1d] TreeElement<CentroidVisitor, CentroidData>;
@@ -46,11 +44,11 @@ mainmodule simple {
     entry void build(const CkCallback&);
     entry void triggerRequest();
     template<typename Visitor>
-    entry void upOnly(CProxy_TreeElement<Visitor, Data>);
+    entry void upOnly();
   };
 
   array [1d] TreePiece<CentroidData>;
-  extern entry void TreePiece<CentroidData> upOnly<CentroidVisitor> (CProxy_TreeElement<CentroidVisitor, CentroidData>);
+  extern entry void TreePiece<CentroidData> upOnly<CentroidVisitor> ();
 
   group Reader {
     entry Reader();

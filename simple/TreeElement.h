@@ -3,6 +3,7 @@
 
 #include "simple.decl.h"
 #include "templates.h"
+#include "Node.h"
 
 template <typename Visitor, typename Data>
 class TreeElement : public CBase_TreeElement<Visitor, Data> {
@@ -11,7 +12,7 @@ private:
   int wait_count;
 public:
   TreeElement();
-  void receiveData (Data, bool, DataInterface<Visitor, Data>);
+  void receiveData (Data, bool);
 };
 
 extern CProxy_Main mainProxy;
@@ -20,16 +21,18 @@ template <typename Visitor, typename Data>
 TreeElement<Visitor, Data>::TreeElement() {
   d = Data();
   wait_count = -1;  
-  //CkPrintf("%d\n", thisIndex);
 }
 template <typename Visitor, typename Data>
-void TreeElement<Visitor, Data>::receiveData (Data di, bool if_leafi, DataInterface<Visitor, Data> dii) {
-  if (wait_count == -1) wait_count = (if_leafi) ? 1 : 8;
+void TreeElement<Visitor, Data>::receiveData (Data di, bool if_leaf) {
+  if (wait_count == -1) wait_count = (if_leaf) ? 1 : 8;
   d = d + di;
   wait_count--;
   if (wait_count == 0) {
-    Visitor v (dii);
-    v.node(d, this->thisIndex);
+    Visitor v (0);
+    Node<Data> node;
+    node.key = this->thisIndex;
+    node.data = &d;
+    v.node(&node);
   }
 }
 

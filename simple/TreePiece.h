@@ -45,7 +45,7 @@ public:
   void build(const CkCallback&);
   bool recursiveBuild(Node<Data>*, bool);
   template<typename Visitor>
-  void upOnly(CProxy_TreeElement<Visitor, Data>);
+  void upOnly();
   void print(Node<Data>*);
 
 };
@@ -252,37 +252,36 @@ bool TreePiece<Data>::recursiveBuild(Node<Data>* node, bool saw_tp_key) {
 
 template <typename Data>
 template <typename Visitor>
-void TreePiece<Data>::upOnly(CProxy_TreeElement<Visitor, Data> global_data) {
+void TreePiece<Data>::upOnly() {
   std::queue<Node<Data>*> nodes;
   nodes.push(root);
-  std::map<Key, Data> local_data;
-  DataInterface <Visitor, Data> d (global_data, local_data, tp_key);
-  Visitor v (d);
+  Visitor v (tp_key);
+  int n_curr_particles = 0;
   while (nodes.size()) {
     Node<Data>* node = nodes.front();
     nodes.pop();
-    if (!local_data.count(node->key)) { // on way down
-      CentroidData cd;
-      local_data.insert(std::make_pair(node->key, cd));
+    if (n_curr_particles < n_total_particles) { // on way down
+      node->wait_count = 0;
       if (node->type == Node<Data>::Internal || node->type == Node<Data>::Boundary) {
         for (int i = 0; i < node->children.size(); i++) {
           nodes.push(node->children[i]);
+          switch (node->children[i]->type) {
+            case Node<Data>::Internal:
+            case Node<Data>::Boundary:
+            case Node<Data>::Leaf:
+              node->wait_count++;
+          }
         }
       }
     }
     if (node->type == Node<Data>::Leaf) {
-      v.leaf(node->key, node->n_particles, node->particles);
+      v.leaf(node);
       node->wait_count = 0;
-      if (node->parent) {
-        if (node->parent->wait_count < 0) node->parent->wait_count = 0;
-        node->parent->wait_count++;
-      }
+      n_curr_particles += node->n_particles;
     }
     if (node->wait_count == 0) {
-      if (node->parent && v.node(local_data[node->key], node->parent->key)) {
-        if (node->parent->wait_count < 0) node->parent->wait_count = node->parent->n_children;
-        node->parent->wait_count--;
-        if (node->parent->wait_count == 0) nodes.push(node->parent);
+      if (v.node(node)) { 
+        if (--node->parent->wait_count == 0) nodes.push(node->parent);
       }
     }
   }
