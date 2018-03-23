@@ -10,7 +10,7 @@
 template <typename Visitor, typename Data>
 class CProxy_TreeElement;
 
-template <typename Visitor, typename Data>
+template <typename Data>
 class CProxy_TreePiece;
 
 template <typename Visitor, typename Data>

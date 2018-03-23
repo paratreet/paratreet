@@ -2,6 +2,7 @@
 #define SIMPLE_TREEELEMENT_H_
 
 #include "simple.decl.h"
+#include "templates.h"
 
 template <typename Visitor, typename Data>
 class TreeElement : public CBase_TreeElement<Visitor, Data> {

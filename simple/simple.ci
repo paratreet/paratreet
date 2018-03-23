@@ -38,24 +38,26 @@ mainmodule simple {
 
   array [1d] TreeElement<CentroidVisitor, CentroidData>;
 
-  template <typename Visitor, typename Data>
+  template <typename Data>
   array [1d] TreePiece {
     entry TreePiece(const CkCallback&, int, int);
     entry void receive(ParticleMsg*);
     entry void check(const CkCallback&);
     entry void build(const CkCallback&);
     entry void triggerRequest();
+    template<typename Visitor>
     entry void upOnly(CProxy_TreeElement<Visitor, Data>);
   };
 
-  array [1d] TreePiece<CentroidVisitor, CentroidData>;
+  array [1d] TreePiece<CentroidData>;
+  extern entry void TreePiece<CentroidData> upOnly<CentroidVisitor> (CProxy_TreeElement<CentroidVisitor, CentroidData>);
 
   group Reader {
     entry Reader();
     entry void load(std::string, const CkCallback&);
     entry void assignKeys(BoundingBox&, const CkCallback&);
-    template <typename Visitor, typename Data>
-    entry void request(CProxyElement_TreePiece<Visitor, Data>, int);
+    template <typename Data>
+    entry void request(CProxy_TreePiece<Data>, int, int);
     entry void countOct(std::vector<Key>&, const CkCallback&);
     //entry void countSfc(const std::vector<Key>&, const CkCallback&);
     entry void pickSamples(const int, const CkCallback&);
@@ -65,10 +67,10 @@ mainmodule simple {
     entry void localSort(const CkCallback&);
     entry void checkSort(const Key, const CkCallback&);
     entry void setSplitters(const std::vector<Splitter>&, const CkCallback&);
-    template <typename Visitor, typename Data>
-    entry void flush(int, int, CProxy_TreePiece<Visitor, Data>);
+    template <typename Data>
+    entry void flush(int, int, CProxy_TreePiece<Data>);
   };
 
-  extern entry void Reader request<Visitor, Data>(CProxyElement_TreePiece<Visitor, Data>, int);
-  extern entry void Reader flush<Visitor, Data>(int, int, CProxy_TreePiece<Visitor, Data>);
+  extern entry void Reader request<CentroidData>(CProxy_TreePiece<CentroidData>, int, int);
+  extern entry void Reader flush<CentroidData>(int, int, CProxy_TreePiece<CentroidData>);
 };
