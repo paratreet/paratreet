@@ -23,6 +23,7 @@
 /* readonly */ CProxy_TreeElement<CentroidVisitor, CentroidData> centroid_calculator;
 
 class Main : public CBase_Main {
+  double total_start_time;
   double start_time;
   std::string input_str;
 
@@ -126,7 +127,7 @@ class Main : public CBase_Main {
     centroid_calculator = CProxy_TreeElement<CentroidVisitor, CentroidData>::ckNew();
 
     // start!
-    start_time = CkWallTimer();
+    total_start_time = CkWallTimer();
     thisProxy.run();
   }
 
@@ -136,7 +137,7 @@ class Main : public CBase_Main {
     largest_particle_key = (~Key(0));
 
     // load Tipsy data and build universe
-    double start_time = CkWallTimer();
+    start_time = CkWallTimer();
     CkReductionMsg* result;
     readers.load(input_file, CkCallbackResumeThread((void*&)result));
     CkPrintf("[Main] Loading Tipsy data and building universe: %lf seconds\n", CkWallTimer() - start_time);
@@ -206,12 +207,12 @@ class Main : public CBase_Main {
     //start_time = CkWallTimer();
     //treepieces.build(CkCallbackResumeThread());
     //CkPrintf("[Main] Local tree build: %lf seconds\n", CkWallTimer() - start_time);
-    
+
     start_time = CkWallTimer();
     treepieces.upOnly<CentroidVisitor>(); 
 
     // terminate
-    CkPrintf("\nElapsed time: %lf s\n", CkWallTimer() - start_time);
+    CkPrintf("\nElapsed time: %lf s\n", CkWallTimer() - total_start_time);
     CkExit();
   }
 
