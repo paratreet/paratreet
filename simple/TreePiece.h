@@ -38,7 +38,7 @@ class TreePiece : public CBase_TreePiece<Data> {
   Node<Data>* root;
 
 public:
-  TreePiece(const CkCallback&, int, int); 
+  TreePiece(const CkCallback&, int, int);
   void receive(ParticleMsg*);
   void check(const CkCallback&);
   void triggerRequest();
@@ -63,7 +63,7 @@ TreePiece<Data>::TreePiece(const CkCallback& cb, int n_total_particles_, int n_t
     if (this->thisIndex < (n_total_particles % n_treepieces))
       n_expected++;
       // TODO tp_key needs to be found in local tree build
-  } 
+  }
   this->contribute(cb);
 }
 
@@ -130,13 +130,14 @@ void TreePiece<Data>::build(const CkCallback &cb){
     }
   }
 #endif
+
   this->contribute(cb);
 }
 
 template <typename Data>
 bool TreePiece<Data>::recursiveBuild(Node<Data>* node, bool saw_tp_key) {
   // store reference to splitters
-  std::vector<Splitter>& splitters = readers.ckLocalBranch()->splitters;
+  static std::vector<Splitter>& splitters = readers.ckLocalBranch()->splitters;
 
   if (tree_type == OCT_TREE) {
     // check if we are inside the subtree rooted at the treepiece's key

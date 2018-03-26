@@ -204,12 +204,14 @@ class Main : public CBase_Main {
       splitters.resize(0);
 
     // start local tree build in TreePieces
-    //start_time = CkWallTimer();
-    //treepieces.build(CkCallbackResumeThread());
-    //CkPrintf("[Main] Local tree build: %lf seconds\n", CkWallTimer() - start_time);
-
     start_time = CkWallTimer();
-    treepieces.upOnly<CentroidVisitor>(); 
+    treepieces.build(CkCallbackResumeThread());
+    CkPrintf("[Main] Local tree build: %lf seconds\n", CkWallTimer() - start_time);
+
+    /*
+    start_time = CkWallTimer();
+    treepieces.upOnly<CentroidVisitor>();
+    */
 
     // terminate
     CkPrintf("\nElapsed time: %lf s\n", CkWallTimer() - total_start_time);
