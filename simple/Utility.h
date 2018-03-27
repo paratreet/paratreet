@@ -100,7 +100,7 @@ class Utility {
     int d1 = getDepthFromKey(k1);
     int d2 = getDepthFromKey(k2);
     if(d1 > d2) return false;
-    k2 = (k2 >> (d2 - d1));
+    k2 = (k2 >> ((d2 - d1) * LOG_BRANCH_FACTOR));
     return k1 == k2;
   }
 
