@@ -5,41 +5,64 @@
 #include "templates.h"
 #include "Node.h"
 
-template <typename Visitor, typename Data>
-class TreeElement : public CBase_TreeElement<Visitor, Data> {
+template<typename Data>
+class CProxy_TreePiece;
+
+template <typename Data>
+class TreeElement : public CBase_TreeElement<Data> {
 private:
   Data d;
   int wait_count;
+  int tp_index;
+  CProxy_TreePiece<Data> tp_proxy;
 public:
   TreeElement();
-  void receiveData (Data, bool);
+  template <typename Visitor>
+  void receiveData (CProxy_TreePiece<Data>, int, Data);
+  template <typename Visitor>
+  void requestTP (Key, int);
+  template <typename Visitor> 
+  void requestData(int);
 };
 
 extern CProxy_Main mainProxy;
 
-template <typename Visitor, typename Data>
-TreeElement<Visitor, Data>::TreeElement() {
+template <typename Data>
+TreeElement<Data>::TreeElement() {
   d = Data();
-  wait_count = -1;  
+  wait_count = -1;
 }
-template <typename Visitor, typename Data>
-void TreeElement<Visitor, Data>::receiveData (Data di, bool if_leaf) {
-  if (wait_count == -1) wait_count = (if_leaf) ? 1 : 8;
+
+template <typename Data>
+template <typename Visitor>
+void TreeElement<Data>::requestTP(Key key, int index) {
+  tp_proxy[tp_index].template requestNodes<Visitor>(key, index);
+}
+
+template <typename Data>
+template <typename Visitor>
+void TreeElement<Data>::requestData(int index) {
+  Node<Data> node;
+  node.data = d;
+  tp_proxy[index].template addCache<Visitor>(node);
+}
+
+template <typename Data>
+template <typename Visitor>
+void TreeElement<Data>::receiveData (CProxy_TreePiece<Data> tp_proxyi, int tp_indexi, Data di) {
+  tp_proxy = tp_proxyi;
+  tp_index = tp_indexi;
+  if (wait_count == -1) wait_count = (tp_index >= 0) ? 1 : 8;
   d = d + di;
   wait_count--;
   if (wait_count == 0) {
-    Visitor v (0);
+    Visitor v (tp_proxy, tp_index);
     Node<Data> node;
     node.key = this->thisIndex;
-    node.data = &d;
+    node.type = Node<Data>::Boundary;
+    node.data = d;
     v.node(&node);
   }
 }
-
-/*
-#define CK_TEMPLATES_ONLY
-#include "simple.def.h"
-#undef CK_TEMPLATES_ONLY
-*/
 
 #endif // SIMPLE_TREEELEMENT_H_

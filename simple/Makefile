@@ -51,7 +51,5 @@ CentroidData.h: common.h
 
 GravityVisitor.h: $(BINARY).decl.h CentroidData.h
 
-DataInterface.h: common.h Utility.h
-
 test: all
 	./charmrun ++local ./simple -f ../inputgen/1k.tipsy +p4

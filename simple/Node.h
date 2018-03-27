@@ -2,16 +2,18 @@
 #define SIMPLE_NODE_H_
 
 #include "common.h"
+class Particle;
 
 template <typename Data>
 struct Node {
-  enum Type { Invalid = 0, Leaf, EmptyLeaf, RemoteLeaf, RemoteEmptyLeaf, Remote, Internal, Boundary };
+  enum Type { Invalid = 0, Leaf, EmptyLeaf, RemoteLeaf, RemoteEmptyLeaf, Remote, Internal, Boundary, CachedRemote, CachedRemoteLeaf, CachedBoundary };
+  // is remote leaf necessary?
 
   Type type;
   Key key;
   int depth;
   Particle* particles;
-  Data* data;
+  Data data;
   int n_particles;
   int owner_tp_start;
   int owner_tp_end;
@@ -20,14 +22,18 @@ struct Node {
   int n_children;
   int wait_count;
 
-  Node() {}
+  void pup (PUP::er& p) {
+  }
 
+  Node() {
+    Node(-1, -1, NULL, 0, 0, 0, NULL);
+  }
   Node(Key key, int depth, Particle* particles, int n_particles, int owner_tp_start, int owner_tp_end, Node* parent) {
     this->type = Invalid;
     this->key = key;
     this->depth = depth;
     this->particles = particles;
-    this->data = NULL;
+    this->data = Data();
     this->n_particles = n_particles;
     this->owner_tp_start = owner_tp_start;
     this->owner_tp_end = owner_tp_end;

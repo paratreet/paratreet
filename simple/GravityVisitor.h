@@ -6,52 +6,38 @@
 #include "common.h"
 #include <cmath>
 
-extern CProxy_Main mainProxy;
-
 class GravityVisitor {
 private:
-  DataInterface<CentroidVisitor, CentroidData> d;
-  Particle part;
-  Vector3D<Real> sum_force;
-
   Real distsq(Vector3D<Real> p1, Vector3D<Real> p2) {
     Real dsq = (p1.x - p2.x) * (p1.x - p2.x);
     dsq += (p1.y - p2.y) * (p1.y - p2.y);
     dsq += (p1.z - p2.z) * (p1.z - p2.z);
     return dsq;
   }
-  void addGravity(Real mass, Vector3D<Real> position) {
+  void addGravity(Real mass, Vector3D<Real> position, Particle& p, Vector3D<Real>& sum_force) {
     const Real gconst = 0.000000000066742;
-    Real rsq = distsq(part.position, position);
-    sum_force += gconst * part.mass * mass / rsq;
+    Real rsq = distsq(p.position, position);
+    sum_force += gconst * p.mass * mass / rsq;
   }
 public:
   GravityVisitor() {}
-  GravityVisitor(DataInterface<CentroidVisitor, CentroidData> di, Particle parti) : 
-  d(di), part(parti), sum_force(Vector3D<Real> (0,0,0)) {}
-  void leaf(Key key, int n_particles, Particle* particles) {
-    for (int i = 0; i < n_particles; i++) {
-      addGravity(particles[i].mass, particles[i].position);
+  void leaf(Node<CentroidData>* node, Particle& p, Vector3D<Real>& sum_force) {
+    for (int i = 0; i < node->n_particles; i++) {
+      addGravity(node->particles[i].mass, node->particles[i].position, p, sum_force);
     }
   }
-  bool node(CentroidData cd, Key key) {
-    // need to put all final data into map
+  bool node(Node<CentroidData>* node, Particle& p, Vector3D<Real>& sum_force ) {
     const Real theta = .5;
-    Real s = std::pow(2, -1 * Utility::getDepthFromKey(key)); // is this right?
-    //CentroidData cd = d.get(key);
-    if (distsq(part.position, cd.moment) < (s * s) / (theta * theta)) {
+    Real s = std::pow(2, -1 * Utility::getDepthFromKey(node->key)); // is this right?
+    if (distsq(p.position, node->data.moment) < (s * s) / (theta * theta)) {
       return true;
     }
     else {
-      addGravity(cd.sum_mass, cd.moment);
+      addGravity(node->data.sum_mass, node->data.moment, p, sum_force);
       return false;
     }
   }
-  void pup(PUP::er& p) {
-    p | d;
-    p | part;
-    p | sum_force;
-  }
+  void pup(PUP::er& p) {}
 };
 
 #endif //SIMPLE_GRAVITYVISITOR_H_

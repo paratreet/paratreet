@@ -2,8 +2,9 @@ mainmodule simple {
   include "BoundingBox.h";
   include "Splitter.h";
   include "CentroidData.h";
-  include "DataInterface.h";
   class CentroidVisitor;
+  include "Node.h";
+  include "extrafile.h";
 
   readonly CProxy_Main mainProxy;
   readonly CProxy_Reader readers;
@@ -14,7 +15,7 @@ mainmodule simple {
   readonly int max_particles_per_leaf;
   readonly int decomp_type;
   readonly int tree_type;
-  readonly CProxy_TreeElement<CentroidVisitor, CentroidData> centroid_calculator;
+  readonly CProxy_TreeElement<CentroidData> centroid_calculator;
 
   mainchare Main {
     initnode void initialize();
@@ -28,13 +29,8 @@ mainmodule simple {
     Particle particles[];
   };
 
-  template <typename Visitor, typename Data>
-  array [1d] TreeElement {
-    entry TreeElement();
-    entry [createhere] void receiveData(Data, bool);
-  };
-
-  array [1d] TreeElement<CentroidVisitor, CentroidData>;
+  //template<typename Data>
+  //array [1d] TreeElement;
 
   template <typename Data>
   array [1d] TreePiece {
@@ -45,10 +41,36 @@ mainmodule simple {
     entry void triggerRequest();
     template<typename Visitor>
     entry void upOnly();
+    template<typename Visitor>
+    entry void startDown(CProxy_TreeElement<Data>);
+    template<typename Visitor>
+    entry void requestNodes(Key, int);
+    template<typename Visitor>
+    entry void addCache(Node<Data>);
   };
 
   array [1d] TreePiece<CentroidData>;
   extern entry void TreePiece<CentroidData> upOnly<CentroidVisitor> ();
+  extern entry void TreePiece<CentroidData> startDown<GravityVisitor> (CProxy_TreeElement<Data>);
+  extern entry void TreePiece<CentroidData> requestNodes<GravityVisitor> (Key, int);
+  extern entry void TreePiece<CentroidData> addCache<GravityVisitor> (Node<CentroidData>);
+
+
+  template <typename Data>
+  array [1d] TreeElement {
+    entry TreeElement();
+    template <typename Visitor>
+    entry [createhere] void receiveData(CProxy_TreePiece<Data>, int, Data);
+    template <typename Visitor>
+    entry void requestData(int);
+    template <typename Visitor>
+    entry void requestTP(Key, int);
+  };
+
+  array [1d] TreeElement<CentroidData>;
+  extern entry void TreeElement<CentroidData> receiveData<CentroidVisitor>(CProxy_TreePiece<CentroidData>, int, CentroidData);
+  extern entry void TreeElement<CentroidData> requestData<GravityVisitor>(int);
+  extern entry void TreeElement<CentroidData> requestTP<GravityVisitor>(Key, int);
 
   group Reader {
     entry Reader();

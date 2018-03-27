@@ -20,7 +20,7 @@
 /* readonly */ int max_particles_per_leaf; // for local tree build
 /* readonly */ int decomp_type;
 /* readonly */ int tree_type;
-/* readonly */ CProxy_TreeElement<CentroidVisitor, CentroidData> centroid_calculator;
+/* readonly */ CProxy_TreeElement<CentroidData> centroid_calculator;
 
 class Main : public CBase_Main {
   double total_start_time;
@@ -124,7 +124,7 @@ class Main : public CBase_Main {
     // create Readers
     n_readers = CkNumNodes();
     readers = CProxy_Reader::ckNew();
-    centroid_calculator = CProxy_TreeElement<CentroidVisitor, CentroidData>::ckNew();
+    centroid_calculator = CProxy_TreeElement<CentroidData>::ckNew();
 
     // start!
     total_start_time = CkWallTimer();
