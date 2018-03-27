@@ -46,6 +46,7 @@ mainmodule simple {
     entry void requestNodes(Key, int);
     template<typename Visitor>
     entry void addCache(Node<Data>);
+    entry void perturb(Real timestep);
   };
 
   array [1d] TreePiece<CentroidData>;

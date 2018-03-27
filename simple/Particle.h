@@ -22,6 +22,12 @@ struct Particle {
 
   void reset();
 
+  void perturb (Real timestep, Vector3D<Real> force) {
+    acceleration = force / mass;
+    position = position + velocity * timestep + acceleration * timestep * timestep / 2;
+    velocity = velocity + acceleration * timestep;
+  }
+
   bool operator<=(const Particle&) const;
   bool operator>(const Particle&) const;
   bool operator>=(const Particle&) const;

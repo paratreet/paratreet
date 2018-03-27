@@ -69,6 +69,7 @@ public:
   void addCache(Node<Data>); 
   void print(Node<Data>*);
   Node<Data>* findNode(Key);
+  void perturb (Real timestep);
 };
 
 template <typename Data>
@@ -467,6 +468,13 @@ void TreePiece<Data>::goDown() {
     }
     dt.curr_nodes = next_nodes;
     dt.status = (dt.curr_nodes.size()) ? DownTraversal<Data>::Waiting : DownTraversal<Data>::Done;
+  }
+}
+
+template <typename Data>
+void TreePiece<Data>::perturb (Real timestep) {
+  for (int i = 0; i < particles.size(); i++) {
+    particles[i].perturb(timestep, down_traversals[i].sum_force);
   }
 }
 
