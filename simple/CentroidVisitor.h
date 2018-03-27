@@ -28,7 +28,7 @@ public:
       mainProxy.doneTraversal();
       return false;
     }*/
-    if (!node->parent || node->parent->type == Node<CentroidData>::Boundary) {
+    if (!node->parent || node->parent->type == Node<CentroidData>::Boundary) { // if global
       centroid_calculator[node->key].receiveData<CentroidVisitor>(tp_proxy, tp_index, node->data);
       return false;
     }

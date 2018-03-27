@@ -59,7 +59,7 @@ void TreeElement<Data>::receiveData (CProxy_TreePiece<Data> tp_proxyi, int tp_in
     Visitor v (tp_proxy, tp_index);
     Node<Data> node;
     node.key = this->thisIndex;
-    node.type = Node<Data>::Boundary;
+    node.type = Node<Data>::Boundary; // might be wrong
     node.data = d;
     v.node(&node);
   }

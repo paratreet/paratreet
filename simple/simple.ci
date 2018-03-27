@@ -4,7 +4,6 @@ mainmodule simple {
   include "CentroidData.h";
   class CentroidVisitor;
   include "Node.h";
-  include "extrafile.h";
 
   readonly CProxy_Main mainProxy;
   readonly CProxy_Reader readers;

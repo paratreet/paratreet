@@ -315,7 +315,7 @@ template <typename Visitor>
 void TreePiece<Data>::upOnly() {
   std::queue<Node<Data>*> nodes;
   nodes.push(root);
-  Visitor v (this->thisProxy, this->thisIndex);
+  Visitor v (this->thisProxy, this->thisIndex); // weird?
   int n_curr_particles = 0;
   while (nodes.size()) {
     Node<Data>* node = nodes.front();
@@ -372,9 +372,9 @@ Node<Data>* TreePiece<Data>::findNode(Key key) {
 template <typename Data>
 template <typename Visitor>
 void TreePiece<Data>::requestNodes(Key key, int index) {
-  /*Node<Data>* node = findNode(key);
+  Node<Data>* node = findNode(key);
   this->thisProxy[index].template addCache<Visitor>(*node);
-*/
+
 }
 
 template<typename Data>
@@ -423,8 +423,11 @@ void TreePiece<Data>::goDown() {
     std::stack<Node<Data>*> nodes;
     std::vector<Node<Data>*> next_nodes;
     for (int j = 0; j < dt.curr_nodes.size(); j++) {
-      if (dt.curr_nodes[j]->type != Node<Data>::Remote || dt.curr_nodes[j]->type != Node<Data>::Boundary) {
+      if (dt.curr_nodes[j]->type != Node<Data>::Remote || dt.curr_nodes[j]->type != Node<Data>::Boundary) { // wrong
         nodes.push(dt.curr_nodes[j]);
+      }
+      else {
+        next_nodes.push_back(dt.curr_nodes[j]);
       }
     }
     while (nodes.size()) {
