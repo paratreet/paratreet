@@ -101,6 +101,9 @@ void TreePiece<Data>::build(const CkCallback &cb){
   Node<Data>* cur = root;
   int sib = 0;
   CkPrintf("[TP %d] key: 0x%" PRIx64 " particles: %d\n", this->thisIndex, tp_key, particles.size());
+  for (int i = 0; i < particles.size(); i++) {
+    CkPrintf("Particle %d: 0x%" PRIx64 "\n", i, particles[i].key);
+  }
   while (1) {
     CkPrintf("[Level %d] cur: 0x%" PRIx64 " particles: %d\n", cur->depth, cur->key, cur->n_particles);
     if (cur->parent == NULL) { // root
@@ -154,6 +157,29 @@ bool TreePiece<Data>::recursiveBuild(Node<Data>* node, bool saw_tp_key) {
     bool single_owner = (owner_start == owner_end);
     */
 
+    if (saw_tp_key) {
+      // XXX if we are under the TP key, we can stop going deeper if node is light
+      if (is_light) {
+        if (node->n_particles == 0)
+          node->type = Node<Data>::EmptyLeaf;
+        else
+          node->type = Node<Data>::Leaf;
+
+        return true;
+      }
+    }
+    else { // still on the way to TP, we could have diverged
+      if (!is_prefix) {
+        // diverged, should be remote
+        node->type = Node<Data>::Remote;
+
+        return false;
+      }
+    }
+
+    // for all other cases, we go deeper
+
+    /*
     if (is_light) {
       if (saw_tp_key) {
         // we can make the node a local leaf
@@ -169,7 +195,6 @@ bool TreePiece<Data>::recursiveBuild(Node<Data>* node, bool saw_tp_key) {
         // so designate as remote
         node->type = Node<Data>::Remote;
 
-        /*
         CkAssert(node->n_particles == 0);
         CkAssert(node->n_children == 0);
 
@@ -190,7 +215,6 @@ bool TreePiece<Data>::recursiveBuild(Node<Data>* node, bool saw_tp_key) {
           node->type = Node<Data>::Remote;
           node->n_children = BRANCH_FACTOR;
         }
-        */
 
         return false;
       }
@@ -198,67 +222,67 @@ bool TreePiece<Data>::recursiveBuild(Node<Data>* node, bool saw_tp_key) {
         CkAbort("Error: can a light node be an internal node (above a TP root)?");
       }
     }
-    else { // node is not light, we have to go deeper
-      // create children
-      node->n_children = BRANCH_FACTOR;
-      Key child_key = node->key << LOG_BRANCH_FACTOR;
-      int start = 0;
-      int finish = start + node->n_particles;
+    */
 
-      for (int i = 0; i < node->n_children; i++) {
-        Key sibling_splitter = Utility::removeLeadingZeros(child_key + 1);
+    // create children
+    node->n_children = BRANCH_FACTOR;
+    Key child_key = node->key << LOG_BRANCH_FACTOR;
+    int start = 0;
+    int finish = start + node->n_particles;
 
-        // find number of particles in child
-        int first_ge_idx;
-        if (i < node->n_children - 1) {
-          first_ge_idx = Utility::binarySearchGE(sibling_splitter, node->particles, start, finish);
-        }
-        else {
-          first_ge_idx = finish;
-        }
-        int n_particles = first_ge_idx - start;
+    for (int i = 0; i < node->n_children; i++) {
+      Key sibling_splitter = Utility::removeLeadingZeros(child_key + 1);
 
-        /*
-        // find owner treepieces of child
-        int child_owner_start = owner_start;
-        int child_owner_end;
-        if (single_owner) {
-        child_owner_end = child_owner_start;
-        }
-        else {
-        if (i < node->n_children - 1) {
-        int first_ge_tp = Utility::binarySearchGE(sibling_splitter, &splitters[0], owner_start, owner_end);
-        child_owner_end = first_ge_tp - 1;
-        owner_start = first_ge_tp;
-        }
-        else {
-        child_owner_end = owner_end;
-        }
-        }
-        */
-
-        // create child and store in vector
-        Node<Data>* child = new Node<Data>(child_key, node->depth + 1, node->particles + start, n_particles, 0, n_treepieces - 1, node);
-        //Node<Data>* child = new Node<Data>(child_key, node->depth + 1, node->particles + start, n_particles, child_owner_start, child_owner_end, node);
-        node->children.push_back(child);
-
-        // recursive tree build
-        bool local = recursiveBuild(child, saw_tp_key);
-
-        if (!local) {
-          non_local_children++;
-        }
-
-        start = first_ge_idx;
-        child_key++;
-      }
-
-      if (non_local_children == 0) {
-        node->type = Node<Data>::Internal;
+      // find number of particles in child
+      int first_ge_idx;
+      if (i < node->n_children - 1) {
+        first_ge_idx = Utility::binarySearchGE(sibling_splitter, node->particles, start, finish);
       }
       else {
-        node->type = Node<Data>::Boundary;
+        first_ge_idx = finish;
       }
+      int n_particles = first_ge_idx - start;
+
+      /*
+      // find owner treepieces of child
+      int child_owner_start = owner_start;
+      int child_owner_end;
+      if (single_owner) {
+        child_owner_end = child_owner_start;
+      }
+      else {
+        if (i < node->n_children - 1) {
+          int first_ge_tp = Utility::binarySearchGE(sibling_splitter, &splitters[0], owner_start, owner_end);
+          child_owner_end = first_ge_tp - 1;
+          owner_start = first_ge_tp;
+        }
+        else {
+          child_owner_end = owner_end;
+        }
+      }
+      */
+
+      // create child and store in vector
+      Node<Data>* child = new Node<Data>(child_key, node->depth + 1, node->particles + start, n_particles, 0, n_treepieces - 1, node);
+      //Node<Data>* child = new Node<Data>(child_key, node->depth + 1, node->particles + start, n_particles, child_owner_start, child_owner_end, node);
+      node->children.push_back(child);
+
+      // recursive tree build
+      bool local = recursiveBuild(child, saw_tp_key);
+
+      if (!local) {
+        non_local_children++;
+      }
+
+      start = first_ge_idx;
+      child_key++;
+    }
+
+    if (non_local_children == 0) {
+      node->type = Node<Data>::Internal;
+    }
+    else {
+      node->type = Node<Data>::Boundary;
     }
 
     return (non_local_children == 0);
