@@ -115,54 +115,21 @@ void TreePiece<Data>::triggerRequest() {
 template <typename Data>
 void TreePiece<Data>::build(const CkCallback &cb){
   // create global root and recurse
+  CkPrintf("[TP %d] key: 0x%" PRIx64 " particles: %d\n", this->thisIndex, tp_key, particles.size());
   root = new Node<Data>(1, 0, &particles[0], particles.size(), 0, n_treepieces - 1, NULL);
   recursiveBuild(root, false);
-
-#ifdef DEBUG
-  //print(root);
-  Node<Data>* cur = root;
-  int sib = 0;
-  CkPrintf("[TP %d] key: 0x%" PRIx64 " particles: %d\n", this->thisIndex, tp_key, particles.size());
-  for (int i = 0; i < particles.size(); i++) {
-    CkPrintf("Particle %d: 0x%" PRIx64 "\n", i, particles[i].key);
-  }
-  while (1) {
-    CkPrintf("[Level %d] cur: 0x%" PRIx64 " particles: %d\n", cur->depth, cur->key, cur->n_particles);
-    if (cur->parent == NULL) { // root
-      if (cur->children.size() > 0) {
-        // go down one level
-        cur = cur->children[0];
-      }
-      else {
-        break;
-      }
-    }
-    else {
-      sib++;
-      if (sib < cur->parent->children.size()) {
-        // visit sibling
-        cur = cur->parent->children[sib];
-      }
-      else {
-        if (cur->children.size() > 0) {
-          // go down one level
-          cur = cur->children[0];
-        }
-        else {
-          break;
-        }
-      }
-    }
-  }
-#endif
 
   this->contribute(cb);
 }
 
 template <typename Data>
 bool TreePiece<Data>::recursiveBuild(Node<Data>* node, bool saw_tp_key) {
+#if DEBUG
+  CkPrintf("[Level %d] created node 0x%" PRIx64 " with %d particles\n",
+      node->depth, node->key, node->n_particles);
+#endif
   // store reference to splitters
-  static std::vector<Splitter>& splitters = readers.ckLocalBranch()->splitters;
+  //static std::vector<Splitter>& splitters = readers.ckLocalBranch()->splitters;
 
   if (tree_type == OCT_TREE) {
     // check if we are inside the subtree rooted at the treepiece's key
@@ -172,7 +139,6 @@ bool TreePiece<Data>::recursiveBuild(Node<Data>* node, bool saw_tp_key) {
 
     bool is_light = (node->n_particles <= ceil(BUCKET_TOLERANCE * max_particles_per_leaf));
     bool is_prefix = Utility::isPrefix(node->key, tp_key);
-    int non_local_children = 0;
     /*
     int owner_start = node->owner_tp_start;
     int owner_end = node->owner_tp_end;
@@ -251,6 +217,7 @@ bool TreePiece<Data>::recursiveBuild(Node<Data>* node, bool saw_tp_key) {
     Key child_key = node->key << LOG_BRANCH_FACTOR;
     int start = 0;
     int finish = start + node->n_particles;
+    int non_local_children = 0;
 
     for (int i = 0; i < node->n_children; i++) {
       Key sibling_splitter = Utility::removeLeadingZeros(child_key + 1);
