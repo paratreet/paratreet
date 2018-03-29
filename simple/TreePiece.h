@@ -61,9 +61,9 @@ public:
   void build(const CkCallback&);
   bool recursiveBuild(Node<Data>*, bool);
   template<typename Visitor>
-  void upOnly();
+  void upOnly(TEHolder<Data>);
   template<typename Visitor>
-  void startDown(TEHolder<Data>);
+  void startDown();
   template<typename Visitor>
   void requestNodes(Key, int);
   template<typename Visitor>
@@ -129,8 +129,8 @@ void TreePiece<Data>::build(const CkCallback &cb){
 template <typename Data>
 bool TreePiece<Data>::recursiveBuild(Node<Data>* node, bool saw_tp_key) {
 #if DEBUG
-  CkPrintf("[Level %d] created node 0x%" PRIx64 " with %d particles\n",
-      node->depth, node->key, node->n_particles);
+  //CkPrintf("[Level %d] created node 0x%" PRIx64 " with %d particles\n",
+    //  node->depth, node->key, node->n_particles);
 #endif
   // store reference to splitters
   //static std::vector<Splitter>& splitters = readers.ckLocalBranch()->splitters;
@@ -284,25 +284,24 @@ bool TreePiece<Data>::recursiveBuild(Node<Data>* node, bool saw_tp_key) {
 
 template <typename Data>
 template <typename Visitor>
-void TreePiece<Data>::upOnly() {
-  std::queue<Node<Data>*> nodes;
-  nodes.push(root);
-  Visitor v (this->thisProxy, this->thisIndex); // weird?
+void TreePiece<Data>::upOnly(TEHolder<Data> te_holderi) {
+  global_data = te_holderi.te_proxy;
+
+  std::queue<Node<Data>*> down, up;
+  down.push(root);
+  Visitor v (this->thisProxy, this->thisIndex);
   int n_curr_particles = 0;
-  while (nodes.size()) {
-    Node<Data>* node = nodes.front();
-    nodes.pop();
-    if (n_curr_particles < n_total_particles) { // on way down
-      node->wait_count = 0;
-      if (node->type == Node<Data>::Internal || node->type == Node<Data>::Boundary) {
-        for (int i = 0; i < node->children.size(); i++) {
-          nodes.push(node->children[i]);
-          switch (node->children[i]->type) {
-            case Node<Data>::Internal:
-            case Node<Data>::Boundary:
-            case Node<Data>::Leaf:
-              node->wait_count++;
-          }
+  while (down.size()) {
+    Node<Data>* node = down.front();
+    down.pop();
+    node->wait_count = 0;
+    for (int i = 0; i < node->children.size(); i++) {
+      switch (node->children[i]->type) {
+        case Node<Data>::Internal:
+        case Node<Data>::Boundary:
+        case Node<Data>::Leaf: {
+          down.push(node->children[i]);
+          node->wait_count++;
         }
       }
     }
@@ -310,19 +309,24 @@ void TreePiece<Data>::upOnly() {
       v.leaf(node);
       node->wait_count = 0;
       n_curr_particles += node->n_particles;
+      up.push(node);
     }
-    if (node->wait_count == 0) {
-      if (v.node(node)) { 
-        if (--node->parent->wait_count == 0) nodes.push(node->parent);
-      }
+  }
+  if (!up.size()) { // no Data bc no Leaves, so send blank
+    global_data[tp_key].template receiveData<Visitor>(this->thisProxy, Data(), this->thisIndex);
+  }
+  while (up.size()) {
+    Node<Data>* node = up.front();
+    up.pop();
+    if (v.node(node)) { 
+      if (--node->parent->wait_count == 0) up.push(node->parent);
     }
   }
 }
 
 template <typename Data>
 template <typename Visitor>
-void TreePiece<Data>::startDown(TEHolder<Data> te_holderi) {
-  global_data = te_holderi.te_proxy;
+void TreePiece<Data>::startDown() {
   down_traversals = std::vector<DownTraversal<Data>> (particles.size());
   for (int i = 0; i < down_traversals.size(); i++) {
     down_traversals[i].curr_nodes.push_back(root);

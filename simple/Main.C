@@ -40,13 +40,10 @@ class Main : public CBase_Main {
   static void initialize() {
     BoundingBox::registerReducer();
   }
-  /*
-  void summass (float sm) {
-    CkPrintf("sum mass = %f\n", sm);
-  }
-  */
+  
   void doneTraversal() {
     CkPrintf("[Main] Calculating Centroid: %lf seconds\n", CkWallTimer() - start_time);
+    CkPrintf("total time:%lf seconds\n", CkWallTimer() - total_start_time);
     CkExit();
   }
 
@@ -208,14 +205,13 @@ class Main : public CBase_Main {
     treepieces.build(CkCallbackResumeThread());
     CkPrintf("[Main] Local tree build: %lf seconds\n", CkWallTimer() - start_time);
 
-    /*
     start_time = CkWallTimer();
-    treepieces.upOnly<CentroidVisitor>();
-    */
+    TEHolder<CentroidData> te_holder (centroid_calculator);
+    treepieces.upOnly<CentroidVisitor>(te_holder);
 
     // terminate
-    CkPrintf("\nElapsed time: %lf s\n", CkWallTimer() - total_start_time);
-    CkExit();
+    //CkPrintf("\nElapsed time: %lf s\n", CkWallTimer() - total_start_time);
+    //CkExit();
   }
 
   void findOctSplitters() {

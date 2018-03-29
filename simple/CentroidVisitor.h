@@ -10,8 +10,8 @@ extern CProxy_TreeElement<CentroidData> centroid_calculator;
 
 class CentroidVisitor {
 private:
-  int tp_index;
   CProxy_TreePiece<CentroidData> tp_proxy;
+  int tp_index;
 public:
   CentroidVisitor(CProxy_TreePiece<CentroidData> tp_proxyi, int tp_indexi = -1) : 
   tp_proxy(tp_proxyi), tp_index(tp_indexi) {}
@@ -23,21 +23,23 @@ public:
     }
   }
   bool node(Node<CentroidData>* node) {
-    /*if (key == 1) {
-      //CkPrintf("%f %f %f %f\n", cd.sum_mass, cd.moment.x, cd.moment.y, cd.moment.z);
+    if (node->key == 1) {
+      CkPrintf("%f %f %f %f\n", node->data.sum_mass, node->data.moment.x, node->data.moment.y, node->data.moment.z);
       mainProxy.doneTraversal();
       return false;
-    }*/
-    if (!node->parent || node->parent->type == Node<CentroidData>::Boundary) { // if global
-      centroid_calculator[node->key].receiveData<CentroidVisitor>(tp_proxy, tp_index, node->data);
+    }
+    if (tp_index == -1 || node->parent->type == Node<CentroidData>::Boundary) {
+      if (node->type == Node<CentroidData>::Boundary) 
+        centroid_calculator[node->key >> 3].receiveData<CentroidVisitor>(tp_proxy, node->data, -1); // doesn't exist
+      else centroid_calculator[node->key].receiveData<CentroidVisitor>(tp_proxy, node->data, tp_index);
       return false;
     }
     node->parent->data = node->parent->data + node->data;
     return true;
   }
   void pup(PUP::er& p) {
-    p | tp_index;
     p | tp_proxy;
+    p | tp_index;
   }
 };
 #endif //SIMPLE_CENTROIDVISITOR_H_

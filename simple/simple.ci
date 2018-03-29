@@ -22,7 +22,6 @@ mainmodule simple {
     entry Main(CkArgMsg* m);
     entry [threaded] void run();
     entry void doneTraversal();
-    //entry [reductiontarget] void summass (float);
   };
 
   message ParticleMsg {
@@ -37,9 +36,9 @@ mainmodule simple {
     entry void build(const CkCallback&);
     entry void triggerRequest();
     template<typename Visitor>
-    entry void upOnly();
+    entry void upOnly(TEHolder<Data>);
     template<typename Visitor>
-    entry void startDown(TEHolder<Data>);
+    entry void startDown();
     template<typename Visitor>
     entry void requestNodes(Key, int);
     template<typename Visitor>
@@ -48,8 +47,8 @@ mainmodule simple {
   };
 
   array [1d] TreePiece<CentroidData>;
-  extern entry void TreePiece<CentroidData> upOnly<CentroidVisitor> ();
-  extern entry void TreePiece<CentroidData> startDown<GravityVisitor> (TEHolder<CentroidData>);
+  extern entry void TreePiece<CentroidData> upOnly<CentroidVisitor> (TEHolder<CentroidData>);
+  extern entry void TreePiece<CentroidData> startDown<GravityVisitor> ();
   extern entry void TreePiece<CentroidData> requestNodes<GravityVisitor> (Key, int);
   extern entry void TreePiece<CentroidData> addCache<GravityVisitor> (Node<CentroidData>);
 
@@ -58,7 +57,7 @@ mainmodule simple {
   array [1d] TreeElement {
     entry TreeElement();
     template <typename Visitor>
-    entry [createhere] void receiveData(CProxy_TreePiece<Data>, int, Data);
+    entry [createhere] void receiveData(CProxy_TreePiece<Data>, Data, int);
     template <typename Visitor>
     entry void requestData(int);
     template <typename Visitor>
@@ -66,7 +65,7 @@ mainmodule simple {
   };
 
   array [1d] TreeElement<CentroidData>;
-  extern entry void TreeElement<CentroidData> receiveData<CentroidVisitor>(CProxy_TreePiece<CentroidData>, int, CentroidData);
+  extern entry void TreeElement<CentroidData> receiveData<CentroidVisitor>(CProxy_TreePiece<CentroidData>, CentroidData, int);
   extern entry void TreeElement<CentroidData> requestData<GravityVisitor>(int);
   extern entry void TreeElement<CentroidData> requestTP<GravityVisitor>(Key, int);
 
