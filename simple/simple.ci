@@ -4,6 +4,7 @@ mainmodule simple {
   include "CentroidData.h";
   class CentroidVisitor;
   include "Node.h";
+  include "TEHolder.h";
 
   readonly CProxy_Main mainProxy;
   readonly CProxy_Reader readers;
@@ -28,9 +29,6 @@ mainmodule simple {
     Particle particles[];
   };
 
-  //template<typename Data>
-  //array [1d] TreeElement;
-
   template <typename Data>
   array [1d] TreePiece {
     entry TreePiece(const CkCallback&, int, int);
@@ -41,7 +39,7 @@ mainmodule simple {
     template<typename Visitor>
     entry void upOnly();
     template<typename Visitor>
-    entry void startDown(CProxy_TreeElement<Data>);
+    entry void startDown(TEHolder<Data>);
     template<typename Visitor>
     entry void requestNodes(Key, int);
     template<typename Visitor>
@@ -51,7 +49,7 @@ mainmodule simple {
 
   array [1d] TreePiece<CentroidData>;
   extern entry void TreePiece<CentroidData> upOnly<CentroidVisitor> ();
-  extern entry void TreePiece<CentroidData> startDown<GravityVisitor> (CProxy_TreeElement<Data>);
+  extern entry void TreePiece<CentroidData> startDown<GravityVisitor> (TEHolder<CentroidData>);
   extern entry void TreePiece<CentroidData> requestNodes<GravityVisitor> (Key, int);
   extern entry void TreePiece<CentroidData> addCache<GravityVisitor> (Node<CentroidData>);
 

@@ -10,6 +10,7 @@
 #include "Reader.h"
 #include "CentroidVisitor.h"
 #include "GravityVisitor.h"
+//#include "TEHolder.h"
 
 #include <queue>
 #include <map>
@@ -62,7 +63,7 @@ public:
   template<typename Visitor>
   void upOnly();
   template<typename Visitor>
-  void startDown(CProxy_TreeElement<Data>);
+  void startDown(TEHolder<Data>);
   template<typename Visitor>
   void requestNodes(Key, int);
   template<typename Visitor>
@@ -317,8 +318,8 @@ void TreePiece<Data>::upOnly() {
 
 template <typename Data>
 template <typename Visitor>
-void TreePiece<Data>::startDown(CProxy_TreeElement<Data> global_datai) {
-  global_data = global_datai;
+void TreePiece<Data>::startDown(TEHolder<Data> te_holderi) {
+  global_data = te_holderi.te_proxy;
   down_traversals = std::vector<DownTraversal<Data>> (particles.size());
   for (int i = 0; i < down_traversals.size(); i++) {
     down_traversals[i].curr_nodes.push_back(root);
