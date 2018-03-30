@@ -42,6 +42,8 @@ mainmodule simple {
     template<typename Visitor>
     entry void requestNodes(Key, int);
     template<typename Visitor>
+    entry void restoreData(Key, Data, bool);
+    template<typename Visitor>
     entry void addCache(Node<Data>);
     entry void perturb(Real timestep);
   };
@@ -50,6 +52,7 @@ mainmodule simple {
   extern entry void TreePiece<CentroidData> upOnly<CentroidVisitor> (TEHolder<CentroidData>);
   extern entry void TreePiece<CentroidData> startDown<GravityVisitor> ();
   extern entry void TreePiece<CentroidData> requestNodes<GravityVisitor> (Key, int);
+  extern entry void TreePiece<CentroidData> restoreData<GravityVisitor> (Key, CentroidData, bool);
   extern entry void TreePiece<CentroidData> addCache<GravityVisitor> (Node<CentroidData>);
 
 
@@ -62,6 +65,7 @@ mainmodule simple {
     entry void requestData(int);
     template <typename Visitor>
     entry void requestTP(Key, int);
+    entry void print();
   };
 
   array [1d] TreeElement<CentroidData>;

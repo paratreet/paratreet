@@ -6,7 +6,7 @@ class Particle;
 
 template <typename Data>
 struct Node {
-  enum Type { Invalid = 0, Leaf, EmptyLeaf, RemoteLeaf, RemoteEmptyLeaf, Remote, Internal, Boundary, CachedRemote, CachedRemoteLeaf, CachedBoundary };
+  enum Type { Invalid = 0, Leaf, EmptyLeaf, RemoteLeaf, RemoteEmptyLeaf, Remote, Internal, Boundary, RemoteAboveTPKey, CachedRemote, CachedRemoteLeaf, CachedBoundary };
   // is remote leaf necessary?
   
   Type type;
@@ -21,6 +21,7 @@ struct Node {
   std::vector<Node*> children;
   int n_children;
   int wait_count;
+  int tp_index;
 
   void pup (PUP::er& p) {
     pup_bytes(&p, (void *)&type, sizeof(Type));
@@ -32,6 +33,7 @@ struct Node {
     p | owner_tp_start;
     p | owner_tp_end;
     p | wait_count;
+    p | tp_index;
   }
 
   Node() {
@@ -49,6 +51,7 @@ struct Node {
     this->parent = parent;
     this->n_children = 0;
     this->wait_count = -1;
+    this->tp_index = -1;
   }
 
   static std::string TypeDotColor(Type type){

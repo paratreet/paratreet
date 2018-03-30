@@ -13,7 +13,7 @@
 //#include "TEHolder.h"
 
 #include <queue>
-#include <map>
+#include <set>
 #include <stack>
 #include <queue>
 #include <vector>
@@ -67,7 +67,11 @@ public:
   template<typename Visitor>
   void requestNodes(Key, int);
   template<typename Visitor>
-  void addCache(Node<Data>); 
+  void restoreData(Key, Data, bool);
+  template<typename Visitor>
+  void addCache(Node<Data>);
+  template<typename Visitor>
+  void checkTraversals(Key);
   void print(Node<Data>*);
   Node<Data>* findNode(Key);
   void perturb (Real timestep);
@@ -348,20 +352,34 @@ Node<Data>* TreePiece<Data>::findNode(Key key) {
 template <typename Data>
 template <typename Visitor>
 void TreePiece<Data>::requestNodes(Key key, int index) {
+  CkPrintf("started reqNodes with key %d, index %d on index %d\n", key, index, this->thisIndex);
   Node<Data>* node = findNode(key);
+  node->tp_index = this->thisIndex;
   this->thisProxy[index].template addCache<Visitor>(*node);
-
 }
 
-template<typename Data>
-template<typename Visitor>
+template <typename Data>
+template <typename Visitor>
+void TreePiece<Data>::restoreData(Key key, Data di, bool if_kids_are_boundaryi) {
+  Node<Data>* node = findNode(key);
+  node->data = di;
+  node->type = Node<Data>::CachedBoundary;
+  if (if_kids_are_boundaryi && node->n_children) {
+    for (int i = 0; i < node->children.size(); i++) {
+      if (node->children[i]->type != Node<Data>::Boundary) {
+        node->children[i]->type = Node<Data>::RemoteAboveTPKey;
+      }
+    }
+  }
+  checkTraversals<Visitor> (key);
+}
+
+
+template <typename Data>
+template <typename Visitor>
 void TreePiece<Data>::addCache(Node<Data> new_node) {
   Node<Data>* node = findNode(new_node.key); 
-  if (new_node.type == Node<Data>::Boundary) {
-    node->data = new_node.data;
-    node->type = Node<Data>::CachedBoundary;
-  }
-  else if (new_node.type == Node<Data>::Leaf) {
+  if (new_node.type == Node<Data>::Leaf) {
     node->n_particles = new_node.n_particles;
     node->particles = new Particle [node->n_particles];
     for (int i = 0; i < node->n_particles; i++) {
@@ -372,20 +390,27 @@ void TreePiece<Data>::addCache(Node<Data> new_node) {
   else {
     node->n_children = new_node.n_children;
     for (int i = 0; i < node->n_children; i++) {
-      Node<Data>* new_child = new Node<Data> ((node->key >> 3) + i, node->depth+1, NULL, 0, 0, 0, node);
+      Node<Data>* new_child = new Node<Data> (node->key * 8 + i, node->depth+1, NULL, 0, 0, 0, node);
       new_child->type = Node<Data>::Remote;
+      new_child->tp_index = new_node.tp_index;
       node->children.push_back(new_child); 
     }
     node->type = Node<Data>::CachedRemote;
   }
+  checkTraversals<Visitor> (new_node.key);
+}
+
+template<typename Data>
+template <typename Visitor>
+void TreePiece<Data>::checkTraversals (Key new_key) {
   for (int i = 0; i < down_traversals.size(); i++) {
     DownTraversal<Data>& dt = down_traversals[i];
     if (dt.status == DownTraversal<Data>::Waiting) {
       for (int j = 0; j < dt.curr_nodes.size(); j++) {
-        if (dt.curr_nodes[j]->key == new_node.key) dt.status = DownTraversal<Data>::Active;
+        if (dt.curr_nodes[j]->key == new_key) dt.status = DownTraversal<Data>::Active;
       }
     }
-  }
+  } // this function might take too long to be useful
   goDown<Visitor>();
 }
 
@@ -393,6 +418,7 @@ template <typename Data>
 template <typename Visitor>
 void TreePiece<Data>::goDown() {
   Visitor v;
+  std::set<Key> current_waiting;
   for (int i = 0; i < down_traversals.size(); i++) if (down_traversals[i].status == DownTraversal<Data>::Active) {
     DownTraversal<Data>& dt = down_traversals[i];
     std::stack<Node<Data>*> nodes;
@@ -405,10 +431,14 @@ void TreePiece<Data>::goDown() {
         next_nodes.push_back(dt.curr_nodes[j]);
       }
     }
-    while (nodes.size()) {
+    while (nodes.size()) { // if we're already waiting for it for another traversal, don't process it
       Node<Data>* node = nodes.top();
       nodes.pop();
-      if (node != root) CkPrintf("type = %d\n", node->type);
+      if (current_waiting.count(node->key)) {
+        next_nodes.push_back(node);
+        continue;
+      }
+      CkPrintf("key = %d, type = %d\n", node->key, node->type);
       switch (node->type) {
         case Node<Data>::CachedBoundary:
         case Node<Data>::CachedRemote:
@@ -416,7 +446,6 @@ void TreePiece<Data>::goDown() {
           if (v.node(node, particles[i], down_traversals[i].sum_force)) {
             for (int i = 0; i < node->children.size(); i++) {
               nodes.push(node->children[i]);
-              CkPrintf("added node\n");
             }
           }
           break;
@@ -426,19 +455,23 @@ void TreePiece<Data>::goDown() {
           v.leaf(node, particles[i], down_traversals[i].sum_force);
           break;
         } 
-        case Node<Data>::Boundary: {
-          CkPrintf("a boundary %d\n", node->key);
+        case Node<Data>::Boundary:
+        case Node<Data>::RemoteAboveTPKey: {
           global_data[node->key].template requestData<Visitor>(this->thisIndex);
           next_nodes.push_back(node);
+          current_waiting.insert(node->key);
           break;
         }
         case Node<Data>::Remote:
         case Node<Data>::RemoteLeaf: {
-          Node<Data>* temp = node;
-          while (temp->parent->type != Node<Data>::CachedBoundary) temp = temp->parent;
-          Key key = temp->key; // might need to be temp->parent->key? idk
-          global_data[key].template requestTP<Visitor>(node->key, this->thisIndex);
+          if (node->tp_index >= 0) { // exists
+            this->thisProxy[node->tp_index].template requestNodes<Visitor>(node->key, this->thisIndex);
+          } 
+          else {
+            global_data[node->key].template requestTP<Visitor>(node->key, this->thisIndex);
+          }
           next_nodes.push_back(node);
+          current_waiting.insert(node->key);
           break;
         }
       }

@@ -23,6 +23,9 @@ public:
   void requestTP (Key, int);
   template <typename Visitor> 
   void requestData(int);
+  void print() {
+    CkPrintf("[TE %d] with tp_index %d\n", this->thisIndex, tp_index);
+  }
 };
 
 extern CProxy_Main mainProxy;
@@ -36,17 +39,15 @@ TreeElement<Data>::TreeElement() {
 template <typename Data>
 template <typename Visitor>
 void TreeElement<Data>::requestTP(Key key, int index) {
+  CkPrintf("reqTP on key %d, te index %d, tp index %d\n", key, this->thisIndex, tp_index);
   tp_proxy[tp_index].template requestNodes<Visitor>(key, index);
 }
 
 template <typename Data>
 template <typename Visitor>
 void TreeElement<Data>::requestData(int index) {
-  Node<Data> node;
-  node.data = d;
-  node.key = this->thisIndex;
-  node.type = Node<Data>::Boundary;
-  tp_proxy[index].template addCache<Visitor>(node);
+  CkPrintf("tp %d requesting te %d\n", index, this->thisIndex);
+  tp_proxy[index].template restoreData<Visitor>(this->thisIndex, d, tp_index == -1);
 }
 
 template <typename Data>
