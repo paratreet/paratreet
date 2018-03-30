@@ -8,7 +8,7 @@ template <typename Data>
 struct Node {
   enum Type { Invalid = 0, Leaf, EmptyLeaf, RemoteLeaf, RemoteEmptyLeaf, Remote, Internal, Boundary, CachedRemote, CachedRemoteLeaf, CachedBoundary };
   // is remote leaf necessary?
-
+  
   Type type;
   Key key;
   int depth;
@@ -23,6 +23,14 @@ struct Node {
   int wait_count;
 
   void pup (PUP::er& p) {
+    pup_bytes(&p, (void *)&type, sizeof(Type));
+    p | key;
+    p | depth;
+    p | data;
+    p | n_particles;
+    p | owner_tp_start;
+    p | owner_tp_end;
+    p | wait_count;
   }
 
   Node() {
