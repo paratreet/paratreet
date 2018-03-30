@@ -28,6 +28,7 @@ struct Node {
     p | depth;
     p | data;
     p | n_particles;
+    p | n_children;
     p | owner_tp_start;
     p | owner_tp_end;
     p | wait_count;

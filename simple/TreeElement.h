@@ -44,6 +44,8 @@ template <typename Visitor>
 void TreeElement<Data>::requestData(int index) {
   Node<Data> node;
   node.data = d;
+  node.key = this->thisIndex;
+  node.type = Node<Data>::Boundary;
   tp_proxy[index].template addCache<Visitor>(node);
 }
 

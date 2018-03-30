@@ -338,9 +338,9 @@ template<typename Data>
 Node<Data>* TreePiece<Data>::findNode(Key key) {
   Node<Data>* node = root;
   while (node->key != key) {
-    Key diff = key - node->key;
-    while (diff >= 8) diff /= 8;
-    node = node->children[diff];
+    Key diff = key / node->key;
+    while (diff > 8) diff = diff / 8;
+    node = node->children[diff % 8];
   }
   return node;
 }
@@ -370,15 +370,14 @@ void TreePiece<Data>::addCache(Node<Data> new_node) {
     node->type = Node<Data>::CachedRemoteLeaf;
   }
   else {
-    node->n_children = 8;
-    for (int i = 0; i < 8; i++) {
-      Node<Data>* new_child = new Node<Data> (node->key * 8 + i, node->depth+1, NULL, 0, 0, 0, node);
-      new_child->type = Node<Data>::Remote; // RemoteLeaf necessary? nah idts
+    node->n_children = new_node.n_children;
+    for (int i = 0; i < node->n_children; i++) {
+      Node<Data>* new_child = new Node<Data> ((node->key >> 3) + i, node->depth+1, NULL, 0, 0, 0, node);
+      new_child->type = Node<Data>::Remote;
       node->children.push_back(new_child); 
     }
     node->type = Node<Data>::CachedRemote;
   }
-  Key key = new_node.key;
   for (int i = 0; i < down_traversals.size(); i++) {
     DownTraversal<Data>& dt = down_traversals[i];
     if (dt.status == DownTraversal<Data>::Waiting) {
@@ -399,7 +398,7 @@ void TreePiece<Data>::goDown() {
     std::stack<Node<Data>*> nodes;
     std::vector<Node<Data>*> next_nodes;
     for (int j = 0; j < dt.curr_nodes.size(); j++) {
-      if (dt.curr_nodes[j]->type != Node<Data>::Remote || dt.curr_nodes[j]->type != Node<Data>::Boundary) { // wrong
+      if (dt.curr_nodes[j]->type != Node<Data>::Remote || dt.curr_nodes[j]->type != Node<Data>::Boundary) {
         nodes.push(dt.curr_nodes[j]);
       }
       else {
@@ -409,6 +408,7 @@ void TreePiece<Data>::goDown() {
     while (nodes.size()) {
       Node<Data>* node = nodes.top();
       nodes.pop();
+      if (node != root) CkPrintf("type = %d\n", node->type);
       switch (node->type) {
         case Node<Data>::CachedBoundary:
         case Node<Data>::CachedRemote:
@@ -416,6 +416,7 @@ void TreePiece<Data>::goDown() {
           if (v.node(node, particles[i], down_traversals[i].sum_force)) {
             for (int i = 0; i < node->children.size(); i++) {
               nodes.push(node->children[i]);
+              CkPrintf("added node\n");
             }
           }
           break;
@@ -424,8 +425,9 @@ void TreePiece<Data>::goDown() {
         case Node<Data>::Leaf: {
           v.leaf(node, particles[i], down_traversals[i].sum_force);
           break;
-        }
+        } 
         case Node<Data>::Boundary: {
+          CkPrintf("a boundary %d\n", node->key);
           global_data[node->key].template requestData<Visitor>(this->thisIndex);
           next_nodes.push_back(node);
           break;
