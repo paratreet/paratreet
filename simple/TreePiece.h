@@ -24,9 +24,9 @@
 template <typename Data>
 struct DownTraversal {
   Vector3D<Real> sum_force;
-  std::vector<Node<Data>*> curr_nodes;
+  std::set<Key> curr_nodes;
   bool if_active;
-  DownTraversal(): sum_force(0), curr_nodes(std::vector<Node<Data>*>()), if_active (true) {}
+  DownTraversal(): sum_force(0), if_active (true) {}
 };
 
 extern CProxy_Reader readers;
@@ -50,7 +50,7 @@ class TreePiece : public CBase_TreePiece<Data> {
   std::set<Key> curr_waiting;
 
   template <typename Visitor>
-  void goDown();
+  void goDown(Key);
 
 public:
   TreePiece(const CkCallback&, int, int); 
@@ -330,9 +330,9 @@ template <typename Visitor>
 void TreePiece<Data>::startDown() {
   down_traversals = std::vector<DownTraversal<Data>> (particles.size());
   for (int i = 0; i < down_traversals.size(); i++) {
-    down_traversals[i].curr_nodes.push_back(root);
+    down_traversals[i].curr_nodes.insert(root->key);
   }
-  goDown<Visitor>();
+  goDown<Visitor>(root->key);
 }
 
 template<typename Data>
@@ -381,7 +381,7 @@ void TreePiece<Data>::restoreData(Key key, Data di) {
     }
   }
   curr_waiting.erase(node->key);
-  goDown<Visitor> ();
+  goDown<Visitor> (node->key);
 }
 
 
@@ -408,25 +408,24 @@ void TreePiece<Data>::addCache(Node<Data> new_node) {
     node->type = Node<Data>::CachedRemote;
   }
   curr_waiting.erase(node->key);
-  goDown<Visitor> ();
+  goDown<Visitor> (node->key);
 }
 
 template <typename Data>
 template <typename Visitor>
-void TreePiece<Data>::goDown() {
+void TreePiece<Data>::goDown(Key new_key) {
   Visitor v;
   for (int i = 0; i < down_traversals.size(); i++) {
     DownTraversal<Data>& dt = down_traversals[i];
+    if (dt.curr_nodes.count(new_key) == 0) continue;
+    dt.curr_nodes.erase(new_key);
     std::stack<Node<Data>*> nodes;
-    std::vector<Node<Data>*> next_nodes;
-    for (int j = 0; j < dt.curr_nodes.size(); j++) {
-      nodes.push(dt.curr_nodes[j]);
-    }
+    nodes.push(findNode(new_key));
     while (nodes.size()) { // if we're already waiting for it for another traversal, don't process it
       Node<Data>* node = nodes.top();
       nodes.pop();
       if (curr_waiting.count(node->key)) { // maybe make curr_waiting a map to vector for all traversals
-        next_nodes.push_back(node);
+        dt.curr_nodes.insert(node->key);
         continue;
       }
       //CkPrintf("key = %d, type = %d\n", node->key, node->type);
@@ -449,22 +448,21 @@ void TreePiece<Data>::goDown() {
         case Node<Data>::Boundary:
         case Node<Data>::RemoteAboveTPKey: {
           global_data[node->key].template requestData<Visitor>(this->thisIndex);
-          next_nodes.push_back(node);
+          dt.curr_nodes.insert(node->key);
           curr_waiting.insert(node->key);
           break;
         }
         case Node<Data>::Remote:
         case Node<Data>::RemoteLeaf: {
           this->thisProxy[node->tp_index].template requestNodes<Visitor>(node->key, this->thisIndex);
-          next_nodes.push_back(node);
+          dt.curr_nodes.insert(node->key);
           curr_waiting.insert(node->key);
           break;
         }
       }
     }
-    dt.curr_nodes = next_nodes;
     dt.if_active = dt.curr_nodes.size();
-    if (!dt.if_active) CkPrintf("%f %f %f\n", dt.sum_force.x, dt.sum_force.y, dt.sum_force.z);
+    //if (!dt.if_active) mainProxy.doneDown(); 
   }
 }
 
