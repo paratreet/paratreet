@@ -17,12 +17,13 @@ private:
   void addGravity(Real mass, Vector3D<Real> position, Particle& p, Vector3D<Real>& sum_force) {
     const Real gconst = 0.000000000066742;
     Real rsq = distsq(p.position, position);
-    sum_force += gconst * p.mass * mass / rsq;
+    sum_force += (position - p.position) * gconst * p.mass * mass / rsq;
   }
 public:
   GravityVisitor() {}
   void leaf(Node<CentroidData>* node, Particle& p, Vector3D<Real>& sum_force) {
     for (int i = 0; i < node->n_particles; i++) {
+      if (node->particles[i] == p) continue;
       addGravity(node->particles[i].mass, node->particles[i].position, p, sum_force);
     }
   }

@@ -37,9 +37,8 @@ TreeElement<Data>::TreeElement() {
 template <typename Data>
 template <typename Visitor>
 void TreeElement<Data>::requestData(int index) {
-  CkPrintf("tp %d requesting te %d\n", index, this->thisIndex);
   if (tp_index >= 0) tp_proxy[tp_index].template requestNodes<Visitor>(this->thisIndex, index);
-  tp_proxy[index].template restoreData<Visitor>(this->thisIndex, d);
+  else tp_proxy[index].template restoreData<Visitor>(this->thisIndex, d);
 }
 
 template <typename Data>

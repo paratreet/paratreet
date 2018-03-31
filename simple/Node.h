@@ -2,12 +2,11 @@
 #define SIMPLE_NODE_H_
 
 #include "common.h"
-class Particle;
+#include "Particle.h"
 
 template <typename Data>
 struct Node {
   enum Type { Invalid = 0, Leaf, EmptyLeaf, RemoteLeaf, RemoteEmptyLeaf, Remote, Internal, Boundary, RemoteAboveTPKey, CachedRemote, CachedRemoteLeaf, CachedBoundary };
-  // is remote leaf necessary?
   
   Type type;
   Key key;
@@ -29,6 +28,9 @@ struct Node {
     p | depth;
     p | data;
     p | n_particles;
+    if (p.isUnpacking() && n_particles)
+      particles = new Particle[n_particles];
+    if (n_particles) PUParray(p, particles, n_particles);
     p | n_children;
     p | owner_tp_start;
     p | owner_tp_end;

@@ -1,7 +1,7 @@
 #ifndef SIMPLE_PARTICLE_H_
 #define SIMPLE_PARTICLE_H_
 
-#include "simple.decl.h"
+//#include "simple.decl.h"
 #include "common.h"
 
 struct Particle {
@@ -18,7 +18,7 @@ struct Particle {
 
   Particle();
 
-  void pup(PUP::er&);
+  void pup(PUP::er&) ;
 
   void reset();
 
@@ -28,6 +28,7 @@ struct Particle {
     velocity = velocity + acceleration * timestep;
   }
 
+  bool operator==(const Particle&) const;
   bool operator<=(const Particle&) const;
   bool operator>(const Particle&) const;
   bool operator>=(const Particle&) const;
@@ -40,14 +41,6 @@ struct Particle {
   friend bool operator>(const Key&, const Particle&);
   friend bool operator>=(const Key&, const Particle&);
   friend bool operator<(const Key&, const Particle&);
-};
-
-struct ParticleMsg : public CMessage_ParticleMsg {
-  Particle* particles;
-  int n_particles;
-
-  ParticleMsg();
-  ParticleMsg(Particle* p, int n);
 };
 
 #endif // SIMPLE_PARTICLE_H_

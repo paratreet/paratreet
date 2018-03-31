@@ -4,7 +4,7 @@
 #include "simple.decl.h"
 #include "common.h"
 #include "templates.h"
-#include "Particle.h"
+#include "ParticleMsg.h"
 #include "Node.h"
 #include "Utility.h"
 #include "Reader.h"
@@ -345,7 +345,8 @@ Node<Data>* TreePiece<Data>::findNode(Key key) {
   }
   Node<Data>* node = root;
   for (int i = remainders.size()-1; i >= 0; i--) {
-    node = node->children[remainders[i]];
+    if (remainders[i] < node->children.size()) node = node->children[remainders[i]];
+    else CkPrintf("problem 1\n");
   }
   return node;
 }
@@ -353,26 +354,31 @@ Node<Data>* TreePiece<Data>::findNode(Key key) {
 template <typename Data>
 template <typename Visitor>
 void TreePiece<Data>::requestNodes(Key key, int index) {
-  CkPrintf("started reqNodes with key %d, index %d on index %d\n", key, index, this->thisIndex);
   Node<Data>* node = findNode(key);
+  if (node->key != key) CkPrintf("problem 2\n");
   node->tp_index = this->thisIndex;
   if (index < n_treepieces) this->thisProxy[index].template addCache<Visitor>(*node);
-  else CkPrintf("uhoh rqn\n");
+  else CkPrintf("problem 3\n");
 }
 
 template <typename Data>
 template <typename Visitor>
 void TreePiece<Data>::restoreData(Key key, Data di) {
   Node<Data>* node = findNode(key);
+  if (node->key != key) CkPrintf("problem 4\n");
   node->data = di;
   node->type = Node<Data>::CachedBoundary;
+  // potential problem? idk
   for (int i = node->n_children; i < 8; i++) {
     Node<Data>* new_child = new Node<Data> (node->key * 8 + i, node->depth + 1, NULL, 0, 0, 0, node);
+    new_child->type = Node<Data>::Remote;
     node->children.push_back(new_child);
   }
   node->n_children = 8; // i think necessary
   for (int i = 0; i < node->n_children; i++) {
-    if (node->children[i]->type != Node<Data>::Boundary) node->children[i]->type = Node<Data>::RemoteAboveTPKey;
+    if (node->children[i]->type == Node<Data>::Remote || node->children[i]->type == Node<Data>::RemoteLeaf) {
+      node->children[i]->type = Node<Data>::RemoteAboveTPKey;
+    }
   }
   curr_waiting.erase(node->key);
   goDown<Visitor> ();
@@ -419,7 +425,7 @@ void TreePiece<Data>::goDown() {
     while (nodes.size()) { // if we're already waiting for it for another traversal, don't process it
       Node<Data>* node = nodes.top();
       nodes.pop();
-      if (curr_waiting.count(node->key)) {
+      if (curr_waiting.count(node->key)) { // maybe make curr_waiting a map to vector for all traversals
         next_nodes.push_back(node);
         continue;
       }
@@ -458,6 +464,7 @@ void TreePiece<Data>::goDown() {
     }
     dt.curr_nodes = next_nodes;
     dt.if_active = dt.curr_nodes.size();
+    if (!dt.if_active) CkPrintf("%f %f %f\n", dt.sum_force.x, dt.sum_force.y, dt.sum_force.z);
   }
 }
 

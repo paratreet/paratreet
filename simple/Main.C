@@ -43,8 +43,9 @@ class Main : public CBase_Main {
   
   void doneTraversal() {
     CkPrintf("[Main] Calculating Centroid: %lf seconds\n", CkWallTimer() - start_time);
-    CkPrintf("total time:%lf seconds\n", CkWallTimer() - total_start_time);
-    CkExit();
+    treepieces.startDown<GravityVisitor>();
+    //CkPrintf("total time:%lf seconds\n", CkWallTimer() - total_start_time);
+    //CkExit();
   }
 
   Main(CkArgMsg* m) {

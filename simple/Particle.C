@@ -24,6 +24,10 @@ void Particle::reset() {
   // TODO velocity?
 }
 
+bool Particle::operator==(const Particle& other) const {
+  return key == other.key;
+}
+
 bool Particle::operator<=(const Particle& other) const {
   return key <= other.key;
 }
@@ -70,14 +74,4 @@ bool operator>=(const Key& k, const Particle& p) {
 
 bool operator<(const Key& k, const Particle& p) {
   return p > k;
-}
-
-ParticleMsg::ParticleMsg() {
-  particles = NULL;
-  n_particles = 0;
-}
-
-ParticleMsg::ParticleMsg(Particle* p, int n) {
-  memcpy(particles, p, n * sizeof(Particle));
-  n_particles = n;
 }

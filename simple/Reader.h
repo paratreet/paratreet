@@ -3,7 +3,7 @@
 
 #include "simple.decl.h"
 #include "common.h"
-#include "Particle.h"
+#include "ParticleMsg.h"
 #include "BoundingBox.h"
 #include "Splitter.h"
 
