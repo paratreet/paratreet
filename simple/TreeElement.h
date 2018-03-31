@@ -19,8 +19,6 @@ public:
   TreeElement();
   template <typename Visitor>
   void receiveData (CProxy_TreePiece<Data>, Data, int);
-  template <typename Visitor>
-  void requestTP (Key, int);
   template <typename Visitor> 
   void requestData(int);
   void print() {
@@ -38,16 +36,10 @@ TreeElement<Data>::TreeElement() {
 
 template <typename Data>
 template <typename Visitor>
-void TreeElement<Data>::requestTP(Key key, int index) {
-  CkPrintf("reqTP on key %d, te index %d, tp index %d\n", key, this->thisIndex, tp_index);
-  tp_proxy[tp_index].template requestNodes<Visitor>(key, index);
-}
-
-template <typename Data>
-template <typename Visitor>
 void TreeElement<Data>::requestData(int index) {
   CkPrintf("tp %d requesting te %d\n", index, this->thisIndex);
-  tp_proxy[index].template restoreData<Visitor>(this->thisIndex, d, tp_index == -1);
+  if (tp_index >= 0) tp_proxy[tp_index].template requestNodes<Visitor>(this->thisIndex, index);
+  tp_proxy[index].template restoreData<Visitor>(this->thisIndex, d);
 }
 
 template <typename Data>
