@@ -41,11 +41,15 @@ class Main : public CBase_Main {
     BoundingBox::registerReducer();
   }
   
-  void doneTraversal() {
+  void doneUp() {
     CkPrintf("[Main] Calculating Centroid: %lf seconds\n", CkWallTimer() - start_time);
+    start_time = CkWallTimer();
     treepieces.startDown<GravityVisitor>();
-    //CkPrintf("total time:%lf seconds\n", CkWallTimer() - total_start_time);
-    //CkExit();
+  }
+
+  void doneDown() {
+    CkPrintf("[Main] First downward traversal done: %lf seconds\n", CkWallTimer() - start_time);
+    CkExit();
   }
 
   Main(CkArgMsg* m) {

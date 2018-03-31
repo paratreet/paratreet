@@ -25,7 +25,7 @@ public:
   bool node(Node<CentroidData>* node) {
     if (node->key == 1) {
       CkPrintf("%f %f %f %f\n", node->data.sum_mass, node->data.moment.x, node->data.moment.y, node->data.moment.z);
-      mainProxy.doneTraversal();
+      mainProxy.doneUp();
       return false;
     }
     if (tp_index == -1 || node->parent->type == Node<CentroidData>::Boundary) {

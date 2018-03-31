@@ -21,7 +21,8 @@ mainmodule simple {
     initnode void initialize();
     entry Main(CkArgMsg* m);
     entry [threaded] void run();
-    entry void doneTraversal();
+    entry void doneUp();
+    entry void doneDown();
   };
 
   message ParticleMsg {

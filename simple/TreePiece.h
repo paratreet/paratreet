@@ -281,6 +281,7 @@ bool TreePiece<Data>::recursiveBuild(Node<Data>* node, bool saw_tp_key) {
 
     return (non_local_children == 0);
   }
+  return false;
 }
 
 template <typename Data>
@@ -304,6 +305,7 @@ void TreePiece<Data>::upOnly(TEHolder<Data> te_holderi) {
           down.push(node->children[i]);
           node->wait_count++;
         }
+        default: break;
       }
     }
     if (node->type == Node<Data>::Leaf) {
@@ -457,12 +459,12 @@ void TreePiece<Data>::goDown(Key new_key) {
           this->thisProxy[node->tp_index].template requestNodes<Visitor>(node->key, this->thisIndex);
           dt.curr_nodes.insert(node->key);
           curr_waiting.insert(node->key);
-          break;
         }
+        default: break; 
       }
     }
     dt.if_active = dt.curr_nodes.size();
-    //if (!dt.if_active) mainProxy.doneDown(); 
+    if (!dt.if_active) mainProxy.doneDown(); 
   }
 }
 
