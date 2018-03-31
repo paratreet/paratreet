@@ -15,7 +15,7 @@ private:
     return dsq;
   }
   void addGravity(Real mass, Vector3D<Real> position, Particle& p, Vector3D<Real>& sum_force) {
-    const Real gconst = 0.000000000066742;
+    const Real gconst = 0.000000000066742; // small, maybe you should just do sum_accel
     Real rsq = distsq(p.position, position);
     sum_force += (position - p.position) * gconst * p.mass * mass / rsq;
   }
@@ -28,9 +28,9 @@ public:
     }
   }
   bool node(Node<CentroidData>* node, Particle& p, Vector3D<Real>& sum_force ) {
-    const Real theta = .5;
-    Real s = std::pow(2, -1 * Utility::getDepthFromKey(node->key)); // is this right?
-    if (distsq(p.position, node->data.moment) < (s * s) / (theta * theta)) {
+    const Real theta = .5, total_volume = 3290.05;
+    Real s = std::pow(total_volume, 1/3.) * std::pow(2, -1 * Utility::getDepthFromKey(node->key));
+    if (theta == 0 || distsq(p.position, node->data.moment) < s * s / (theta * theta)) {
       return true;
     }
     else {

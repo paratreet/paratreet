@@ -148,7 +148,7 @@ class Main : public CBase_Main {
     delete result;
 
 #ifdef DEBUG
-    std::cout << "[Main] Universal bounding box: " << universe << std::endl;
+    std::cout << "[Main] Universal bounding box: " << universe << " with volume " << universe.box.volume() << std::endl;
 #endif
 
     // assign keys and sort particles locally
