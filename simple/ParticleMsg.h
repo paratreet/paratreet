@@ -13,12 +13,12 @@ struct ParticleMsg : public CMessage_ParticleMsg {
   ParticleMsg(Particle* p, int n);
 };
 
-ParticleMsg::ParticleMsg() {
+inline ParticleMsg::ParticleMsg() {
   particles = NULL;
   n_particles = 0;
 }
 
-ParticleMsg::ParticleMsg(Particle* p, int n) {
+inline ParticleMsg::ParticleMsg(Particle* p, int n) {
   memcpy(particles, p, n * sizeof(Particle));
   n_particles = n;
 }
