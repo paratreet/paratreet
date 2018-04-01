@@ -45,7 +45,7 @@ mainmodule simple {
     template<typename Visitor>
     entry void restoreData(Key, Data);
     template<typename Visitor>
-    entry void addCache(Node<Data>);
+    entry void addCache(Node<Data> new_nodes [num_new_nodes], int num_new_nodes);
     entry void perturb(Real timestep);
   };
 
@@ -54,8 +54,7 @@ mainmodule simple {
   extern entry void TreePiece<CentroidData> startDown<GravityVisitor> ();
   extern entry void TreePiece<CentroidData> requestNodes<GravityVisitor> (Key, int);
   extern entry void TreePiece<CentroidData> restoreData<GravityVisitor> (Key, CentroidData);
-  extern entry void TreePiece<CentroidData> addCache<GravityVisitor> (Node<CentroidData>);
-
+  extern entry void TreePiece<CentroidData> addCache<GravityVisitor> (Node<CentroidData> new_nodes [num_new_nodes], int num_new_nodes);
 
   template <typename Data>
   array [1d] TreeElement {

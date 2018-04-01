@@ -69,7 +69,8 @@ public:
   template<typename Visitor>
   void restoreData(Key, Data);
   template<typename Visitor>
-  void addCache(Node<Data>);
+  void addCache(Node<Data>*, int);
+  void processNewNode(Node<Data>*, Node<Data>&);
   void print(Node<Data>*);
   Node<Data>* findNode(Key);
   void perturb (Real timestep);
@@ -349,8 +350,8 @@ Node<Data>* TreePiece<Data>::findNode(Key key) {
   }
   Node<Data>* node = root;
   for (int i = remainders.size()-1; i >= 0; i--) {
-    if (remainders[i] < node->children.size()) node = node->children[remainders[i]];
-    else CkPrintf("problem 1\n");
+    if (remainders[i] < node->n_children) node = node->children[remainders[i]];
+    else CkPrintf("problem, key = %d\n", key);
   }
   return node;
 }
@@ -359,26 +360,33 @@ template <typename Data>
 template <typename Visitor>
 void TreePiece<Data>::requestNodes(Key key, int index) {
   Node<Data>* node = findNode(key);
-  if (node->key != key) CkPrintf("problem 2\n");
+  std::vector<Node<Data>> nodes;
   node->tp_index = this->thisIndex;
-  if (index < n_treepieces) this->thisProxy[index].template addCache<Visitor>(*node);
-  else CkPrintf("problem 3\n");
+  nodes.push_back(*node);
+  for (int i = 0; i < node->n_children; i++) {
+    Node<Data>* child = node->children[i];
+    child->tp_index = this->thisIndex;
+    nodes.push_back(*child);
+    for (int j = 0; j < child->n_children; j++) {
+      child->children[j]->tp_index = this->thisIndex;
+      nodes.push_back(*(child->children[j]));
+    }
+  }
+  this->thisProxy[index].template addCache<Visitor>(nodes.data(), nodes.size());
 }
 
 template <typename Data>
 template <typename Visitor>
 void TreePiece<Data>::restoreData(Key key, Data di) {
   Node<Data>* node = findNode(key);
-  if (node->key != key) CkPrintf("problem 4\n");
   node->data = di;
   node->type = Node<Data>::CachedBoundary;
-  // potential problem? idk
   for (int i = node->n_children; i < 8; i++) {
     Node<Data>* new_child = new Node<Data> (node->key * 8 + i, node->depth + 1, NULL, 0, 0, 0, node);
     new_child->type = Node<Data>::Remote;
     node->children.push_back(new_child);
   }
-  node->n_children = 8; // i think necessary
+  node->n_children = 8;
   for (int i = 0; i < node->n_children; i++) {
     if (node->children[i]->type == Node<Data>::Remote || node->children[i]->type == Node<Data>::RemoteLeaf) {
       node->children[i]->type = Node<Data>::RemoteAboveTPKey;
@@ -391,11 +399,30 @@ void TreePiece<Data>::restoreData(Key key, Data di) {
 
 template <typename Data>
 template <typename Visitor>
-void TreePiece<Data>::addCache(Node<Data> new_node) {
-  Node<Data>* node = findNode(new_node.key);
-  if (new_node.type == Node<Data>::Leaf) {
+void TreePiece<Data>::addCache(Node<Data>* new_nodes, int num_new_nodes) {
+  Node<Data>* top_node = findNode(new_nodes[0].key);
+  processNewNode(top_node, new_nodes[0]);
+  int curr_index = 1;
+  for (int i = 0; curr_index < num_new_nodes && i < top_node->n_children; i++) {
+    Node<Data>* curr_child = top_node->children[i];
+    processNewNode(curr_child, new_nodes[curr_index++]);
+    for (int j = 0; curr_index < num_new_nodes && j < curr_child->n_children; j++) {
+      processNewNode(curr_child->children[j], new_nodes[curr_index++]);
+    }
+  }
+  for (int i = 0; i < num_new_nodes; i++) {
+    if (curr_waiting.erase(new_nodes[i].key)) {
+      goDown<Visitor> (new_nodes[i].key);
+    }
+  }
+}
+
+template <typename Data>
+void TreePiece<Data>::processNewNode(Node<Data>* node, Node<Data>& new_node) {
+  // maybe not passing over enough data
+  if (new_node.type == Node<Data>::Leaf || new_node.type == Node<Data>::EmptyLeaf) {
     node->n_particles = new_node.n_particles;
-    node->particles = new Particle [node->n_particles];
+    if (node->n_particles) node->particles = new Particle [node->n_particles];
     for (int i = 0; i < node->n_particles; i++) {
       node->particles[i] = new_node.particles[i];
     }
@@ -411,8 +438,6 @@ void TreePiece<Data>::addCache(Node<Data> new_node) {
     }
     node->type = Node<Data>::CachedRemote;
   }
-  curr_waiting.erase(node->key);
-  goDown<Visitor> (node->key);
 }
 
 template <typename Data>
