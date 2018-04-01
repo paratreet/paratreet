@@ -48,6 +48,7 @@ class TreePiece : public CBase_TreePiece<Data> {
   std::vector<DownTraversal<Data>> down_traversals;
   CProxy_TreeElement<Data> global_data;
   std::set<Key> curr_waiting;
+  int num_done;
 
   template <typename Visitor>
   void goDown(Key);
@@ -331,6 +332,7 @@ template <typename Data>
 template <typename Visitor>
 void TreePiece<Data>::startDown() {
   down_traversals = std::vector<DownTraversal<Data>> (particles.size());
+  num_done = 0;
   for (int i = 0; i < down_traversals.size(); i++) {
     down_traversals[i].curr_nodes.insert(root->key);
   }
@@ -464,7 +466,12 @@ void TreePiece<Data>::goDown(Key new_key) {
       }
     }
     dt.if_active = dt.curr_nodes.size();
-    if (!dt.if_active) mainProxy.doneDown(); 
+    //if (!dt.if_active) CkPrintf("%d %f %f %f\n", CkMyPe(), dt.sum_force.x, dt.sum_force.y, dt.sum_force.z);
+    if (!dt.if_active) num_done++;
+  }
+  if (num_done == down_traversals.size()) {
+    CkCallback cb(CkReductionTarget(Main, doneDown), mainProxy);
+    this->contribute(cb);
   }
 }
 

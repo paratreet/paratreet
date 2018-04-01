@@ -48,7 +48,8 @@ class Main : public CBase_Main {
   }
 
   void doneDown() {
-    CkPrintf("[Main] First downward traversal done: %lf seconds\n", CkWallTimer() - start_time);
+    CkPrintf("[Main] Downward traversal done: %lf seconds\n", CkWallTimer() - start_time);
+    CkPrintf("[Main] Total time: %lf seconds\n", CkWallTimer() - total_start_time);
     CkExit();
   }
 
