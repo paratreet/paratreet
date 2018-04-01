@@ -22,7 +22,7 @@ mainmodule simple {
     entry Main(CkArgMsg* m);
     entry [threaded] void run();
     entry void doneUp();
-    entry void doneDown();
+    entry [reductiontarget] void doneDown();
   };
 
   message ParticleMsg {
