@@ -5,6 +5,7 @@ mainmodule simple {
   class CentroidVisitor;
   include "Node.h";
   include "TEHolder.h";
+  class CProxy_Reader;
 
   readonly CProxy_Main mainProxy;
   readonly CProxy_Reader readers;
@@ -47,6 +48,8 @@ mainmodule simple {
     template<typename Visitor>
     entry void addCache(Node<Data>);
     entry void perturb(Real timestep);
+    entry void flush(CProxy_Reader);
+    entry void rebuild(const CkCallback&);
   };
 
   array [1d] TreePiece<CentroidData>;
@@ -74,6 +77,7 @@ mainmodule simple {
   group Reader {
     entry Reader();
     entry void load(std::string, const CkCallback&);
+    entry void computeUniverseBoundingBox(const CkCallback&);    
     entry void assignKeys(BoundingBox&, const CkCallback&);
     template <typename Data>
     entry void request(CProxy_TreePiece<Data>, int, int);

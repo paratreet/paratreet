@@ -73,6 +73,8 @@ public:
   void print(Node<Data>*);
   Node<Data>* findNode(Key);
   void perturb (Real timestep);
+  void flush(CProxy_Reader);
+  void rebuild(const CkCallback&);
 };
 
 template <typename Data>
@@ -480,6 +482,24 @@ void TreePiece<Data>::perturb (Real timestep) {
   for (int i = 0; i < particles.size(); i++) {
     particles[i].perturb(timestep, down_traversals[i].sum_force);
   }
+}
+
+template <typename Data>
+void TreePiece<Data>::flush(CProxy_Reader readers) {
+  ParticleMsg *msg = new (particles.size()) ParticleMsg(particles.data(), particles.size());
+  readers[CkMyPe()].receive(msg);
+  particles.resize(0);
+  particle_index = 0;
+}
+
+template <typename Data>
+void TreePiece<Data>::rebuild(const CkCallback& cb) {
+  // clean up old tree information
+  delete root;
+  root = nullptr;
+
+  // build a new tree from scratch
+  build(cb);
 }
 
 template <typename Data>
