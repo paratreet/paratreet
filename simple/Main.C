@@ -224,24 +224,32 @@ class Main : public CBase_Main {
     // TEHolder<CentroidData> te_holder (centroid_calculator);
     // treepieces.upOnly<CentroidVisitor>(te_holder);
 
-    // - Redistribute particles and rebuild tree (OCT) ------------------------
+    redistributeParticles();
+
+    // terminate
+    CkPrintf("\nElapsed time: %lf s\n", CkWallTimer() - total_start_time);
+    CkExit();
+  }
+
+  void redistributeParticles() {
     CkPrintf("[Main] Start redistributing particles...\n");
   
     // flush data to readers
-    start_time = CkWallTimer();    
+    start_time = CkWallTimer();
     treepieces.flush(readers);
     CkWaitQD(); // i think we should use callback here
     CkPrintf("[Main] Flushing particles to Readers: %lf seconds\n", CkWallTimer()-start_time);
 
     // compute universe
     start_time = CkWallTimer();
+    CkReductionMsg* result;
     readers.computeUniverseBoundingBox(CkCallbackResumeThread((void*&)result));
     universe = *((BoundingBox*)result->getData());
     delete result;
     CkPrintf("[Main] Building universe: %lf seconds\n", CkWallTimer()-start_time);
 
     // assign keys
-    start_time = CkWallTimer();    
+    start_time = CkWallTimer();
     readers.assignKeys(universe, CkCallbackResumeThread());
     CkPrintf("[Main] Assigning keys and sorting particles: %lf seconds\n", CkWallTimer()-start_time);
 
@@ -266,11 +274,6 @@ class Main : public CBase_Main {
     CkCallback cb(CkReductionTarget(Main, checkParticlesChangedDone), thisProxy);
     treepieces.checkParticlesChanged(cb);
     CkWaitQD();
-    // ------------------------------------------------------------------------
-
-    // terminate
-    CkPrintf("\nElapsed time: %lf s\n", CkWallTimer() - total_start_time);
-    CkExit();
   }
 
   void findOctSplitters() {
