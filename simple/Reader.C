@@ -99,6 +99,19 @@ void Reader::load(std::string input_file, const CkCallback& cb) {
   contribute(sizeof(BoundingBox), &box, BoundingBox::reducer(), cb);
 }
 
+
+void Reader::computeUniverseBoundingBox(const CkCallback& cb) {
+  box.reset();
+  for (std::vector<Particle>::const_iterator it = particles.begin();
+       it != particles.end(); ++it) {
+    box.grow(it->position);
+    box.mass += it->mass;
+    box.ke += 0.5 * it->mass * it->velocity.lengthSquared();
+    box.n_particles += 1;
+  }
+  contribute(sizeof(BoundingBox), &box, BoundingBox::reducer(), cb);
+}
+
 void Reader::assignKeys(BoundingBox& universe, const CkCallback& cb) {
   // generate particle keys
   for (unsigned int i = 0; i < particles.size(); i++) {

@@ -53,6 +53,14 @@ class Main : public CBase_Main {
     CkExit();
   }
 
+  void checkParticlesChangedDone(bool result) {
+    if (result) {
+      CkPrintf("[Main] Particles are the same.\n");
+    } else {
+      CkPrintf("[Main] Particles are changed.\n");
+    }
+  }
+
   Main(CkArgMsg* m) {
     mainProxy = thisProxy;
 
@@ -211,13 +219,61 @@ class Main : public CBase_Main {
     treepieces.build(CkCallbackResumeThread());
     CkPrintf("[Main] Local tree build: %lf seconds\n", CkWallTimer() - start_time);
 
-    start_time = CkWallTimer();
-    TEHolder<CentroidData> te_holder (centroid_calculator);
-    treepieces.upOnly<CentroidVisitor>(te_holder);
+    // comment this out for now because this will terminate the program after finished
+    // start_time = CkWallTimer();
+    // TEHolder<CentroidData> te_holder (centroid_calculator);
+    // treepieces.upOnly<CentroidVisitor>(te_holder);
+
+    redistributeParticles();
 
     // terminate
-    //CkPrintf("\nElapsed time: %lf s\n", CkWallTimer() - total_start_time);
-    //CkExit();
+    CkPrintf("\nElapsed time: %lf s\n", CkWallTimer() - total_start_time);
+    CkExit();
+  }
+
+  void redistributeParticles() {
+    CkPrintf("[Main] Start redistributing particles...\n");
+  
+    // flush data to readers
+    start_time = CkWallTimer();
+    treepieces.flush(readers);
+    CkWaitQD(); // i think we should use callback here
+    CkPrintf("[Main] Flushing particles to Readers: %lf seconds\n", CkWallTimer()-start_time);
+
+    // compute universe
+    start_time = CkWallTimer();
+    CkReductionMsg* result;
+    readers.computeUniverseBoundingBox(CkCallbackResumeThread((void*&)result));
+    universe = *((BoundingBox*)result->getData());
+    delete result;
+    CkPrintf("[Main] Building universe: %lf seconds\n", CkWallTimer()-start_time);
+
+    // assign keys
+    start_time = CkWallTimer();
+    readers.assignKeys(universe, CkCallbackResumeThread());
+    CkPrintf("[Main] Assigning keys and sorting particles: %lf seconds\n", CkWallTimer()-start_time);
+
+    // find and splitters
+    findOctSplitters();
+    std::sort(splitters.begin(), splitters.end());
+    readers.setSplitters(splitters, CkCallbackResumeThread());
+    CkPrintf("[Main] Finding and sorting splitters: %lf seconds\n", CkWallTimer()-start_time);
+
+    // flush data to treepieces
+    start_time = CkWallTimer();
+    readers.flush(universe.n_particles, n_treepieces, treepieces);
+    CkWaitQD();
+    CkPrintf("[Main] Flushing particles to TreePieces: %lf seconds\n", CkWallTimer()-start_time);
+
+    // rebuild local tree in TreePieces
+    start_time = CkWallTimer();
+    treepieces.rebuild(CkCallbackResumeThread());
+    CkPrintf("[Main] Local tree rebuild: %lf seconds\n", CkWallTimer()-start_time);
+
+    // debug
+    CkCallback cb(CkReductionTarget(Main, checkParticlesChangedDone), thisProxy);
+    treepieces.checkParticlesChanged(cb);
+    CkWaitQD();
   }
 
   void findOctSplitters() {

@@ -56,6 +56,16 @@ struct Node {
     this->tp_index = -1;
   }
 
+  ~Node() {
+    for (typename std::vector<Node*>::const_iterator it = children.begin();
+         it != children.end(); ++it) {
+      delete *it;
+    }
+    if (type == CachedRemoteLeaf) {
+      delete particles;
+    }
+  }
+
   static std::string TypeDotColor(Type type){
     switch(type){
       case Invalid:                     return "firebrick1";
