@@ -53,6 +53,14 @@ class Main : public CBase_Main {
     CkExit();
   }
 
+  void checkParticlesChangedDone(bool result) {
+    if (result) {
+      CkPrintf("[Main] Particles are the same.\n");
+    } else {
+      CkPrintf("[Main] Particles are changed.\n");
+    }
+  }
+
   Main(CkArgMsg* m) {
     mainProxy = thisProxy;
 
@@ -253,6 +261,11 @@ class Main : public CBase_Main {
     start_time = CkWallTimer();
     treepieces.rebuild(CkCallbackResumeThread());
     CkPrintf("[Main] Local tree rebuild: %lf seconds\n", CkWallTimer()-start_time);
+
+    // debug
+    CkCallback cb(CkReductionTarget(Main, checkParticlesChangedDone), thisProxy);
+    treepieces.checkParticlesChanged(cb);
+    CkWaitQD();
     // ------------------------------------------------------------------------
 
     // terminate

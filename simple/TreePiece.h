@@ -50,6 +50,9 @@ class TreePiece : public CBase_TreePiece<Data> {
   std::set<Key> curr_waiting;
   int num_done;
 
+  // debug
+  std::vector<Particle> flushed_particles;
+
   template <typename Visitor>
   void goDown(Key);
 
@@ -75,6 +78,18 @@ public:
   void perturb (Real timestep);
   void flush(CProxy_Reader);
   void rebuild(const CkCallback&);
+
+  // debug
+  void checkParticlesChanged(const CkCallback& cb) {
+    bool result = true;
+    for (int i = 0; i < particles.size(); i++) {
+      if (!(particles[i] == flushed_particles[i])) {
+        result = false;
+        break;
+      }
+    }
+    this->contribute(sizeof(bool), &result, CkReduction::logical_and_bool, cb);
+  }
 };
 
 template <typename Data>
@@ -486,6 +501,10 @@ void TreePiece<Data>::perturb (Real timestep) {
 
 template <typename Data>
 void TreePiece<Data>::flush(CProxy_Reader readers) {
+  // debug
+  flushed_particles.resize(0);
+  flushed_particles.insert(flushed_particles.end(), particles.begin(), particles.end());
+
   ParticleMsg *msg = new (particles.size()) ParticleMsg(particles.data(), particles.size());
   readers[CkMyPe()].receive(msg);
   particles.resize(0);

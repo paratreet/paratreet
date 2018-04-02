@@ -24,6 +24,9 @@ mainmodule simple {
     entry [threaded] void run();
     entry void doneUp();
     entry [reductiontarget] void doneDown();
+
+    // debug
+    entry [reductiontarget] void checkParticlesChangedDone(bool result);
   };
 
   message ParticleMsg {
@@ -50,6 +53,8 @@ mainmodule simple {
     entry void perturb(Real timestep);
     entry void flush(CProxy_Reader);
     entry void rebuild(const CkCallback&);
+
+    entry void checkParticlesChanged(const CkCallback&);
   };
 
   array [1d] TreePiece<CentroidData>;
