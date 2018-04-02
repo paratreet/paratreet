@@ -82,6 +82,11 @@ public:
   // debug
   void checkParticlesChanged(const CkCallback& cb) {
     bool result = true;
+    if (particles.size() != flushed_particles.size()) {
+      result = false;
+      this->contribute(sizeof(bool), &result, CkReduction::logical_and_bool, cb);
+      return;
+    }
     for (int i = 0; i < particles.size(); i++) {
       if (!(particles[i] == flushed_particles[i])) {
         result = false;
