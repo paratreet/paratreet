@@ -133,7 +133,7 @@ class Main : public CBase_Main {
     CkPrintf("Maximum number of particles per leaf: %d\n\n", max_particles_per_leaf);
 
     // create Readers
-    n_readers = CkNumNodes();
+    n_readers = CkNumPes();
     readers = CProxy_Reader::ckNew();
     centroid_calculator = CProxy_TreeElement<CentroidData>::ckNew();
 
