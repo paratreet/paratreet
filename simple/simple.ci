@@ -29,6 +29,13 @@ mainmodule simple {
     Particle particles[];
   };
 
+  template <class Data>
+  message NodeMsg {
+    Node<Data> nodes[];
+  };
+  
+  message NodeMsg<CentroidData>;
+
   template <typename Data>
   array [1d] TreePiece {
     entry TreePiece(const CkCallback&, int, int);
@@ -45,7 +52,7 @@ mainmodule simple {
     template<typename Visitor>
     entry void restoreData(Key, Data);
     template<typename Visitor>
-    entry void addCache(Node<Data> new_nodes [num_new_nodes], int num_new_nodes);
+    entry void addCache(NodeMsg<Data>*);
     entry void perturb(Real timestep);
   };
 
@@ -54,7 +61,7 @@ mainmodule simple {
   extern entry void TreePiece<CentroidData> startDown<GravityVisitor> ();
   extern entry void TreePiece<CentroidData> requestNodes<GravityVisitor> (Key, int);
   extern entry void TreePiece<CentroidData> restoreData<GravityVisitor> (Key, CentroidData);
-  extern entry void TreePiece<CentroidData> addCache<GravityVisitor> (Node<CentroidData> new_nodes [num_new_nodes], int num_new_nodes);
+  extern entry void TreePiece<CentroidData> addCache<GravityVisitor> (NodeMsg<CentroidData>*);
 
   template <typename Data>
   array [1d] TreeElement {

@@ -11,9 +11,9 @@ struct Node {
   Type type;
   Key key;
   int depth;
-  Particle* particles;
   Data data;
   int n_particles;
+  std::vector<Particle> particles;
   int owner_tp_start;
   int owner_tp_end;
   Node* parent;
@@ -22,7 +22,7 @@ struct Node {
   int wait_count;
   int tp_index;
 
-  void pup (PUP::er& p) {
+  void pup (PUP::er& p) {/*
     pup_bytes(&p, (void *)&type, sizeof(Type));
     p | key;
     p | depth;
@@ -30,24 +30,27 @@ struct Node {
     p | n_particles;
     if (p.isUnpacking() && n_particles)
       particles = new Particle[n_particles];
-    if (n_particles) PUParray(p, particles, n_particles);
+    PUParray(p, particles, n_particles);
     p | n_children;
     p | owner_tp_start;
     p | owner_tp_end;
     p | wait_count;
-    p | tp_index;
+    p | tp_index;*/
   }
 
   Node() {
-    Node(-1, -1, NULL, 0, 0, 0, NULL);
+    Node(-1, -1, 0, NULL, 0, 0, NULL);
   }
-  Node(Key key, int depth, Particle* particles, int n_particles, int owner_tp_start, int owner_tp_end, Node* parent) {
+  Node(Key key, int depth, int n_particles, Particle* particles, int owner_tp_start, int owner_tp_end, Node* parent) {
     this->type = Invalid;
     this->key = key;
     this->depth = depth;
-    this->particles = particles;
-    this->data = Data();
     this->n_particles = n_particles;
+    this->particles = std::vector<Particle> (n_particles);
+    for (int i = 0; i < n_particles; i++) {
+      this->particles[i] = particles[i];
+    }
+    this->data = Data();
     this->owner_tp_start = owner_tp_start;
     this->owner_tp_end = owner_tp_end;
     this->parent = parent;
