@@ -33,7 +33,7 @@ mainmodule simple {
     Particle particles[];
   };
 
-  template <class Data>
+  template <class Data> //hi
   message NodeMsg {
     Node<Data> nodes[];
   };

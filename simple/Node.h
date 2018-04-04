@@ -37,7 +37,7 @@ struct Node {
     p | wait_count;
     p | tp_index;*/
   }
-
+//hi
   Node() {
     Node(-1, -1, 0, NULL, 0, 0, NULL);
   }
@@ -65,7 +65,7 @@ struct Node {
       delete *it;
     }
     if (type == CachedRemoteLeaf) {
-      delete particles;
+      particles.resize(0);
     }
   }
 

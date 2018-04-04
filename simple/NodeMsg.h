@@ -10,7 +10,7 @@ template <typename Data>
 struct NodeMsg : public CMessage_NodeMsg<Data> {
   Node<Data>* nodes;
   int n_nodes;
-
+//hi
   NodeMsg();
   NodeMsg(Node<Data>*, int);
 };
