@@ -51,6 +51,9 @@ class TreePiece : public CBase_TreePiece<Data> {
   std::set<Key> curr_waiting;
   int num_done;
 
+  // debug
+  std::vector<Particle> flushed_particles;
+
   template <typename Visitor>
   void goDown(Key);
 
@@ -75,6 +78,25 @@ public:
   void print(Node<Data>*);
   Node<Data>* findNode(Key);
   void perturb (Real timestep);
+  void flush(CProxy_Reader);
+  void rebuild(const CkCallback&);
+
+  // debug
+  void checkParticlesChanged(const CkCallback& cb) {
+    bool result = true;
+    if (particles.size() != flushed_particles.size()) {
+      result = false;
+      this->contribute(sizeof(bool), &result, CkReduction::logical_and_bool, cb);
+      return;
+    }
+    for (int i = 0; i < particles.size(); i++) {
+      if (!(particles[i] == flushed_particles[i])) {
+        result = false;
+        break;
+      }
+    }
+    this->contribute(sizeof(bool), &result, CkReduction::logical_and_bool, cb);
+  }
 };
 
 template <typename Data>
@@ -519,6 +541,28 @@ void TreePiece<Data>::perturb (Real timestep) {
   for (int i = 0; i < particles.size(); i++) {
     particles[i].perturb(timestep, down_traversals[i].sum_force);
   }
+}
+
+template <typename Data>
+void TreePiece<Data>::flush(CProxy_Reader readers) {
+  // debug
+  flushed_particles.resize(0);
+  flushed_particles.insert(flushed_particles.end(), particles.begin(), particles.end());
+
+  ParticleMsg *msg = new (particles.size()) ParticleMsg(particles.data(), particles.size());
+  readers[CkMyPe()].receive(msg);
+  particles.resize(0);
+  particle_index = 0;
+}
+
+template <typename Data>
+void TreePiece<Data>::rebuild(const CkCallback& cb) {
+  // clean up old tree information
+  delete root;
+  root = nullptr;
+
+  // build a new tree from scratch
+  build(cb);
 }
 
 template <typename Data>

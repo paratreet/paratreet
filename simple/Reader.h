@@ -26,6 +26,7 @@ class Reader : public CBase_Reader {
 
     // loading particles and assigning keys
     void load(std::string, const CkCallback&);
+    void computeUniverseBoundingBox(const CkCallback& cb);
     void assignKeys(BoundingBox&, const CkCallback&);
 
     // OCT decomposition
@@ -122,6 +123,10 @@ void Reader::flush(int n_total_particles, int n_treepieces, CProxy_TreePiece<Dat
     CkPrintf("[Reader %d] ERROR! Flushed %d out of %d particles\n", thisIndex, flush_count, particles.size());
     CkAbort("Flush failure");
   }
+
+  // clean up
+  particles.resize(0);
+  particle_index = 0;
 }
 
 #endif // SIMPLE_READER_H_
