@@ -1,0 +1,26 @@
+mainmodule simple {
+  include "Node.h";
+
+  readonly CProxy_Main mainProxy;
+  readonly CProxy_Test testProxy;
+
+  mainchare Main {
+    entry Main(CkArgMsg* m);
+    entry [reductiontarget] void terminate();
+  };
+
+  /*
+  message ParticleMsg {
+    Particle particles[];
+  };
+
+  message NodeMsg {
+    Node node;
+  };
+  */
+
+  array [1d] Test {
+    entry Test();
+    entry void receive(std::vector<Node>&);
+  };
+};
