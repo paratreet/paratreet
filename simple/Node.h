@@ -56,7 +56,8 @@ struct Node {
   void triggerFree() {
     for (typename std::vector<Node*>::const_iterator it = children.begin();
          it != children.end(); ++it) {
-         it->triggerFree();
+         (*it)->triggerFree();
+         delete *it;
     }
     if (type == CachedRemoteLeaf) {
       delete[] particles;
