@@ -5,13 +5,12 @@
 #include "common.h"
 #include "templates.h"
 #include "ParticleMsg.h"
-#include "NodeMsg.h"
+#include "MultiMsg.h"
 #include "Node.h"
 #include "Utility.h"
 #include "Reader.h"
 #include "CentroidVisitor.h"
 #include "GravityVisitor.h"
-//#include "TEHolder.h"
 
 #include <queue>
 #include <set>
@@ -73,8 +72,8 @@ public:
   template<typename Visitor>
   void restoreData(Key, Data);
   template<typename Visitor>
-  void addCache(NodeMsg<Data>*);
-  void processNewNode(Node<Data>*, Node<Data>&);
+  void addCache(MultiMsg<Data>*);
+  void processNewNode(Node<Data>*, Node<Data>&, int&, Particle*);
   void print(Node<Data>*);
   Node<Data>* findNode(Key);
   void perturb (Real timestep);
@@ -255,7 +254,7 @@ bool TreePiece<Data>::recursiveBuild(Node<Data>* node, bool saw_tp_key) {
       // find number of particles in child
       int first_ge_idx;
       if (i < node->n_children - 1) {
-        first_ge_idx = Utility::binarySearchGE(sibling_splitter, node->particles.data(), start, finish);
+        first_ge_idx = Utility::binarySearchGE(sibling_splitter, node->particles, start, finish);
       }
       else {
         first_ge_idx = finish;
@@ -282,7 +281,7 @@ bool TreePiece<Data>::recursiveBuild(Node<Data>* node, bool saw_tp_key) {
       */
 
       // create child and store in vector
-      Node<Data>* child = new Node<Data>(child_key, node->depth + 1, n_particles, node->particles.data() + start, 0, n_treepieces - 1, node);
+      Node<Data>* child = new Node<Data>(child_key, node->depth + 1, n_particles, node->particles + start, 0, n_treepieces - 1, node);
       //Node<Data>* child = new Node<Data>(child_key, node->depth + 1, node->particles + start, n_particles, child_owner_start, child_owner_end, node);
       node->children.push_back(child);
 
@@ -296,8 +295,6 @@ bool TreePiece<Data>::recursiveBuild(Node<Data>* node, bool saw_tp_key) {
       start = first_ge_idx;
       child_key++;
     }
-    node->n_particles = 0;
-    node->particles.resize(0);
     if (non_local_children == 0) {
       node->type = Node<Data>::Internal;
     }
@@ -383,11 +380,12 @@ Node<Data>* TreePiece<Data>::findNode(Key key) {
 template <typename Data>
 template <typename Visitor>
 void TreePiece<Data>::requestNodes(Key key, int index) {
-  CkPrintf("starting reqn\n");
   Node<Data>* node = findNode(key);
   std::vector<Node<Data>> nodes;
+  std::vector<Particle> sending_particles;
   node->tp_index = this->thisIndex;
   nodes.push_back(*node);
+  //CkPrintf("sending top node key %d\n", node->key);
   for (int i = 0; i < node->n_children; i++) {
     Node<Data>* child = node->children[i];
     child->tp_index = this->thisIndex;
@@ -397,9 +395,15 @@ void TreePiece<Data>::requestNodes(Key key, int index) {
       nodes.push_back(*(child->children[j]));
     }
   }
-  NodeMsg<Data>* nodemsg = new (nodes.size()) NodeMsg<Data> (nodes.data(), nodes.size());
-  this->thisProxy[index].template addCache<Visitor>(nodemsg);
-  CkPrintf("ending reqn\n");
+  for (int i = 0; i < nodes.size(); i++) {
+    if (nodes[i].type == Node<Data>::Leaf) {
+      for (int j = 0; j < nodes[i].n_particles; j++) {
+        sending_particles.push_back(nodes[i].particles[j]);
+      }
+    }
+  }
+  MultiMsg<Data>* multimsg = new (sending_particles.size(), nodes.size()) MultiMsg<Data> (sending_particles.data(), sending_particles.size(), nodes.data(), nodes.size());
+  this->thisProxy[index].template addCache<Visitor>(multimsg);
 }
 
 template <typename Data>
@@ -426,41 +430,38 @@ void TreePiece<Data>::restoreData(Key key, Data di) {
 
 template <typename Data>
 template <typename Visitor>
-void TreePiece<Data>::addCache(NodeMsg<Data>* nodemsg) {
-  CkPrintf("starting addcache\n");
-  int num_new_nodes = nodemsg->n_nodes;
-  for (int i = 0; i < num_new_nodes; i++) {
-    for (int j = 0; j < nodemsg->nodes[i].n_particles; j++) {
-      if (nodemsg->nodes[i].type == Node<Data>::Leaf) CkPrintf("%f %f %f %f\n", nodemsg->nodes[i].particles[j].mass, nodemsg->nodes[i].particles[j].position.x, nodemsg->nodes[i].particles[j].position.y, nodemsg->nodes[i].particles[j].position.z);
-    }
+void TreePiece<Data>::addCache(MultiMsg<Data>* multimsg) {
+  //CkPrintf("n_nodes = %d, n_parts = %d, firstkey = %d, PE = %d\n", multimsg->n_nodes, multimsg->n_particles, multimsg->nodes[0].key, CkMyPe());
+  for (int i = 0; i < multimsg->n_particles; i++) {
+    //CkPrintf("%f %f %f %f\n", multimsg->particles[i].mass, multimsg->particles[i].position.x, multimsg->particles[i].position.y, multimsg->particles[i].position.z);
   }
-  Node<Data>* top_node = findNode(nodemsg->nodes[0].key);
-  processNewNode(top_node, nodemsg->nodes[0]);
-  int curr_index = 1;
+  int num_new_nodes = multimsg->n_nodes, p_index = 0, curr_index = 1;
+  Node<Data>* top_node = findNode(multimsg->nodes[0].key);
+  processNewNode(top_node, multimsg->nodes[0], p_index, multimsg->particles);
   for (int i = 0; curr_index < num_new_nodes && i < top_node->n_children; i++) {
     Node<Data>* curr_child = top_node->children[i];
-    processNewNode(curr_child, nodemsg->nodes[curr_index++]);
+    processNewNode(curr_child, multimsg->nodes[curr_index++], p_index, multimsg->particles);
     for (int j = 0; curr_index < num_new_nodes && j < curr_child->n_children; j++) {
-      processNewNode(curr_child->children[j], nodemsg->nodes[curr_index++]);
+      processNewNode(curr_child->children[j], multimsg->nodes[curr_index++], p_index, multimsg->particles);
     }
   }
   for (int i = 0; i < num_new_nodes; i++) {
-    if (curr_waiting.erase(nodemsg->nodes[i].key)) {
-      goDown<Visitor> (nodemsg->nodes[i].key);
+    if (curr_waiting.erase(multimsg->nodes[i].key)) {
+      goDown<Visitor> (multimsg->nodes[i].key);
     }
   }
-  CkPrintf("ending addcache\n");
+  delete multimsg;
 }
 
 template <typename Data>
-void TreePiece<Data>::processNewNode(Node<Data>* node, Node<Data>& new_node) {
+void TreePiece<Data>::processNewNode(Node<Data>* node, Node<Data>& new_node, int& p_index, Particle* msg_particles) {
   // maybe not passing over enough data
   //CkPrintf("new_node type = %d\n", new_node.type);
   if (new_node.type == Node<Data>::Leaf || new_node.type == Node<Data>::EmptyLeaf) {
     node->n_particles = new_node.n_particles;
-    if (node->n_particles) node->particles = std::vector<Particle> (node->n_particles);
+    if (node->n_particles) node->particles = new Particle [node->n_particles];
     for (int i = 0; i < node->n_particles; i++) {
-      node->particles[i] = new_node.particles[i];
+      node->particles[i] = msg_particles[p_index++];
     }
     node->type = Node<Data>::CachedRemoteLeaf;
   }
@@ -493,7 +494,7 @@ void TreePiece<Data>::goDown(Key new_key) {
         dt.curr_nodes.insert(node->key);
         continue;
       }
-      CkPrintf("key = %d, type = %d\n", node->key, node->type);
+      //CkPrintf("key = %d, type = %d\n", node->key, node->type);
       switch (node->type) {
         case Node<Data>::CachedBoundary:
         case Node<Data>::CachedRemote:
@@ -558,7 +559,7 @@ void TreePiece<Data>::flush(CProxy_Reader readers) {
 template <typename Data>
 void TreePiece<Data>::rebuild(const CkCallback& cb) {
   // clean up old tree information
-  delete root;
+  root->triggerFree();
   root = nullptr;
 
   // build a new tree from scratch

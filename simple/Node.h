@@ -13,7 +13,7 @@ struct Node {
   int depth;
   Data data;
   int n_particles;
-  std::vector<Particle> particles;
+  Particle* particles;
   int owner_tp_start;
   int owner_tp_end;
   Node* parent;
@@ -22,22 +22,19 @@ struct Node {
   int wait_count;
   int tp_index;
 
-  void pup (PUP::er& p) {/*
+  void pup (PUP::er& p) {
     pup_bytes(&p, (void *)&type, sizeof(Type));
     p | key;
     p | depth;
     p | data;
     p | n_particles;
-    if (p.isUnpacking() && n_particles)
-      particles = new Particle[n_particles];
-    PUParray(p, particles, n_particles);
     p | n_children;
     p | owner_tp_start;
     p | owner_tp_end;
     p | wait_count;
-    p | tp_index;*/
+    p | tp_index;
   }
-//hi
+
   Node() {
     Node(-1, -1, 0, NULL, 0, 0, NULL);
   }
@@ -46,10 +43,7 @@ struct Node {
     this->key = key;
     this->depth = depth;
     this->n_particles = n_particles;
-    this->particles = std::vector<Particle> (n_particles);
-    for (int i = 0; i < n_particles; i++) {
-      this->particles[i] = particles[i];
-    }
+    this->particles = particles;
     this->data = Data();
     this->owner_tp_start = owner_tp_start;
     this->owner_tp_end = owner_tp_end;
@@ -59,13 +53,13 @@ struct Node {
     this->tp_index = -1;
   }
 
-  ~Node() {
+  void triggerFree() {
     for (typename std::vector<Node*>::const_iterator it = children.begin();
          it != children.end(); ++it) {
-      delete *it;
+         it->triggerFree();
     }
     if (type == CachedRemoteLeaf) {
-      particles.resize(0);
+      delete[] particles;
     }
   }
 

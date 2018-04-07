@@ -34,11 +34,12 @@ mainmodule simple {
   };
 
   template <class Data> //hi
-  message NodeMsg {
+  message MultiMsg {
+    Particle particles[];
     Node<Data> nodes[];
   };
   
-  message NodeMsg<CentroidData>;
+  message MultiMsg<CentroidData>;
 
   template <typename Data>
   array [1d] TreePiece {
@@ -56,7 +57,7 @@ mainmodule simple {
     template<typename Visitor>
     entry void restoreData(Key, Data);
     template<typename Visitor>
-    entry void addCache(NodeMsg<Data>*);
+    entry void addCache(MultiMsg<Data>*);
     entry void perturb(Real timestep);
     entry void flush(CProxy_Reader);
     entry void rebuild(const CkCallback&);
@@ -69,7 +70,7 @@ mainmodule simple {
   extern entry void TreePiece<CentroidData> startDown<GravityVisitor> ();
   extern entry void TreePiece<CentroidData> requestNodes<GravityVisitor> (Key, int);
   extern entry void TreePiece<CentroidData> restoreData<GravityVisitor> (Key, CentroidData);
-  extern entry void TreePiece<CentroidData> addCache<GravityVisitor> (NodeMsg<CentroidData>*);
+  extern entry void TreePiece<CentroidData> addCache<GravityVisitor> (MultiMsg<CentroidData>*);
 
   template <typename Data>
   array [1d] TreeElement {
