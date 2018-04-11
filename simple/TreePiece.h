@@ -144,7 +144,9 @@ void TreePiece<Data>::build(const CkCallback &cb){
   std::sort(particles.begin(), particles.end());
 
   // create global root and recurse
+#ifdef DEBUG
   CkPrintf("[TP %d] key: 0x%" PRIx64 " particles: %d\n", this->thisIndex, tp_key, particles.size());
+#endif
   root = new Node<Data>(1, 0, particles.size(), &particles[0], 0, n_treepieces - 1, NULL);
   recursiveBuild(root, false);
 

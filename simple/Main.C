@@ -20,12 +20,14 @@
 /* readonly */ int max_particles_per_leaf; // for local tree build
 /* readonly */ int decomp_type;
 /* readonly */ int tree_type;
+/* readonly */ int num_iterations;
 /* readonly */ CProxy_TreeElement<CentroidData> centroid_calculator;
 
 class Main : public CBase_Main {
   double total_start_time;
   double start_time;
   std::string input_str;
+  int cur_iteration;
 
   BoundingBox universe;
   Key smallest_particle_key;
@@ -42,13 +44,20 @@ class Main : public CBase_Main {
   }
   
   void doneUp() {
-    CkPrintf("[Main] Calculating Centroid: %lf seconds\n", CkWallTimer() - start_time);
+    CkPrintf("[Main, iter %d] Calculating Centroid: %lf seconds\n", cur_iteration, CkWallTimer() - start_time);
     start_time = CkWallTimer();
     treepieces.startDown<GravityVisitor>();
   }
 
   void doneDown() {
-    CkPrintf("[Main] Downward traversal done: %lf seconds\n", CkWallTimer() - start_time);
+    CkPrintf("[Main, iter %d] Downward traversal done: %lf seconds\n", cur_iteration, CkWallTimer() - start_time);
+    if (++cur_iteration < num_iterations)
+      nextIteration();
+    else
+      terminate();
+  }
+
+  void terminate() {
     CkPrintf("[Main] Total time: %lf seconds\n", CkWallTimer() - total_start_time);
     CkExit();
   }
@@ -72,10 +81,12 @@ class Main : public CBase_Main {
     max_particles_per_leaf = 1;
     decomp_type = OCT_DECOMP;
     tree_type = OCT_TREE;
+    num_iterations = 1;
+    cur_iteration = 0;
 
     // handle arguments
     int c;
-    while ((c = getopt(m->argc, m->argv, "f:n:p:l:d:t:")) != -1) {
+    while ((c = getopt(m->argc, m->argv, "f:n:p:l:d:t:i:")) != -1) {
       switch (c) {
         case 'f':
           input_file = optarg;
@@ -104,6 +115,9 @@ class Main : public CBase_Main {
             tree_type = OCT_TREE;
           }
           break;
+        case 'i':
+          num_iterations = atoi(optarg);
+          break;
         default:
           CkPrintf("Usage:\n");
           CkPrintf("\t-f [input file]\n");
@@ -111,6 +125,7 @@ class Main : public CBase_Main {
           CkPrintf("\t-p [maximum number of particles per treepiece]\n");
           CkPrintf("\t-l [maximum number of particles per leaf]\n");
           CkPrintf("\t-t [tree type: oct, sfc]\n");
+          CkPrintf("\t-i [number of iterations]\n");
           CkExit();
       }
     }
@@ -161,7 +176,6 @@ class Main : public CBase_Main {
 #endif
 
     // assign keys and sort particles locally
-
     start_time = CkWallTimer();
     readers.assignKeys(universe, CkCallbackResumeThread());
     CkPrintf("[Main] Assigning keys and sorting particles: %lf seconds\n", CkWallTimer() - start_time);
@@ -219,26 +233,20 @@ class Main : public CBase_Main {
     treepieces.build(CkCallbackResumeThread());
     CkPrintf("[Main] Local tree build: %lf seconds\n", CkWallTimer() - start_time);
 
-    // comment this out for now because this will terminate the program after finished
-    // start_time = CkWallTimer();
-    // TEHolder<CentroidData> te_holder (centroid_calculator);
-    // treepieces.upOnly<CentroidVisitor>(te_holder);
-
-    redistributeParticles();
-
-    // terminate
-    CkPrintf("\nElapsed time: %lf s\n", CkWallTimer() - total_start_time);
-    CkExit();
+    // perform downward and upward traversals (Barnes-Hut)
+    start_time = CkWallTimer();
+    TEHolder<CentroidData> te_holder (centroid_calculator);
+    treepieces.upOnly<CentroidVisitor>(te_holder);
   }
 
-  void redistributeParticles() {
-    CkPrintf("[Main] Start redistributing particles...\n");
-  
+  void nextIteration() {
+    CkPrintf("[Main, iter %d] Start redistributing particles...\n", cur_iteration);
+
     // flush data to readers
     start_time = CkWallTimer();
     treepieces.flush(readers);
     CkWaitQD(); // i think we should use callback here
-    CkPrintf("[Main] Flushing particles to Readers: %lf seconds\n", CkWallTimer()-start_time);
+    CkPrintf("[Main, iter %d] Flushing particles to Readers: %lf seconds\n", cur_iteration, CkWallTimer()-start_time);
 
     // compute universe
     start_time = CkWallTimer();
@@ -246,34 +254,43 @@ class Main : public CBase_Main {
     readers.computeUniverseBoundingBox(CkCallbackResumeThread((void*&)result));
     universe = *((BoundingBox*)result->getData());
     delete result;
-    CkPrintf("[Main] Building universe: %lf seconds\n", CkWallTimer()-start_time);
+    CkPrintf("[Main, iter %d] Building universe: %lf seconds\n", cur_iteration, CkWallTimer()-start_time);
 
     // assign keys
     start_time = CkWallTimer();
     readers.assignKeys(universe, CkCallbackResumeThread());
-    CkPrintf("[Main] Assigning keys and sorting particles: %lf seconds\n", CkWallTimer()-start_time);
+    CkPrintf("[Main, iter %d] Assigning keys and sorting particles: %lf seconds\n", cur_iteration, CkWallTimer()-start_time);
 
     // find and splitters
     findOctSplitters();
     std::sort(splitters.begin(), splitters.end());
     readers.setSplitters(splitters, CkCallbackResumeThread());
-    CkPrintf("[Main] Finding and sorting splitters: %lf seconds\n", CkWallTimer()-start_time);
+    CkPrintf("[Main, iter %d] Finding and sorting splitters: %lf seconds\n", cur_iteration, CkWallTimer()-start_time);
 
     // flush data to treepieces
     start_time = CkWallTimer();
     readers.flush(universe.n_particles, n_treepieces, treepieces);
     CkWaitQD();
-    CkPrintf("[Main] Flushing particles to TreePieces: %lf seconds\n", CkWallTimer()-start_time);
+    CkPrintf("[Main, iter %d] Flushing particles to TreePieces: %lf seconds\n", cur_iteration, CkWallTimer()-start_time);
 
+    CkExit();
+
+    /* TODO Need to debug below
     // rebuild local tree in TreePieces
     start_time = CkWallTimer();
     treepieces.rebuild(CkCallbackResumeThread());
-    CkPrintf("[Main] Local tree rebuild: %lf seconds\n", CkWallTimer()-start_time);
+    CkPrintf("[Main, iter %d] Local tree rebuild: %lf seconds\n", cur_iteration, CkWallTimer()-start_time);
 
     // debug
     CkCallback cb(CkReductionTarget(Main, checkParticlesChangedDone), thisProxy);
     treepieces.checkParticlesChanged(cb);
     CkWaitQD();
+
+    // start traversals
+    start_time = CkWallTimer();
+    TEHolder<CentroidData> te_holder (centroid_calculator);
+    treepieces.upOnly<CentroidVisitor>(te_holder);
+    */
   }
 
   void findOctSplitters() {

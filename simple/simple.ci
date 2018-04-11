@@ -16,6 +16,7 @@ mainmodule simple {
   readonly int max_particles_per_leaf;
   readonly int decomp_type;
   readonly int tree_type;
+  readonly int num_iterations;
   readonly CProxy_TreeElement<CentroidData> centroid_calculator;
 
   mainchare Main {
