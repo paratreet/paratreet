@@ -59,7 +59,7 @@ struct Node {
          (*it)->triggerFree();
          delete *it;
     }
-    if (type == CachedRemoteLeaf) {
+    if (type == CachedRemoteLeaf && n_particles) {
       delete[] particles;
     }
   }

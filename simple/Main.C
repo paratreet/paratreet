@@ -64,9 +64,9 @@ class Main : public CBase_Main {
 
   void checkParticlesChangedDone(bool result) {
     if (result) {
-      CkPrintf("[Main] Particles are the same.\n");
+      CkPrintf("[Main, iter %d] Particles are the same.\n", cur_iteration);
     } else {
-      CkPrintf("[Main] Particles are changed.\n");
+      CkPrintf("[Main, iter %d] Particles are changed.\n", cur_iteration);
     }
   }
 
@@ -261,7 +261,7 @@ class Main : public CBase_Main {
     readers.assignKeys(universe, CkCallbackResumeThread());
     CkPrintf("[Main, iter %d] Assigning keys and sorting particles: %lf seconds\n", cur_iteration, CkWallTimer()-start_time);
 
-    // find and splitters
+    // find and sort splitters
     findOctSplitters();
     std::sort(splitters.begin(), splitters.end());
     readers.setSplitters(splitters, CkCallbackResumeThread());
@@ -273,9 +273,6 @@ class Main : public CBase_Main {
     CkWaitQD();
     CkPrintf("[Main, iter %d] Flushing particles to TreePieces: %lf seconds\n", cur_iteration, CkWallTimer()-start_time);
 
-    CkExit();
-
-    /* TODO Need to debug below
     // rebuild local tree in TreePieces
     start_time = CkWallTimer();
     treepieces.rebuild(CkCallbackResumeThread());
@@ -290,7 +287,6 @@ class Main : public CBase_Main {
     start_time = CkWallTimer();
     TEHolder<CentroidData> te_holder (centroid_calculator);
     treepieces.upOnly<CentroidVisitor>(te_holder);
-    */
   }
 
   void findOctSplitters() {
