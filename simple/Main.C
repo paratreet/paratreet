@@ -81,7 +81,7 @@ class Main : public CBase_Main {
     max_particles_per_leaf = 1;
     decomp_type = OCT_DECOMP;
     tree_type = OCT_TREE;
-    num_iterations = 1;
+    num_iterations = 10;
     cur_iteration = 0;
 
     // handle arguments
@@ -262,10 +262,15 @@ class Main : public CBase_Main {
     CkPrintf("[Main, iter %d] Assigning keys and sorting particles: %lf seconds\n", cur_iteration, CkWallTimer()-start_time);
 
     // find and sort splitters
+    splitters.resize(0);
     findOctSplitters();
     std::sort(splitters.begin(), splitters.end());
     readers.setSplitters(splitters, CkCallbackResumeThread());
     CkPrintf("[Main, iter %d] Finding and sorting splitters: %lf seconds\n", cur_iteration, CkWallTimer()-start_time);
+
+    // reset TreeElement
+    centroid_calculator.reset();
+    CkWaitQD();
 
     // flush data to treepieces
     start_time = CkWallTimer();
