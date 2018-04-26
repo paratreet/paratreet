@@ -25,6 +25,7 @@ mainmodule simple {
     entry [threaded] void run();
     entry void doneUp();
     entry [reductiontarget] void doneDown();
+    entry [reductiontarget] void donePerturb();
 
     // debug
     entry [reductiontarget] void checkParticlesChangedDone(bool result);

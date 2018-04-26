@@ -544,6 +544,8 @@ void TreePiece<Data>::perturb (Real timestep) {
   for (int i = 0; i < particles.size(); i++) {
     particles[i].perturb(timestep, down_traversals[i].sum_force);
   }
+  CkCallback cb(CkReductionTarget(Main, donePerturb), mainProxy);
+  this->contribute(cb);
 }
 
 template <typename Data>
@@ -561,6 +563,7 @@ void TreePiece<Data>::flush(CProxy_Reader readers) {
 template <typename Data>
 void TreePiece<Data>::rebuild(const CkCallback& cb) {
   // clean up old tree information
+  down_traversals.resize(0);
   root->triggerFree();
   root = nullptr;
 

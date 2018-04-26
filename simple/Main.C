@@ -51,6 +51,12 @@ class Main : public CBase_Main {
 
   void doneDown() {
     CkPrintf("[Main, iter %d] Downward traversal done: %lf seconds\n", cur_iteration, CkWallTimer() - start_time);
+    start_time = CkWallTimer();
+    treepieces.perturb(1.0); // TODO Time step needs to choose.
+  }
+
+  void donePerturb() {
+    CkPrintf("[Main, iter %d] Perturb particles done: %lf seconds\n", cur_iteration, CkWallTimer() - start_time);    
     if (++cur_iteration < num_iterations)
       nextIteration();
     else
@@ -301,7 +307,7 @@ class Main : public CBase_Main {
     keys.add(Key(1)); // 0000...1
     keys.add(~Key(0)); // 1111...1
     keys.buffer();
-
+    CkPrintf("%d\n", splitters.size());
 
     int decomp_particle_sum = 0; // to check if all particles are decomposed
 
@@ -312,7 +318,7 @@ class Main : public CBase_Main {
       readers.countOct(keys.get(), CkCallbackResumeThread((void*&)msg));
       int* counts = (int*)msg->getData();
       int n_counts = msg->getSize() / sizeof(int);
-
+      
       // check counts and create splitters if necessary
       Real threshold = (DECOMP_TOLERANCE * Real(max_particles_per_tp));
       for (int i = 0; i < n_counts; i++) {
@@ -365,6 +371,7 @@ class Main : public CBase_Main {
       keys.buffer();
       delete msg;
     }
+CkPrintf("%d\n", splitters.size());
 
     if (decomp_particle_sum != universe.n_particles) {
       CkPrintf("[Main] ERROR! Only %d particles out of %d decomposed\n",
