@@ -65,7 +65,7 @@ void Reader::request(CProxy_TreePiece<Data> tp_proxy, int index, int num_to_give
 template <typename Data>
 void Reader::flush(int n_total_particles, int n_treepieces, CProxy_TreePiece<Data> treepieces) {
   int flush_count = 0;
-
+  
   if (decomp_type == OCT_DECOMP) {
     // OCT decomposition
     int start = 0;

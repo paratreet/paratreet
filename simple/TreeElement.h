@@ -24,12 +24,19 @@ public:
   void print() {
     CkPrintf("[TE %d] with tp_index %d\n", this->thisIndex, tp_index);
   }
+  void reset();
 };
 
 extern CProxy_Main mainProxy;
 
 template <typename Data>
 TreeElement<Data>::TreeElement() {
+  d = Data();
+  wait_count = -1;
+}
+
+template <typename Data>
+void TreeElement<Data>::reset() {
   d = Data();
   wait_count = -1;
 }

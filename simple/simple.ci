@@ -81,6 +81,7 @@ mainmodule simple {
     template <typename Visitor>
     entry void requestData(int);
     entry void print();
+    entry void reset();
   };
 
   array [1d] TreeElement<CentroidData>;
