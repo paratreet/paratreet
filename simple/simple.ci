@@ -65,6 +65,7 @@ mainmodule simple {
     entry void rebuild(const CkCallback&);
 
     entry void checkParticlesChanged(const CkCallback&);
+    entry void computeParticleNum(const CkCallback&);
   };
 
   array [1d] TreePiece<CentroidData>;

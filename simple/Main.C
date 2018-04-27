@@ -268,6 +268,7 @@ class Main : public CBase_Main {
     CkPrintf("[Main, iter %d] Assigning keys and sorting particles: %lf seconds\n", cur_iteration, CkWallTimer()-start_time);
 
     // find and sort splitters
+    int old_n_treepieces = n_treepieces;
     splitters.resize(0);
     findOctSplitters();
     std::sort(splitters.begin(), splitters.end());
@@ -278,21 +279,27 @@ class Main : public CBase_Main {
     centroid_calculator.reset();
     CkWaitQD();
 
+    // recreate TreePieces
+    treepieces.ckDestroy();
+    treepieces = CProxy_TreePiece<CentroidData>::ckNew(CkCallbackResumeThread(), universe.n_particles, n_treepieces, n_treepieces);
+    CkPrintf("[Main, iter %d] Create %d TreePieces\n", cur_iteration, n_treepieces);
+
     // flush data to treepieces
     start_time = CkWallTimer();
     readers.flush(universe.n_particles, n_treepieces, treepieces);
     CkWaitQD();
     CkPrintf("[Main, iter %d] Flushing particles to TreePieces: %lf seconds\n", cur_iteration, CkWallTimer()-start_time);
 
-    // rebuild local tree in TreePieces
-    start_time = CkWallTimer();
-    treepieces.rebuild(CkCallbackResumeThread());
-    CkPrintf("[Main, iter %d] Local tree rebuild: %lf seconds\n", cur_iteration, CkWallTimer()-start_time);
-
     // debug
-    CkCallback cb(CkReductionTarget(Main, checkParticlesChangedDone), thisProxy);
-    treepieces.checkParticlesChanged(cb);
-    CkWaitQD();
+    treepieces.computeParticleNum(CkCallbackResumeThread((void*&)result));
+    int curr_particle_num = *reinterpret_cast<int*>(result->getData());
+    CkPrintf("[Main, iter %d] Current particle_num=%d\n", cur_iteration, curr_particle_num);
+    delete result;
+
+    // build local tree in TreePieces
+    start_time = CkWallTimer();
+    treepieces.build(CkCallbackResumeThread());
+    CkPrintf("[Main, iter %d] Local tree build: %lf seconds\n", cur_iteration, CkWallTimer()-start_time);
 
     // start traversals
     start_time = CkWallTimer();
@@ -307,7 +314,6 @@ class Main : public CBase_Main {
     keys.add(Key(1)); // 0000...1
     keys.add(~Key(0)); // 1111...1
     keys.buffer();
-    CkPrintf("%d\n", splitters.size());
 
     int decomp_particle_sum = 0; // to check if all particles are decomposed
 
@@ -371,7 +377,6 @@ class Main : public CBase_Main {
       keys.buffer();
       delete msg;
     }
-CkPrintf("%d\n", splitters.size());
 
     if (decomp_particle_sum != universe.n_particles) {
       CkPrintf("[Main] ERROR! Only %d particles out of %d decomposed\n",

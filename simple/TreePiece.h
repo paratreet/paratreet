@@ -96,6 +96,11 @@ public:
     }
     this->contribute(sizeof(bool), &result, CkReduction::logical_and_bool, cb);
   }
+
+  void computeParticleNum(const CkCallback& cb) {
+    int n = particles.size();
+    this->contribute(sizeof(int), &n, CkReduction::sum_int, cb);
+  }
 };
 
 template <typename Data>
