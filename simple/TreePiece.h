@@ -21,14 +21,6 @@
 #include <sstream>
 #include <cstring>
 
-template <typename Data>
-struct DownTraversal {
-  Vector3D<Real> sum_force;
-  std::set<Key> curr_nodes;
-  bool if_active;
-  DownTraversal(): sum_force(0), if_active (true) {}
-};
-
 extern CProxy_Reader readers;
 extern int max_particles_per_leaf;
 extern int decomp_type;
@@ -39,13 +31,14 @@ extern CProxy_Main mainProxy;
 template <typename Data>
 class TreePiece : public CBase_TreePiece<Data> {
   std::vector<Particle> particles;
+  std::vector<Node<Data>*> leaves;
   int n_total_particles;
   int n_treepieces;
   int particle_index;
   int n_expected;
   Key tp_key; // should be a prefix of all particle keys underneath this node
   Node<Data>* root;
-  std::vector<DownTraversal<Data>> down_traversals;
+  std::vector<std::set<Key>> curr_nodes;
   CProxy_TreeElement<Data> global_data;
   std::set<Key> curr_waiting;
   int num_done;
@@ -334,10 +327,10 @@ void TreePiece<Data>::upOnly(TEHolder<Data> te_holderi) {
       }
     }
     if (node->type == Node<Data>::Leaf) {
-      //for (int i = 0; i < node->n_particles; i++) CkPrintf("%d\n", node->particles[i].key);
       v.leaf(node);
       node->wait_count = 0;
       n_curr_particles += node->n_particles;
+      leaves.push_back(node);
       up.push(node);
     }
   }
@@ -356,10 +349,10 @@ void TreePiece<Data>::upOnly(TEHolder<Data> te_holderi) {
 template <typename Data>
 template <typename Visitor>
 void TreePiece<Data>::startDown() {
-  down_traversals = std::vector<DownTraversal<Data>> (particles.size());
+  curr_nodes = std::vector<std::set<Key> > (leaves.size());
   num_done = 0;
-  for (int i = 0; i < down_traversals.size(); i++) {
-    down_traversals[i].curr_nodes.insert(root->key);
+  for (int i = 0; i < curr_nodes.size(); i++) {
+    curr_nodes[i].insert(root->key);
   }
   goDown<Visitor>(root->key);
 }
@@ -387,7 +380,6 @@ void TreePiece<Data>::requestNodes(Key key, int index) {
   std::vector<Particle> sending_particles;
   node->tp_index = this->thisIndex;
   nodes.push_back(*node);
-  //CkPrintf("sending top node key %d\n", node->key);
   for (int i = 0; i < node->n_children; i++) {
     Node<Data>* child = node->children[i];
     child->tp_index = this->thisIndex;
@@ -433,10 +425,6 @@ void TreePiece<Data>::restoreData(Key key, Data di) {
 template <typename Data>
 template <typename Visitor>
 void TreePiece<Data>::addCache(MultiMsg<Data>* multimsg) {
-  //CkPrintf("n_nodes = %d, n_parts = %d, firstkey = %d, PE = %d\n", multimsg->n_nodes, multimsg->n_particles, multimsg->nodes[0].key, CkMyPe());
-  for (int i = 0; i < multimsg->n_particles; i++) {
-    //CkPrintf("%f %f %f %f\n", multimsg->particles[i].mass, multimsg->particles[i].position.x, multimsg->particles[i].position.y, multimsg->particles[i].position.z);
-  }
   int num_new_nodes = multimsg->n_nodes, p_index = 0, curr_index = 1;
   Node<Data>* top_node = findNode(multimsg->nodes[0].key);
   processNewNode(top_node, multimsg->nodes[0], p_index, multimsg->particles);
@@ -457,8 +445,6 @@ void TreePiece<Data>::addCache(MultiMsg<Data>* multimsg) {
 
 template <typename Data>
 void TreePiece<Data>::processNewNode(Node<Data>* node, Node<Data>& new_node, int& p_index, Particle* msg_particles) {
-  // maybe not passing over enough data
-  //CkPrintf("new_node type = %d\n", new_node.type);
   if (new_node.type == Node<Data>::Leaf || new_node.type == Node<Data>::EmptyLeaf) {
     node->n_particles = new_node.n_particles;
     if (node->n_particles) node->particles = new Particle [node->n_particles];
@@ -483,17 +469,16 @@ template <typename Data>
 template <typename Visitor>
 void TreePiece<Data>::goDown(Key new_key) {
   Visitor v;
-  for (int i = 0; i < down_traversals.size(); i++) {
-    DownTraversal<Data>& dt = down_traversals[i];
-    if (dt.curr_nodes.count(new_key) == 0) continue;
-    dt.curr_nodes.erase(new_key);
+  for (int i = 0; i < leaves.size(); i++) {
+    if (curr_nodes[i].count(new_key) == 0) continue;
+    curr_nodes[i].erase(new_key);
     std::stack<Node<Data>*> nodes;
     nodes.push(findNode(new_key));
-    while (nodes.size()) { // if we're already waiting for it for another traversal, don't process it
+    while (nodes.size()) {
       Node<Data>* node = nodes.top();
       nodes.pop();
-      if (curr_waiting.count(node->key)) { // maybe make curr_waiting a map to vector for all traversals
-        dt.curr_nodes.insert(node->key);
+      if (curr_waiting.count(node->key)) {
+        curr_nodes[i].insert(node->key);
         continue;
       }
       //CkPrintf("key = %d, type = %d\n", node->key, node->type);
@@ -501,7 +486,7 @@ void TreePiece<Data>::goDown(Key new_key) {
         case Node<Data>::CachedBoundary:
         case Node<Data>::CachedRemote:
         case Node<Data>::Internal: {
-          if (v.node(node, particles[i], down_traversals[i].sum_force)) {
+          if (v.node(node, leaves[i])) {
             for (int i = 0; i < node->children.size(); i++) {
               nodes.push(node->children[i]);
             }
@@ -510,30 +495,29 @@ void TreePiece<Data>::goDown(Key new_key) {
         }
         case Node<Data>::CachedRemoteLeaf:
         case Node<Data>::Leaf: {
-          v.leaf(node, particles[i], down_traversals[i].sum_force);
+          v.leaf(node, leaves[i]);
           break;
         } 
         case Node<Data>::Boundary:
         case Node<Data>::RemoteAboveTPKey: {
           global_data[node->key].template requestData<Visitor>(this->thisIndex);
-          dt.curr_nodes.insert(node->key);
+          curr_nodes[i].insert(node->key);
           curr_waiting.insert(node->key);
           break;
         }
         case Node<Data>::Remote:
         case Node<Data>::RemoteLeaf: {
           this->thisProxy[node->tp_index].template requestNodes<Visitor>(node->key, this->thisIndex);
-          dt.curr_nodes.insert(node->key);
+          curr_nodes[i].insert(node->key);
           curr_waiting.insert(node->key);
         }
         default: break; 
       }
     }
-    dt.if_active = dt.curr_nodes.size();
-    //if (!dt.if_active) CkPrintf("%d %f %f %f\n", CkMyPe(), dt.sum_force.x, dt.sum_force.y, dt.sum_force.z);
-    if (!dt.if_active) num_done++;
+    if (!curr_nodes[i].size()) num_done++;
   }
-  if (num_done == down_traversals.size()) {
+  if (num_done == leaves.size()) {
+    CkPrintf("tp %d finished!\n", this->thisIndex);
     CkCallback cb(CkReductionTarget(Main, doneDown), mainProxy);
     this->contribute(cb);
   }
@@ -541,8 +525,10 @@ void TreePiece<Data>::goDown(Key new_key) {
 
 template <typename Data>
 void TreePiece<Data>::perturb (Real timestep) {
-  for (int i = 0; i < particles.size(); i++) {
-    particles[i].perturb(timestep, down_traversals[i].sum_force);
+  for (int i = 0; i < leaves.size(); i++) {
+    for (int i = 0; i < leaves[i]->n_particles; i++) {
+      leaves[i]->particles[i].perturb(timestep, leaves[i]->data.sum_forces[i]);
+    }
   }
 }
 

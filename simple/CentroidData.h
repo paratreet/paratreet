@@ -2,23 +2,28 @@
 #define SIMPLE_CENTROIDDATA_H_
 
 #include "common.h"
+#include <vector>
 
 struct CentroidData {
   Vector3D<Real> moment;
   Real sum_mass;
+  std::vector<Vector3D<Real> > sum_forces;
 
   CentroidData() : 
-  moment(Vector3D<Real> (0, 0, 0)),
-  sum_mass(0) {}
+  moment(Vector3D<Real> (0,0,0)), sum_mass(0),
+  sum_forces(std::vector< Vector3D<Real> > ()) {}
+
   const CentroidData& operator+ (const CentroidData& cd) { // needed for upward traversal
     moment += cd.moment;
     sum_mass += cd.sum_mass;
     return *this;
   }
-  /*const CentroidData& operator= (const CentroidData& cd) {
+  const CentroidData& operator= (const CentroidData& cd) {
     moment = cd.moment;
     sum_mass = cd.sum_mass;
-  }*/
+    sum_forces = std::vector< Vector3D<Real> > ();
+    return *this;
+  }
   void pup(PUP::er& p) {
     p | moment;
     p | sum_mass;

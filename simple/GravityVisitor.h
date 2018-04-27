@@ -2,7 +2,7 @@
 #define SIMPLE_GRAVITYVISITOR_H_
 
 #include "simple.decl.h"
-#include "CentroidData.h"
+//#include "CentroidData.h"
 #include "common.h"
 #include <cmath>
 
@@ -14,29 +14,32 @@ private:
     dsq += (p1.z - p2.z) * (p1.z - p2.z);
     return dsq;
   }
-  void addGravity(Real mass, Vector3D<Real> position, Particle& p, Vector3D<Real>& sum_force) {
-    const Real gconst = 0.000000000066742; // small, maybe you should just do sum_accel
-    Real rsq = distsq(p.position, position);
-    sum_force += (position - p.position) * gconst * p.mass * mass / rsq;
+  void addGravity(Node<CentroidData>* from, Node<CentroidData>* on, std::vector<Vector3D<Real> >& sum_forces) {
+    const Real gconst = 0.000000000066742; // very small
+    sum_forces.resize(on->n_particles);
+    for (int i = 0; i < on->n_particles; i++) {
+      for (int j = 0; j < from->n_particles; j++) {
+        Real rsq = distsq(from->particles[j].position, on->particles[i].position);
+        sum_forces[i] += (from->particles[j].position - on->particles[i].position)
+          * gconst * from->particles[j].mass * on->particles[i].mass / (rsq * std::sqrt(rsq));
+      }
+    }
   }
 public:
   GravityVisitor() {}
-  void leaf(Node<CentroidData>* node, Particle& p, Vector3D<Real>& sum_force) {
-    for (int i = 0; i < node->n_particles; i++) {
-      if (node->particles[i] == p) continue;
-      addGravity(node->particles[i].mass, node->particles[i].position, p, sum_force);
-    }
+  void leaf(Node<CentroidData>* from, Node<CentroidData>* on) { // we're calculating force from node X on node Y
+    addGravity(from, on, on->data.sum_forces);
   }
-  bool node(Node<CentroidData>* node, Particle& p, Vector3D<Real>& sum_force ) {
+  bool node(Node<CentroidData>* from, Node<CentroidData>* on) {
     const Real theta = .5, total_volume = 3290.05;
-    Real s = std::pow(total_volume, 1/3.) * std::pow(2, -1 * Utility::getDepthFromKey(node->key));
-    if (theta == 0 || distsq(p.position, node->data.moment) < s * s / (theta * theta)) {
+    Real s = std::pow(total_volume, 1/3.) * std::pow(2, -1 * Utility::getDepthFromKey(from->key));
+    if (theta == 0 || distsq(from->data.moment, on->data.moment) < s * s / (theta * theta)) {
       return true;
     }
-    else {
-      addGravity(node->data.sum_mass, node->data.moment, p, sum_force);
-      return false;
+    for (int i = 0; i < on->n_particles; i++) {
+      addGravity(from, on, on->data.sum_forces);
     }
+    return false;
   }
   void pup(PUP::er& p) {}
 };
