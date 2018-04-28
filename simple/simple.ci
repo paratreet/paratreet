@@ -54,6 +54,8 @@ mainmodule simple {
     template<typename Visitor>
     entry void startDown();
     template<typename Visitor>
+    entry void startUpAndDown();
+    template<typename Visitor>
     entry void requestNodes(Key, int);
     template<typename Visitor>
     entry void restoreData(Key, Data);

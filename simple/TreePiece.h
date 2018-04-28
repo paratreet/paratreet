@@ -39,6 +39,7 @@ class TreePiece : public CBase_TreePiece<Data> {
   Key tp_key; // should be a prefix of all particle keys underneath this node
   Node<Data>* root;
   std::vector<std::set<Key>> curr_nodes;
+  std::vector<Node<Data>*> trav_tops;
   CProxy_TreeElement<Data> global_data;
   std::set<Key> curr_waiting;
   int num_done;
@@ -60,6 +61,8 @@ public:
   void upOnly(TEHolder<Data>);
   template<typename Visitor>
   void startDown();
+  template<typename Visitor>
+  void startUpAndDown();
   template<typename Visitor>
   void requestNodes(Key, int);
   template<typename Visitor>
@@ -174,9 +177,10 @@ bool TreePiece<Data>::recursiveBuild(Node<Data>* node, bool saw_tp_key) {
       if (is_light) {
         if (node->n_particles == 0)
           node->type = Node<Data>::EmptyLeaf;
-        else
+        else {
           node->type = Node<Data>::Leaf;
-
+          leaves.push_back(node);
+        }
         return true;
       }
     }
@@ -330,7 +334,6 @@ void TreePiece<Data>::upOnly(TEHolder<Data> te_holderi) {
       v.leaf(node);
       node->wait_count = 0;
       n_curr_particles += node->n_particles;
-      leaves.push_back(node);
       up.push(node);
     }
   }
@@ -351,15 +354,31 @@ template <typename Visitor>
 void TreePiece<Data>::startDown() {
   curr_nodes = std::vector<std::set<Key> > (leaves.size());
   num_done = 0;
+  trav_tops = std::vector<Node<Data>*> (leaves.size(), root);
   for (int i = 0; i < curr_nodes.size(); i++) {
     curr_nodes[i].insert(root->key);
   }
   goDown<Visitor>(root->key);
 }
 
+template <typename Data>
+template <typename Visitor>
+void TreePiece<Data>::startUpAndDown() {
+  curr_nodes = std::vector<std::set<Key> > (leaves.size());
+  num_done = 0;
+  trav_tops = std::vector< Node<Data>* > (leaves.size(), NULL);
+  for (int i = 0; i < curr_nodes.size(); i++) {
+    curr_nodes[i].insert(leaves[i]->key);
+    trav_tops[i] = leaves[i];
+  }
+  for (int i = 0; i < leaves.size(); i++) {
+    goDown<Visitor> (leaves[i]->key);
+  }
+}
+
 template<typename Data>
 Node<Data>* TreePiece<Data>::findNode(Key key) {
-  std::vector<int> remainders; // sorry lol
+  std::vector<int> remainders;
   Key temp = key;
   while (temp >= 8) {
     remainders.push_back(temp % 8);
@@ -469,6 +488,7 @@ template <typename Data>
 template <typename Visitor>
 void TreePiece<Data>::goDown(Key new_key) {
   Visitor v;
+  std::set<Key> to_go_down; 
   for (int i = 0; i < leaves.size(); i++) {
     if (curr_nodes[i].count(new_key) == 0) continue;
     curr_nodes[i].erase(new_key);
@@ -481,7 +501,7 @@ void TreePiece<Data>::goDown(Key new_key) {
         curr_nodes[i].insert(node->key);
         continue;
       }
-      //CkPrintf("key = %d, type = %d\n", node->key, node->type);
+      CkPrintf("key = %d, type = %d\n", node->key, node->type);
       switch (node->type) {
         case Node<Data>::CachedBoundary:
         case Node<Data>::CachedRemote:
@@ -514,13 +534,30 @@ void TreePiece<Data>::goDown(Key new_key) {
         default: break; 
       }
     }
-    if (!curr_nodes[i].size()) num_done++;
+    if (!curr_nodes[i].size()) {
+      if (trav_tops[i]->parent == NULL) {
+        num_done++;
+      }
+      else {
+        for (int i = 0; i < trav_tops[i]->parent->children.size(); i++) {
+          Node<Data>* child = trav_tops[i]->parent->children[i];
+          if (child != trav_tops[i]) {
+            curr_nodes[i].insert(child->key);
+            to_go_down.insert(child->key);
+          }
+        }
+        trav_tops[i] = trav_tops[i]->parent;
+      }
+    }
   }
   if (num_done == leaves.size()) {
     CkPrintf("tp %d finished!\n", this->thisIndex);
     CkCallback cb(CkReductionTarget(Main, doneDown), mainProxy);
     this->contribute(cb);
   }
+  for (std::set<Key>::iterator it = to_go_down.begin(); it != to_go_down.end(); it++) {
+    goDown<Visitor> (*it);
+  } 
 }
 
 template <typename Data>
