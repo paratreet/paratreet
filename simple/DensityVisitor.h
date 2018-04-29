@@ -44,9 +44,11 @@ public:
   }
 
   void leaf(Node<CentroidData>* from, Node<CentroidData>* on) {
+    const int k = 5;
     on->data.neighbors.resize(on->n_particles);
     for (int i = 0; i < on->n_particles; i++) {
       for (int j = 0; j < from->n_particles; j++) {
+        if (on->data.neighbors[i].size() < k) on->data.neighbors[i].push(from->particles[j]);
         Real radius2 = distsq(on->data.neighbors[i].top().position, from->particles[j].position);
         if (distsq(on->particles[i].position, from->particles[j].position) < radius2) {
           on->data.neighbors[i].push(from->particles[j]);

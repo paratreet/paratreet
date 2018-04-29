@@ -364,6 +364,11 @@ void TreePiece<Data>::startDown() {
 template <typename Data>
 template <typename Visitor>
 void TreePiece<Data>::startUpAndDown() {
+  if (!leaves.size()) {
+    CkPrintf("tp %d finished!\n", this->thisIndex);
+    CkCallback cb(CkReductionTarget(Main, doneDown), mainProxy);
+    this->contribute(cb);
+  }
   curr_nodes = std::vector<std::set<Key> > (leaves.size());
   num_done = 0;
   trav_tops = std::vector< Node<Data>* > (leaves.size(), NULL);
@@ -539,12 +544,13 @@ void TreePiece<Data>::goDown(Key new_key) {
       if (trav_tops[i]->parent == NULL) {
         num_done++;
       }
-      else {
-        for (int i = 0; i < trav_tops[i]->parent->children.size(); i++) {
-          Node<Data>* child = trav_tops[i]->parent->children[i];
+      else {        
+        for (int j = 0; j < trav_tops[i]->parent->children.size(); j++) {
+          Node<Data>* child = trav_tops[i]->parent->children[j];
           if (child != trav_tops[i]) {
-            curr_nodes[i].insert(child->key);
-            to_go_down.insert(child->key);
+             if (trav_tops[i]->parent->type == Node<Data>::Boundary) child->type = Node<Data>::RemoteAboveTPKey;
+             curr_nodes[i].insert(child->key);
+             to_go_down.insert(child->key);
           }
         }
         trav_tops[i] = trav_tops[i]->parent;
@@ -552,7 +558,7 @@ void TreePiece<Data>::goDown(Key new_key) {
     }
   }
   if (num_done == leaves.size()) {
-    //CkPrintf("tp %d finished!\n", this->thisIndex);
+    CkPrintf("tp %d finished!\n", this->thisIndex);
     CkCallback cb(CkReductionTarget(Main, doneDown), mainProxy);
     this->contribute(cb);
   }
