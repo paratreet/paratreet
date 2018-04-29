@@ -31,9 +31,10 @@ public:
     addGravity(from, on, on->data.sum_forces);
   }
   bool node(Node<CentroidData>* from, Node<CentroidData>* on) {
+    if (from->data.sum_mass < .00001) return false;
     const Real theta = .5, total_volume = 3290.05;
     Real s = std::pow(total_volume, 1/3.) * std::pow(2, -1 * Utility::getDepthFromKey(from->key));
-    if (theta == 0 || distsq(from->data.moment, on->data.moment) < s * s / (theta * theta)) {
+    if (theta == 0 || distsq(from->data.getCentroid(), on->data.getCentroid()) < s * s / (theta * theta)) {
       return true;
     }
     for (int i = 0; i < on->n_particles; i++) {

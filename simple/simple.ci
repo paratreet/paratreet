@@ -75,6 +75,16 @@ mainmodule simple {
   extern entry void TreePiece<CentroidData> restoreData<GravityVisitor> (Key, CentroidData);
   extern entry void TreePiece<CentroidData> addCache<GravityVisitor> (MultiMsg<CentroidData>*);
 
+  extern entry void TreePiece<CentroidData> startUpAndDown<DensityVisitor> ();
+  extern entry void TreePiece<CentroidData> requestNodes<DensityVisitor> (Key, int);
+  extern entry void TreePiece<CentroidData> restoreData<DensityVisitor> (Key, CentroidData);
+  extern entry void TreePiece<CentroidData> addCache<DensityVisitor> (MultiMsg<CentroidData>*);
+
+  extern entry void TreePiece<CentroidData> startDown<PressureVisitor> ();
+  extern entry void TreePiece<CentroidData> requestNodes<PressureVisitor> (Key, int);
+  extern entry void TreePiece<CentroidData> restoreData<PressureVisitor> (Key, CentroidData);
+  extern entry void TreePiece<CentroidData> addCache<PressureVisitor> (MultiMsg<CentroidData>*);
+
   template <typename Data>
   array [1d] TreeElement {
     entry TreeElement();
@@ -89,6 +99,9 @@ mainmodule simple {
   array [1d] TreeElement<CentroidData>;
   extern entry void TreeElement<CentroidData> receiveData<CentroidVisitor>(CProxy_TreePiece<CentroidData>, CentroidData, int);
   extern entry void TreeElement<CentroidData> requestData<GravityVisitor>(int);
+  extern entry void TreeElement<CentroidData> requestData<DensityVisitor>(int);
+  extern entry void TreeElement<CentroidData> requestData<PressureVisitor>(int);
+
 
   group Reader {
     entry Reader();

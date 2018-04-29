@@ -51,5 +51,9 @@ CentroidData.h: common.h
 
 GravityVisitor.h: $(BINARY).decl.h CentroidData.h
 
+PressureVisitor.h: $(BINARY).decl.h CentroidData.h
+
+DensityVisitor.h: $(BINARY).decl.h CentroidData.h ParticleComp.h
+
 test: all
-	./charmrun ++local ./simple -f ../inputgen/1k.tipsy +p4
+	./charmrun ++local ./simple -f ../inputgen/5k.tipsy +p4

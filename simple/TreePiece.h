@@ -464,6 +464,7 @@ void TreePiece<Data>::addCache(MultiMsg<Data>* multimsg) {
 
 template <typename Data>
 void TreePiece<Data>::processNewNode(Node<Data>* node, Node<Data>& new_node, int& p_index, Particle* msg_particles) {
+  node->data = new_node.data;
   if (new_node.type == Node<Data>::Leaf || new_node.type == Node<Data>::EmptyLeaf) {
     node->n_particles = new_node.n_particles;
     if (node->n_particles) node->particles = new Particle [node->n_particles];
@@ -501,7 +502,7 @@ void TreePiece<Data>::goDown(Key new_key) {
         curr_nodes[i].insert(node->key);
         continue;
       }
-      CkPrintf("key = %d, type = %d\n", node->key, node->type);
+      //CkPrintf("key = %d, type = %d\n", node->key, node->type);
       switch (node->type) {
         case Node<Data>::CachedBoundary:
         case Node<Data>::CachedRemote:
@@ -551,7 +552,7 @@ void TreePiece<Data>::goDown(Key new_key) {
     }
   }
   if (num_done == leaves.size()) {
-    CkPrintf("tp %d finished!\n", this->thisIndex);
+    //CkPrintf("tp %d finished!\n", this->thisIndex);
     CkCallback cb(CkReductionTarget(Main, doneDown), mainProxy);
     this->contribute(cb);
   }
