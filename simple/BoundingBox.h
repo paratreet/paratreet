@@ -21,7 +21,7 @@ struct BoundingBox {
 
   BoundingBox();
   void pup(PUP::er &p);
-  void expand(Real pad);
+  void expand(Real ratio);
   void grow(const BoundingBox& other);
   void grow(const Vector3D<Real>& v);
   void reset();

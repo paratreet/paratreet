@@ -38,9 +38,11 @@ void BoundingBox::grow(const BoundingBox &other){
   }
 }
 
-void BoundingBox::expand(Real pad){
-  box.greater_corner = box.greater_corner*pad+box.greater_corner;
-  box.lesser_corner = box.lesser_corner-pad*box.lesser_corner;
+void BoundingBox::expand(Real ratio){
+  Vector3D<Real> center = (box.greater_corner + box.lesser_corner)/2;
+  Vector3D<Real> range = (box.greater_corner - box.lesser_corner)*ratio/2;
+  box.greater_corner = center + range;
+  box.lesser_corner = center - range;
 }
 
 void BoundingBox::pup(PUP::er &p){
