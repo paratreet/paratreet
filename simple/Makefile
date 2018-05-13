@@ -28,7 +28,7 @@ Main.o: Main.C $(BINARY).decl.h common.h Reader.h TreePiece.h BoundingBox.h Buff
 
 OctTree.h: $(BINARY).decl.h common.h BoundingBox.h BufferedVec.h Utility.h
 
-OctTree.o: OctTree.C OctTree.h Splitter.h BoundingBox.h BufferedVec.h Utility.h
+OctTree.o: OctTree.C OctTree.h Splitter.h BoundingBox.h BufferedVec.h TreePiece.h TreeElement.h templates.h Utility.h
 	$(CHARMC) -c $<
 
 Reader.h: $(BINARY).decl.h common.h Particle.h BoundingBox.h Splitter.h
