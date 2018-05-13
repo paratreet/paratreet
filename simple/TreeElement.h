@@ -18,7 +18,7 @@ private:
 public:
   TreeElement();
   template <typename Visitor>
-  void receiveData (CProxy_TreePiece<Data>, Data, int);
+  void receiveData (CProxy_TreePiece<Data>, Data, int, CkCallback&);
   template <typename Visitor> 
   void requestData(int);
   void print() {
@@ -50,14 +50,14 @@ void TreeElement<Data>::requestData(int index) {
 
 template <typename Data>
 template <typename Visitor>
-void TreeElement<Data>::receiveData (CProxy_TreePiece<Data> tp_proxyi, Data di, int tp_indexi) {
+void TreeElement<Data>::receiveData(CProxy_TreePiece<Data> tp_proxyi, Data di, int tp_indexi, CkCallback& cb) {
   tp_proxy = tp_proxyi;
   tp_index = tp_indexi;
   if (wait_count == -1) wait_count = (tp_index >= 0) ? 1 : 8; // tps need 1 message
   d = d + di;
   wait_count--;
   if (wait_count == 0) {
-    Visitor v (tp_proxy);
+    Visitor v (tp_proxy, -1, cb);
     Node<Data> node;
     node.key = this->thisIndex;
     node.type = Node<Data>::Boundary;

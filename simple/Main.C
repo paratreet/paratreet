@@ -10,6 +10,7 @@
 #include "Utility.h"
 #include "TreeElement.h"
 #include "CentroidVisitor.h"
+#include "OctTree.h"
 
 /* readonly */ CProxy_Main mainProxy;
 /* readonly */ CProxy_Reader readers;
@@ -30,42 +31,16 @@ class Main : public CBase_Main {
   int cur_iteration;
 
   BoundingBox universe;
-  Key smallest_particle_key;
-  Key largest_particle_key;
+  const Key smallest_particle_key = Utility::removeLeadingZeros(Key(1));
+  const Key largest_particle_key = (~Key(0));
 
   std::vector<Splitter> splitters;
 
-  CProxy_TreePiece<CentroidData> treepieces; // cannot be a global variable
   int n_treepieces;
 
   public:
   static void initialize() {
     BoundingBox::registerReducer();
-  }
-  
-  void doneUp() {
-    CkPrintf("[Main, iter %d] Calculating Centroid: %lf seconds\n", cur_iteration, CkWallTimer() - start_time);
-    start_time = CkWallTimer();
-    treepieces.startDown<GravityVisitor>();
-  }
-
-  void doneDown() {
-    CkPrintf("[Main, iter %d] Downward traversal done: %lf seconds\n", cur_iteration, CkWallTimer() - start_time);
-    start_time = CkWallTimer();
-    treepieces.perturb(1.0); // TODO Time step needs to choose.
-  }
-
-  void donePerturb() {
-    CkPrintf("[Main, iter %d] Perturb particles done: %lf seconds\n", cur_iteration, CkWallTimer() - start_time);    
-    if (++cur_iteration < num_iterations)
-      nextIteration();
-    else
-      terminate();
-  }
-
-  void terminate() {
-    CkPrintf("[Main] Total time: %lf seconds\n", CkWallTimer() - total_start_time);
-    CkExit();
   }
 
   void checkParticlesChangedDone(bool result) {
@@ -164,229 +139,49 @@ class Main : public CBase_Main {
   }
 
   void run() {
-    // useful particle keys
-    smallest_particle_key = Utility::removeLeadingZeros(Key(1));
-    largest_particle_key = (~Key(0));
-
     // load Tipsy data and build universe
     start_time = CkWallTimer();
-    CkReductionMsg* result;
-    readers.load(input_file, CkCallbackResumeThread((void*&)result));
-    CkPrintf("[Main] Loading Tipsy data and building universe: %lf seconds\n", CkWallTimer() - start_time);
+    readers.load(input_file, CkCallbackResumeThread());
+    CkPrintf("[Main] Loading Tipsy data: %lf seconds\n", CkWallTimer() - start_time);
 
-    universe = *((BoundingBox*)result->getData());
-    delete result;
+    OctTree octtree(max_particles_per_leaf, max_particles_per_tp, 1.2, readers);
 
-#ifdef DEBUG
-    std::cout << "[Main] Universal bounding box: " << universe << " with volume " << universe.box.volume() << std::endl;
-#endif
+    CkReductionMsg *msg;
+    for (int i = 0; i < num_iterations; i++) {
+      CkPrintf("[Main, iter %d] Start redistributing particles...\n", i);
 
-    // assign keys and sort particles locally
-    start_time = CkWallTimer();
-    readers.assignKeys(universe, CkCallbackResumeThread());
-    CkPrintf("[Main] Assigning keys and sorting particles: %lf seconds\n", CkWallTimer() - start_time);
+      centroid_calculator.reset();
+      CkWaitQD();
 
-    // OCT decomposition: find and sort splitters, send them to Readers for flushing
-    // SFC decomposition: globally sort particles (sample sort)
-    start_time = CkWallTimer();
-    if (decomp_type == OCT_DECOMP) {
-      findOctSplitters();
-      std::sort(splitters.begin(), splitters.end());
-      CkPrintf("[Main] Finding and sorting splitters: %lf seconds\n",
-          CkWallTimer() - start_time);
-      readers.setSplitters(splitters, CkCallbackResumeThread());
-    }
-    else if (decomp_type == SFC_DECOMP) {
-      //findSfcSplitters();
-      //readers.setSplitters(sfc_splitters, bin_counts, CkCallbackResumeThread());
-      globalSampleSort();
-      CkPrintf("[Main] Global sample sort of particles: %lf seconds\n",
-          CkWallTimer() - start_time);
-
-#ifdef DEBUG
-      // check if particles are correctly sorted globally
-      readers[0].checkSort(Key(0), CkCallbackResumeThread());
-#endif
-    }
-
-    // create treepieces
-    treepieces = CProxy_TreePiece<CentroidData>::ckNew(CkCallbackResumeThread(), universe.n_particles, n_treepieces, n_treepieces);
-    CkPrintf("[Main] Created %d TreePieces\n", n_treepieces);
-
-    // flush particles to home TreePieces
-    start_time = CkWallTimer();
-    if (decomp_type == OCT_DECOMP) {
-      readers.flush(universe.n_particles, n_treepieces, treepieces);
-      CkStartQD(CkCallbackResumeThread());
-    }
-    else if (decomp_type == SFC_DECOMP) {
-      treepieces.triggerRequest();
-      CkStartQD(CkCallbackResumeThread()); // lol is this right
-    }
-    CkPrintf("[Main] Flushing particles to TreePieces: %lf seconds\n", CkWallTimer() - start_time);
-
-#ifdef DEBUG
-    // check if all treepieces have received the right number of particles
-    treepieces.check(CkCallbackResumeThread());
-#endif
-
-    // free splitter memory
-    if (decomp_type == OCT_DECOMP)
-      splitters.resize(0);
-
-    // start local tree build in TreePieces
-    start_time = CkWallTimer();
-    treepieces.build(CkCallbackResumeThread());
-    CkPrintf("[Main] Local tree build: %lf seconds\n", CkWallTimer() - start_time);
-
-    // perform downward and upward traversals (Barnes-Hut)
-    start_time = CkWallTimer();
-    TEHolder<CentroidData> te_holder (centroid_calculator);
-    treepieces.upOnly<CentroidVisitor>(te_holder);
-  }
-
-  void nextIteration() {
-    CkPrintf("[Main, iter %d] Start redistributing particles...\n", cur_iteration);
-
-    // flush data to readers
-    start_time = CkWallTimer();
-    treepieces.flush(readers);
-    CkWaitQD(); // i think we should use callback here
-    CkPrintf("[Main, iter %d] Flushing particles to Readers: %lf seconds\n", cur_iteration, CkWallTimer()-start_time);
-
-    // compute universe
-    start_time = CkWallTimer();
-    CkReductionMsg* result;
-    readers.computeUniverseBoundingBox(CkCallbackResumeThread((void*&)result));
-    universe = *((BoundingBox*)result->getData());
-    delete result;
-    CkPrintf("[Main, iter %d] Building universe: %lf seconds\n", cur_iteration, CkWallTimer()-start_time);
-
-    // assign keys
-    start_time = CkWallTimer();
-    readers.assignKeys(universe, CkCallbackResumeThread());
-    CkPrintf("[Main, iter %d] Assigning keys and sorting particles: %lf seconds\n", cur_iteration, CkWallTimer()-start_time);
-
-    // find and sort splitters
-    int old_n_treepieces = n_treepieces;
-    splitters.resize(0);
-    findOctSplitters();
-    std::sort(splitters.begin(), splitters.end());
-    readers.setSplitters(splitters, CkCallbackResumeThread());
-    CkPrintf("[Main, iter %d] Finding and sorting splitters: %lf seconds\n", cur_iteration, CkWallTimer()-start_time);
-
-    // reset TreeElement
-    centroid_calculator.reset();
-    CkWaitQD();
-
-    // recreate TreePieces
-    treepieces.ckDestroy();
-    treepieces = CProxy_TreePiece<CentroidData>::ckNew(CkCallbackResumeThread(), universe.n_particles, n_treepieces, n_treepieces);
-    CkPrintf("[Main, iter %d] Create %d TreePieces\n", cur_iteration, n_treepieces);
-
-    // flush data to treepieces
-    start_time = CkWallTimer();
-    readers.flush(universe.n_particles, n_treepieces, treepieces);
-    CkWaitQD();
-    CkPrintf("[Main, iter %d] Flushing particles to TreePieces: %lf seconds\n", cur_iteration, CkWallTimer()-start_time);
-
-    // debug
-    treepieces.computeParticleNum(CkCallbackResumeThread((void*&)result));
-    int curr_particle_num = *reinterpret_cast<int*>(result->getData());
-    CkPrintf("[Main, iter %d] Current particle_num=%d\n", cur_iteration, curr_particle_num);
-    delete result;
-
-    // build local tree in TreePieces
-    start_time = CkWallTimer();
-    treepieces.build(CkCallbackResumeThread());
-    CkPrintf("[Main, iter %d] Local tree build: %lf seconds\n", cur_iteration, CkWallTimer()-start_time);
-
-    // start traversals
-    start_time = CkWallTimer();
-    TEHolder<CentroidData> te_holder (centroid_calculator);
-    treepieces.upOnly<CentroidVisitor>(te_holder);
-  }
-
-  void findOctSplitters() {
-    BufferedVec<Key> keys;
-
-    // initial splitter keys (first and last)
-    keys.add(Key(1)); // 0000...1
-    keys.add(~Key(0)); // 1111...1
-    keys.buffer();
-
-    int decomp_particle_sum = 0; // to check if all particles are decomposed
-
-    // main decomposition loop
-    while (keys.size() != 0) {
-      // send splitters to Readers for histogramming
-      CkReductionMsg *msg;
-      readers.countOct(keys.get(), CkCallbackResumeThread((void*&)msg));
-      int* counts = (int*)msg->getData();
-      int n_counts = msg->getSize() / sizeof(int);
+      // Up traversal
+      start_time = CkWallTimer();
+      octtree.treepieces_proxy().upOnly<CentroidVisitor>(
+        TEHolder<CentroidData>(centroid_calculator), CkCallbackResumeThread()
+      );
+      CkPrintf(
+        "[Main, iter %d] Calculating Centroid: %lf seconds\n",
+        i, CkWallTimer() - start_time
+      );
       
-      // check counts and create splitters if necessary
-      Real threshold = (DECOMP_TOLERANCE * Real(max_particles_per_tp));
-      for (int i = 0; i < n_counts; i++) {
-        Key from = keys.get(2*i);
-        Key to = keys.get(2*i+1);
+      // Down traversal
+      start_time = CkWallTimer();
+      octtree.treepieces_proxy().startDown<GravityVisitor>(CkCallbackResumeThread());
+      CkPrintf(
+        "[Main, iter %d] Downward traversal done: %lf seconds\n",
+        i, CkWallTimer() - start_time
+      );
 
-        int n_particles = counts[i];
-        if ((Real)n_particles > threshold) {
-          // create 8 more splitter key pairs to go one level deeper
-          // leading zeros will be removed in Reader::count()
-          // to compare splitter key with particle keys
-          keys.add(from << 3);
-          keys.add((from << 3) + 1);
+      // Purturb
+      octtree.treepieces_proxy().perturb(1.0, CkCallbackResumeThread());
+      CkPrintf(
+        "[Main, iter %d] Perturb particles done: %lf seconds\n",
+        i, CkWallTimer() - start_time
+      );
 
-          keys.add((from << 3) + 1);
-          keys.add((from << 3) + 2);
-
-          keys.add((from << 3) + 2);
-          keys.add((from << 3) + 3);
-
-          keys.add((from << 3) + 3);
-          keys.add((from << 3) + 4);
-
-          keys.add((from << 3) + 4);
-          keys.add((from << 3) + 5);
-
-          keys.add((from << 3) + 5);
-          keys.add((from << 3) + 6);
-
-          keys.add((from << 3) + 6);
-          keys.add((from << 3) + 7);
-
-          keys.add((from << 3) + 7);
-          if (to == (~Key(0)))
-            keys.add(~Key(0));
-          else
-            keys.add(to << 3);
-        }
-        else {
-          // create and store splitter
-          Splitter sp(Utility::removeLeadingZeros(from),
-              Utility::removeLeadingZeros(to), from, n_particles);
-          splitters.push_back(sp);
-
-          // add up number of particles to check if all are flushed
-          decomp_particle_sum += n_particles;
-        }
-      }
-
-      keys.buffer();
-      delete msg;
+      octtree.redistribute();
     }
-
-    if (decomp_particle_sum != universe.n_particles) {
-      CkPrintf("[Main] ERROR! Only %d particles out of %d decomposed\n",
-          decomp_particle_sum, universe.n_particles);
-      CkAbort("Decomposition error");
-    }
-
-    // determine number of TreePieces
-    // override input from user if there was one
-    n_treepieces = splitters.size();
+    CkPrintf("[Main] Total time: %lf seconds\n", CkWallTimer() - total_start_time);
+    CkExit();
   }
 
   void globalSampleSort() {

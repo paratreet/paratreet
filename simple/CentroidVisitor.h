@@ -12,9 +12,10 @@ class CentroidVisitor {
 private:
   CProxy_TreePiece<CentroidData> tp_proxy;
   int tp_index;
+  CkCallback cb;
 public:
-  CentroidVisitor(CProxy_TreePiece<CentroidData> tp_proxyi, int tp_indexi = -1) : 
-  tp_proxy(tp_proxyi), tp_index(tp_indexi) {}
+  CentroidVisitor(CProxy_TreePiece<CentroidData> tp_proxyi, int tp_indexi, CkCallback& cb) : 
+  tp_proxy(tp_proxyi), tp_index(tp_indexi), cb(cb) {}
   void leaf(Node<CentroidData>* node) {
     for (int i = 0; i < node->n_particles; i++) {
       Particle p = node->particles[i];
@@ -25,13 +26,13 @@ public:
   bool node(Node<CentroidData>* node) {
     if (node->key == 1) {
       CkPrintf("%f %f %f %f\n", node->data.sum_mass, node->data.moment.x, node->data.moment.y, node->data.moment.z);
-      mainProxy.doneUp();
+      cb.send();
       return false;
     }
     if (tp_index == -1 || node->parent->type == Node<CentroidData>::Boundary) {
       if (node->type == Node<CentroidData>::Boundary) 
-        centroid_calculator[node->key >> 3].receiveData<CentroidVisitor>(tp_proxy, node->data, -1); // doesn't exist
-      else centroid_calculator[node->key].receiveData<CentroidVisitor>(tp_proxy, node->data, tp_index);
+        centroid_calculator[node->key >> 3].receiveData<CentroidVisitor>(tp_proxy, node->data, -1, cb); // doesn't exist
+      else centroid_calculator[node->key].receiveData<CentroidVisitor>(tp_proxy, node->data, tp_index, cb);
       return false;
     }
     node->parent->data = node->parent->data + node->data;

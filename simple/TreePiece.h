@@ -49,7 +49,8 @@ class TreePiece : public CBase_TreePiece<Data> {
   CProxy_TreeElement<Data> global_data;
   std::set<Key> curr_waiting;
   int num_done;
-//hi
+  CkCallback downCallback;
+
   // debug
   std::vector<Particle> flushed_particles;
 
@@ -64,9 +65,9 @@ public:
   void build(const CkCallback&);
   bool recursiveBuild(Node<Data>*, bool);
   template<typename Visitor>
-  void upOnly(TEHolder<Data>);
+  void upOnly(TEHolder<Data>, CkCallback&);
   template<typename Visitor>
-  void startDown();
+  void startDown(CkCallback&);
   template<typename Visitor>
   void requestNodes(Key, int);
   template<typename Visitor>
@@ -76,25 +77,25 @@ public:
   void processNewNode(Node<Data>*, Node<Data>&, int&, Particle*);
   void print(Node<Data>*);
   Node<Data>* findNode(Key);
-  void perturb (Real timestep);
+  void perturb(Real timestep, CkCallback& cb);
   void flush(CProxy_Reader);
   void rebuild(const CkCallback&);
 
   // debug
   void checkParticlesChanged(const CkCallback& cb) {
-    bool result = true;
+    bool result = false;
     if (particles.size() != flushed_particles.size()) {
-      result = false;
-      this->contribute(sizeof(bool), &result, CkReduction::logical_and_bool, cb);
+      result = true;
+      this->contribute(sizeof(bool), &result, CkReduction::logical_or_bool, cb);
       return;
     }
     for (int i = 0; i < particles.size(); i++) {
       if (!(particles[i] == flushed_particles[i])) {
-        result = false;
+        result = true;
         break;
       }
     }
-    this->contribute(sizeof(bool), &result, CkReduction::logical_and_bool, cb);
+    this->contribute(sizeof(bool), &result, CkReduction::logical_or_bool, cb);
   }
 
   void computeParticleNum(const CkCallback& cb) {
@@ -104,7 +105,9 @@ public:
 };
 
 template <typename Data>
-TreePiece<Data>::TreePiece(const CkCallback& cb, int n_total_particles_, int n_treepieces_) : n_total_particles(n_total_particles_), n_treepieces(n_treepieces_), particle_index(0) {
+TreePiece<Data>::TreePiece(const CkCallback& cb, int n_total_particles_, int n_treepieces_) :
+  n_total_particles(n_total_particles_), n_treepieces(n_treepieces_), particle_index(0)
+{
   if (decomp_type == OCT_DECOMP) {
     // OCT decomposition
     n_expected = readers.ckLocalBranch()->splitters[this->thisIndex].n_particles;
@@ -316,12 +319,12 @@ bool TreePiece<Data>::recursiveBuild(Node<Data>* node, bool saw_tp_key) {
 
 template <typename Data>
 template <typename Visitor>
-void TreePiece<Data>::upOnly(TEHolder<Data> te_holderi) {
+void TreePiece<Data>::upOnly(TEHolder<Data> te_holderi, CkCallback& cb) {
   global_data = te_holderi.te_proxy;
 
   std::queue<Node<Data>*> down, up;
   down.push(root);
-  Visitor v (this->thisProxy, this->thisIndex);
+  Visitor v (this->thisProxy, this->thisIndex, cb);
   int n_curr_particles = 0;
   while (down.size()) {
     Node<Data>* node = down.front();
@@ -347,7 +350,7 @@ void TreePiece<Data>::upOnly(TEHolder<Data> te_holderi) {
     }
   }
   if (!up.size()) { // no Data bc no Leaves, so send blank
-    global_data[tp_key].template receiveData<Visitor>(this->thisProxy, Data(), this->thisIndex);
+    global_data[tp_key].template receiveData<Visitor>(this->thisProxy, Data(), this->thisIndex, cb);
   }
   while (up.size()) {
     Node<Data>* node = up.front();
@@ -360,12 +363,13 @@ void TreePiece<Data>::upOnly(TEHolder<Data> te_holderi) {
 
 template <typename Data>
 template <typename Visitor>
-void TreePiece<Data>::startDown() {
+void TreePiece<Data>::startDown(CkCallback& cb) {
   down_traversals = std::vector<DownTraversal<Data>> (particles.size());
   num_done = 0;
   for (int i = 0; i < down_traversals.size(); i++) {
     down_traversals[i].curr_nodes.insert(root->key);
   }
+  downCallback = cb;
   goDown<Visitor>(root->key);
 }
 
@@ -539,17 +543,15 @@ void TreePiece<Data>::goDown(Key new_key) {
     if (!dt.if_active) num_done++;
   }
   if (num_done == down_traversals.size()) {
-    CkCallback cb(CkReductionTarget(Main, doneDown), mainProxy);
-    this->contribute(cb);
+    this->contribute(downCallback);
   }
 }
 
 template <typename Data>
-void TreePiece<Data>::perturb (Real timestep) {
+void TreePiece<Data>::perturb(Real timestep, CkCallback& cb) {
   for (int i = 0; i < particles.size(); i++) {
     particles[i].perturb(timestep, down_traversals[i].sum_force);
   }
-  CkCallback cb(CkReductionTarget(Main, donePerturb), mainProxy);
   this->contribute(cb);
 }
 

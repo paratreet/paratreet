@@ -23,19 +23,13 @@ mainmodule simple {
     initnode void initialize();
     entry Main(CkArgMsg* m);
     entry [threaded] void run();
-    entry void doneUp();
-    entry [reductiontarget] void doneDown();
-    entry [reductiontarget] void donePerturb();
-
-    // debug
-    entry [reductiontarget] void checkParticlesChangedDone(bool result);
   };
 
   message ParticleMsg {
     Particle particles[];
   };
 
-  template <class Data> //hi
+  template <class Data>
   message MultiMsg {
     Particle particles[];
     Node<Data> nodes[];
@@ -51,16 +45,16 @@ mainmodule simple {
     entry void build(const CkCallback&);
     entry void triggerRequest();
     template<typename Visitor>
-    entry void upOnly(TEHolder<Data>);
+    entry void upOnly(TEHolder<Data>, CkCallback&);
     template<typename Visitor>
-    entry void startDown();
+    entry void startDown(CkCallback&);
     template<typename Visitor>
     entry void requestNodes(Key, int);
     template<typename Visitor>
     entry void restoreData(Key, Data);
     template<typename Visitor>
     entry void addCache(MultiMsg<Data>*);
-    entry void perturb(Real timestep);
+    entry void perturb(Real timestep, CkCallback&);
     entry void flush(CProxy_Reader);
     entry void rebuild(const CkCallback&);
 
@@ -69,17 +63,17 @@ mainmodule simple {
   };
 
   array [1d] TreePiece<CentroidData>;
-  extern entry void TreePiece<CentroidData> upOnly<CentroidVisitor> (TEHolder<CentroidData>);
-  extern entry void TreePiece<CentroidData> startDown<GravityVisitor> ();
-  extern entry void TreePiece<CentroidData> requestNodes<GravityVisitor> (Key, int);
-  extern entry void TreePiece<CentroidData> restoreData<GravityVisitor> (Key, CentroidData);
+  extern entry void TreePiece<CentroidData> upOnly<CentroidVisitor>(TEHolder<CentroidData>, CkCallback&);
+  extern entry void TreePiece<CentroidData> startDown<GravityVisitor>(CkCallback&);
+  extern entry void TreePiece<CentroidData> requestNodes<GravityVisitor>(Key, int);
+  extern entry void TreePiece<CentroidData> restoreData<GravityVisitor>(Key, CentroidData);
   extern entry void TreePiece<CentroidData> addCache<GravityVisitor> (MultiMsg<CentroidData>*);
 
   template <typename Data>
   array [1d] TreeElement {
     entry TreeElement();
     template <typename Visitor>
-    entry [createhere] void receiveData(CProxy_TreePiece<Data>, Data, int);
+    entry [createhere] void receiveData(CProxy_TreePiece<Data>, Data, int, CkCallback&);
     template <typename Visitor>
     entry void requestData(int);
     entry void print();
@@ -87,7 +81,7 @@ mainmodule simple {
   };
 
   array [1d] TreeElement<CentroidData>;
-  extern entry void TreeElement<CentroidData> receiveData<CentroidVisitor>(CProxy_TreePiece<CentroidData>, CentroidData, int);
+  extern entry void TreeElement<CentroidData> receiveData<CentroidVisitor>(CProxy_TreePiece<CentroidData>, CentroidData, int, CkCallback&);
   extern entry void TreeElement<CentroidData> requestData<GravityVisitor>(int);
 
   group Reader {
