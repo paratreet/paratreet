@@ -7,7 +7,7 @@
 
 class OctTree {
 public:
-    OctTree(int max_particles_per_leaf, int max_particles_per_tp, Real bounding_ratio,
+    OctTree(int max_particles_per_leaf, int max_particles_per_tp, Real expand_ratio,
             CProxy_Reader& readers);
     CProxy_TreePiece<CentroidData> treepieces_proxy();
     void redistribute();
@@ -15,7 +15,7 @@ public:
 private:
     int max_particles_per_tp;
     int max_particles_per_leaf;
-    Real bounding_ratio;
+    Real expand_ratio;
     CProxy_Reader readers;
     CProxy_TreePiece<CentroidData> treepieces;
     BoundingBox universe;

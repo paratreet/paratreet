@@ -15,11 +15,11 @@ std::vector<Splitter> findSplitters(CProxy_Reader readers, BoundingBox& universe
                                     int max_particles_per_tp);
 
 
-OctTree::OctTree(int max_particles_per_leaf, int max_particles_per_tp, Real bounding_ratio,
+OctTree::OctTree(int max_particles_per_leaf, int max_particles_per_tp, Real expand_ratio,
                  CProxy_Reader& readers) :
     max_particles_per_leaf(max_particles_per_leaf),
     max_particles_per_tp(max_particles_per_tp),
-    bounding_ratio(bounding_ratio),
+    expand_ratio(expand_ratio),
     readers(readers)
 {
     build();
@@ -51,7 +51,7 @@ void OctTree::redistribute() {
 
 
 void OctTree::build() {
-    CkPrintf("[OctTree] Start building oct-tree...\n");
+    CkPrintf("[OctTree] Start building oct tree...\n");
 
     CkReductionMsg* result;
     double t;
@@ -63,7 +63,8 @@ void OctTree::build() {
     delete result;
     CkPrintf("[OctTree] Computed universe bounding box in %lfs\n", CkWallTimer()-t);
 
-    // Extend
+    // Expand bounding box to reduce the probability of particles moving out of it
+    universe.expand(expand_ratio);
 
     // Assign keys
     t = CkWallTimer();
