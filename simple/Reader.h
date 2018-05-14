@@ -86,9 +86,6 @@ void Reader::flush(int n_total_particles, int n_treepieces, CProxy_TreePiece<Dat
 
       start = end;
     }
-
-    // free splitter memory
-    splitters.resize(0);
   }
   else if (decomp_type == SFC_DECOMP) {
     // TODO SFC decomposition

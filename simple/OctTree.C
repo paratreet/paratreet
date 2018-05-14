@@ -32,10 +32,27 @@ CProxy_TreePiece<CentroidData> OctTree::treepieces_proxy() {
 
 
 void OctTree::redistribute() {
-    destroy();
-    build();
-
     CkReductionMsg* result;
+    double t;
+
+    treepieces.assignKeys(CkCallbackResumeThread((void*&)result));
+    if (*reinterpret_cast<bool*>(result->getData())) {
+        CkPrintf("[OctTree] All particles in universe. Reusing treepieces...\n");
+
+        t = CkWallTimer();
+        treepieces.redistribute();
+        CkWaitQD();
+        CkPrintf("[OctTree] Redistributed particles in %lfs\n", CkWallTimer()-t);
+
+        t = CkWallTimer();        
+        treepieces.rebuild(CkCallbackResumeThread());
+        CkPrintf("[OctTree] Rebuilt local trees in %lfs\n", CkWallTimer()-t);        
+    } else {
+        CkPrintf("[OctTree] Some particles out of universe. Recreating treepieces...\n");        
+        destroy();
+        build();
+    }
+
     treepieces.checkParticlesChanged(CkCallbackResumeThread((void*&)result));
     if (*reinterpret_cast<bool*>(result->getData())) {
         CkPrintf("[OctTree] Particles are changed\n");
@@ -65,7 +82,7 @@ void OctTree::build() {
 
     // Expand bounding box to reduce the probability of particles moving out of it
     universe.expand(expand_ratio);
-
+    
     // Assign keys
     t = CkWallTimer();
     readers.assignKeys(universe, CkCallbackResumeThread());
@@ -83,7 +100,7 @@ void OctTree::build() {
     t = CkWallTimer();
     int n_treepieces = splitters.size();
     treepieces = CProxy_TreePiece<CentroidData>::ckNew(
-        CkCallbackResumeThread(), universe.n_particles, n_treepieces, n_treepieces
+        CkCallbackResumeThread(), universe.n_particles, n_treepieces, universe, n_treepieces
     );
     CkPrintf("[OctTree] Created %d tree pieces in %lfs\n", n_treepieces, CkWallTimer()-t);
 

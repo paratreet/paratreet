@@ -39,7 +39,7 @@ mainmodule simple {
 
   template <typename Data>
   array [1d] TreePiece {
-    entry TreePiece(const CkCallback&, int, int);
+    entry TreePiece(const CkCallback&, int, int, const BoundingBox&);
     entry void receive(ParticleMsg*);
     entry void check(const CkCallback&);
     entry void build(const CkCallback&);
@@ -57,6 +57,8 @@ mainmodule simple {
     entry void perturb(Real timestep, CkCallback&);
     entry void flush(CProxy_Reader);
     entry void rebuild(const CkCallback&);
+    entry void assignKeys(const CkCallback&);
+    entry void redistribute();      
 
     entry void checkParticlesChanged(const CkCallback&);
     entry void computeParticleNum(const CkCallback&);

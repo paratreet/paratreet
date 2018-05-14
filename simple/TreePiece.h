@@ -41,7 +41,6 @@ class TreePiece : public CBase_TreePiece<Data> {
   std::vector<Particle> particles;
   int n_total_particles;
   int n_treepieces;
-  int particle_index;
   int n_expected;
   Key tp_key; // should be a prefix of all particle keys underneath this node
   Node<Data>* root;
@@ -50,15 +49,16 @@ class TreePiece : public CBase_TreePiece<Data> {
   std::set<Key> curr_waiting;
   int num_done;
   CkCallback downCallback;
+  BoundingBox universe;
 
   // debug
-  std::vector<Particle> flushed_particles;
+  std::vector<Particle> old_particles;
 
   template <typename Visitor>
   void goDown(Key);
 
 public:
-  TreePiece(const CkCallback&, int, int); 
+  TreePiece(const CkCallback&, int, int, const BoundingBox&); 
   void receive(ParticleMsg*);
   void check(const CkCallback&);
   void triggerRequest();
@@ -80,17 +80,19 @@ public:
   void perturb(Real timestep, CkCallback& cb);
   void flush(CProxy_Reader);
   void rebuild(const CkCallback&);
+  void assignKeys(const CkCallback&);
+  void redistribute();
 
   // debug
   void checkParticlesChanged(const CkCallback& cb) {
     bool result = false;
-    if (particles.size() != flushed_particles.size()) {
+    if (particles.size() != old_particles.size()) {
       result = true;
       this->contribute(sizeof(bool), &result, CkReduction::logical_or_bool, cb);
       return;
     }
     for (int i = 0; i < particles.size(); i++) {
-      if (!(particles[i] == flushed_particles[i])) {
+      if (!(particles[i] == old_particles[i])) {
         result = true;
         break;
       }
@@ -105,8 +107,9 @@ public:
 };
 
 template <typename Data>
-TreePiece<Data>::TreePiece(const CkCallback& cb, int n_total_particles_, int n_treepieces_) :
-  n_total_particles(n_total_particles_), n_treepieces(n_treepieces_), particle_index(0)
+TreePiece<Data>::TreePiece(const CkCallback& cb, int n_total_particles_,
+                           int n_treepieces_, const BoundingBox& universe) :
+  n_total_particles(n_total_particles_), n_treepieces(n_treepieces_), universe(universe)
 {
   if (decomp_type == OCT_DECOMP) {
     // OCT decomposition
@@ -126,9 +129,7 @@ TreePiece<Data>::TreePiece(const CkCallback& cb, int n_total_particles_, int n_t
 template <typename Data>
 void TreePiece<Data>::receive(ParticleMsg* msg) {
   // copy particles to local vector
-  particles.resize(particle_index + msg->n_particles);
-  std::memcpy(&particles[particle_index], msg->particles, msg->n_particles * sizeof(Particle));
-  particle_index += msg->n_particles;
+  particles.insert(particles.end(), msg->particles, msg->particles+msg->n_particles);
   delete msg;
 }
 
@@ -153,7 +154,7 @@ void TreePiece<Data>::build(const CkCallback &cb){
 
   // create global root and recurse
 #ifdef DEBUG
-  CkPrintf("[TP %d] key: 0x%" PRIx64 " particles: %d\n", this->thisIndex, tp_key, particles.size());
+  // CkPrintf("[TP %d] key: 0x%" PRIx64 " particles: %d\n", this->thisIndex, tp_key, particles.size());
 #endif
   root = new Node<Data>(1, 0, particles.size(), &particles[0], 0, n_treepieces - 1, NULL);
   recursiveBuild(root, false);
@@ -557,14 +558,9 @@ void TreePiece<Data>::perturb(Real timestep, CkCallback& cb) {
 
 template <typename Data>
 void TreePiece<Data>::flush(CProxy_Reader readers) {
-  // debug
-  flushed_particles.resize(0);
-  flushed_particles.insert(flushed_particles.end(), particles.begin(), particles.end());
-
   ParticleMsg *msg = new (particles.size()) ParticleMsg(particles.data(), particles.size());
-  readers[CkMyPe()].receive(msg);
-  particles.resize(0);
-  particle_index = 0;
+  readers.ckLocalBranch()->receive(msg);
+  particles.clear();
 }
 
 template <typename Data>
@@ -588,6 +584,62 @@ void TreePiece<Data>::print(Node<Data>* root) {
   root->dot(out);
   out << "}" << endl;
   out.close();
+}
+
+template <typename Data>
+void TreePiece<Data>::assignKeys(const CkCallback& cb) {
+  bool in_universe = true;
+  for (unsigned int i = 0; i < particles.size(); i++) {
+    particles[i].key = SFC::generateKey(particles[i].position, universe.box);
+    // add placeholder bit
+    particles[i].key |= (Key)1 << (KEY_BITS-1);
+
+    in_universe = in_universe && universe.box.contains(particles[i].position);
+  }
+  std::sort(particles.begin(), particles.end());  
+  this->contribute(sizeof(bool), &in_universe, CkReduction::logical_and_bool, cb);
+}
+
+
+template <typename Data>
+void TreePiece<Data>::redistribute() {
+  // debug
+  old_particles.clear();
+  old_particles.insert(old_particles.end(), particles.begin(), particles.end());
+
+  // Find out particles to send
+  std::map<unsigned int, std::vector<Particle>> toSend;
+
+  std::vector<Splitter>& splitters = readers.ckLocalBranch()->splitters;
+  std::vector<Splitter>::iterator sp_it = splitters.begin();
+  unsigned int sp_idx = 0;
+
+  std::vector<Particle>::iterator p_it = particles.begin();
+  while (p_it != particles.end()) {
+    while (!Utility::isPrefix(sp_it->tp_key, p_it->key)) {
+      ++sp_it;
+      ++sp_idx;
+      CkAssert(sp_it != splitters.end());      
+    }
+    if(sp_idx != this->thisIndex) {
+      if (toSend.find(sp_idx) == toSend.end()) {
+        toSend[sp_idx] = std::vector<Particle>();
+      }
+      toSend[sp_idx].push_back(*p_it);
+      p_it = particles.erase(p_it);
+    } else {
+      ++p_it;
+    }
+  }
+
+  // Send particles
+  for (std::map<unsigned int, std::vector<Particle>>::iterator it = toSend.begin();
+       it != toSend.end(); ++it)
+  {
+    std::vector<Particle>& v = it->second;
+    ParticleMsg* msg = new (v.size()) ParticleMsg(v.data(), v.size());
+    this->thisProxy[it->first].receive(msg);
+  }
 }
 
 #endif // SIMPLE_TREEPIECE_H_

@@ -144,7 +144,7 @@ class Main : public CBase_Main {
     readers.load(input_file, CkCallbackResumeThread());
     CkPrintf("[Main] Loading Tipsy data: %lf seconds\n", CkWallTimer() - start_time);
 
-    OctTree octtree(max_particles_per_leaf, max_particles_per_tp, 1.2, readers);
+    OctTree octtree(max_particles_per_leaf, max_particles_per_tp, 1.4, readers);
 
     CkReductionMsg *msg;
     for (int i = 0; i < num_iterations; i++) {
