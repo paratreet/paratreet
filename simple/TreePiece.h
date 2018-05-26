@@ -622,7 +622,7 @@ void TreePiece<Data>::redistribute() {
       CkAssert(sp_it != splitters.end());      
     }
     if(sp_idx != this->thisIndex) {
-      if (toSend.find(sp_idx) == toSend.end()) {
+      if (toSend.find(sp_idx) == toSend.end()) { // vector not created
         toSend[sp_idx] = std::vector<Particle>();
       }
       toSend[sp_idx].push_back(*p_it);

@@ -36,7 +36,9 @@ void OctTree::redistribute() {
     double t;
 
     treepieces.assignKeys(CkCallbackResumeThread((void*&)result));
-    if (*reinterpret_cast<bool*>(result->getData())) {
+    bool is_all_particles_in_universe = *reinterpret_cast<bool*>(result->getData());
+    delete result;    
+    if (is_all_particles_in_universe) {
         CkPrintf("[OctTree] All particles in universe. Reusing treepieces...\n");
 
         t = CkWallTimer();
@@ -54,12 +56,13 @@ void OctTree::redistribute() {
     }
 
     treepieces.checkParticlesChanged(CkCallbackResumeThread((void*&)result));
-    if (*reinterpret_cast<bool*>(result->getData())) {
+    bool is_particles_changed = *reinterpret_cast<bool*>(result->getData());
+    delete result;
+    if (is_particles_changed) {
         CkPrintf("[OctTree] Particles are changed\n");
     } else {
         CkPrintf("[OctTree] Particles are NOT changed\n");
     }
-    delete result;
 
     treepieces.computeParticleNum(CkCallbackResumeThread((void*&)result));
     CkPrintf("[OctTree] n_particles=%d\n", *reinterpret_cast<int*>(result->getData()));
