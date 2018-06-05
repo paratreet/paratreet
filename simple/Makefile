@@ -1,4 +1,4 @@
-CHARM_HOME ?= ~/charm
+CHARM_HOME ?= ~/multicore-linux64-omp-gcc
 STRUCTURE_PATH = ../utility/structures
 OPTS = -g -I$(STRUCTURE_PATH) -DDEBUG
 CHARMC = $(CHARM_HOME)/bin/charmc $(OPTS)
@@ -23,8 +23,10 @@ clean:
 
 common.h: $(STRUCTURE_PATH)/Vector3D.h $(STRUCTURE_PATH)/SFC.h
 
-Main.o: Main.C $(BINARY).decl.h common.h Reader.h TreePiece.h BoundingBox.h BufferedVec.h TreeElement.h CentroidVisitor.h GravityVisitor.h Utility.h
+Main.o: Main.C $(BINARY).decl.h common.h Reader.h TreePiece.h BoundingBox.h BufferedVec.h TreeElement.h CentroidVisitor.h GravityVisitor.h Utility.h CacheManager.h
 	$(CHARMC) -c $<
+
+CacheManager.h: $(BINARY).decl.h
 
 Reader.h: $(BINARY).decl.h common.h Particle.h BoundingBox.h Splitter.h
 
@@ -56,4 +58,4 @@ PressureVisitor.h: $(BINARY).decl.h CentroidData.h
 DensityVisitor.h: $(BINARY).decl.h CentroidData.h ParticleComp.h
 
 test: all
-	./charmrun ++local ./simple -f ../inputgen/5k.tipsy +p4
+	./charmrun ++local ./simple -f ../inputgen/1k.tipsy +p4

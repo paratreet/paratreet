@@ -13,6 +13,7 @@
 #include "DensityVisitor.h"
 #include "GravityVisitor.h"
 #include "PressureVisitor.h"
+#include "CacheManager.h"
 
 /* readonly */ CProxy_Main mainProxy;
 /* readonly */ CProxy_Reader readers;
@@ -25,6 +26,7 @@
 /* readonly */ int tree_type;
 /* readonly */ int num_iterations;
 /* readonly */ CProxy_TreeElement<CentroidData> centroid_calculator;
+/* readonly */ CProxy_CacheManager<CentroidData> centroid_cache;
 
 class Main : public CBase_Main {
   double total_start_time;
@@ -49,15 +51,17 @@ class Main : public CBase_Main {
   void doneUp() {
     CkPrintf("[Main, iter %d] Calculating Centroid: %lf seconds\n", cur_iteration, CkWallTimer() - start_time);
     start_time = CkWallTimer();
-    treepieces.startDown<GravityVisitor>();
+    TPHolder<CentroidData> tp_holder (treepieces);
+    centroid_cache.receiveTP(tp_holder);
+    treepieces.startDown<GravityVisitor>(centroid_cache);
   }
 
   void doneDown() {
     CkPrintf("[Main, iter %d] Downward traversal done: %lf seconds\n", cur_iteration, CkWallTimer() - start_time);
-    if (++cur_iteration < num_iterations)
+    /*if (++cur_iteration < num_iterations)
       nextIteration();
     else
-      terminate();
+      terminate();*/
   }
 
   void terminate() {
@@ -154,6 +158,7 @@ class Main : public CBase_Main {
     n_readers = CkNumPes();
     readers = CProxy_Reader::ckNew();
     centroid_calculator = CProxy_TreeElement<CentroidData>::ckNew();
+    centroid_cache = CProxy_CacheManager<CentroidData>::ckNew();
 
     // start!
     total_start_time = CkWallTimer();
@@ -238,8 +243,7 @@ class Main : public CBase_Main {
 
     // perform downward and upward traversals (Barnes-Hut)
     start_time = CkWallTimer();
-    TEHolder<CentroidData> te_holder (centroid_calculator);
-    treepieces.upOnly<CentroidVisitor>(te_holder);
+    treepieces.upOnly<CentroidVisitor>(centroid_calculator);
   }
 
   void nextIteration() {
@@ -293,8 +297,7 @@ class Main : public CBase_Main {
 
     // start traversals
     start_time = CkWallTimer();
-    TEHolder<CentroidData> te_holder (centroid_calculator);
-    treepieces.upOnly<CentroidVisitor>(te_holder);
+    treepieces.upOnly<CentroidVisitor>(centroid_calculator);
   }
 
   void findOctSplitters() {
