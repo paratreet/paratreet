@@ -6,7 +6,13 @@
 
 template <typename Data>
 struct Node {
-  enum Type { Invalid = 0, Leaf, EmptyLeaf, RemoteLeaf, RemoteEmptyLeaf, Remote, Internal, Boundary, RemoteAboveTPKey, CachedRemote, CachedRemoteLeaf, CachedBoundary };
+  enum Type {
+    Invalid = 0,
+    Leaf, EmptyLeaf, RemoteLeaf, RemoteEmptyLeaf,
+    Remote, Internal, Boundary, RemoteAboveTPKey,
+    CachedRemote, CachedRemoteLeaf, CachedBoundary,
+    Shared, Local
+  };
   
   Type type;
   Key key;

@@ -139,8 +139,53 @@ void TreePiece<Data>::build(const CkCallback &cb){
 #ifdef DEBUG
   CkPrintf("[TP %d] key: 0x%" PRIx64 " particles: %d\n", this->thisIndex, tp_key, particles.size());
 #endif
-  root = new Node<Data>(1, 0, particles.size(), &particles[0], 0, n_treepieces - 1, NULL);
-  recursiveBuild(root, false);
+  if (decomp_type == OCT_DECOMP) {
+    root = new Node<Data>(1, 0, particles.size(), &particles[0], 0, n_treepieces - 1, NULL);
+    recursiveBuild(root, false);
+  } else if (decomp_type == SFC_DECOMP) {
+    root = new Node<Data>(1, 0, particles.size(), &particles[0], 0, n_treepieces - 1, NULL);
+    root->type = Node<Data>::Shared;
+
+    std::queue<Node<Data>*> queue;
+    queue.push(root);
+
+    while (!queue.empty()) {
+      Node<Data>* node = queue.front();
+      queue.pop();
+
+      // Create each child
+      for (Key child_key = (node->key >> LOG_BRANCH_FACTOR);
+           child_key < (node->key >> LOG_BRANCH_FACTOR) + BRANCH_FACTOR;
+           child_key++)
+      {
+        // Decide node type
+        int start_key = Utility::removeLeadingZeros(child_key);
+        int end_key = Utility::removeLeadingZeros(child_key) + 1;
+        int start_idx = Utility::binarySearchG(start_key, node->particles, 0, node->n_particles);
+        int end_idx = Utility::binarySearchGE(end_key, node->particles, 0, node->n_particles);
+        
+        Node<Data>* child = new Node<Data>(
+          child_key, node->depth+1, end_idx-start_idx+1,
+          node->particles+start_idx-1, 0, 0, node
+        );
+        if (end_idx <= 0 || start_idx >= node->n_particles) {
+          child->type = Node<Data>::Remote;
+        } else if (start_idx > 0 && end_idx < node->n_particles) {
+          child->type = Node<Data>::Local;
+        } else {
+          child->type = Node<Data>::Shared;
+        }
+        
+        node->children.push_back(child);
+
+        bool is_light = (node->n_particles <= ceil(BUCKET_TOLERANCE * max_particles_per_leaf));
+        if (node->type == Node<Data>::Shared || (node->type == Node<Data>::Local && is_light)) {
+          queue.push(child);
+        }
+      }
+
+    }
+  }
 
   this->contribute(cb);
 }
