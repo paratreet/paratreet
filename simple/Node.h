@@ -33,6 +33,10 @@ struct Node {
     p | owner_tp_end;
     p | wait_count;
     p | tp_index;
+    if (p.isUnpacking()) {
+      particles = NULL;
+      children = std::vector<Node*> ();
+    }
   }
 
   Node() {
@@ -53,9 +57,30 @@ struct Node {
     this->tp_index = -1;
   }
 
+  Node (const Node& n) {
+    type = n.type;
+    key = n.key;
+    depth = n.depth;
+    data = n.data;
+    n_particles = n.n_particles;
+    particles = n.particles;
+    owner_tp_start = n.owner_tp_start;
+    owner_tp_end = n.owner_tp_end;
+    parent = n.parent;
+    n_children = n.n_children;
+    children = std::vector<Node*> (); 
+    //if (key == 14) CkPrintf("children size = %d\n\n\n", children.size());
+    /*for (int i = 0; i < n.children.size(); i++) {
+      children.push_back(n.children[i]);
+    }*/
+    wait_count = n.wait_count;
+    tp_index = n.tp_index;
+  }
+
   void triggerFree() {
     for (typename std::vector<Node*>::const_iterator it = children.begin();
          it != children.end(); ++it) {
+         if (*it == NULL) continue;
          (*it)->triggerFree();
          delete *it;
     }

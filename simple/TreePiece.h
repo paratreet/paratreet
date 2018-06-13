@@ -503,6 +503,7 @@ void TreePiece<Data>::goDown(Key new_key) {
       }
     } 
     if (!curr_nodes[i].size()) {
+      if (trav_tops[i] == NULL) trav_tops[i] = cache_manager.ckLocalBranch()->root;
       if (trav_tops[i]->parent == NULL) {
         num_done++;
       }
@@ -520,7 +521,7 @@ void TreePiece<Data>::goDown(Key new_key) {
     }
   }
   if (num_done == leaves.size()) {
-    CkPrintf("tp %d finished!\n", this->thisIndex);
+    //CkPrintf("tp %d finished!\n", this->thisIndex);
     CkCallback cb(CkReductionTarget(Main, doneDown), mainProxy);
     this->contribute(cb);
   }

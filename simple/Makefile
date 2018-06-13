@@ -1,4 +1,4 @@
-CHARM_HOME ?= ~/multicore-linux64-omp-gcc
+CHARM_HOME ?= ~/charm
 STRUCTURE_PATH = ../utility/structures
 OPTS = -g -I$(STRUCTURE_PATH) -DDEBUG
 CHARMC = $(CHARM_HOME)/bin/charmc $(OPTS)
