@@ -44,7 +44,11 @@ mainmodule simple {
   message MultiMsg<CentroidData>;
 
   template <typename Data>
+#ifdef SMPCACHE
+  nodegroup CacheManager {
+#else
   group CacheManager {
+#endif
     entry CacheManager();
     entry void receiveTP(TPHolder<Data>);
     template <typename Visitor>
@@ -53,7 +57,11 @@ mainmodule simple {
     entry void restoreData(Key, Data);
   };
 
+#ifdef SMPCACHE
+  nodegroup CacheManager<CentroidData>;
+#else
   group CacheManager<CentroidData>;
+#endif
   extern entry void CacheManager<CentroidData> addCache<GravityVisitor> (MultiMsg<CentroidData>*);
   extern entry void CacheManager<CentroidData> restoreData<GravityVisitor> (Key, CentroidData);
   extern entry void CacheManager<CentroidData> addCache<DensityVisitor> (MultiMsg<CentroidData>*);

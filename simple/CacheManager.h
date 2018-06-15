@@ -14,17 +14,21 @@ template <typename Data>
 class CacheManager : public CBase_CacheManager<Data> {
 public:
   CProxy_TreePiece<Data> tp_proxy;
-  //CmiNodeLock rlock, clock, tlock;
+#ifdef SMPCACHE
+  CmiNodeLock clock, tlock;
+#endif
   Node<Data>* root;
   std::map<Key, Node<Data>*> tps;
-  std::map<Key, std::vector<int> > curr_waiting;
+  std::map<Key, std::set<int> > curr_waiting;
+  std::vector<Node<Data>*> delete_at_end;
 
   CacheManager() { // : root(nullptr), curr_waiting (std::map<Key, std::vector<int> >()) {}
     root = new Node<Data>(1, 0, 0, NULL, 0, 0, NULL);
     root->type = Node<Data>::Boundary;
-    //rlock = CmiCreateLock();
-    //clock = CmiCreateLock();
-    //tlock = CmiCreateLock();
+#ifdef SMPCACHE
+    clock = CmiCreateLock();
+    tlock = CmiCreateLock();
+#endif
   }
 
   void receiveTP(TPHolder<Data> tp_holderi) {
@@ -32,6 +36,7 @@ public:
   }
 
   ~CacheManager() {
+    for (int i = 0; i < delete_at_end.size(); i++) delete delete_at_end[i];
     root->triggerFree();
     delete root;
     curr_waiting.clear();
@@ -49,7 +54,8 @@ public:
   Node<Data> *getNode(Key);
   template <typename Visitor>
   void resumeTraversals(Key);
-  void insertNode(Node<Data>*);
+  void insertNode(Node<Data>*, bool, bool);
+  void swapIn(Node<Data>*);
 };
 
 template <typename Data>
@@ -62,25 +68,35 @@ void CacheManager<Data>::addCache(MultiMsg<Data>* multimsg) {
 template <typename Data>
 template <typename Visitor>
 void CacheManager<Data>::addCacheHelper(Particle* particles, int n_particles, Node<Data>* nodes, int n_nodes) {
-  int p_index = 0;
-  for (int j = 0; j < n_nodes; j++) {
-    Node<Data>* node = new Node<Data>(nodes[j]);
-    if (node->type == Node<Data>::Leaf || node->type == Node<Data>::EmptyLeaf) {
-      node->type = Node<Data>::CachedRemoteLeaf;
-      if (node->n_particles) node->particles = new Particle [node->n_particles];
-      for (int i = 0; i < node->n_particles; i++) {
-        if (p_index < n_particles) node->particles[i] = particles[p_index++];
-        else CkPrintf("yikes not good\n");
+  Node<Data>* first_node = findNode(nodes[0].key), *first_added_node;
+  if (first_node->type != Node<Data>::CachedRemote && first_node->type != Node<Data>::CachedRemoteLeaf) {
+    int p_index = 0;
+    for (int j = 0; j < n_nodes; j++) {
+      Node<Data>* node = new Node<Data>(nodes[j]);
+      if (j == 0) first_added_node = node;
+      if (node->type == Node<Data>::Leaf || node->type == Node<Data>::EmptyLeaf) {
+        node->type = Node<Data>::CachedRemoteLeaf;
+        if (node->n_particles) node->particles = new Particle [node->n_particles];
+        for (int i = 0; i < node->n_particles; i++) {
+          if (p_index < n_particles) node->particles[i] = particles[p_index++];
+          else CkPrintf("yikes not good\n");
+        }
       }
+      else if (node->type == Node<Data>::Internal) {
+        node->type = Node<Data>::CachedRemote;
+      }
+#ifdef SMPCACHE
+      if (j == 0) insertNode(node, false, false);
+      else insertNode(node, false, true);
+#else
+      insertNode(node, false, true);
+#endif
     }
-    else if (node->type == Node<Data>::Internal) {
-      node->type = Node<Data>::CachedRemote;
-    }
-    insertNode(node);
   }
-  for (int i = 0; i < n_nodes; i++) {
-    resumeTraversals<Visitor>(nodes[i].key);
-  }
+#ifdef SMPCACHE
+  swapIn(first_added_node);
+#endif
+  resumeTraversals<Visitor>(nodes[0].key);
 }
 /*
 template <typename Data>
@@ -107,74 +123,94 @@ Node<Data>* CacheManager<Data>::getNode(Key key) {
 template <typename Data>
 template <typename Visitor>
 void CacheManager<Data>::resumeTraversals (Key key) {
-  //CmiLock(clock);
+#ifdef SMPCACHE
+  CmiLock(clock);
+#endif
   if (curr_waiting.count(key)) {
-    std::vector<int> indices = curr_waiting[key];
-    for (int j = 0; j < indices.size(); j++) {
+    std::set<int> indices = curr_waiting[key];
+    for (std::set<int>::iterator it = indices.begin(); it != indices.end(); it++) {
       //CkPrintf("restoring tp %d\n", indices[j]);
-      tp_proxy[indices[j]].template goDown<Visitor>(key);
+      tp_proxy[*it].template goDown<Visitor>(key);
     }
     curr_waiting.erase(key);
   }
-  //CmiUnlock(clock);
+#ifdef SMPCACHE
+  CmiUnlock(clock);
+#endif
 }
 
 template <typename Data>
 template <typename Visitor>
 void CacheManager<Data>::restoreData(Key key, Data di) {
-  //CkPrintf("restoring %d's data on pe %d\n", key, CkMyPe());
-  Node<Data>* node = new Node<Data>();
-  node->data = di;
-  node->key = key;
-  node->type = Node<Data>::CachedBoundary;
-  node->n_children = 8; 
-  insertNode(node);
-  for (int i = 0; i < node->children.size(); i++) {
-    if (node->children[i]->type == Node<Data>::Remote)
-      node->children[i]->type = Node<Data>::RemoteAboveTPKey;
+  if (findNode(key)->type != Node<Data>::CachedBoundary) {
+    //CkPrintf("restoring %d's data on pe %d\n", key, CkMyPe());
+    Node<Data>* node = new Node<Data>();
+    node->data = di;
+    node->key = key;
+    node->type = Node<Data>::CachedBoundary;
+    node->n_children = 8; 
+    insertNode(node, true, true);
   }
   resumeTraversals<Visitor>(key);
+}
+
+template <typename Data>
+void CacheManager<Data>::swapIn(Node<Data>* to_swap) {
+  Node<Data>* copy = findNode(to_swap->key);
+  Node<Data>* parent = copy->parent;
+  delete_at_end.push_back(copy);
+  parent->children[to_swap->key % 8] = to_swap;
+  to_swap->parent = copy->parent;
 }
 
 template <typename Data>
 bool CacheManager<Data>::connect(Node<Data>* node) {
   Node<Data>* copy = findNode(node->key);
   if (copy == NULL) {
-    //CmiLock(tlock);
+#ifdef SMPCACHE
+    CmiLock(tlock);
+#endif
     tps.insert(std::make_pair(node->key, node));
-    //CmiUnlock(tlock);
+#ifdef SMPCACHE
+    CmiUnlock(tlock);
+#endif
     return false;
   }
-  //CkPrintf("didnt add to tps\n");
+  CkPrintf("didnt add to tps\n");
   // need to lock this? no i dont i dont think
-  Node<Data>* parent = copy->parent;
-  delete copy;
-  parent->children[node->key % 8] = node;
+  swapIn(node);
   return true;
 }
 
 template <typename Data>
-void CacheManager<Data>::insertNode(Node<Data>* node) {
+void CacheManager<Data>::insertNode(Node<Data>* node, bool above_tp, bool should_swap) {
+  //CkPrintf("start %d\n", CkMyPe());
   for (int i = 0; i < node->n_children; i++) {
     Node<Data>* new_child;
-    //CmiLock(tlock);
+#ifdef SMPCACHE
+    CmiLock(tlock);
+#endif
     if (tps.count(node->key * 8 + i)) {
       new_child = tps[node->key * 8 + i];
       tps.erase(new_child->key);
     } 
     else {
       new_child = new Node<Data> (node->key * 8 + i, node->depth+1, 0, NULL, 0, 0, node);
-      new_child->type = Node<Data>::Remote;
+      new_child->type = (above_tp) ? Node<Data>::RemoteAboveTPKey : Node<Data>::Remote;
       new_child->tp_index = node->tp_index;
     }
-    //CmiUnlock(tlock);
-    node->children.push_back(new_child); 
+#ifdef SMPCACHE
+    CmiUnlock(tlock);
+#endif
+    node->children.push_back(new_child);
   }
-  Node<Data>* to_replace = findNode(node->key);
-  if (to_replace->parent) { // dont think i need to lock, again
-    to_replace->parent->children[node->key % 8] = node;
+  if (should_swap) {
+    if (node->key == 1) {
+      delete_at_end.push_back(root);
+      root = node;
+    }
+    else swapIn(node);
   }
-  else root = node;
 }
 
 /*  CmiLock(rlock);
@@ -241,7 +277,5 @@ Node<Data>* CacheManager<Data>::findNode(Key key) {
   }
   return node;
 }
-
-
 
 #endif //SIMPLE_CACHEMANAGER_H_

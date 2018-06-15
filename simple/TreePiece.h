@@ -45,6 +45,9 @@ class TreePiece : public CBase_TreePiece<Data> {
   CProxy_TreeElement<Data> global_data;
   CProxy_CacheManager<Data> cache_manager;
   std::set<Key> curr_waiting;
+#ifdef SMPCACHE
+  std::set<std::pair<Key, int>> filled_requests;
+#endif
   int num_done;
   // debug
   std::vector<Particle> flushed_particles;
@@ -360,9 +363,9 @@ void TreePiece<Data>::startDown(CProxy_CacheManager<Data> cache_manageri) {
   num_done = 0;
   trav_tops = std::vector<Node<Data>*> (leaves.size(), root);
   for (int i = 0; i < curr_nodes.size(); i++) {
-    curr_nodes[i].insert(root->key);
+    curr_nodes[i].insert(1);
   }
-  goDown<Visitor>(root->key);
+  goDown<Visitor> (1);
 }
 
 template <typename Data>
@@ -412,8 +415,14 @@ Node<Data>* TreePiece<Data>::findNode(Key key, bool start_from_tp_key) {
 template <typename Data>
 template <typename Visitor>
 void TreePiece<Data>::requestNodes(Key key, CProxy_CacheManager<Data> cache_manager, int cm_index) {
+#ifdef SMPCACHE
+  CkPrintf("BIG ISSUES FAM, requesting key %d, type %d on tp_key %d\n", key, findNode(key, true)->type, tp_key);
+  if (cm_index == CkMyNode()) return;
+  if (filled_requests.count(std::make_pair(key, cm_index))) return;
+  filled_requests.insert(std::make_pair(key, cm_index));
+#else
   if (cm_index == CkMyPe()) return;
-
+#endif
   Node<Data>* node = findNode(key, true);
   std::vector<Node<Data>> nodes;
   std::vector<Particle> sending_particles;
@@ -444,7 +453,7 @@ template <typename Visitor>
 void TreePiece<Data>::goDown(Key new_key) {
   Visitor v;
   if (new_key == 1) root = cache_manager.ckLocalBranch()->root;
-  std::set<Key> to_go_down; 
+  std::set<Key> to_go_down;
   for (int i = 0; i < leaves.size(); i++) {
     if (curr_nodes[i].count(new_key) == 0) continue;
     curr_nodes[i].erase(new_key);
@@ -453,17 +462,23 @@ void TreePiece<Data>::goDown(Key new_key) {
     while (nodes.size()) {
       Node<Data>* node = nodes.top();
       nodes.pop();
-      //CmiLock(cache_manager.ckLocalBranch()->clock);
+#ifdef SMPCACHE
+      CmiLock(cache_manager.ckLocalBranch()->clock);
+#endif
       if (cache_manager.ckLocalBranch()->curr_waiting.count(node->key)) {
         //CkPrintf("non zero waiting count\n");
         curr_nodes[i].insert(node->key);
-        if (cache_manager.ckLocalBranch()->curr_waiting[node->key].back() != this->thisIndex) // wont work on nodegroup
-          cache_manager.ckLocalBranch()->curr_waiting[node->key].push_back(this->thisIndex);
-        //CmiUnlock(cache_manager.ckLocalBranch()->clock);
+        if (!cache_manager.ckLocalBranch()->curr_waiting[node->key].count(this->thisIndex))
+          cache_manager.ckLocalBranch()->curr_waiting[node->key].insert(this->thisIndex); 
+#ifdef SMPCACHE
+        CmiUnlock(cache_manager.ckLocalBranch()->clock);
+#endif
         continue;
       }
-      //CmiUnlock(cache_manager.ckLocalBranch()->clock);
-      //CkPrintf("key = %d, type = %d\n", node->key, node->type);
+#ifdef SMPCACHE
+      CmiUnlock(cache_manager.ckLocalBranch()->clock);
+#endif
+      //CkPrintf("tp %d, key = %d, type = %d, pe %d\n", this->thisIndex, node->key, node->type, CkMyPe());
       bool waiting = false;
       switch (node->type) {
         case Node<Data>::CachedBoundary:
@@ -483,23 +498,37 @@ void TreePiece<Data>::goDown(Key new_key) {
         } 
         case Node<Data>::Boundary:
         case Node<Data>::RemoteAboveTPKey: {
+#ifdef SMPCACHE
+          global_data[node->key].template requestData<Visitor>(cache_manager, CkMyNode());
+#else
           global_data[node->key].template requestData<Visitor>(cache_manager, CkMyPe());
+#endif
           waiting = true;
           break;
         }
         case Node<Data>::Remote:
         case Node<Data>::RemoteLeaf: {
+#ifdef SMPCACHE
+          this->thisProxy[node->tp_index].template requestNodes<Visitor>(node->key, cache_manager, CkMyNode());
+#else
           this->thisProxy[node->tp_index].template requestNodes<Visitor>(node->key, cache_manager, CkMyPe());
+#endif
           waiting = true;          
         }
         default: break; 
       }
       if (waiting) {
         curr_nodes[i].insert(node->key);
-        std::vector<int> myvec (1, this->thisIndex);
-        //CmiLock(cache_manager.ckLocalBranch()->clock);
-        cache_manager.ckLocalBranch()->curr_waiting.insert(make_pair(node->key, myvec));
-        //CmiUnlock(cache_manager.ckLocalBranch()->clock);
+        std::set<int> myset;
+        myset.insert(this->thisIndex);
+#ifdef SMPCACHE
+        CmiLock(cache_manager.ckLocalBranch()->clock);
+#endif
+        if (cache_manager.ckLocalBranch()->curr_waiting.count(node->key)) cache_manager.ckLocalBranch()->curr_waiting[node->key].insert(this->thisIndex);
+        else cache_manager.ckLocalBranch()->curr_waiting.insert(make_pair(node->key, myset));
+#ifdef SMPCACHE
+        CmiUnlock(cache_manager.ckLocalBranch()->clock);
+#endif
       }
     } 
     if (!curr_nodes[i].size()) {
@@ -519,14 +548,30 @@ void TreePiece<Data>::goDown(Key new_key) {
         trav_tops[i] = trav_tops[i]->parent;
       }
     }
+    else {
+      //CkPrintf("tp %d leaf %d waiting on keys: ", this->thisIndex, i);
+#ifdef SMPCACHE
+      for (std::set<Key>::iterator it = curr_nodes[i].begin(); it != curr_nodes[i].end(); it++) {
+        switch (findNode(*it)->type) {
+          case Node<Data>::CachedRemote: 
+          case Node<Data>::CachedRemoteLeaf: 
+          case Node<Data>::CachedBoundary:
+            CmiLock(cache_manager.ckLocalBranch()->clock);
+            cache_manager.ckLocalBranch()->curr_waiting.erase(*it);
+            CmiUnlock(cache_manager.ckLocalBranch()->clock);
+            to_go_down.insert(*it);
+        }
+      }
+#endif
+    }
   }
   if (num_done == leaves.size()) {
-    //CkPrintf("tp %d finished!\n", this->thisIndex);
+    //CkPrintf("tp %d finished!, we got key %d\n", this->thisIndex, new_key);
     CkCallback cb(CkReductionTarget(Main, doneDown), mainProxy);
     this->contribute(cb);
   }
   for (std::set<Key>::iterator it = to_go_down.begin(); it != to_go_down.end(); it++) {
-    goDown<Visitor> (*it);
+    this->thisProxy[this->thisIndex].goDown<Visitor> (*it);
   } 
 }
 

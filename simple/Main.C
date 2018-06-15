@@ -33,6 +33,7 @@ class Main : public CBase_Main {
   double start_time;
   std::string input_str;
   int cur_iteration;
+  bool down_finished;
 
   BoundingBox universe;
   Key smallest_particle_key;
@@ -51,14 +52,18 @@ class Main : public CBase_Main {
   void doneUp() {
     CkPrintf("[Main, iter %d] Calculating Centroid: %lf seconds\n", cur_iteration, CkWallTimer() - start_time);
     start_time = CkWallTimer();
+    down_finished = false;
     TPHolder<CentroidData> tp_holder (treepieces);
+    //centroid_calculator.print(); 
     centroid_cache.receiveTP(tp_holder);
     treepieces.startDown<GravityVisitor>(centroid_cache);
   }
 
   void doneDown() {
+    if (down_finished) return;
+    else down_finished = true;
     CkPrintf("[Main, iter %d] Downward traversal done: %lf seconds\n", cur_iteration, CkWallTimer() - start_time);
-    /*if (++cur_iteration < num_iterations)
+    CkExit(); /*if (++cur_iteration < num_iterations)
       nextIteration();
     else
       terminate();*/
