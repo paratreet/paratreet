@@ -54,7 +54,7 @@ class Main : public CBase_Main {
     start_time = CkWallTimer();
     down_finished = false;
     TPHolder<CentroidData> tp_holder (treepieces);
-    //centroid_calculator.print(); 
+    centroid_calculator.print(); 
     centroid_cache.receiveTP(tp_holder);
     treepieces.startDown<GravityVisitor>(centroid_cache);
   }

@@ -19,9 +19,6 @@ private:
   int wait_count;
   int tp_index;
   CProxy_TreePiece<Data> tp_proxy;
-#ifdef SMPCACHE
-  std::set<int> filled_requests;
-#endif
 public:
   TreeElement();
   void reset();
@@ -30,7 +27,7 @@ public:
   template <typename Visitor> 
   void requestData(CProxy_CacheManager<Data>, int);
   void print() {
-    CkPrintf("[TE %d] with tp_index %d\n", this->thisIndex, tp_index);
+    CkPrintf("[TE %d] on PE %d from tp_index %d\n", this->thisIndex, CkMyPe(), tp_index);
   }
 };
 
@@ -52,14 +49,7 @@ template <typename Data>
 template <typename Visitor>
 void TreeElement<Data>::requestData(CProxy_CacheManager<Data> cache_manager, int cm_index) {
   if (tp_index >= 0) tp_proxy[tp_index].template requestNodes<Visitor>(this->thisIndex, cache_manager, cm_index);
-  else {
-#ifdef SMPCACHE
-    if (!filled_requests.count(cm_index)) cache_manager[cm_index].template restoreData<Visitor> (this->thisIndex, d); 
-    filled_requests.insert(cm_index);
-#else
-    cache_manager[cm_index].template restoreData<Visitor>(this->thisIndex, d);
-#endif
-  }
+  else cache_manager[cm_index].template restoreData<Visitor>(this->thisIndex, d);
 }
 
 template <typename Data>

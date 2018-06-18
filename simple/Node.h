@@ -3,6 +3,7 @@
 
 #include "common.h"
 #include "Particle.h"
+#include <atomic>
 
 template <typename Data>
 struct Node {
@@ -21,6 +22,8 @@ struct Node {
   int n_children;
   int wait_count;
   int tp_index;
+  CmiNodeLock qlock;
+  std::set<int> waiting;
 
   void pup (PUP::er& p) {
     pup_bytes(&p, (void *)&type, sizeof(Type));
@@ -35,7 +38,6 @@ struct Node {
     p | tp_index;
     if (p.isUnpacking()) {
       particles = NULL;
-      children = std::vector<Node*> ();
     }
   }
 
@@ -55,6 +57,8 @@ struct Node {
     this->n_children = 0;
     this->wait_count = -1;
     this->tp_index = -1;
+    this->qlock = CmiCreateLock();
+    this->waiting = std::set<int> ();
   }
 
   Node (const Node& n) {
@@ -68,21 +72,22 @@ struct Node {
     owner_tp_end = n.owner_tp_end;
     parent = n.parent;
     n_children = n.n_children;
-    children = std::vector<Node*> (); 
-    //if (key == 14) CkPrintf("children size = %d\n\n\n", children.size());
+    if ((type == Leaf || type == EmptyLeaf) && n_children) CkPrintf("not sure whats going on\n");
     /*for (int i = 0; i < n.children.size(); i++) {
       children.push_back(n.children[i]);
     }*/
     wait_count = n.wait_count;
     tp_index = n.tp_index;
+    qlock = CmiCreateLock();
+    waiting = std::set<int> ();
   }
 
   void triggerFree() {
-    for (typename std::vector<Node*>::const_iterator it = children.begin();
-         it != children.end(); ++it) {
-         if (*it == NULL) continue;
-         (*it)->triggerFree();
-         delete *it;
+    for (int i = 0; i < children.size(); i++) {
+      Node* node = children[i];
+      if (node == NULL) continue;
+      node->triggerFree();
+      delete node;
     }
     if (type == CachedRemoteLeaf && n_particles) {
       delete[] particles;

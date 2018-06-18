@@ -1,4 +1,4 @@
-CHARM_HOME ?= ~/charm
+CHARM_HOME ?= ~/charm/multicore-linux-x86_64
 STRUCTURE_PATH = ../utility/structures
 OPTS = -g -I$(STRUCTURE_PATH) -DDEBUG
 CHARMC = $(CHARM_HOME)/bin/charmc $(OPTS)
@@ -16,7 +16,7 @@ proj: $(OBJS)
 	$(CHARMC) -language charm++ -tracemode projections -o $(BINARY) $(OBJS) $(LD_LIBS)
 
 $(BINARY).decl.h: $(BINARY).ci
-	$(CHARMC)  $(BINARY).ci
+	$(CHARMC) $(BINARY).ci
 
 clean:
 	rm -f *.decl.h *.def.h conv-host *.o $(BINARY) charmrun
@@ -58,4 +58,7 @@ PressureVisitor.h: $(BINARY).decl.h CentroidData.h
 DensityVisitor.h: $(BINARY).decl.h CentroidData.h ParticleComp.h
 
 test: all
-	./charmrun ++local ./simple -f ../inputgen/1k.tipsy +p4
+	./charmrun ++local ./simple -f ../inputgen/100.tipsy +p3
+
+nottest:
+	./charmrun ++local ./simple -f ../inputgen/10k.tipsy +p3 ++ppn 3 +pemap 1-3 +commap 0
