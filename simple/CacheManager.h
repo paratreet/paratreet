@@ -9,7 +9,6 @@
 #include <unordered_map>
 #include <vector>
 #include "templates.h"
-#include <atomic>
 
 template <typename Data>
 class CacheManager : public CBase_CacheManager<Data> {
@@ -21,13 +20,14 @@ public:
   Node<Data>* root;
   std::map<Key, Node<Data>*> tps;
   std::vector<Node<Data>*> delete_at_end;
+  std::map<Key, Node<Data>*> missed; // not ideal but barely gets used
 
   CacheManager() { // : root(nullptr), curr_waiting (std::map<Key, std::vector<int> >()) {}
     Node<Data>* node = new Node<Data>(1, 0, 0, NULL, 0, 0, NULL);
     node->type = Node<Data>::Boundary;
     root = node;
 #ifdef SMPCACHE
-    tlock = CmiCreateLock();
+    tlock = CmiCreateLock(); //tlock both locks tps and controls connecting
     dlock = CmiCreateLock();
 #endif
   }
@@ -123,8 +123,11 @@ void CacheManager<Data>::restoreData(Key key, Data di) {
   node->key = key;
   node->type = Node<Data>::CachedBoundary;
   node->n_children = 8;
+  node->children = std::vector<Node<Data>*> (8, NULL);
   node->parent = (key > 1) ? findNode(key / 8) : NULL;
-  if (key == 15) {if (node->parent) CkPrintf("we coo\n\n"); else CkPrintf("we NOT coo\n\n");}
+  node->depth = (node->parent) ? node->depth + 1 : 0;
+  //CkPrintf("adding %d\n", key);
+  //if (key == 15) {if (node->parent) CkPrintf("we coo\n\n"); else CkPrintf("we NOT coo\n\n");}
   resumeTraversals<Visitor>(key, insertNode(node, true, true));
 }
 
@@ -132,11 +135,10 @@ template <typename Data>
 int CacheManager<Data>::swapIn(Node<Data>* to_swap) {
   Node<Data>* copy;
   if (to_swap->key > 1) {
-    if (to_swap->parent->children.size() < 8) CkPrintf("uhoh!\n");
+    if (to_swap->parent->children.size() < 8) CkPrintf("node %d of type %d has %d children\n", to_swap->parent->key, to_swap->parent->type, to_swap->parent->children.size());
     copy = to_swap->parent->children[to_swap->key % 8];
     if (copy == to_swap) CkPrintf("ISSUE\n");
     to_swap->parent->children[to_swap->key % 8] = to_swap;
-    if (to_swap->key >= 120 && to_swap->key < 128) CkPrintf("\n\nare we good early? %d should be 15\n\n", to_swap->parent->key);
   }
   else {
     copy = root;
@@ -155,46 +157,56 @@ int CacheManager<Data>::swapIn(Node<Data>* to_swap) {
 
 template <typename Data>
 int CacheManager<Data>::connect(Node<Data>* node) {
-  Node<Data>* copy = findNode(node->key);
-  if (copy == NULL) {
+  //CkPrintf("connecting on pe %d\n", CkMyPe());
 #ifdef SMPCACHE
-    CmiLock(tlock);
+  CmiLock(tlock);
 #endif
-    tps.insert(std::make_pair(node->key, node));
+  if (missed.count(node->key)) {
+    node->parent = missed[node->key];
 #ifdef SMPCACHE
     CmiUnlock(tlock);
-#endif
-    return -1;
+#endif  
+    return swapIn(node);
   }
-  CkPrintf("didnt add to tps\n");
-  return swapIn(node);
+  tps.insert(std::make_pair(node->key, node));
+#ifdef SMPCACHE
+  CmiUnlock(tlock);
+#endif
+  return -1;
 }
 
 template <typename Data>
 int CacheManager<Data>::insertNode(Node<Data>* node, bool above_tp, bool should_swap) {
-  CkPrintf("inserting node %d of type %d with %d children\n", node->key, node->type, node->n_children);
+  //CkPrintf("inserting node %d of type %d with %d children\n", node->key, node->type, node->n_children);
   for (int i = 0; i < node->n_children; i++) {
     Node<Data>* new_child;
+    Key child_key = (node->key << 3) + i;
+    bool add_placeholder = false;
+    if (above_tp) {
 #ifdef SMPCACHE
-    CmiLock(tlock);
+      CmiLock(tlock);
 #endif
-    if (tps.count(node->key * 8 + i)) {
-      new_child = tps[node->key * 8 + i];
-      //CkPrintf("connected tp with key %d\n", new_child->key);
-      new_child->parent = node;
-      tps.erase(new_child->key);
-    } 
-    else {
-      new_child = new Node<Data> (node->key * 8 + i, node->depth+1, 0, NULL, 0, 0, node);
+      if (tps.count(child_key)) {
+        new_child = tps[child_key];
+        new_child->parent = node;
+      } 
+      else {
+        missed.insert(std::make_pair(child_key, node));
+        add_placeholder = true;
+      }
+#ifdef SMPCACHE
+      CmiUnlock(tlock);
+#endif
+    }
+    if (!above_tp || add_placeholder) {
+      new_child = new Node<Data> (child_key, node->depth+1, 0, NULL, 0, 0, node);
       new_child->type = (above_tp) ? Node<Data>::RemoteAboveTPKey : Node<Data>::Remote;
       new_child->tp_index = node->tp_index;
     }
-#ifdef SMPCACHE
-    CmiUnlock(tlock);
-#endif
-    node->children.push_back(new_child);
+    node->children[i] = new_child;
   } 
-  return should_swap ? swapIn(node) : -1;
+  int retval = should_swap ? swapIn(node) : -1;
+  return retval;
 }
 
 template <typename Data>

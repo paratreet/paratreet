@@ -360,7 +360,7 @@ void TreePiece<Data>::startDown(CProxy_CacheManager<Data> cache_manageri) {
   for (int i = 0; i < curr_nodes.size(); i++) {
     curr_nodes[i].insert(1);
   }
-  if (this->thisIndex == 11) goDown<Visitor> (1);
+  goDown<Visitor> (1);
 }
 
 template <typename Data>
@@ -527,7 +527,7 @@ void TreePiece<Data>::goDown(Key new_key) {
     }
   }
   if (num_done == leaves.size()) {
-    CkPrintf("tp %d finished!, we got key %d\n", this->thisIndex, new_key);
+    //CkPrintf("tp %d finished!, we got key %d\n", this->thisIndex, new_key);
     CkCallback cb(CkReductionTarget(Main, doneDown), mainProxy);
     this->contribute(cb);
   }
