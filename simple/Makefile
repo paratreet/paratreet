@@ -1,6 +1,6 @@
-CHARM_HOME ?= ~/charm/multicore-linux-x86_64
+CHARM_HOME ?= ~/charm/netlrts-linux-x86_64-smp
 STRUCTURE_PATH = ../utility/structures
-OPTS = -g -I$(STRUCTURE_PATH) -DDEBUG
+OPTS = -g -I$(STRUCTURE_PATH) -DSMPCACHE
 CHARMC = $(CHARM_HOME)/bin/charmc $(OPTS)
 LD_LIBS = -L$(STRUCTURE_PATH) -lTipsy
 
@@ -23,7 +23,7 @@ clean:
 
 common.h: $(STRUCTURE_PATH)/Vector3D.h $(STRUCTURE_PATH)/SFC.h
 
-Main.o: Main.C $(BINARY).decl.h common.h Reader.h TreePiece.h BoundingBox.h BufferedVec.h TreeElement.h CentroidVisitor.h GravityVisitor.h Utility.h CacheManager.h
+Main.o: Main.C $(BINARY).decl.h common.h Reader.h TreePiece.h BoundingBox.h BufferedVec.h TreeElement.h CentroidVisitor.h GravityVisitor.h Utility.h CacheManager.h Node.h
 	$(CHARMC) -c $<
 
 CacheManager.h: $(BINARY).decl.h
@@ -57,8 +57,10 @@ PressureVisitor.h: $(BINARY).decl.h CentroidData.h
 
 DensityVisitor.h: $(BINARY).decl.h CentroidData.h ParticleComp.h
 
-test: all
+Node.h: common.h
+
+nottest: all
 	./charmrun ++local ./simple -f ../inputgen/100.tipsy +p3
 
-nottest:
+test: all
 	./charmrun ++local ./simple -f ../inputgen/10k.tipsy +p3 ++ppn 3 +pemap 1-3 +commap 0

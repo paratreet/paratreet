@@ -3,7 +3,7 @@
 
 #include "common.h"
 #include "Particle.h"
-#include <atomic>
+#include <array>
 
 template <typename Data>
 struct Node {
@@ -18,7 +18,7 @@ struct Node {
   int owner_tp_start;
   int owner_tp_end;
   Node* parent;
-  std::vector<Node*> children;
+  std::array<Node*, BRANCH_FACTOR> children;
   int n_children;
   int wait_count;
   int tp_index;
@@ -41,8 +41,11 @@ struct Node {
     }
   }
 
-  Node() {
-    Node(-1, -1, 0, NULL, 0, 0, NULL);
+  Node(Key key, Type type, Data data, int n_children, Node* parent) :
+    Node(key, parent ? parent->depth + 1 : 0, 0, NULL, 0, 0, parent) {
+    this->type = type;
+    this->data = data;
+    this->n_children = n_children;
   }
   Node(Key key, int depth, int n_particles, Particle* particles, int owner_tp_start, int owner_tp_end, Node* parent) {
     this->type = Invalid;
@@ -58,7 +61,7 @@ struct Node {
     this->wait_count = -1;
     this->tp_index = -1;
     this->qlock = CmiCreateLock();
-    this->waiting = std::set<int> ();
+    for (int i = 0; i < BRANCH_FACTOR; i++) this->children[i] = NULL;
   }
 
   Node (const Node& n) {
@@ -72,14 +75,10 @@ struct Node {
     owner_tp_end = n.owner_tp_end;
     parent = n.parent;
     n_children = n.n_children;
-    if ((type == Leaf || type == EmptyLeaf) && n_children) CkPrintf("not sure whats going on\n");
-    /*for (int i = 0; i < n.children.size(); i++) {
-      children.push_back(n.children[i]);
-    }*/
     wait_count = n.wait_count;
     tp_index = n.tp_index;
     qlock = CmiCreateLock();
-    waiting = std::set<int> ();
+    for (int i = 0; i < BRANCH_FACTOR; i++) this->children[i] = NULL;
   }
 
   void triggerFree() {

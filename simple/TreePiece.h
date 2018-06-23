@@ -277,7 +277,7 @@ bool TreePiece<Data>::recursiveBuild(Node<Data>* node, bool saw_tp_key) {
       // create child and store in vector
       Node<Data>* child = new Node<Data>(child_key, node->depth + 1, n_particles, node->particles + start, 0, n_treepieces - 1, node);
       //Node<Data>* child = new Node<Data>(child_key, node->depth + 1, node->particles + start, n_particles, child_owner_start, child_owner_end, node);
-      node->children.push_back(child);
+      node->children[i] = child;
 
       // recursive tree build
       bool local = recursiveBuild(child, saw_tp_key);
@@ -313,8 +313,16 @@ void TreePiece<Data>::upOnly(CProxy_TreeElement<Data> te_proxy) {
     Node<Data>* node = down.front();
     down.pop();
     node->wait_count = 0;
+    if (node->type == Node<Data>::Leaf) {
+      v.leaf(node);
+      node->wait_count = 0;
+      n_curr_particles += node->n_particles;
+      up.push(node);
+      continue;
+    }
     for (int i = 0; i < node->children.size(); i++) {
       Node<Data>* child = node->children[i];
+      if (!child) continue;
       switch (child->type) {
         case Node<Data>::Internal:
         case Node<Data>::Boundary:
@@ -324,12 +332,6 @@ void TreePiece<Data>::upOnly(CProxy_TreeElement<Data> te_proxy) {
         }
         default: break;
       }
-    }
-    if (node->type == Node<Data>::Leaf) {
-      v.leaf(node);
-      node->wait_count = 0;
-      n_curr_particles += node->n_particles;
-      up.push(node);
     }
   }
   if (!up.size()) { // no Data bc no Leaves, so send blank

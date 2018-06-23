@@ -61,11 +61,8 @@ void TreeElement<Data>::receiveData (TPHolder<Data> tp_holderi, Data di, int tp_
   d = d + di;
   wait_count--;
   if (wait_count == 0) {
-    Visitor v (tp_proxy);
-    Node<Data> node;
-    node.key = this->thisIndex;
-    node.type = Node<Data>::Boundary;
-    node.data = d;
+    Visitor v (tp_proxy, -1);
+    Node<Data> node (this->thisIndex, Node<Data>::Boundary, d, 0, NULL);
     v.node(&node);
   }
 }

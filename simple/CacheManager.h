@@ -97,17 +97,17 @@ void CacheManager<Data>::addCacheHelper(Particle* particles, int n_particles, No
 template <typename Data>
 template <typename Visitor>
 void CacheManager<Data>::resumeTraversals (Key key, int dindex) {
-  //CkPrintf("we're resuming on a node that has type %d\n", findNode(key)->type);
   //CkPrintf("resuming on key %d\n", key);
-  Node<Data>* placeholder = delete_at_end[dindex];
+  Node<Data>* placeholder;
+  if (dindex < delete_at_end.size()) placeholder = delete_at_end[dindex];
+  else CkPrintf("dindex is wrong!\n");
 #ifdef SMPCACHE
   CmiLock(placeholder->qlock);
 #endif
-  std::set<int>::iterator it1 = placeholder->waiting.begin();
   for (std::set<int>::iterator it = placeholder->waiting.begin(); it != placeholder->waiting.end(); it++) {
-    //CkPrintf("restoring node %d's traversals on tp %d\n", key, *it);
-    tp_proxy[*it].template goDown<Visitor>(key);
-  } 
+    /*if (*it >= n_treepieces) CkPrintf("waiting is wrong!\n");
+    else*/ tp_proxy[*it].template goDown<Visitor>(key);
+  }
   placeholder->waiting.clear();
 #ifdef SMPCACHE
   CmiUnlock(placeholder->qlock);
@@ -118,15 +118,7 @@ template <typename Data>
 template <typename Visitor>
 void CacheManager<Data>::restoreData(Key key, Data di) {
   //CkPrintf("restoring %d's data on pe %d\n", key, CkMyPe());
-  Node<Data>* node = new Node<Data>();
-  node->data = di;
-  node->key = key;
-  node->type = Node<Data>::CachedBoundary;
-  node->n_children = 8;
-  node->children = std::vector<Node<Data>*> (8, NULL);
-  node->parent = (key > 1) ? findNode(key / 8) : NULL;
-  node->depth = (node->parent) ? node->depth + 1 : 0;
-  //CkPrintf("adding %d\n", key);
+  Node<Data>* node = new Node<Data>(key, Node<Data>::CachedBoundary, di, 8, (key > 1) ? findNode(key / 8) : NULL);
   //if (key == 15) {if (node->parent) CkPrintf("we coo\n\n"); else CkPrintf("we NOT coo\n\n");}
   resumeTraversals<Visitor>(key, insertNode(node, true, true));
 }
@@ -205,8 +197,7 @@ int CacheManager<Data>::insertNode(Node<Data>* node, bool above_tp, bool should_
     }
     node->children[i] = new_child;
   } 
-  int retval = should_swap ? swapIn(node) : -1;
-  return retval;
+  return should_swap ? swapIn(node) : -1;
 }
 
 template <typename Data>
@@ -219,7 +210,7 @@ Node<Data>* CacheManager<Data>::findNode(Key key) {
   }
   Node<Data>* node = root;
   for (int i = remainders.size()-1; i >= 0; i--) {
-    if (remainders[i] < node->children.size()) node = node->children[remainders[i]];
+    if (node && remainders[i] < node->children.size()) node = node->children[remainders[i]];
     else return NULL;
   }
   return node;
