@@ -22,8 +22,10 @@ struct Node {
   int n_children;
   int wait_count;
   int tp_index;
-  CmiNodeLock qlock;
   std::set<int> waiting;
+#ifdef SMPCACHE
+  CmiNodeLock qlock;
+#endif
 
   void pup (PUP::er& p) {
     pup_bytes(&p, (void *)&type, sizeof(Type));
@@ -37,7 +39,7 @@ struct Node {
     p | wait_count;
     p | tp_index;
     if (p.isUnpacking()) {
-      particles = NULL;
+      particles = NULL; // qlock = CmiCreateLock();
     }
   }
 
@@ -60,8 +62,10 @@ struct Node {
     this->n_children = 0;
     this->wait_count = -1;
     this->tp_index = -1;
-    this->qlock = CmiCreateLock();
     for (int i = 0; i < BRANCH_FACTOR; i++) this->children[i] = NULL;
+#ifdef SMPCACHE
+    this->qlock = CmiCreateLock();
+#endif
   }
 
   Node (const Node& n) {
@@ -77,8 +81,10 @@ struct Node {
     n_children = n.n_children;
     wait_count = n.wait_count;
     tp_index = n.tp_index;
-    qlock = CmiCreateLock();
     for (int i = 0; i < BRANCH_FACTOR; i++) this->children[i] = NULL;
+#ifdef SMPCACHE 
+    qlock = CmiCreateLock();
+#endif
   }
 
   void triggerFree() {

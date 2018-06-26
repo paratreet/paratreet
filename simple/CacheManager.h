@@ -76,6 +76,10 @@ void CacheManager<Data>::addCacheHelper(Particle* particles, int n_particles, No
         node->parent = findNode(nodes[0].key)->parent;
         first_node = node;
       }
+      else {
+        if (first_node->key == (node->key >> 3)) node->parent = first_node;
+        else node->parent = first_node->children[(node->key >> 3) % 8];
+      }
       if (node->type == Node<Data>::Leaf || node->type == Node<Data>::EmptyLeaf) {
         node->type = Node<Data>::CachedRemoteLeaf;
         if (node->n_particles) node->particles = new Particle [node->n_particles];
@@ -89,7 +93,7 @@ void CacheManager<Data>::addCacheHelper(Particle* particles, int n_particles, No
       }
       insertNode(node, false, j > 0);
     }
-  }
+  } else CkPrintf("something strange afoot\n");
   int swap_val = swapIn(first_node);
   resumeTraversals<Visitor>(first_node_placeholder->key, swap_val);
 }
@@ -117,30 +121,25 @@ void CacheManager<Data>::resumeTraversals (Key key, int dindex) {
 template <typename Data>
 template <typename Visitor>
 void CacheManager<Data>::restoreData(Key key, Data di) {
-  //CkPrintf("restoring %d's data on pe %d\n", key, CkMyPe());
   Node<Data>* node = new Node<Data>(key, Node<Data>::CachedBoundary, di, 8, (key > 1) ? findNode(key / 8) : NULL);
-  //if (key == 15) {if (node->parent) CkPrintf("we coo\n\n"); else CkPrintf("we NOT coo\n\n");}
   resumeTraversals<Visitor>(key, insertNode(node, true, true));
 }
 
 template <typename Data>
 int CacheManager<Data>::swapIn(Node<Data>* to_swap) {
+  //CkPrintf("swapping in node %d\n", to_swap->key);
   Node<Data>* copy;
   if (to_swap->key > 1) {
-    if (to_swap->parent->children.size() < 8) CkPrintf("node %d of type %d has %d children\n", to_swap->parent->key, to_swap->parent->type, to_swap->parent->children.size());
-    copy = to_swap->parent->children[to_swap->key % 8];
-    if (copy == to_swap) CkPrintf("ISSUE\n");
-    to_swap->parent->children[to_swap->key % 8] = to_swap;
+    std::swap(to_swap, to_swap->parent->children[to_swap->key % 8]);
   }
   else {
-    copy = root;
-    root = to_swap;
+    std::swap(root, to_swap);
   }
 #ifdef SMPCACHE
   CmiLock(dlock);
 #endif
   int retval = delete_at_end.size();
-  delete_at_end.push_back(copy);
+  delete_at_end.push_back(to_swap); // is waiting getting copied?
 #ifdef SMPCACHE
   CmiUnlock(dlock);
 #endif
@@ -193,7 +192,7 @@ int CacheManager<Data>::insertNode(Node<Data>* node, bool above_tp, bool should_
     if (!above_tp || add_placeholder) {
       new_child = new Node<Data> (child_key, node->depth+1, 0, NULL, 0, 0, node);
       new_child->type = (above_tp) ? Node<Data>::RemoteAboveTPKey : Node<Data>::Remote;
-      new_child->tp_index = node->tp_index;
+      if (!above_tp) new_child->tp_index = node->tp_index;
     }
     node->children[i] = new_child;
   } 

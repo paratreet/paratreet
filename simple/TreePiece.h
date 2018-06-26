@@ -384,7 +384,6 @@ void TreePiece<Data>::startUpAndDown(CProxy_CacheManager<Data> cache_manageri) {
   trav_tops = std::vector< Node<Data>* > (leaves.size(), NULL);
   for (int i = 0; i < curr_nodes.size(); i++) {
     curr_nodes[i].insert(leaves[i]->key);
-    trav_tops[i] = leaves[i];
   }
   for (int i = 0; i < leaves.size(); i++) {
     goDown<Visitor> (leaves[i]->key);
@@ -410,14 +409,12 @@ template <typename Data>
 template <typename Visitor>
 void TreePiece<Data>::requestNodes(Key key, CProxy_CacheManager<Data> cache_manager, int cm_index) {
 #ifdef SMPCACHE
-  CkPrintf("BIG ISSUES FAM, requesting key %d, type %d on tp_key %d\n", key, findNode(key, true)->type, tp_key);
   if (cm_index == CkMyNode()) return;
 #else
   if (cm_index == CkMyPe()) return;
 #endif
   Node<Data>* node = findNode(key, true);
-  CkPrintf("node %d has type %d on rftpk %d with type %d, parent has key %d, type %d, n_children %d\n", node->key, node->type, root_from_tp_key->key, root_from_tp_key->type, node->parent->key, node->parent->type, node->parent->n_children);
-  if (node == NULL) CkPrintf("NULL\n");
+
   std::vector<Node<Data>> nodes;
   std::vector<Particle> sending_particles;
   node->tp_index = this->thisIndex;

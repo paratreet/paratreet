@@ -20,7 +20,6 @@ private:
     for (int i = 0; i < on->n_particles; i++) {
       if (isLeaf) {
         for (int j = 0; j < from->n_particles; j++) {
-          //CkPrintf("particle\n");
           Real rsq = distsq(from->particles[j].position, on->particles[i].position);
           sum_forces[i] += (from->particles[j].position - on->particles[i].position)
             * gconst * from->particles[j].mass * on->particles[i].mass / (rsq * std::sqrt(rsq));
@@ -39,8 +38,6 @@ public:
     addGravity(from, on, on->data.sum_forces, true);
   }
   bool node(Node<CentroidData>* from, Node<CentroidData>* on) {
-    return true;
-    if (from->data.sum_mass < .00001) return false;
     const Real theta = .5, total_volume = 3290.05;
     Real s = std::pow(total_volume, 1/3.) * std::pow(2, -1 * Utility::getDepthFromKey(from->key));
     if (theta == 0 || distsq(from->data.getCentroid(), on->data.getCentroid()) < s * s / (theta * theta)) {
