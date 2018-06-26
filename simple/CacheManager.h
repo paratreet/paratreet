@@ -101,16 +101,17 @@ void CacheManager<Data>::addCacheHelper(Particle* particles, int n_particles, No
 template <typename Data>
 template <typename Visitor>
 void CacheManager<Data>::resumeTraversals (Key key, int dindex) {
-  //CkPrintf("resuming on key %d\n", key);
   Node<Data>* placeholder;
-  if (dindex < delete_at_end.size()) placeholder = delete_at_end[dindex];
-  else CkPrintf("dindex is wrong!\n");
 #ifdef SMPCACHE
+  CmiLock(dlock);
+#endif
+  placeholder = delete_at_end[dindex];
+#ifdef SMPCACHE
+  CmiUnlock(dlock);
   CmiLock(placeholder->qlock);
 #endif
   for (std::set<int>::iterator it = placeholder->waiting.begin(); it != placeholder->waiting.end(); it++) {
-    /*if (*it >= n_treepieces) CkPrintf("waiting is wrong!\n");
-    else*/ tp_proxy[*it].template goDown<Visitor>(key);
+    tp_proxy[*it].template goDown<Visitor>(key);
   }
   placeholder->waiting.clear();
 #ifdef SMPCACHE
