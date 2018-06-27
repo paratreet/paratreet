@@ -15,19 +15,20 @@ class CacheManager : public CBase_CacheManager<Data> {
 public:
   CProxy_TreePiece<Data> tp_proxy;
 #ifdef SMPCACHE
-  CmiNodeLock tlock, dlock;
+  CmiNodeLock block, dlock;
 #endif
   Node<Data>* root;
-  std::map<Key, Node<Data>*> tps;
+  std::map<Key, Node<Data>*> buffer;
   std::vector<Node<Data>*> delete_at_end;
   std::map<Key, Node<Data>*> missed; // not ideal but barely gets used
 
   CacheManager() { // : root(nullptr), curr_waiting (std::map<Key, std::vector<int> >()) {}
     Node<Data>* node = new Node<Data>(1, 0, 0, NULL, 0, 0, NULL);
     node->type = Node<Data>::Boundary;
+    missed.insert(std::make_pair(node->key, (Node<Data>*) NULL));
     root = node;
 #ifdef SMPCACHE
-    tlock = CmiCreateLock(); //tlock both locks tps and controls connecting
+    block = CmiCreateLock(); //block both locks buffer and controls connecting
     dlock = CmiCreateLock();
 #endif
   }
@@ -123,7 +124,10 @@ template <typename Data>
 template <typename Visitor>
 void CacheManager<Data>::restoreData(Key key, Data di) {
   Node<Data>* node = new Node<Data>(key, Node<Data>::CachedBoundary, di, 8, (key > 1) ? findNode(key / 8) : NULL);
-  resumeTraversals<Visitor>(key, insertNode(node, true, true));
+  insertNode(node, true, false);
+  int dindex = connect(node);
+  //CkPrintf("dindex = %d\n", dindex);
+  if (dindex >= 0) resumeTraversals<Visitor>(key, dindex);
 }
 
 template <typename Data>
@@ -151,18 +155,18 @@ template <typename Data>
 int CacheManager<Data>::connect(Node<Data>* node) {
   //CkPrintf("connecting on pe %d\n", CkMyPe());
 #ifdef SMPCACHE
-  CmiLock(tlock);
+  CmiLock(block);
 #endif
   if (missed.count(node->key)) {
     node->parent = missed[node->key];
 #ifdef SMPCACHE
-    CmiUnlock(tlock);
+    CmiUnlock(block);
 #endif  
     return swapIn(node);
   }
-  tps.insert(std::make_pair(node->key, node));
+  buffer.insert(std::make_pair(node->key, node));
 #ifdef SMPCACHE
-  CmiUnlock(tlock);
+  CmiUnlock(block);
 #endif
   return -1;
 }
@@ -176,10 +180,10 @@ int CacheManager<Data>::insertNode(Node<Data>* node, bool above_tp, bool should_
     bool add_placeholder = false;
     if (above_tp) {
 #ifdef SMPCACHE
-      CmiLock(tlock);
+      CmiLock(block);
 #endif
-      if (tps.count(child_key)) {
-        new_child = tps[child_key];
+      if (buffer.count(child_key)) {
+        new_child = buffer[child_key];
         new_child->parent = node;
       } 
       else {
@@ -187,7 +191,7 @@ int CacheManager<Data>::insertNode(Node<Data>* node, bool above_tp, bool should_
         add_placeholder = true;
       }
 #ifdef SMPCACHE
-      CmiUnlock(tlock);
+      CmiUnlock(block);
 #endif
     }
     if (!above_tp || add_placeholder) {

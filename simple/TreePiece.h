@@ -531,7 +531,7 @@ void TreePiece<Data>::goDown(Key new_key) {
     this->contribute(cb);
   }
   for (std::set<Key>::iterator it = to_go_down.begin(); it != to_go_down.end(); it++) {
-    this->thisProxy[this->thisIndex].goDown<Visitor> (*it);
+    this->thisProxy[this->thisIndex].template goDown<Visitor> (*it);
   } 
 }
 
