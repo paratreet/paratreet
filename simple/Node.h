@@ -4,6 +4,7 @@
 #include "common.h"
 #include "Particle.h"
 #include <array>
+#include <mutex>
 
 template <typename Data>
 struct Node {
@@ -24,7 +25,7 @@ struct Node {
   int tp_index;
   std::set<int> waiting;
 #ifdef SMPCACHE
-  CmiNodeLock qlock;
+  std::mutex qlock;
 #endif
 
   void pup (PUP::er& p) {
@@ -39,7 +40,7 @@ struct Node {
     p | wait_count;
     p | tp_index;
     if (p.isUnpacking()) {
-      particles = NULL; // qlock = CmiCreateLock();
+      particles = NULL;
     }
   }
 
@@ -63,9 +64,6 @@ struct Node {
     this->wait_count = -1;
     this->tp_index = -1;
     for (int i = 0; i < BRANCH_FACTOR; i++) this->children[i] = NULL;
-#ifdef SMPCACHE
-    this->qlock = CmiCreateLock();
-#endif
   }
 
   Node (const Node& n) {
@@ -82,9 +80,6 @@ struct Node {
     wait_count = n.wait_count;
     tp_index = n.tp_index;
     for (int i = 0; i < BRANCH_FACTOR; i++) this->children[i] = NULL;
-#ifdef SMPCACHE 
-    qlock = CmiCreateLock();
-#endif
   }
 
   void triggerFree() {

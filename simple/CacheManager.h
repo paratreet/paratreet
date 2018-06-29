@@ -9,13 +9,14 @@
 #include <unordered_map>
 #include <vector>
 #include "templates.h"
+#include <mutex>
 
 template <typename Data>
 class CacheManager : public CBase_CacheManager<Data> {
 public:
   CProxy_TreePiece<Data> tp_proxy;
 #ifdef SMPCACHE
-  CmiNodeLock block, dlock;
+  std::mutex block, dlock; //block controls buffer and missing
 #endif
   Node<Data>* root;
   std::map<Key, Node<Data>*> buffer;
@@ -27,10 +28,6 @@ public:
     node->type = Node<Data>::Boundary;
     missed.insert(std::make_pair(node->key, (Node<Data>*) NULL));
     root = node;
-#ifdef SMPCACHE
-    block = CmiCreateLock(); //block both locks buffer and controls connecting
-    dlock = CmiCreateLock();
-#endif
   }
 
   void receiveTP(TPHolder<Data> tp_holderi) {
@@ -104,19 +101,19 @@ template <typename Visitor>
 void CacheManager<Data>::resumeTraversals (Key key, int dindex) {
   Node<Data>* placeholder;
 #ifdef SMPCACHE
-  CmiLock(dlock);
+  dlock.lock();
 #endif
   placeholder = delete_at_end[dindex];
 #ifdef SMPCACHE
-  CmiUnlock(dlock);
-  CmiLock(placeholder->qlock);
+  dlock.unlock();
+  placeholder->qlock.lock();
 #endif
   for (std::set<int>::iterator it = placeholder->waiting.begin(); it != placeholder->waiting.end(); it++) {
     tp_proxy[*it].template goDown<Visitor>(key);
   }
   placeholder->waiting.clear();
 #ifdef SMPCACHE
-  CmiUnlock(placeholder->qlock);
+  placeholder->qlock.unlock();
 #endif
 }
 
@@ -141,12 +138,12 @@ int CacheManager<Data>::swapIn(Node<Data>* to_swap) {
     std::swap(root, to_swap);
   }
 #ifdef SMPCACHE
-  CmiLock(dlock);
+  dlock.lock();
 #endif
   int retval = delete_at_end.size();
   delete_at_end.push_back(to_swap); // is waiting getting copied?
 #ifdef SMPCACHE
-  CmiUnlock(dlock);
+  dlock.unlock();
 #endif
   return retval;
 }
@@ -155,18 +152,18 @@ template <typename Data>
 int CacheManager<Data>::connect(Node<Data>* node) {
   //CkPrintf("connecting on pe %d\n", CkMyPe());
 #ifdef SMPCACHE
-  CmiLock(block);
+  block.lock();
 #endif
   if (missed.count(node->key)) {
     node->parent = missed[node->key];
 #ifdef SMPCACHE
-    CmiUnlock(block);
+    block.unlock();
 #endif  
     return swapIn(node);
   }
   buffer.insert(std::make_pair(node->key, node));
 #ifdef SMPCACHE
-  CmiUnlock(block);
+  block.unlock();
 #endif
   return -1;
 }
@@ -180,7 +177,7 @@ int CacheManager<Data>::insertNode(Node<Data>* node, bool above_tp, bool should_
     bool add_placeholder = false;
     if (above_tp) {
 #ifdef SMPCACHE
-      CmiLock(block);
+      block.lock();
 #endif
       if (buffer.count(child_key)) {
         new_child = buffer[child_key];
@@ -191,7 +188,7 @@ int CacheManager<Data>::insertNode(Node<Data>* node, bool above_tp, bool should_
         add_placeholder = true;
       }
 #ifdef SMPCACHE
-      CmiUnlock(block);
+      block.unlock();
 #endif
     }
     if (!above_tp || add_placeholder) {

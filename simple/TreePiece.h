@@ -20,6 +20,8 @@
 #include <fstream>
 #include <sstream>
 #include <cstring>
+#include <atomic>
+#include <mutex>
 
 extern CProxy_Reader readers;
 extern int max_particles_per_leaf;
@@ -471,12 +473,12 @@ void TreePiece<Data>::goDown(Key new_key) {
         case Node<Data>::Boundary: case Node<Data>::RemoteAboveTPKey: case Node<Data>::Remote: case Node<Data>::RemoteLeaf: {
           curr_nodes[i].insert(node->key);
 #ifdef SMPCACHE
-          CmiLock(node->qlock);
+          node->qlock.lock();
 #endif
           if (!node->waiting.size()) waiting_nodes.insert(node->key);
           node->waiting.insert(this->thisIndex);
 #ifdef SMPCACHE
-          CmiUnlock(node->qlock);
+          node->qlock.unlock();
 #endif
         }
       }
