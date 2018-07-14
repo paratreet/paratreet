@@ -20,11 +20,12 @@ private:
     for (int i = 0; i < on->n_particles; i++) {
       if (isLeaf) {
         for (int j = 0; j < from->n_particles; j++) {
+          if (on->particles[i].key == on->particles[j].key) continue;
           Real rsq = distsq(from->particles[j].position, on->particles[i].position);
           sum_forces[i] += (from->particles[j].position - on->particles[i].position)
             * gconst * from->particles[j].mass * on->particles[i].mass / (rsq * std::sqrt(rsq));
         }
-      } 
+      }
       else {
         Real rsq = distsq(from->data.getCentroid(), on->particles[i].position);
         sum_forces[i] += (from->data.getCentroid() - on->particles[i].position)
