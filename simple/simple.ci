@@ -139,10 +139,10 @@ mainmodule simple {
     entry Reader();
     entry void load(std::string, const CkCallback&);
     entry void computeUniverseBoundingBox(const CkCallback&);    
-    entry void assignKeys(BoundingBox&, const CkCallback&);
+    entry void assignKeys(BoundingBox, const CkCallback&);
     template <typename Data>
     entry void request(CProxy_TreePiece<Data>, int, int);
-    entry void countOct(std::vector<Key>&, const CkCallback&);
+    entry void countOct(std::vector<Key>, const CkCallback&);
     //entry void countSfc(const std::vector<Key>&, const CkCallback&);
     entry void pickSamples(const int, const CkCallback&);
     entry void prepMessages(const std::vector<Key>&, const CkCallback&);

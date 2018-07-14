@@ -27,10 +27,10 @@ class Reader : public CBase_Reader {
     // loading particles and assigning keys
     void load(std::string, const CkCallback&);
     void computeUniverseBoundingBox(const CkCallback& cb);
-    void assignKeys(BoundingBox&, const CkCallback&);
+    void assignKeys(BoundingBox, const CkCallback&);
 
     // OCT decomposition
-    void countOct(std::vector<Key>&, const CkCallback&);
+    void countOct(std::vector<Key>, const CkCallback&);
     void setSplitters(const std::vector<Splitter>&, const CkCallback&);
 
     // SFC decomposition

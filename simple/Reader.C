@@ -112,7 +112,7 @@ void Reader::computeUniverseBoundingBox(const CkCallback& cb) {
   contribute(sizeof(BoundingBox), &box, BoundingBox::reducer(), cb);
 }
 
-void Reader::assignKeys(BoundingBox& universe, const CkCallback& cb) {
+void Reader::assignKeys(BoundingBox universe, const CkCallback& cb) {
   // generate particle keys
   for (unsigned int i = 0; i < particles.size(); i++) {
     particles[i].key = SFC::generateKey(particles[i].position, universe.box);
@@ -130,7 +130,7 @@ void Reader::assignKeys(BoundingBox& universe, const CkCallback& cb) {
   // back to callee
   contribute(cb);
 }
-void Reader::countOct(std::vector<Key>& splitter_keys, const CkCallback& cb) {
+void Reader::countOct(std::vector<Key> splitter_keys, const CkCallback& cb) {
   std::vector<int> counts;
   counts.resize(splitter_keys.size()/2);
   for (int i = 0; i < splitter_keys.size(); i++) {
