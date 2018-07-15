@@ -67,6 +67,8 @@ public:
   void requestNodes(Key, CProxy_CacheManager<Data>, int);
   template<typename Visitor>
   void goDown(Key); 
+  template <typename Visitor>
+  void catchMissed();
   void print(Node<Data>*);
   Node<Data>* findNode(Key, bool start_from_tp_key = false);
   void perturb (Real timestep);
@@ -506,7 +508,7 @@ void TreePiece<Data>::goDown(Key new_key) {
     Node<Data>* node = findNode(*it);
     switch (node->type) {
       case Node<Data>::CachedRemote: case Node<Data>::CachedRemoteLeaf: case Node<Data>::CachedBoundary: {
-        CkPrintf("NODE %d PROCESSED PREMATURELY\n", node->key);
+        CkPrintf("node %d processed prematurely on tp %d\n", node->key, this->thisIndex);
         to_go_down.insert(*it);
         break;
       }
@@ -535,6 +537,17 @@ void TreePiece<Data>::goDown(Key new_key) {
   for (std::set<Key>::iterator it = to_go_down.begin(); it != to_go_down.end(); it++) {
     this->thisProxy[this->thisIndex].template goDown<Visitor> (*it);
   } 
+}
+
+template <typename Data>
+template <typename Visitor>
+void TreePiece<Data>::catchMissed() {
+  for (int i = 0; i < leaves.size(); i++) {
+    for (std::set<Key>::iterator it = curr_nodes[i].begin(); it != curr_nodes[i].end(); it++) {
+      CkPrintf("caught node %d missed on tp %d, leaf %d\n", *it, this->thisIndex, i);
+      this->thisProxy[this->thisIndex].template goDown<Visitor> (*it);
+    }
+  }
 }
 
 template <typename Data>

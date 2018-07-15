@@ -25,6 +25,7 @@ mainmodule simple {
     entry Main(CkArgMsg* m);
     entry [threaded] void run();
     entry void doneUp();
+    entry void catchDown();
     entry [reductiontarget] void doneDown();
 
     // debug
@@ -112,6 +113,8 @@ mainmodule simple {
     template<typename Visitor>
     entry void goDown(Key);
     template<typename Visitor>
+    entry void catchMissed();
+    template<typename Visitor>
     entry void requestNodes(Key, CProxy_CacheManager<Data>, int);
     entry void perturb(Real timestep);
     entry void flush(CProxy_Reader);
@@ -126,14 +129,17 @@ mainmodule simple {
   extern entry void TreePiece<CentroidData> startDown<GravityVisitor> (CProxy_CacheManager<CentroidData>);
   extern entry void TreePiece<CentroidData> requestNodes<GravityVisitor> (Key, CProxy_CacheManager<CentroidData>, int);
   extern entry void TreePiece<CentroidData> goDown<GravityVisitor> (Key);
+  extern entry void TreePiece<CentroidData> catchMissed<GravityVisitor> ();
 
   extern entry void TreePiece<CentroidData> startUpAndDown<DensityVisitor> (CProxy_CacheManager<CentroidData>);
   extern entry void TreePiece<CentroidData> requestNodes<DensityVisitor> (Key, CProxy_CacheManager<CentroidData>, int);
   extern entry void TreePiece<CentroidData> goDown<DensityVisitor> (Key);
+  extern entry void TreePiece<CentroidData> catchMissed<DensityVisitor> ();
 
   extern entry void TreePiece<CentroidData> startDown<PressureVisitor> (CProxy_CacheManager<CentroidData>);
   extern entry void TreePiece<CentroidData> requestNodes<PressureVisitor> (Key, CProxy_CacheManager<CentroidData>, int);
   extern entry void TreePiece<CentroidData> goDown<PressureVisitor> (Key);
+  extern entry void TreePiece<CentroidData> catchMissed<PressureVisitor> ();
 
   group Reader {
     entry Reader();

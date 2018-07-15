@@ -54,19 +54,23 @@ class Main : public CBase_Main {
     start_time = CkWallTimer();
     down_finished = false;
     TPHolder<CentroidData> tp_holder (treepieces);
-    centroid_calculator.print(); 
+    //centroid_calculator.print(); 
     centroid_cache.receiveTP(tp_holder);
     treepieces.startDown<GravityVisitor>(centroid_cache);
+    CkStartQD(CkCallback(CkIndex_Main::catchDown(), mainProxy));
   }
 
   void doneDown() {
-    if (down_finished) return;
-    else down_finished = true;
+    down_finished = true;
     CkPrintf("[Main, iter %d] Downward traversal done: %lf seconds\n", cur_iteration, CkWallTimer() - start_time);
     CkExit(); /*if (++cur_iteration < num_iterations)
       nextIteration();
     else
       terminate();*/
+  }
+
+  void catchDown() {
+    if (!down_finished) treepieces.template catchMissed<GravityVisitor>();
   }
 
   void terminate() {
