@@ -5,6 +5,7 @@
 #include "templates.h"
 #include "Node.h"
 #include "CacheManager.h"
+#include <unordered_set>
 
 template<typename Data>
 class CProxy_TreePiece;
@@ -50,11 +51,12 @@ template <typename Data>
 template <typename Visitor>
 void TreeElement<Data>::requestData(CProxy_CacheManager<Data> cache_manager, int cm_index) {
   if (tp_index >= 0) tp_proxy[tp_index].template requestNodes<Visitor>(this->thisIndex, cache_manager, cm_index);
-  else {if (!recipients.count(cm_index)) {
-    cache_manager[cm_index].template restoreData<Visitor>(this->thisIndex, d);
-    recipients.insert(cm_index);
-  }
-  else CkPrintf("DOUBLE REQUEST FOR node %d by %d\n", this->thisIndex, cm_index);
+  else {
+    if (!recipients.count(cm_index)) {
+      cache_manager[cm_index].template restoreData<Visitor>(this->thisIndex, d);
+      recipients.insert(cm_index);
+    }
+    else CkPrintf("DOUBLE REQUEST FOR node %d by %d\n", this->thisIndex, cm_index);
   }
 }
 

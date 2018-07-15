@@ -56,10 +56,6 @@ mainmodule simple {
     entry void addCache(MultiMsg<Data>*);
     template <typename Visitor>
     entry void restoreData(Key, Data);
-#ifdef SMPCACHE
-    template <typename Visitor>
-    entry void resumeTraversals(Key, int);
-#endif
   };
 
 #ifdef SMPCACHE
@@ -73,12 +69,6 @@ mainmodule simple {
   extern entry void CacheManager<CentroidData> restoreData<GravityVisitor> (Key, CentroidData);
   extern entry void CacheManager<CentroidData> restoreData<DensityVisitor> (Key, CentroidData);
   extern entry void CacheManager<CentroidData> restoreData<PressureVisitor> (Key, CentroidData);
-#ifdef SMPCACHE
-  extern entry void CacheManager<CentroidData> resumeTraversals<GravityVisitor> (Key, int);
-  extern entry void CacheManager<CentroidData> resumeTraversals<DensityVisitor> (Key, int);
-  extern entry void CacheManager<CentroidData> resumeTraversals<PressureVisitor> (Key, int);
-#endif
-
 
   template <typename Data>
   array [1d] TreeElement {
