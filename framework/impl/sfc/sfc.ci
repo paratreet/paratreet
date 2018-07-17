@@ -1,0 +1,21 @@
+module sfc {
+
+namespace paratreet { namespace sfc {
+
+    template <class Meta>
+    array [1d] TreePiece {
+        entry TreePiece();
+        
+    };
+
+    template <class Meta>
+    group DataManager {
+        entry DataManager();
+        entry void load(const std::string filename, const CkCallback& cb);
+        entry void countElements(const CkCallback& cb);
+        entry void computeBoundingBox(const CkCallback& cb);
+    };
+
+} } // paratreet::sfc
+
+};

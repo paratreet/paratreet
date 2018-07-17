@@ -1,0 +1,15 @@
+#include "paratreet_ci.h"
+
+mainmodule simple_gravity {
+    include "paratreet.h";
+    include "simple_gravity.h";
+
+    PARATREET_CI_REGISTER_REDUCERS
+    PARATREET_CI_DECLARE_SFC(SGMeta)
+
+    mainchare Main {
+        entry Main(CkArgMsg* m);
+        entry [threaded] void run();
+        entry void exit();
+    };
+};
