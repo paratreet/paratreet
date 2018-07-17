@@ -20,7 +20,9 @@ public:
       Particle p = node->particles[i];
       node->data.moment += node->particles[i].mass * node->particles[i].position;
       node->data.sum_mass += node->particles[i].mass;
+      node->data.box.grow(node->particles[i].position);
     }
+    node->data.count += node->n_particles;
   }
   bool node(Node<CentroidData>* node) {
     if (node->key == 1) {

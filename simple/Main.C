@@ -13,7 +13,9 @@
 #include "DensityVisitor.h"
 #include "GravityVisitor.h"
 #include "PressureVisitor.h"
+#include "CountVisitor.h"
 #include "CacheManager.h"
+#include "CountManager.h"
 
 /* readonly */ CProxy_Main mainProxy;
 /* readonly */ CProxy_Reader readers;
@@ -27,6 +29,8 @@
 /* readonly */ int num_iterations;
 /* readonly */ CProxy_TreeElement<CentroidData> centroid_calculator;
 /* readonly */ CProxy_CacheManager<CentroidData> centroid_cache;
+/* readonly */ CProxy_CountManager count_manager;
+
 
 class Main : public CBase_Main {
   double total_start_time;
@@ -57,23 +61,31 @@ class Main : public CBase_Main {
     //centroid_calculator.print(); 
     centroid_cache.receiveTP(tp_holder);
     treepieces.startDown<GravityVisitor>(centroid_cache);
+    // treepieces.startDown<CountVisitor>(centroid_cache);
     CkStartQD(CkCallback(CkIndex_Main::catchDown(), mainProxy));
   }
 
   void doneDown() {
     down_finished = true;
     CkPrintf("[Main, iter %d] Downward traversal done: %lf seconds\n", cur_iteration, CkWallTimer() - start_time);
-    CkExit(); /*if (++cur_iteration < num_iterations)
+    // count_manager.sum(CkCallback(CkReductionTarget(Main, terminate), thisProxy));
+    CkExit();
+    /*if (++cur_iteration < num_iterations)
       nextIteration();
     else
       terminate();*/
   }
 
   void catchDown() {
-    if (!down_finished) treepieces.template catchMissed<GravityVisitor>();
+    if (!down_finished) treepieces.template catchMissed<CountVisitor>();
   }
 
-  void terminate() {
+  void terminate(CkReductionMsg* m) {
+    int* bins = static_cast<int*>(m->getData());
+    for (int i = 0; i < 5; i++) {
+      CkPrintf("Bin[%d]: %d\n", i, bins[i]);
+    }
+    delete m;
     CkPrintf("[Main] Total time: %lf seconds\n", CkWallTimer() - total_start_time);
     CkExit();
   }
@@ -168,6 +180,7 @@ class Main : public CBase_Main {
     readers = CProxy_Reader::ckNew();
     centroid_calculator = CProxy_TreeElement<CentroidData>::ckNew();
     centroid_cache = CProxy_CacheManager<CentroidData>::ckNew();
+    count_manager = CProxy_CountManager::ckNew(0.00001, 10000, 5);
 
     // start!
     total_start_time = CkWallTimer();

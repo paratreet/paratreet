@@ -19,6 +19,7 @@ mainmodule simple {
   readonly int num_iterations;
   readonly CProxy_TreeElement<CentroidData> centroid_calculator;
   readonly CProxy_CacheManager<CentroidData> centroid_cache;
+  readonly CProxy_CountManager count_manager;
 
   mainchare Main {
     initnode void initialize();
@@ -27,6 +28,7 @@ mainmodule simple {
     entry void doneUp();
     entry void catchDown();
     entry [reductiontarget] void doneDown();
+    entry [reductiontarget] void terminate(CkReductionMsg*);
 
     // debug
     entry [reductiontarget] void checkParticlesChangedDone(bool result);
@@ -66,9 +68,11 @@ mainmodule simple {
   extern entry void CacheManager<CentroidData> addCache<GravityVisitor> (MultiMsg<CentroidData>*);
   extern entry void CacheManager<CentroidData> addCache<DensityVisitor> (MultiMsg<CentroidData>*);
   extern entry void CacheManager<CentroidData> addCache<PressureVisitor> (MultiMsg<CentroidData>*);
+  extern entry void CacheManager<CentroidData> addCache<CountVisitor> (MultiMsg<CentroidData>*);
   extern entry void CacheManager<CentroidData> restoreData<GravityVisitor> (Key, CentroidData);
   extern entry void CacheManager<CentroidData> restoreData<DensityVisitor> (Key, CentroidData);
   extern entry void CacheManager<CentroidData> restoreData<PressureVisitor> (Key, CentroidData);
+  extern entry void CacheManager<CentroidData> restoreData<CountVisitor> (Key, CentroidData);
 
   template <typename Data>
   array [1d] TreeElement {
@@ -86,6 +90,7 @@ mainmodule simple {
   extern entry void TreeElement<CentroidData> requestData<GravityVisitor>(CProxy_CacheManager<CentroidData>, int);
   extern entry void TreeElement<CentroidData> requestData<DensityVisitor>(CProxy_CacheManager<CentroidData>, int);
   extern entry void TreeElement<CentroidData> requestData<PressureVisitor>(CProxy_CacheManager<CentroidData>, int);
+  extern entry void TreeElement<CentroidData> requestData<CountVisitor>(CProxy_CacheManager<CentroidData>, int);
 
   template <typename Data>
   array [1d] TreePiece {
@@ -131,6 +136,11 @@ mainmodule simple {
   extern entry void TreePiece<CentroidData> goDown<PressureVisitor> (Key);
   extern entry void TreePiece<CentroidData> catchMissed<PressureVisitor> ();
 
+  extern entry void TreePiece<CentroidData> startDown<CountVisitor> (CProxy_CacheManager<CentroidData>);
+  extern entry void TreePiece<CentroidData> requestNodes<CountVisitor> (Key, CProxy_CacheManager<CentroidData>, int);
+  extern entry void TreePiece<CentroidData> goDown<CountVisitor> (Key);
+  extern entry void TreePiece<CentroidData> catchMissed<CountVisitor> ();
+
   group Reader {
     entry Reader();
     entry void load(std::string, const CkCallback&);
@@ -153,4 +163,9 @@ mainmodule simple {
 
   extern entry void Reader request<CentroidData>(CProxy_TreePiece<CentroidData>, int, int);
   extern entry void Reader flush<CentroidData>(int, int, CProxy_TreePiece<CentroidData>);
+
+  group CountManager {
+    entry CountManager(double min, double max, int nbins);
+    entry void sum(const CkCallback&);
+  }
 };
