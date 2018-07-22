@@ -20,14 +20,19 @@ public:
 #endif
   Node<Data>* root;
   std::map<Key, Node<Data>*> buffer;
+  int dindex;
   std::vector<Node<Data>*> delete_at_end;
   std::map<Key, Node<Data>*> missed; // not ideal but barely gets used
+  std::function<void(CacheManager<Data>*)> processor; // processes new data
+  bool processor_set; // done this way to vastly reduce user code and teplated code bloat
 
   CacheManager() { // : root(nullptr), curr_waiting (std::map<Key, std::vector<int> >()) {}
     Node<Data>* node = new Node<Data>(1, 0, 0, NULL, 0, 0, NULL);
     node->type = Node<Data>::Boundary;
     missed.insert(std::make_pair(node->key, (Node<Data>*) NULL));
     root = node;
+    dindex = 0;
+    processor_set = false;
   }
 
   void receiveTP(TPHolder<Data> tp_holderi) {
@@ -40,29 +45,25 @@ public:
     temp->triggerFree();
     delete temp;
   }
-  int connect (Node<Data>*);
+  void connect (Node<Data>*);
   Node<Data>* findNode(Key);
-  template <typename Visitor>
   void addCache(MultiMsg<Data>*);
-  template <typename Visitor>
   void addCacheHelper(Particle*, int, Node<Data>*, int);
+  void restoreData(std::pair<Key, Data>);
   template <typename Visitor>
-  void restoreData(Key, Data);
-  template <typename Visitor>
-  void resumeTraversals(Key, int);
-  int insertNode(Node<Data>*, bool, bool);
-  int swapIn(Node<Data>*);
+  void resumeTraversals();
+  void insertNode(Node<Data>*, bool, bool);
+  void swapIn(Node<Data>*);
 };
 
 template <typename Data>
-template <typename Visitor>
 void CacheManager<Data>::addCache(MultiMsg<Data>* multimsg) {
-  addCacheHelper<Visitor>(multimsg->particles, multimsg->n_particles, multimsg->nodes, multimsg->n_nodes);
+  addCacheHelper(multimsg->particles, multimsg->n_particles, multimsg->nodes, multimsg->n_nodes);
+  processor(this);
   delete multimsg;
 }
 
 template <typename Data>
-template <typename Visitor>
 void CacheManager<Data>::addCacheHelper(Particle* particles, int n_particles, Node<Data>* nodes, int n_nodes) {
   Node<Data>* first_node_placeholder = findNode(nodes[0].key);
   Node<Data>* first_node;
@@ -92,43 +93,42 @@ void CacheManager<Data>::addCacheHelper(Particle* particles, int n_particles, No
       insertNode(node, false, j > 0);
     }
   } else CkPrintf("something strange afoot\n");
-  int swap_val = swapIn(first_node);
-  resumeTraversals<Visitor>(first_node_placeholder->key, swap_val);
+  swapIn(first_node);
 }
 
 template <typename Data>
 template <typename Visitor>
-void CacheManager<Data>::resumeTraversals (Key key, int dindex) {
-  Node<Data>* placeholder;
+void CacheManager<Data>::resumeTraversals() {
 #ifdef SMPCACHE
   dlock.lock();
 #endif
-  placeholder = delete_at_end[dindex];
+  for (; dindex < delete_at_end.size(); dindex++) {
+    Node<Data>* placeholder = delete_at_end[dindex];
+#ifdef SMPCACHE
+    placeholder->qlock.lock();
+#endif
+    for (std::set<int>::iterator it = placeholder->waiting.begin(); it != placeholder->waiting.end(); it++) {
+      tp_proxy[*it].template goDown<Visitor>(placeholder->key);
+    }
+    placeholder->waiting.clear();
+  #ifdef SMPCACHE
+    placeholder->qlock.unlock();
+  #endif
+  }
 #ifdef SMPCACHE
   dlock.unlock();
-  placeholder->qlock.lock();
-#endif
-  for (std::set<int>::iterator it = placeholder->waiting.begin(); it != placeholder->waiting.end(); it++) {
-    tp_proxy[*it].template goDown<Visitor>(key);
-  }
-  placeholder->waiting.clear();
-#ifdef SMPCACHE
-  placeholder->qlock.unlock();
 #endif
 }
 
 template <typename Data>
-template <typename Visitor>
-void CacheManager<Data>::restoreData(Key key, Data di) {
-  Node<Data>* node = new Node<Data>(key, Node<Data>::CachedBoundary, di, 8, (key > 1) ? findNode(key / 8) : NULL);
+void CacheManager<Data>::restoreData(std::pair<Key, Data> kd) {
+  Node<Data>* node = new Node<Data>(kd.first, Node<Data>::CachedBoundary, kd.second, 8, (kd.first > 1) ? findNode(kd.first / 8) : NULL);
   insertNode(node, true, false);
-  int dindex = connect(node);
-  //CkPrintf("dindex = %d\n", dindex);
-  if (dindex >= 0) resumeTraversals<Visitor>(key, dindex);
+  connect(node);
 }
 
 template <typename Data>
-int CacheManager<Data>::swapIn(Node<Data>* to_swap) {
+void CacheManager<Data>::swapIn(Node<Data>* to_swap) {
   //CkPrintf("swapping in node %d\n", to_swap->key);
   Node<Data>* copy;
   if (to_swap->key > 1) {
@@ -145,11 +145,10 @@ int CacheManager<Data>::swapIn(Node<Data>* to_swap) {
 #ifdef SMPCACHE
   dlock.unlock();
 #endif
-  return retval;
 }
 
 template <typename Data>
-int CacheManager<Data>::connect(Node<Data>* node) {
+void CacheManager<Data>::connect(Node<Data>* node) {
   //CkPrintf("connecting on pe %d\n", CkMyPe());
 #ifdef SMPCACHE
   block.lock();
@@ -159,17 +158,17 @@ int CacheManager<Data>::connect(Node<Data>* node) {
 #ifdef SMPCACHE
     block.unlock();
 #endif  
-    return swapIn(node);
+    swapIn(node);
+    processor(this);
   }
   buffer.insert(std::make_pair(node->key, node));
 #ifdef SMPCACHE
   block.unlock();
 #endif
-  return -1;
 }
 
 template <typename Data>
-int CacheManager<Data>::insertNode(Node<Data>* node, bool above_tp, bool should_swap) {
+void CacheManager<Data>::insertNode(Node<Data>* node, bool above_tp, bool should_swap) {
   //CkPrintf("inserting node %d of type %d with %d children\n", node->key, node->type, node->n_children);
   for (int i = 0; i < node->n_children; i++) {
     Node<Data>* new_child;
@@ -198,7 +197,6 @@ int CacheManager<Data>::insertNode(Node<Data>* node, bool above_tp, bool should_
     }
     node->children[i] = new_child;
   } 
-  return should_swap ? swapIn(node) : -1;
 }
 
 template <typename Data>

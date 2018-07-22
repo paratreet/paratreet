@@ -11,6 +11,7 @@
 #include "Reader.h"
 #include "CentroidVisitor.h"
 #include "GravityVisitor.h"
+#include "CacheManager.h"
 
 #include <queue>
 #include <set>
@@ -63,7 +64,6 @@ public:
   void startDown(CProxy_CacheManager<Data>);
   template<typename Visitor>
   void startUpAndDown(CProxy_CacheManager<Data>);
-  template<typename Visitor>
   void requestNodes(Key, CProxy_CacheManager<Data>, int);
   template<typename Visitor>
   void goDown(Key); 
@@ -354,9 +354,12 @@ template <typename Data>
 template <typename Visitor>
 void TreePiece<Data>::startDown(CProxy_CacheManager<Data> cache_manageri) {
   cache_manager = cache_manageri;
+  if (!cache_manager.ckLocalBranch()->processor_set) {
+    cache_manager.ckLocalBranch()->processor_set = true;
+    cache_manager.ckLocalBranch()->processor = [](CacheManager<Data>* cm) {cm->template resumeTraversals<Visitor>();};
+  }
   root_from_tp_key = findNode(tp_key);
-  int ret = cache_manager.ckLocalBranch()->connect(root_from_tp_key);
-  if (ret > -1) cache_manager.ckLocalBranch()->template resumeTraversals<Visitor> (tp_key, ret);
+  cache_manager.ckLocalBranch()->connect(root_from_tp_key);
   root_from_tp_key->parent->children[tp_key % 8] = NULL;
   root->triggerFree();
   
@@ -374,8 +377,7 @@ template <typename Visitor>
 void TreePiece<Data>::startUpAndDown(CProxy_CacheManager<Data> cache_manageri) {
   cache_manager = cache_manageri;
   root_from_tp_key = findNode(tp_key);   
-  int ret = cache_manager.ckLocalBranch()->connect(root_from_tp_key);
-  if (ret > -1) cache_manager.ckLocalBranch()->template resumeTraversals<Visitor> (tp_key, ret);
+  cache_manager.ckLocalBranch()->connect(root_from_tp_key);
   root_from_tp_key->parent->children[tp_key % 8] = NULL;
   root->triggerFree();
   if (!leaves.size()) {
@@ -410,7 +412,6 @@ Node<Data>* TreePiece<Data>::findNode(Key key, bool start_from_tp_key) {
 }
 
 template <typename Data>
-template <typename Visitor>
 void TreePiece<Data>::requestNodes(Key key, CProxy_CacheManager<Data> cache_manager, int cm_index) {
 #ifdef SMPCACHE
   if (cm_index == CkMyNode()) return;
@@ -440,7 +441,7 @@ void TreePiece<Data>::requestNodes(Key key, CProxy_CacheManager<Data> cache_mana
     }
   }
   MultiMsg<Data>* multimsg = new (sending_particles.size(), nodes.size()) MultiMsg<Data> (sending_particles.data(), sending_particles.size(), nodes.data(), nodes.size());
-  cache_manager[cm_index].template addCache<Visitor>(multimsg);
+  cache_manager[cm_index].addCache(multimsg);
 }
 
 template <typename Data>
@@ -514,17 +515,17 @@ void TreePiece<Data>::goDown(Key new_key) {
       }
       case Node<Data>::Boundary: case Node<Data>::RemoteAboveTPKey: {
 #ifdef SMPCACHE
-        global_data[node->key].template requestData<Visitor>(cache_manager, CkMyNode());
+        global_data[node->key].requestData(cache_manager, CkMyNode());
 #else
-        global_data[node->key].template requestData<Visitor>(cache_manager, CkMyPe());
+        global_data[node->key].requestData(cache_manager, CkMyPe());
 #endif
         break;
       }
       case Node<Data>::Remote: case Node<Data>::RemoteLeaf: {
 #ifdef SMPCACHE
-        this->thisProxy[node->tp_index].template requestNodes<Visitor>(node->key, cache_manager, CkMyNode());
+        this->thisProxy[node->tp_index].requestNodes(node->key, cache_manager, CkMyNode());
 #else
-        this->thisProxy[node->tp_index].template requestNodes<Visitor>(node->key, cache_manager, CkMyPe());
+        this->thisProxy[node->tp_index].requestNodes(node->key, cache_manager, CkMyPe());
 #endif
       }
     }

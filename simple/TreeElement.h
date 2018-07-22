@@ -26,7 +26,6 @@ public:
   void reset();
   template <typename Visitor>
   void receiveData (TPHolder<Data>, Data, int);
-  template <typename Visitor> 
   void requestData(CProxy_CacheManager<Data>, int);
   void print() {
     CkPrintf("[TE %d] on PE %d from tp_index %d\n", this->thisIndex, CkMyPe(), tp_index);
@@ -48,12 +47,11 @@ void TreeElement<Data>::reset() {
 }
 
 template <typename Data>
-template <typename Visitor>
 void TreeElement<Data>::requestData(CProxy_CacheManager<Data> cache_manager, int cm_index) {
-  if (tp_index >= 0) tp_proxy[tp_index].template requestNodes<Visitor>(this->thisIndex, cache_manager, cm_index);
+  if (tp_index >= 0) tp_proxy[tp_index].requestNodes(this->thisIndex, cache_manager, cm_index);
   else {
     if (!recipients.count(cm_index)) {
-      cache_manager[cm_index].template restoreData<Visitor>(this->thisIndex, d);
+      cache_manager[cm_index].restoreData(std::make_pair(this->thisIndex, d));
       recipients.insert(cm_index);
     }
     else CkPrintf("DOUBLE REQUEST FOR node %d by %d\n", this->thisIndex, cm_index);
