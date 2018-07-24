@@ -9,11 +9,15 @@
 
 template <typename Data>
 struct MultiMsg : public CMessage_MultiMsg<Data> {
-  Particle* particles;
   int n_particles;
-  Node<Data>* nodes;
   int n_nodes;
-
+#ifdef FS_MSG
+  Particle particles [BRANCH_FACTOR * BRANCH_FACTOR * MAX_PARTICLES_PER_LEAF];
+  Node<Data> nodes [1 + BRANCH_FACTOR + BRANCH_FACTOR * BRANCH_FACTOR];
+#else
+  Particle* particles;
+  Node<Data>* nodes;
+#endif
   MultiMsg();
   MultiMsg(Particle*, int, Node<Data>*, int);
 };
@@ -44,6 +48,6 @@ inline MultiMsg<Data>::MultiMsg(Particle* particlesi, int n_particlesi, Node<Dat
     nodes[i].n_children = nodesi[i].n_children;
     nodes[i].tp_index = nodesi[i].tp_index;
   }*/
-} 
+}
 
 #endif // SIMPLE_MULTIMSG_H_

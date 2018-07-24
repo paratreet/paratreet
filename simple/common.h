@@ -20,6 +20,8 @@ typedef double Real;
 #define OCT_DECOMP 10
 #define SFC_DECOMP 11
 
+#define MAX_PARTICLES_PER_LEAF 1
+
 /* Tree types */
 #define OCT_TREE 20
 

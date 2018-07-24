@@ -440,7 +440,12 @@ void TreePiece<Data>::requestNodes(Key key, CProxy_CacheManager<Data> cache_mana
       }
     }
   }
-  MultiMsg<Data>* multimsg = new (sending_particles.size(), nodes.size()) MultiMsg<Data> (sending_particles.data(), sending_particles.size(), nodes.data(), nodes.size());
+  MultiMsg<Data>* multimsg;
+#ifdef FS_MSG
+  multimsg = new MultiMsg<Data> (sending_particles.data(), sending_particles.size(), nodes.data(), nodes.size());
+#else
+  multimsg = new (sending_particles.size(), nodes.size()) MultiMsg<Data> (sending_particles.data(), sending_particles.size(), nodes.data(), nodes.size());
+#endif
   cache_manager[cm_index].addCache(multimsg);
 }
 

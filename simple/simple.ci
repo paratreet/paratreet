@@ -39,11 +39,14 @@ mainmodule simple {
   };
 
   template <class Data>
+#ifdef FS_MSG
+  message MultiMsg;
+#else
   message MultiMsg {
     Particle particles [];
     Node<Data> nodes [];
   };
-
+#endif
   message MultiMsg<CentroidData>;
 
   template <typename Data>
@@ -62,6 +65,11 @@ mainmodule simple {
   nodegroup CacheManager<CentroidData>;
 #else
   group CacheManager<CentroidData>;
+#endif
+
+extern entry [aggregate] void CacheManager<CentroidData> restoreData(std::pair<Key, CentroidData>);
+#ifdef FS_MSG
+//extern entry [aggregate] void CacheManager<CentroidData> addCache(MultiMsg<CentroidData>);
 #endif
 
   template <typename Data>

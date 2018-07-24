@@ -44,6 +44,8 @@ struct Node {
     }
   }
 
+  Node() : Node(-1, -1, 0, NULL, -1, -1, NULL) {}
+
   Node(Key key, Type type, Data data, int n_children, Node* parent) :
     Node(key, parent ? parent->depth + 1 : 0, 0, NULL, 0, 0, parent) {
     this->type = type;
