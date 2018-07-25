@@ -11,13 +11,8 @@ template <typename Data>
 struct MultiMsg : public CMessage_MultiMsg<Data> {
   int n_particles;
   int n_nodes;
-#ifdef FS_MSG
-  Particle particles [BRANCH_FACTOR * BRANCH_FACTOR * MAX_PARTICLES_PER_LEAF];
-  Node<Data> nodes [1 + BRANCH_FACTOR + BRANCH_FACTOR * BRANCH_FACTOR];
-#else
   Particle* particles;
   Node<Data>* nodes;
-#endif
   MultiMsg();
   MultiMsg(Particle*, int, Node<Data>*, int);
 };
@@ -35,19 +30,7 @@ inline MultiMsg<Data>::MultiMsg(Particle* particlesi, int n_particlesi, Node<Dat
   n_particles = n_particlesi;
   memcpy(particles, particlesi, n_particles * sizeof(Particle));
   n_nodes = n_nodesi;
-  memcpy(nodes, nodesi, n_nodes * sizeof(Node<Data>)); /*
-  nodes = new Node<Data> [n_nodes];
-  for (int i = 0; i < n_nodes; i++) {
-    nodes[i].type = nodesi[i].type;
-    nodes[i].key = nodesi[i].key;
-    nodes[i].depth = nodesi[i].depth;
-    nodes[i].n_particles = nodesi[i].n_particles;
-    nodes[i].particles = nodesi[i].particles;
-    nodes[i].owner_tp_start = nodesi[i].owner_tp_start;
-    nodes[i].owner_tp_end = nodesi[i].owner_tp_end;
-    nodes[i].n_children = nodesi[i].n_children;
-    nodes[i].tp_index = nodesi[i].tp_index;
-  }*/
+  memcpy(nodes, nodesi, n_nodes * sizeof(Node<Data>));
 }
 
 #endif // SIMPLE_MULTIMSG_H_

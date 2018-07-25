@@ -22,7 +22,7 @@ struct Node {
   std::array<Node*, BRANCH_FACTOR> children;
   int n_children;
   int wait_count;
-  int tp_index;
+  int cm_index;
   std::set<int> waiting;
 #ifdef SMPCACHE
   std::mutex qlock;
@@ -38,7 +38,7 @@ struct Node {
     p | owner_tp_start;
     p | owner_tp_end;
     p | wait_count;
-    p | tp_index;
+    p | cm_index;
     if (p.isUnpacking()) {
       particles = NULL;
     }
@@ -64,7 +64,7 @@ struct Node {
     this->parent = parent;
     this->n_children = 0;
     this->wait_count = -1;
-    this->tp_index = -1;
+    this->cm_index = -1;
     for (int i = 0; i < BRANCH_FACTOR; i++) this->children[i] = NULL;
   }
 
@@ -80,7 +80,7 @@ struct Node {
     parent = n.parent;
     n_children = n.n_children;
     wait_count = n.wait_count;
-    tp_index = n.tp_index;
+    cm_index = n.cm_index;
     for (int i = 0; i < BRANCH_FACTOR; i++) this->children[i] = NULL;
   }
 
@@ -136,6 +136,20 @@ struct Node {
       out << key << " -> " << child->key << ";" << std::endl;
       child->dot(out);
     }
+  }
+  Node* findNode(Key to_find) {
+    std::vector<int> remainders;
+    Key temp = to_find;
+    while (temp >= 8 * key) {
+      remainders.push_back(temp % 8);
+      temp /= 8;
+    }
+    Node<Data>* node = this;
+    for (int i = remainders.size()-1; i >= 0; i--) {
+      if (node && remainders[i] < node->children.size()) node = node->children[remainders[i]];
+      else return NULL;
+    }
+    return node;
   }
 };
 

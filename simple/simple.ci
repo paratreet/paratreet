@@ -6,6 +6,7 @@ mainmodule simple {
   include "Node.h";
   include "TPHolder.h";
   class CProxy_Reader;
+  include "MultiData.h";
 
   readonly CProxy_Main mainProxy;
   readonly CProxy_Reader readers;
@@ -39,14 +40,10 @@ mainmodule simple {
   };
 
   template <class Data>
-#ifdef FS_MSG
-  message MultiMsg;
-#else
   message MultiMsg {
     Particle particles [];
     Node<Data> nodes [];
   };
-#endif
   message MultiMsg<CentroidData>;
 
   template <typename Data>
@@ -57,7 +54,9 @@ mainmodule simple {
 #endif
     entry CacheManager();
     entry void receiveTP(TPHolder<Data>);
+    entry void requestNodes(std::pair<Key, int>);
     entry void addCache(MultiMsg<Data>*);
+    entry void addCache(MultiData<Data>);
     entry void restoreData(std::pair<Key, Data>);
   };
 
@@ -68,9 +67,8 @@ mainmodule simple {
 #endif
 
 extern entry [aggregate] void CacheManager<CentroidData> restoreData(std::pair<Key, CentroidData>);
-#ifdef FS_MSG
-//extern entry [aggregate] void CacheManager<CentroidData> addCache(MultiMsg<CentroidData>);
-#endif
+extern entry [aggregate] void CacheManager<CentroidData> addCache(MultiData<CentroidData>);
+extern entry [aggregate] void CacheManager<CentroidData> requestNodes(std::pair<Key, int>);
 
   template <typename Data>
   array [1d] TreeElement {
@@ -100,9 +98,9 @@ extern entry [aggregate] void CacheManager<CentroidData> restoreData(std::pair<K
     entry void startUpAndDown(CProxy_CacheManager<Data>);
     template<typename Visitor>
     entry void goDown(Key);
+    entry void requestNodes(Key, CProxy_CacheManager<Data>, int);
     template<typename Visitor>
     entry void catchMissed();
-    entry void requestNodes(Key, CProxy_CacheManager<Data>, int);
     entry void perturb(Real timestep);
     entry void flush(CProxy_Reader);
     entry void rebuild(const CkCallback&);

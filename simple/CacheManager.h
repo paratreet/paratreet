@@ -9,6 +9,7 @@
 #include <unordered_map>
 #include <vector>
 #include "templates.h"
+#include "MultiData.h"
 #include <mutex>
 
 template <typename Data>
@@ -46,8 +47,10 @@ public:
     delete temp;
   }
   void connect (Node<Data>*);
-  Node<Data>* findNode(Key);
+  void requestNodes(std::pair<Key, int>);
+  void serviceRequest(Node<Data>*, int);
   void addCache(MultiMsg<Data>*);
+  void addCache(MultiData<Data>);
   void addCacheHelper(Particle*, int, Node<Data>*, int);
   void restoreData(std::pair<Key, Data>);
   template <typename Visitor>
@@ -64,15 +67,21 @@ void CacheManager<Data>::addCache(MultiMsg<Data>* multimsg) {
 }
 
 template <typename Data>
+void CacheManager<Data>::addCache(MultiData<Data> multidata) {
+  addCacheHelper(multidata.particles, multidata.n_particles, multidata.nodes, multidata.n_nodes);
+  processor(this);
+}
+
+template <typename Data>
 void CacheManager<Data>::addCacheHelper(Particle* particles, int n_particles, Node<Data>* nodes, int n_nodes) {
-  Node<Data>* first_node_placeholder = findNode(nodes[0].key);
+  Node<Data>* first_node_placeholder = root->findNode(nodes[0].key);
   Node<Data>* first_node;
   if (first_node_placeholder->type != Node<Data>::CachedRemote && first_node_placeholder->type != Node<Data>::CachedRemoteLeaf) {
     int p_index = 0;
     for (int j = 0; j < n_nodes; j++) {
       Node<Data>* node = new Node<Data>(nodes[j]);
       if (j == 0) {
-        node->parent = findNode(nodes[0].key)->parent;
+        node->parent = root->findNode(nodes[0].key)->parent;
         first_node = node;
       }
       else {
@@ -95,6 +104,48 @@ void CacheManager<Data>::addCacheHelper(Particle* particles, int n_particles, No
   } else CkPrintf("something strange afoot\n");
   swapIn(first_node);
 }
+
+template <typename Data>
+void CacheManager<Data>::requestNodes(std::pair<Key, int> param) {
+  Key key = param.first;
+  Node<Data>* node = root->findNode(key);
+  if (!node) {
+    Key temp = key;
+    while (!buffer.count(temp)) temp /= 8;
+    node = buffer[temp]->findNode(key);
+  }
+  if (!node) CkPrintf("node found for key %d on cm %d\n", param.first, this->thisIndex);
+  serviceRequest(node, param.second);
+}
+
+template <typename Data>
+void CacheManager<Data>::serviceRequest(Node<Data>* node, int cm_index) {
+  if (cm_index == this->thisIndex) return; // you'll get it later!
+  if (!node) CkPrintf("UH OH\n");
+  std::vector<Node<Data>> nodes;
+  std::vector<Particle> sending_particles;
+  node->cm_index = this->thisIndex;
+  nodes.push_back(*node);
+  for (int i = 0; i < node->n_children; i++) {
+    Node<Data>* child = node->children[i];
+    child->cm_index = this->thisIndex;
+    nodes.push_back(*child);
+    for (int j = 0; j < child->n_children; j++) {
+      child->children[j]->cm_index = this->thisIndex;
+      nodes.push_back(*(child->children[j]));
+    }
+  }
+  for (int i = 0; i < nodes.size(); i++) {
+    if (nodes[i].type == Node<Data>::Leaf) {
+      for (int j = 0; j < nodes[i].n_particles; j++) {
+        sending_particles.push_back(nodes[i].particles[j]);
+      }
+    }
+  }
+  MultiData<Data> multidata (sending_particles.data(), sending_particles.size(), nodes.data(), nodes.size());
+  this->thisProxy[cm_index].addCache(multidata);
+}
+
 
 template <typename Data>
 template <typename Visitor>
@@ -121,8 +172,9 @@ void CacheManager<Data>::resumeTraversals() {
 }
 
 template <typename Data>
-void CacheManager<Data>::restoreData(std::pair<Key, Data> kd) {
-  Node<Data>* node = new Node<Data>(kd.first, Node<Data>::CachedBoundary, kd.second, 8, (kd.first > 1) ? findNode(kd.first / 8) : NULL);
+void CacheManager<Data>::restoreData(std::pair<Key, Data> param) {
+  Key key = param.first;
+  Node<Data>* node = new Node<Data>(key, Node<Data>::CachedBoundary, param.second, 8, (key > 1) ? root->findNode(key / 8) : NULL);
   insertNode(node, true, false);
   connect(node);
 }
@@ -159,7 +211,7 @@ void CacheManager<Data>::connect(Node<Data>* node) {
     block.unlock();
 #endif  
     swapIn(node);
-    processor(this);
+    if (processor_set) processor(this);
   }
   buffer.insert(std::make_pair(node->key, node));
 #ifdef SMPCACHE
@@ -193,26 +245,10 @@ void CacheManager<Data>::insertNode(Node<Data>* node, bool above_tp, bool should
     if (!above_tp || add_placeholder) {
       new_child = new Node<Data> (child_key, node->depth+1, 0, NULL, 0, 0, node);
       new_child->type = (above_tp) ? Node<Data>::RemoteAboveTPKey : Node<Data>::Remote;
-      if (!above_tp) new_child->tp_index = node->tp_index;
+      if (!above_tp) new_child->cm_index = node->cm_index;
     }
     node->children[i] = new_child;
   } 
-}
-
-template <typename Data>
-Node<Data>* CacheManager<Data>::findNode(Key key) {
-  std::vector<int> remainders;
-  Key temp = key;
-  while (temp >= 8) {
-    remainders.push_back(temp % 8);
-    temp /= 8;
-  }
-  Node<Data>* node = root;
-  for (int i = remainders.size()-1; i >= 0; i--) {
-    if (node && remainders[i] < node->children.size()) node = node->children[remainders[i]];
-    else return NULL;
-  }
-  return node;
 }
 
 #endif //SIMPLE_CACHEMANAGER_H_

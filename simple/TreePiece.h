@@ -60,6 +60,9 @@ public:
   bool recursiveBuild(Node<Data>*, bool);
   template<typename Visitor>
   void upOnly(CProxy_TreeElement<Data>);
+  void initCache(CProxy_CacheManager<Data>);
+  template<typename Visitor>
+  void initCache(CProxy_CacheManager<Data>);
   template<typename Visitor>
   void startDown(CProxy_CacheManager<Data>);
   template<typename Visitor>
@@ -70,7 +73,6 @@ public:
   template <typename Visitor>
   void catchMissed();
   void print(Node<Data>*);
-  Node<Data>* findNode(Key, bool start_from_tp_key = false);
   void perturb (Real timestep);
   void flush(CProxy_Reader);
   void rebuild(const CkCallback&);
@@ -108,6 +110,7 @@ TreePiece<Data>::TreePiece(const CkCallback& cb, int n_total_particles_, int n_t
       // TODO tp_key needs to be found in local tree build
   }
   this->contribute(cb);
+  root_from_tp_key = nullptr;
 }
 
 template <typename Data>
@@ -351,18 +354,33 @@ void TreePiece<Data>::upOnly(CProxy_TreeElement<Data> te_proxy) {
 }
 
 template <typename Data>
+void TreePiece<Data>::initCache(CProxy_CacheManager<Data> cache_manageri) {
+  cache_manager = cache_manageri;
+  if (!root_from_tp_key) {
+    root_from_tp_key = root->findNode(tp_key);
+    cache_manager.ckLocalBranch()->connect(root_from_tp_key);
+    root_from_tp_key->parent->children[tp_key % 8] = NULL;
+    root->triggerFree();
+  }
+}
+
+template <typename Data>
+template <typename Visitor>
+void TreePiece<Data>::initCache(CProxy_CacheManager<Data> cache_manageri) {
+  initCache(cache_manageri);
+  CacheManager<Data>* local_branch = cache_manager.ckLocalBranch();
+  if (!local_branch->processor_set) {
+    local_branch->processor_set = true;
+    local_branch->processor = [](CacheManager<Data>* cm) {cm->template resumeTraversals<Visitor>();};
+    local_branch->processor(local_branch);
+  }
+}
+
+
+template <typename Data>
 template <typename Visitor>
 void TreePiece<Data>::startDown(CProxy_CacheManager<Data> cache_manageri) {
-  cache_manager = cache_manageri;
-  if (!cache_manager.ckLocalBranch()->processor_set) {
-    cache_manager.ckLocalBranch()->processor_set = true;
-    cache_manager.ckLocalBranch()->processor = [](CacheManager<Data>* cm) {cm->template resumeTraversals<Visitor>();};
-  }
-  root_from_tp_key = findNode(tp_key);
-  cache_manager.ckLocalBranch()->connect(root_from_tp_key);
-  root_from_tp_key->parent->children[tp_key % 8] = NULL;
-  root->triggerFree();
-  
+  initCache<Visitor>(cache_manageri);
   curr_nodes = std::vector<std::set<Key> > (leaves.size());
   num_done = 0;
   trav_tops = std::vector<Node<Data>*> (leaves.size(), root);
@@ -375,11 +393,7 @@ void TreePiece<Data>::startDown(CProxy_CacheManager<Data> cache_manageri) {
 template <typename Data>
 template <typename Visitor>
 void TreePiece<Data>::startUpAndDown(CProxy_CacheManager<Data> cache_manageri) {
-  cache_manager = cache_manageri;
-  root_from_tp_key = findNode(tp_key);   
-  cache_manager.ckLocalBranch()->connect(root_from_tp_key);
-  root_from_tp_key->parent->children[tp_key % 8] = NULL;
-  root->triggerFree();
+  initCache<Visitor>(cache_manageri);
   if (!leaves.size()) {
     CkPrintf("tp %d finished!\n", this->thisIndex);
     CkCallback cb(CkReductionTarget(Main, doneDown), mainProxy);
@@ -396,57 +410,12 @@ void TreePiece<Data>::startUpAndDown(CProxy_CacheManager<Data> cache_manageri) {
   }
 }
 
-template<typename Data>
-Node<Data>* TreePiece<Data>::findNode(Key key, bool start_from_tp_key) {
-  std::vector<int> remainders;
-  Key temp = key;
-  while (temp >= 8 * (start_from_tp_key ? tp_key : 1)) {
-    remainders.push_back(temp % 8);
-    temp /= 8;
-  }
-  Node<Data>* node = start_from_tp_key ? root_from_tp_key : root;
-  for (int i = remainders.size()-1; i >= 0; i--) {
-    node = node->children[remainders[i]];
-  }
-  return node;
-}
-
 template <typename Data>
-void TreePiece<Data>::requestNodes(Key key, CProxy_CacheManager<Data> cache_manager, int cm_index) {
-#ifdef SMPCACHE
-  if (cm_index == CkMyNode()) return;
-#else
-  if (cm_index == CkMyPe()) return;
-#endif
-  Node<Data>* node = findNode(key, true);
-
-  std::vector<Node<Data>> nodes;
-  std::vector<Particle> sending_particles;
-  node->tp_index = this->thisIndex;
-  nodes.push_back(*node);
-  for (int i = 0; i < node->n_children; i++) {
-    Node<Data>* child = node->children[i];
-    child->tp_index = this->thisIndex;
-    nodes.push_back(*child);
-    for (int j = 0; j < child->n_children; j++) {
-      child->children[j]->tp_index = this->thisIndex;
-      nodes.push_back(*(child->children[j]));
-    }
-  }
-  for (int i = 0; i < nodes.size(); i++) {
-    if (nodes[i].type == Node<Data>::Leaf) {
-      for (int j = 0; j < nodes[i].n_particles; j++) {
-        sending_particles.push_back(nodes[i].particles[j]);
-      }
-    }
-  }
-  MultiMsg<Data>* multimsg;
-#ifdef FS_MSG
-  multimsg = new MultiMsg<Data> (sending_particles.data(), sending_particles.size(), nodes.data(), nodes.size());
-#else
-  multimsg = new (sending_particles.size(), nodes.size()) MultiMsg<Data> (sending_particles.data(), sending_particles.size(), nodes.data(), nodes.size());
-#endif
-  cache_manager[cm_index].addCache(multimsg);
+void TreePiece<Data>::requestNodes(Key key, CProxy_CacheManager<Data> cache_manageri, int cm_index) {
+  initCache(cache_manager);
+  Node<Data>* node = root_from_tp_key->findNode(key);
+  if (!node) CkPrintf("null found for key %d on tp %d\n", key, this->thisIndex);
+  cache_manager.ckLocalBranch()->serviceRequest(node, cm_index);
 }
 
 template <typename Data>
@@ -460,7 +429,7 @@ void TreePiece<Data>::goDown(Key new_key) {
     if (!curr_nodes[i].count(new_key)) continue;
     curr_nodes[i].erase(new_key);
     std::stack<Node<Data>*> nodes;
-    nodes.push(findNode(new_key));
+    nodes.push(root->findNode(new_key));
     while (nodes.size()) {
       Node<Data>* node = nodes.top();
       nodes.pop();
@@ -511,7 +480,7 @@ void TreePiece<Data>::goDown(Key new_key) {
     //else CkPrintf("TP %d still waiting on at least key %d\n", this->thisIndex, *curr_nodes[i].begin());
   }
   for (std::set<Key>::iterator it = waiting_nodes.begin(); it != waiting_nodes.end(); it++) {
-    Node<Data>* node = findNode(*it);
+    Node<Data>* node = root->findNode(*it);
     switch (node->type) {
       case Node<Data>::CachedRemote: case Node<Data>::CachedRemoteLeaf: case Node<Data>::CachedBoundary: {
         CkPrintf("node %d processed prematurely on tp %d\n", node->key, this->thisIndex);
@@ -519,19 +488,11 @@ void TreePiece<Data>::goDown(Key new_key) {
         break;
       }
       case Node<Data>::Boundary: case Node<Data>::RemoteAboveTPKey: {
-#ifdef SMPCACHE
-        global_data[node->key].requestData(cache_manager, CkMyNode());
-#else
-        global_data[node->key].requestData(cache_manager, CkMyPe());
-#endif
+        global_data[node->key].requestData(cache_manager, cache_manager.ckLocalBranch()->thisIndex);
         break;
       }
       case Node<Data>::Remote: case Node<Data>::RemoteLeaf: {
-#ifdef SMPCACHE
-        this->thisProxy[node->tp_index].requestNodes(node->key, cache_manager, CkMyNode());
-#else
-        this->thisProxy[node->tp_index].requestNodes(node->key, cache_manager, CkMyPe());
-#endif
+        cache_manager[node->cm_index].requestNodes(std::make_pair(node->key, cache_manager.ckLocalBranch()->thisIndex));
       }
     }
   }
