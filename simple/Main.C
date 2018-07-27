@@ -105,8 +105,8 @@ class Main : public CBase_Main {
     n_treepieces = 0; // cannot be a readonly because of OCT decomposition
     input_file = "";
     decomp_tolerance = 0.1;
-    max_particles_per_tp = 10;
-    max_particles_per_leaf = 1;
+    max_particles_per_tp = MAX_PARTICLES_PER_TP;
+    max_particles_per_leaf = MAX_PARTICLES_PER_LEAF;
     decomp_type = OCT_DECOMP;
     tree_type = OCT_TREE;
     num_iterations = 10;
@@ -158,6 +158,10 @@ class Main : public CBase_Main {
       }
     }
     delete m;
+    if (max_particles_per_leaf != MAX_PARTICLES_PER_LEAF)
+      CkAbort("max_particles_per_leaf runtime value doesn't match compile time value!\n");
+    if (max_particles_per_tp != MAX_PARTICLES_PER_TP)
+      CkAbort("max particles per tp runtime value doesn't match compile time value!\n");
 
     // print settings
     CkPrintf("\n[SIMPLE TREE]\n");
