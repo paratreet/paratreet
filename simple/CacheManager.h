@@ -20,10 +20,10 @@ public:
   std::mutex block, dlock; //block controls buffer and missing
 #endif
   Node<Data>* root;
-  std::map<Key, Node<Data>*> buffer;
+  std::unordered_map<Key, Node<Data>*> buffer;
   int dindex;
   std::vector<Node<Data>*> delete_at_end;
-  std::map<Key, Node<Data>*> missed; // not ideal but barely gets used
+  std::unordered_map<Key, Node<Data>*> missed; // not ideal but barely gets used
   std::function<void(CacheManager<Data>*)> processor; // processes new data
   bool processor_set; // done this way to vastly reduce user code and teplated code bloat
 
@@ -134,9 +134,7 @@ void CacheManager<Data>::serviceRequest(Node<Data>* node, int cm_index) {
   for (auto& to_send : nodes) {//int i = 0; i < nodes.size(); i++) {
     to_send.cm_index = this->thisIndex;
     if (to_send.type == Node<Data>::Leaf) {
-      for (int j = 0; j < to_send.n_particles; j++) {
-        sending_particles.push_back(to_send.particles[j]);
-      }
+      sending_particles.insert(sending_particles.end(), to_send.particles, to_send.particles + to_send.n_particles);
     }
   }
   MultiData<Data> multidata (sending_particles.data(), sending_particles.size(), nodes.data(), nodes.size());
