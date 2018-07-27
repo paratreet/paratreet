@@ -327,8 +327,7 @@ void TreePiece<Data>::upOnly(CProxy_TreeElement<Data> te_proxy) {
       up.push(node);
       continue;
     }
-    for (int i = 0; i < node->children.size(); i++) {
-      Node<Data>* child = node->children[i];
+    for (auto child : node->children) {
       if (!child) continue;
       switch (child->type) {
         case Node<Data>::Internal:
@@ -384,9 +383,7 @@ void TreePiece<Data>::startDown(CProxy_CacheManager<Data> cache_manageri) {
   curr_nodes = std::vector<std::set<Key> > (leaves.size());
   num_done = 0;
   trav_tops = std::vector<Node<Data>*> (leaves.size(), root);
-  for (int i = 0; i < curr_nodes.size(); i++) {
-    curr_nodes[i].insert(1);
-  }
+  for (auto& curr_node : curr_nodes) curr_node.insert(1);
   goDown<Visitor> (1);
 }
 
@@ -402,12 +399,8 @@ void TreePiece<Data>::startUpAndDown(CProxy_CacheManager<Data> cache_manageri) {
   curr_nodes = std::vector<std::set<Key> > (leaves.size());
   num_done = 0;
   trav_tops = std::vector< Node<Data>* > (leaves.size(), NULL);
-  for (int i = 0; i < curr_nodes.size(); i++) {
-    curr_nodes[i].insert(leaves[i]->key);
-  }
-  for (int i = 0; i < leaves.size(); i++) {
-    goDown<Visitor> (leaves[i]->key);
-  }
+  for (int i = 0; i < curr_nodes.size(); i++) curr_nodes[i].insert(leaves[i]->key);
+  for (auto leaf : leaves) goDown<Visitor> (leaf->key);
 }
 
 template <typename Data>
@@ -466,8 +459,7 @@ void TreePiece<Data>::goDown(Key new_key) {
         num_done++;
       }
       else {        
-        for (int j = 0; j < trav_tops[i]->parent->children.size(); j++) {
-          Node<Data>* child = trav_tops[i]->parent->children[j];
+        for (auto child : trav_tops[i]->parent->children) {
           if (child != trav_tops[i]) {
              if (trav_tops[i]->parent->type == Node<Data>::Boundary) child->type = Node<Data>::RemoteAboveTPKey;
              curr_nodes[i].insert(child->key);
@@ -479,12 +471,12 @@ void TreePiece<Data>::goDown(Key new_key) {
     }
     //else CkPrintf("TP %d still waiting on at least key %d\n", this->thisIndex, *curr_nodes[i].begin());
   }
-  for (std::set<Key>::iterator it = waiting_nodes.begin(); it != waiting_nodes.end(); it++) {
-    Node<Data>* node = root->findNode(*it);
+  for (auto waiting_node : waiting_nodes) {
+    Node<Data>* node = root->findNode(waiting_node);
     switch (node->type) {
       case Node<Data>::CachedRemote: case Node<Data>::CachedRemoteLeaf: case Node<Data>::CachedBoundary: {
         CkPrintf("node %d processed prematurely on tp %d\n", node->key, this->thisIndex);
-        to_go_down.insert(*it);
+        to_go_down.insert(waiting_node);
         break;
       }
       case Node<Data>::Boundary: case Node<Data>::RemoteAboveTPKey: {
@@ -501,27 +493,25 @@ void TreePiece<Data>::goDown(Key new_key) {
     CkCallback cb(CkReductionTarget(Main, doneDown), mainProxy);
     this->contribute(cb);
   }
-  for (std::set<Key>::iterator it = to_go_down.begin(); it != to_go_down.end(); it++) {
-    this->thisProxy[this->thisIndex].template goDown<Visitor> (*it);
-  } 
+  for (auto to_go : to_go_down) this->thisProxy[this->thisIndex].template goDown<Visitor> (to_go);
 }
 
 template <typename Data>
 template <typename Visitor>
 void TreePiece<Data>::catchMissed() {
-  for (int i = 0; i < leaves.size(); i++) {
-    for (std::set<Key>::iterator it = curr_nodes[i].begin(); it != curr_nodes[i].end(); it++) {
-      CkPrintf("caught node %d missed on tp %d, leaf %d\n", *it, this->thisIndex, i);
-      this->thisProxy[this->thisIndex].template goDown<Visitor> (*it);
+  for (auto& curr_node : curr_nodes) {
+    for (auto caught : curr_node) {
+      CkPrintf("caught node %d missed on tp %d\n", caught, this->thisIndex);
+      this->thisProxy[this->thisIndex].template goDown<Visitor> (caught);
     }
   }
 }
 
 template <typename Data>
 void TreePiece<Data>::perturb (Real timestep) {
-  for (int i = 0; i < leaves.size(); i++) {
-    for (int i = 0; i < leaves[i]->n_particles; i++) {
-      leaves[i]->particles[i].perturb(timestep, leaves[i]->data.sum_forces[i]);
+  for (auto leaf : leaves) {
+    for (int i = 0; i < leaf->n_particles; i++) {
+      leaf->particles[i].perturb(timestep, leaf->data.sum_forces[i]);
     }
   }
 }

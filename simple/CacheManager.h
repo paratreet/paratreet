@@ -41,7 +41,7 @@ public:
   }
 
   ~CacheManager() {
-    for (int i = 0; i < delete_at_end.size(); i++) delete delete_at_end[i];
+    for (auto dae : delete_at_end) delete dae;
     Node<Data>* temp = root;
     temp->triggerFree();
     delete temp;
@@ -124,21 +124,18 @@ void CacheManager<Data>::serviceRequest(Node<Data>* node, int cm_index) {
   if (!node) CkPrintf("UH OH\n");
   std::vector<Node<Data>> nodes;
   std::vector<Particle> sending_particles;
-  node->cm_index = this->thisIndex;
   nodes.push_back(*node);
   for (int i = 0; i < node->n_children; i++) {
     Node<Data>* child = node->children[i];
-    child->cm_index = this->thisIndex;
     nodes.push_back(*child);
-    for (int j = 0; j < child->n_children; j++) {
-      child->children[j]->cm_index = this->thisIndex;
+    for (int j = 0; j < child->n_children; j++) 
       nodes.push_back(*(child->children[j]));
-    }
   }
-  for (int i = 0; i < nodes.size(); i++) {
-    if (nodes[i].type == Node<Data>::Leaf) {
-      for (int j = 0; j < nodes[i].n_particles; j++) {
-        sending_particles.push_back(nodes[i].particles[j]);
+  for (auto& to_send : nodes) {//int i = 0; i < nodes.size(); i++) {
+    to_send.cm_index = this->thisIndex;
+    if (to_send.type == Node<Data>::Leaf) {
+      for (int j = 0; j < to_send.n_particles; j++) {
+        sending_particles.push_back(to_send.particles[j]);
       }
     }
   }
