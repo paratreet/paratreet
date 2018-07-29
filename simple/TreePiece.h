@@ -492,11 +492,12 @@ void TreePiece<Data>::goDown(Key new_key) {
 template <typename Data>
 template <typename Visitor>
 void TreePiece<Data>::catchMissed() {
-  //add another ckstartqd
+  bool if_caught = curr_nodes.size();
   for (auto& caught : curr_nodes) {
     CkPrintf("caught node %d missed on tp %d, leaf %d\n", caught, this->thisIndex, caught.second);
     this->thisProxy[this->thisIndex].template goDown<Visitor> (caught.first);
   }
+  if (if_caught) CkStartQD(CkCallback(CkIndex_Main::catchDown(), mainProxy));
 }
 
 template <typename Data>
