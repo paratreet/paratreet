@@ -420,11 +420,12 @@ void TreePiece<Data>::goDown(Key new_key) {
   std::set<Key> to_go_down;
   auto range = curr_nodes.equal_range(new_key);
   std::vector<std::pair<Key, int>> curr_nodes_insertions;
+  Node<Data>* start_node = root->findNode(new_key);
   for (auto it = range.first; it != range.second; it++) {
     int i = it->second;
     num_waiting[i]--;
     std::stack<Node<Data>*> nodes;
-    nodes.push(root->findNode(new_key));
+    nodes.push(start_node);
     while (nodes.size()) {
       Node<Data>* node = nodes.top();
       nodes.pop();
