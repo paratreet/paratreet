@@ -54,7 +54,7 @@ void TreeElement<Data>::requestData(CProxy_CacheManager<Data> cache_manager, int
       cache_manager[cm_index].restoreData(std::make_pair(this->thisIndex, d));
       recipients.insert(cm_index);
     }
-    else CkPrintf("DOUBLE REQUEST FOR node %d by %d\n", this->thisIndex, cm_index);
+    else CkPrintf("DOUBLE REQUEST FOR node %d by cm %d\n", this->thisIndex, cm_index);
   }
 }
 

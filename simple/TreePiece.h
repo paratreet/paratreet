@@ -48,6 +48,7 @@ class TreePiece : public CBase_TreePiece<Data> {
   std::vector<Node<Data>*> trav_tops;
   CProxy_TreeElement<Data> global_data;
   CProxy_CacheManager<Data> cache_manager;
+  CacheManager<Data>* cache_local;
   int num_done;
   // debug
   std::vector<Particle> flushed_particles;
@@ -354,9 +355,10 @@ void TreePiece<Data>::upOnly(CProxy_TreeElement<Data> te_proxy) {
 template <typename Data>
 void TreePiece<Data>::initCache(CProxy_CacheManager<Data> cache_manageri) {
   cache_manager = cache_manageri;
+  cache_local = cache_manager.ckLocalBranch();
   if (!root_from_tp_key) {
     root_from_tp_key = root->findNode(tp_key);
-    cache_manager.ckLocalBranch()->connect(root_from_tp_key);
+    cache_local->connect(root_from_tp_key);
     root_from_tp_key->parent->children[tp_key % 8] = nullptr;
     root->triggerFree();
   }
@@ -366,11 +368,10 @@ template <typename Data>
 template <typename Visitor>
 void TreePiece<Data>::initCache(CProxy_CacheManager<Data> cache_manageri) {
   initCache(cache_manageri);
-  CacheManager<Data>* local_branch = cache_manager.ckLocalBranch();
-  if (!local_branch->processor_set) {
-    local_branch->processor_set = true;
-    local_branch->processor = [](CacheManager<Data>* cm) {cm->template resumeTraversals<Visitor>();};
-    local_branch->processor(local_branch);
+  if (!cache_local->processor_set) {
+    cache_local->processor_set = true;
+    cache_local->processor = [](CacheManager<Data>* cm) {cm->template resumeTraversals<Visitor>();};
+    cache_local->processor(cache_local);
   }
 }
 
@@ -408,7 +409,7 @@ void TreePiece<Data>::requestNodes(Key key, CProxy_CacheManager<Data> cache_mana
   initCache(cache_manager);
   Node<Data>* node = root_from_tp_key->findNode(key);
   if (!node) CkPrintf("null found for key %d on tp %d\n", key, this->thisIndex);
-  cache_manager.ckLocalBranch()->serviceRequest(node, cm_index);
+  cache_local->serviceRequest(node, cm_index);
 }
 
 template <typename Data>
@@ -416,7 +417,7 @@ template <typename Visitor>
 void TreePiece<Data>::goDown(Key new_key) {
   //CkPrintf("going down on key %d while its type is %d\n", new_key, findNode(new_key)->type);
   Visitor v;
-  if (new_key == 1) root = cache_manager.ckLocalBranch()->root;
+  if (new_key == 1) root = cache_local->root;
   std::set<Key> to_go_down;
   auto range = curr_nodes.equal_range(new_key);
   std::vector<std::pair<Key, int>> curr_nodes_insertions;
@@ -457,15 +458,15 @@ void TreePiece<Data>::goDown(Key new_key) {
 #endif
           if (should_send) {
             if (node->type == Node<Data>::Boundary || node->type == Node<Data>::RemoteAboveTPKey)
-              global_data[node->key].requestData(cache_manager, cache_manager.ckLocalBranch()->thisIndex);
-            else cache_manager[node->cm_index].requestNodes(std::make_pair(node->key, cache_manager.ckLocalBranch()->thisIndex));
+              global_data[node->key].requestData(cache_manager, cache_local->thisIndex);
+            else cache_manager[node->cm_index].requestNodes(std::make_pair(node->key, cache_local->thisIndex));
           }
 
         }
       }
     } 
     if (num_waiting[i] == 0) {
-      if (trav_tops[i] == nullptr) trav_tops[i] = cache_manager.ckLocalBranch()->root;
+      if (trav_tops[i] == nullptr) trav_tops[i] = cache_local->root;
       if (trav_tops[i]->parent == nullptr) {
         num_done++;
       }
