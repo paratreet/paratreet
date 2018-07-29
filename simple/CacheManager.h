@@ -81,7 +81,7 @@ void CacheManager<Data>::addCacheHelper(Particle* particles, int n_particles, No
     for (int j = 0; j < n_nodes; j++) {
       Node<Data>* node = new Node<Data>(nodes[j]);
       if (j == 0) {
-        node->parent = root->findNode(nodes[0].key)->parent;
+        node->parent = first_node_placeholder->parent;
         first_node = node;
       }
       else {
@@ -206,8 +206,9 @@ void CacheManager<Data>::connect(Node<Data>* node) {
 #ifdef SMPCACHE
   block.lock();
 #endif
-  if (missed.count(node->key)) {
-    node->parent = missed[node->key];
+  auto it = missed.find(node->key);
+  if (it != missed.end()) {
+    node->parent = it->second;
 #ifdef SMPCACHE
     block.unlock();
 #endif  
@@ -223,25 +224,23 @@ void CacheManager<Data>::connect(Node<Data>* node) {
 template <typename Data>
 void CacheManager<Data>::insertNode(Node<Data>* node, bool above_tp, bool should_swap) {
   //CkPrintf("inserting node %d of type %d with %d children\n", node->key, node->type, node->n_children);
+#ifdef SMPCACHE
+  if (above_tp) block.lock();
+#endif
   for (int i = 0; i < node->n_children; i++) {
     Node<Data>* new_child;
     Key child_key = (node->key << 3) + i;
     bool add_placeholder = false;
     if (above_tp) {
-#ifdef SMPCACHE
-      block.lock();
-#endif
-      if (buffer.count(child_key)) {
-        new_child = buffer[child_key];
+      auto it = buffer.find(child_key);
+      if (it != buffer.end()) {
+        new_child = it->second;
         new_child->parent = node;
       } 
       else {
         missed.insert(std::make_pair(child_key, node));
         add_placeholder = true;
       }
-#ifdef SMPCACHE
-      block.unlock();
-#endif
     }
     if (!above_tp || add_placeholder) {
       new_child = new Node<Data> (child_key, node->depth+1, 0, nullptr, 0, 0, node);
@@ -249,7 +248,10 @@ void CacheManager<Data>::insertNode(Node<Data>* node, bool above_tp, bool should
       if (!above_tp) new_child->cm_index = node->cm_index;
     }
     node->children[i] = new_child;
-  } 
+  }
+#ifdef SMPCACHE
+  if (above_tp) block.unlock();
+#endif
 }
 
 #endif //SIMPLE_CACHEMANAGER_H_

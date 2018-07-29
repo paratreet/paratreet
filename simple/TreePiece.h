@@ -446,18 +446,21 @@ void TreePiece<Data>::goDown(Key new_key) {
         case Node<Data>::Boundary: case Node<Data>::RemoteAboveTPKey: case Node<Data>::Remote: case Node<Data>::RemoteLeaf: {
           curr_nodes_insertions.push_back(std::make_pair(node->key, i));
           num_waiting[i]++;
+          bool should_send = false;
 #ifdef SMPCACHE
           node->qlock.lock();
 #endif
-          if (!node->waiting.size()) {
-            if (node->type == Node<Data>::Boundary || node->type == Node<Data>::RemoteAboveTPKey)
-              global_data[node->key].requestData(cache_manager, cache_manager.ckLocalBranch()->thisIndex);
-            else cache_manager[node->cm_index].requestNodes(std::make_pair(node->key, cache_manager.ckLocalBranch()->thisIndex));
-          }
+          if (!node->waiting.size()) should_send = true;
           node->waiting.insert(this->thisIndex);
 #ifdef SMPCACHE
           node->qlock.unlock();
 #endif
+          if (should_send) {
+            if (node->type == Node<Data>::Boundary || node->type == Node<Data>::RemoteAboveTPKey)
+              global_data[node->key].requestData(cache_manager, cache_manager.ckLocalBranch()->thisIndex);
+            else cache_manager[node->cm_index].requestNodes(std::make_pair(node->key, cache_manager.ckLocalBranch()->thisIndex));
+          }
+
         }
       }
     } 
@@ -494,7 +497,7 @@ template <typename Data>
 template <typename Visitor>
 void TreePiece<Data>::catchMissed() {
   bool if_caught = curr_nodes.size();
-  for (auto& caught : curr_nodes) {
+  for (auto caught : curr_nodes) {
     CkPrintf("caught node %d missed on tp %d, leaf %d\n", caught, this->thisIndex, caught.second);
     this->thisProxy[this->thisIndex].template goDown<Visitor> (caught.first);
   }
