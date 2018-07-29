@@ -111,8 +111,14 @@ void CacheManager<Data>::requestNodes(std::pair<Key, int> param) {
   Node<Data>* node = root->findNode(key);
   if (!node) {
     Key temp = key;
+#ifdef SMPCACHE
+    block.lock();
+#endif
     while (!buffer.count(temp)) temp /= 8;
     node = buffer[temp]->findNode(key);
+#ifdef SMPCACHE
+    block.unlock();
+#endif
   }
   if (!node) CkPrintf("node found for key %d on cm %d\n", param.first, this->thisIndex);
   serviceRequest(node, param.second);
