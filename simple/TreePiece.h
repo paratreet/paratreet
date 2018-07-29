@@ -146,7 +146,7 @@ void TreePiece<Data>::build(const CkCallback &cb){
 #ifdef DEBUG
   CkPrintf("[TP %d] key: 0x%" PRIx64 " particles: %d\n", this->thisIndex, tp_key, particles.size());
 #endif
-  root = new Node<Data>(1, 0, particles.size(), &particles[0], 0, n_treepieces - 1, NULL);
+  root = new Node<Data>(1, 0, particles.size(), &particles[0], 0, n_treepieces - 1, nullptr);
   recursiveBuild(root, false);
 
   this->contribute(cb);
@@ -357,7 +357,7 @@ void TreePiece<Data>::initCache(CProxy_CacheManager<Data> cache_manageri) {
   if (!root_from_tp_key) {
     root_from_tp_key = root->findNode(tp_key);
     cache_manager.ckLocalBranch()->connect(root_from_tp_key);
-    root_from_tp_key->parent->children[tp_key % 8] = NULL;
+    root_from_tp_key->parent->children[tp_key % 8] = nullptr;
     root->triggerFree();
   }
 }
@@ -398,7 +398,7 @@ void TreePiece<Data>::startUpAndDown(CProxy_CacheManager<Data> cache_manageri) {
   }
   num_waiting = std::vector<int> (leaves.size(), 1);
   num_done = 0;
-  trav_tops = std::vector< Node<Data>* > (leaves.size(), NULL);
+  trav_tops = std::vector< Node<Data>* > (leaves.size(), nullptr);
   for (int i = 0; i < leaves.size(); i++) curr_nodes.insert(std::make_pair(leaves[i]->key, i));
   for (auto leaf : leaves) goDown<Visitor> (leaf->key);
 }
@@ -461,8 +461,8 @@ void TreePiece<Data>::goDown(Key new_key) {
       }
     } 
     if (num_waiting[i] == 0) {
-      if (trav_tops[i] == NULL) trav_tops[i] = cache_manager.ckLocalBranch()->root;
-      if (trav_tops[i]->parent == NULL) {
+      if (trav_tops[i] == nullptr) trav_tops[i] = cache_manager.ckLocalBranch()->root;
+      if (trav_tops[i]->parent == nullptr) {
         num_done++;
       }
       else {        

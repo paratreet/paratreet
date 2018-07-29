@@ -28,9 +28,9 @@ public:
   bool processor_set; // done this way to vastly reduce user code and teplated code bloat
 
   CacheManager() { // : root(nullptr), curr_waiting (std::map<Key, std::vector<int> >()) {}
-    Node<Data>* node = new Node<Data>(1, 0, 0, NULL, 0, 0, NULL);
+    Node<Data>* node = new Node<Data>(1, 0, 0, nullptr, 0, 0, nullptr);
     node->type = Node<Data>::Boundary;
-    missed.insert(std::make_pair(node->key, (Node<Data>*) NULL));
+    missed.insert(std::make_pair(node->key, nullptr));
     root = node;
     dindex = 0;
     processor_set = false;
@@ -169,7 +169,7 @@ void CacheManager<Data>::resumeTraversals() {
 template <typename Data>
 void CacheManager<Data>::restoreData(std::pair<Key, Data> param) {
   Key key = param.first;
-  Node<Data>* node = new Node<Data>(key, Node<Data>::CachedBoundary, param.second, 8, (key > 1) ? root->findNode(key / 8) : NULL);
+  Node<Data>* node = new Node<Data>(key, Node<Data>::CachedBoundary, param.second, 8, (key > 1) ? root->findNode(key / 8) : nullptr);
   insertNode(node, true, false);
   connect(node);
 }
@@ -238,7 +238,7 @@ void CacheManager<Data>::insertNode(Node<Data>* node, bool above_tp, bool should
 #endif
     }
     if (!above_tp || add_placeholder) {
-      new_child = new Node<Data> (child_key, node->depth+1, 0, NULL, 0, 0, node);
+      new_child = new Node<Data> (child_key, node->depth+1, 0, nullptr, 0, 0, node);
       new_child->type = (above_tp) ? Node<Data>::RemoteAboveTPKey : Node<Data>::Remote;
       if (!above_tp) new_child->cm_index = node->cm_index;
     }

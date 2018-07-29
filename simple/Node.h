@@ -40,14 +40,14 @@ struct Node {
     p | wait_count;
     p | cm_index;
     if (p.isUnpacking()) {
-      particles = NULL;
+      particles = nullptr;
     }
   }
 
-  Node() : Node(-1, -1, 0, NULL, -1, -1, NULL) {}
+  Node() : Node(-1, -1, 0, nullptr, -1, -1, nullptr) {}
 
   Node(Key key, Type type, Data data, int n_children, Node* parent) :
-    Node(key, parent ? parent->depth + 1 : 0, 0, NULL, 0, 0, parent) {
+    Node(key, parent ? parent->depth + 1 : 0, 0, nullptr, 0, 0, parent) {
     this->type = type;
     this->data = data;
     this->n_children = n_children;
@@ -65,7 +65,7 @@ struct Node {
     this->n_children = 0;
     this->wait_count = -1;
     this->cm_index = -1;
-    for (int i = 0; i < BRANCH_FACTOR; i++) this->children[i] = NULL;
+    for (int i = 0; i < BRANCH_FACTOR; i++) this->children[i] = nullptr;
   }
 
   Node (const Node& n) {
@@ -81,13 +81,13 @@ struct Node {
     n_children = n.n_children;
     wait_count = n.wait_count;
     cm_index = n.cm_index;
-    for (int i = 0; i < BRANCH_FACTOR; i++) this->children[i] = NULL;
+    for (int i = 0; i < BRANCH_FACTOR; i++) this->children[i] = nullptr;
   }
 
   void triggerFree() {
     for (int i = 0; i < children.size(); i++) {
       Node* node = children[i];
-      if (node == NULL) continue;
+      if (node == nullptr) continue;
       node->triggerFree();
       delete node;
     }
@@ -147,7 +147,7 @@ struct Node {
     Node<Data>* node = this;
     for (int i = remainders.size()-1; i >= 0; i--) {
       if (node && remainders[i] < node->children.size()) node = node->children[remainders[i]];
-      else return NULL;
+      else return nullptr;
     }
     return node;
   }

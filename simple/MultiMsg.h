@@ -19,9 +19,9 @@ struct MultiMsg : public CMessage_MultiMsg<Data> {
 
 template <typename Data>
 inline MultiMsg<Data>::MultiMsg() {
-  particles = NULL;
+  particles = nullptr;
   n_particles = 0;
-  nodes = NULL;
+  nodes = nullptr;
   n_nodes = 0;
 }
 

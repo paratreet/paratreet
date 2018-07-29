@@ -14,7 +14,7 @@ struct ParticleMsg : public CMessage_ParticleMsg {
 };
 
 inline ParticleMsg::ParticleMsg() {
-  particles = NULL;
+  particles = nullptr;
   n_particles = 0;
 }
 
