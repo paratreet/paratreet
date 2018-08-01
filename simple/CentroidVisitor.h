@@ -32,8 +32,8 @@ public:
     }
     if (tp_index == -1 || node->parent->type == Node<CentroidData>::Boundary) {
       if (node->type == Node<CentroidData>::Boundary) 
-        centroid_calculator[node->key >> 3].receiveData<CentroidVisitor>(tp_proxy, node->data, -1); // doesn't exist
-      else centroid_calculator[node->key].receiveData<CentroidVisitor>(tp_proxy, node->data, tp_index);
+        centroid_calculator[node->key >> 3].receiveData<CentroidVisitor>(node->data); // doesn't exist
+      else centroid_calculator[node->key].receiveData<CentroidVisitor>(node->data);
       return false;
     }
     node->parent->data = node->parent->data + node->data;

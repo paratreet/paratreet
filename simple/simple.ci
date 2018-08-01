@@ -86,15 +86,16 @@ mainmodule simple {
   template <typename Data>
   array [1d] TreeElement {
     entry TreeElement();
+    entry [createhere] void receiveProxies (TPHolder<Data>, int, CProxy_CacheManager<Data>);
     template <typename Visitor>
-    entry [createhere] void receiveData(TPHolder<Data>, Data, int);
-    entry void requestData(CProxy_CacheManager<Data>, int);
+    entry void receiveData (Data);
+    entry void requestData(int);
     entry void print();
     entry void reset();
   };
 
   array [1d] TreeElement<CentroidData>;
-  extern entry void TreeElement<CentroidData> receiveData<CentroidVisitor>(TPHolder<CentroidData>, CentroidData, int);
+  extern entry void TreeElement<CentroidData> receiveData<CentroidVisitor>(CentroidData);
 
   template <typename Data>
   array [1d] TreePiece {

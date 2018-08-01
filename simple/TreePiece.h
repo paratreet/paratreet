@@ -106,6 +106,7 @@ TreePiece<Data>::TreePiece(const CkCallback& cb, int n_total_particles_, int n_t
   resumer.ckLocalBranch()->cache_local = cache_local;
   cache_local->resumer = resumer;
   cache_init = false;
+
   if (decomp_type == OCT_DECOMP) {
     // OCT decomposition
     n_expected = readers.ckLocalBranch()->splitters[this->thisIndex].n_particles;
@@ -118,6 +119,15 @@ TreePiece<Data>::TreePiece(const CkCallback& cb, int n_total_particles_, int n_t
       n_expected++;
       // TODO tp_key needs to be found in local tree build
   }
+
+  global_data[tp_key].receiveProxies(TPHolder<Data>(this->thisProxy), this->thisIndex, cache_manager);
+  Key temp = tp_key;
+  while (temp > 0 && temp % 8 == 0) {
+    temp /= 8;
+    //CkPrintf("temp = %d\n", temp);
+    global_data[temp].receiveProxies(TPHolder<Data>(this->thisProxy), -1, cache_manager);
+ }
+
   this->contribute(cb);
   root_from_tp_key = nullptr;
 }
@@ -347,7 +357,7 @@ void TreePiece<Data>::upOnly() {
     }
   }
   if (!up.size()) { // no Data bc no Leaves, so send blank
-    global_data[tp_key].template receiveData<Visitor>(this->thisProxy, Data(), this->thisIndex);
+    global_data[tp_key].template receiveData<Visitor>(Data());
   }
   while (up.size()) {
     Node<Data>* node = up.front();
@@ -465,7 +475,7 @@ void TreePiece<Data>::goDown(Key new_key) {
           bool prev = node->requested.exchange(true);
           if (!prev) {
             if (node->type == Node<Data>::Boundary || node->type == Node<Data>::RemoteAboveTPKey)
-              global_data[node->key].requestData(cache_manager, cache_local->thisIndex);
+              global_data[node->key].requestData(cache_local->thisIndex);
             else cache_manager[node->cm_index].requestNodes(std::make_pair(node->key, cache_local->thisIndex));
           }
           std::vector<int>& list = resumer.ckLocalBranch()->waiting[node->key];
