@@ -20,7 +20,6 @@ private:
   int wait_count;
   int tp_index;
   CProxy_TreePiece<Data> tp_proxy;
-  std::unordered_set<int> recipients;
 public:
   TreeElement();
   void reset();
@@ -48,14 +47,8 @@ void TreeElement<Data>::reset() {
 
 template <typename Data>
 void TreeElement<Data>::requestData(CProxy_CacheManager<Data> cache_manager, int cm_index) {
-  if (tp_index >= 0) tp_proxy[tp_index].requestNodes(this->thisIndex, cache_manager, cm_index);
-  else {
-    if (!recipients.count(cm_index)) {
-      cache_manager[cm_index].restoreData(std::make_pair(this->thisIndex, d));
-      recipients.insert(cm_index);
-    }
-    else CkPrintf("DOUBLE REQUEST FOR node %d by cm %d\n", this->thisIndex, cm_index);
-  }
+  if (tp_index >= 0) tp_proxy[tp_index].requestNodes(this->thisIndex, cm_index);
+  else cache_manager[cm_index].restoreData(std::make_pair(this->thisIndex, d));
 }
 
 template <typename Data>

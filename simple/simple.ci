@@ -20,6 +20,7 @@ mainmodule simple {
   readonly int num_iterations;
   readonly CProxy_TreeElement<CentroidData> centroid_calculator;
   readonly CProxy_CacheManager<CentroidData> centroid_cache;
+  readonly CProxy_Resumer<CentroidData> centroid_resumer;
   readonly CProxy_CountManager count_manager;
 
   mainchare Main {
@@ -27,7 +28,6 @@ mainmodule simple {
     entry Main(CkArgMsg* m);
     entry [threaded] void run();
     entry void doneUp();
-    entry void catchDown();
     entry [reductiontarget] void doneDown();
     entry [reductiontarget] void terminate(CkReductionMsg*);
 
@@ -53,7 +53,6 @@ mainmodule simple {
   group CacheManager {
 #endif
     entry CacheManager();
-    entry void receiveTP(TPHolder<Data>);
     entry void requestNodes(std::pair<Key, int>);
     entry void addCache(MultiMsg<Data>*);
     entry void addCache(MultiData<Data>);
@@ -66,9 +65,23 @@ mainmodule simple {
   group CacheManager<CentroidData>;
 #endif
 
-extern entry [aggregate] void CacheManager<CentroidData> restoreData(std::pair<Key, CentroidData>);
-extern entry [aggregate] void CacheManager<CentroidData> addCache(MultiData<CentroidData>);
-extern entry [aggregate] void CacheManager<CentroidData> requestNodes(std::pair<Key, int>);
+  extern entry [aggregate] void CacheManager<CentroidData> restoreData(std::pair<Key, CentroidData>);
+  extern entry [aggregate] void CacheManager<CentroidData> addCache(MultiData<CentroidData>);
+  extern entry [aggregate] void CacheManager<CentroidData> requestNodes(std::pair<Key, int>);
+
+  template <typename Data>
+  group Resumer {
+    entry Resumer();
+    template <typename Visitor>
+    entry [expedited] void process(Key);
+  };
+
+  group Resumer<CentroidData>;
+
+  extern entry void Resumer<CentroidData> process<GravityVisitor> (Key);
+  extern entry void Resumer<CentroidData> process<DensityVisitor> (Key);
+  extern entry void Resumer<CentroidData> process<PressureVisitor> (Key);
+  extern entry void Resumer<CentroidData> process<CountVisitor> (Key);
 
   template <typename Data>
   array [1d] TreeElement {
@@ -85,22 +98,20 @@ extern entry [aggregate] void CacheManager<CentroidData> requestNodes(std::pair<
 
   template <typename Data>
   array [1d] TreePiece {
-    entry TreePiece(const CkCallback&, int, int);
+    entry TreePiece(const CkCallback&, int, int, CProxy_TreeElement<Data>, CProxy_Resumer<Data>, CProxy_CacheManager<Data>);
     entry void receive(ParticleMsg*);
     entry void check(const CkCallback&);
     entry void build(const CkCallback&);
     entry void triggerRequest();
     template<typename Visitor>
-    entry void upOnly(CProxy_TreeElement<Data>);
+    entry void upOnly();
     template<typename Visitor>
-    entry void startDown(CProxy_CacheManager<Data>);
+    entry void startDown();
     template<typename Visitor>
-    entry void startUpAndDown(CProxy_CacheManager<Data>);
+    entry void startUpAndDown();
     template<typename Visitor>
     entry void goDown(Key);
-    entry void requestNodes(Key, CProxy_CacheManager<Data>, int);
-    template<typename Visitor>
-    entry void catchMissed();
+    entry void requestNodes(Key, int);
     entry void perturb(Real timestep);
     entry void flush(CProxy_Reader);
     entry void rebuild(const CkCallback&);
@@ -109,23 +120,17 @@ extern entry [aggregate] void CacheManager<CentroidData> requestNodes(std::pair<
   };
 
   array [1d] TreePiece<CentroidData>;
-  extern entry void TreePiece<CentroidData> upOnly<CentroidVisitor> (CProxy_TreeElement<CentroidData>);
+  extern entry void TreePiece<CentroidData> upOnly<CentroidVisitor> ();
 
-  extern entry void TreePiece<CentroidData> startDown<GravityVisitor> (CProxy_CacheManager<CentroidData>);
+  extern entry void TreePiece<CentroidData> startDown<GravityVisitor> ();
+  extern entry void TreePiece<CentroidData> startUpAndDown<DensityVisitor> ();
+  extern entry void TreePiece<CentroidData> startDown<PressureVisitor> ();
+  extern entry void TreePiece<CentroidData> startDown<CountVisitor> ();
+
   extern entry void TreePiece<CentroidData> goDown<GravityVisitor> (Key);
-  extern entry void TreePiece<CentroidData> catchMissed<GravityVisitor> ();
-
-  extern entry void TreePiece<CentroidData> startUpAndDown<DensityVisitor> (CProxy_CacheManager<CentroidData>);
   extern entry void TreePiece<CentroidData> goDown<DensityVisitor> (Key);
-  extern entry void TreePiece<CentroidData> catchMissed<DensityVisitor> ();
-
-  extern entry void TreePiece<CentroidData> startDown<PressureVisitor> (CProxy_CacheManager<CentroidData>);
   extern entry void TreePiece<CentroidData> goDown<PressureVisitor> (Key);
-  extern entry void TreePiece<CentroidData> catchMissed<PressureVisitor> ();
-
-  extern entry void TreePiece<CentroidData> startDown<CountVisitor> (CProxy_CacheManager<CentroidData>);
   extern entry void TreePiece<CentroidData> goDown<CountVisitor> (Key);
-  extern entry void TreePiece<CentroidData> catchMissed<CountVisitor> ();
 
   group Reader {
     entry Reader();

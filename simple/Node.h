@@ -4,7 +4,7 @@
 #include "common.h"
 #include "Particle.h"
 #include <array>
-#include <mutex>
+#include <atomic>
 
 template <typename Data>
 struct Node {
@@ -23,10 +23,7 @@ struct Node {
   int n_children;
   int wait_count;
   int cm_index;
-  std::set<int> waiting;
-#ifdef SMPCACHE
-  std::mutex qlock;
-#endif
+  std::atomic<bool> requested;
 
   void pup (PUP::er& p) {
     pup_bytes(&p, (void *)&type, sizeof(Type));
@@ -66,6 +63,7 @@ struct Node {
     this->wait_count = -1;
     this->cm_index = -1;
     for (int i = 0; i < BRANCH_FACTOR; i++) this->children[i] = nullptr;
+    this->requested.store(false);
   }
 
   Node (const Node& n) {

@@ -29,6 +29,7 @@
 /* readonly */ int num_iterations;
 /* readonly */ CProxy_TreeElement<CentroidData> centroid_calculator;
 /* readonly */ CProxy_CacheManager<CentroidData> centroid_cache;
+/* readonly */ CProxy_Resumer<CentroidData> centroid_resumer;
 /* readonly */ CProxy_CountManager count_manager;
 
 
@@ -59,10 +60,8 @@ class Main : public CBase_Main {
     down_finished = false;
     TPHolder<CentroidData> tp_holder (treepieces);
     //centroid_calculator.print(); 
-    centroid_cache.receiveTP(tp_holder);
-    treepieces.startDown<GravityVisitor>(centroid_cache);
-    // treepieces.startDown<CountVisitor>(centroid_cache);
-    CkStartQD(CkCallback(CkIndex_Main::catchDown(), mainProxy));
+    treepieces.startDown<GravityVisitor>();
+    // treepieces.startDown<CountVisitor>();
   }
 
   void doneDown() {
@@ -74,10 +73,6 @@ class Main : public CBase_Main {
       nextIteration();
     else
       terminate();*/
-  }
-
-  void catchDown() {
-    if (!down_finished) treepieces.template catchMissed<CountVisitor>();
   }
 
   void terminate(CkReductionMsg* m) {
@@ -184,6 +179,7 @@ class Main : public CBase_Main {
     readers = CProxy_Reader::ckNew();
     centroid_calculator = CProxy_TreeElement<CentroidData>::ckNew();
     centroid_cache = CProxy_CacheManager<CentroidData>::ckNew();
+    centroid_resumer = CProxy_Resumer<CentroidData>::ckNew();
     count_manager = CProxy_CountManager::ckNew(0.00001, 10000, 5);
 
     // start!
@@ -238,7 +234,7 @@ class Main : public CBase_Main {
     }
 
     // create treepieces
-    treepieces = CProxy_TreePiece<CentroidData>::ckNew(CkCallbackResumeThread(), universe.n_particles, n_treepieces, n_treepieces);
+    treepieces = CProxy_TreePiece<CentroidData>::ckNew(CkCallbackResumeThread(), universe.n_particles, n_treepieces, centroid_calculator, centroid_resumer, centroid_cache, n_treepieces);
     CkPrintf("[Main] Created %d TreePieces\n", n_treepieces);
 
     // flush particles to home TreePieces
@@ -269,7 +265,7 @@ class Main : public CBase_Main {
 
     // perform downward and upward traversals (Barnes-Hut)
     start_time = CkWallTimer();
-    treepieces.upOnly<CentroidVisitor>(centroid_calculator);
+    treepieces.upOnly<CentroidVisitor>();
   }
 
   void nextIteration() {
@@ -323,7 +319,7 @@ class Main : public CBase_Main {
 
     // start traversals
     start_time = CkWallTimer();
-    treepieces.upOnly<CentroidVisitor>(centroid_calculator);
+    treepieces.upOnly<CentroidVisitor>();
   }
 
   void findOctSplitters() {
