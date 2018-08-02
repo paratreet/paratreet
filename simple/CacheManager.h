@@ -22,6 +22,7 @@ public:
   std::function<void(CProxy_Resumer<Data>, bool, int, Key)> processor;
   bool processor_set;
   bool isNG;
+  int first_pe;
   CProxy_Resumer<Data> resumer;
   CkCallback build_cb;
 
@@ -31,11 +32,8 @@ public:
     missed.insert(std::make_pair(node->key, nullptr));
     root = node;
     processor_set = false;
-    isNG = this->isNodeGroup();
-    if (this->thisIndex == 0) {
-      if (isNG) CkPrintf("Cache is node local\n");
-      else CkPrintf("Cache is pe local\n");
-    }
+    isNG = false;
+    first_pe = -1;
   }
 
   ~CacheManager() {

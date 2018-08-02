@@ -44,23 +44,14 @@ mainmodule simple {
   message MultiMsg<CentroidData>;
 
   template <typename Data>
-#ifdef SMPCACHE
   nodegroup CacheManager {
-#else
-  group CacheManager {
-#endif
     entry CacheManager();
     entry void requestNodes(std::pair<Key, int>);
     entry void addCache(MultiMsg<Data>*);
     entry void addCache(MultiData<Data>);
     entry void restoreData(std::pair<Key, Data>);
   };
-
-#ifdef SMPCACHE
   nodegroup CacheManager<CentroidData>;
-#else
-  group CacheManager<CentroidData>;
-#endif
 
   extern entry [aggregate] void CacheManager<CentroidData> restoreData(std::pair<Key, CentroidData>);
   extern entry [aggregate] void CacheManager<CentroidData> addCache(MultiData<CentroidData>);
@@ -72,7 +63,6 @@ mainmodule simple {
     template <typename Visitor>
     entry [expedited] void process(Key);
   };
-
   group Resumer<CentroidData>;
 
   extern entry void Resumer<CentroidData> process<GravityVisitor> (Key);
@@ -89,7 +79,6 @@ mainmodule simple {
     entry void print();
     entry void reset();
   };
-
   array [1d] TreeElement<CentroidData>;
 
   template <typename Data>
@@ -112,7 +101,6 @@ mainmodule simple {
 
     entry void checkParticlesChanged(const CkCallback&);
   };
-
   array [1d] TreePiece<CentroidData>;
 
   extern entry void TreePiece<CentroidData> startDown<GravityVisitor> (CkCallback&);

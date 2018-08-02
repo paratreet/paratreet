@@ -103,6 +103,9 @@ TreePiece<Data>::TreePiece(const CkCallback& cb, int n_total_particles_, int n_t
   cache_local = cache_manager.ckLocalBranch();
   resumer.ckLocalBranch()->cache_local = cache_local;
   cache_local->resumer = resumer;
+  if (cache_local->first_pe > -1 && cache_local->first_pe != CkMyPe())
+    cache_local->isNG = true;
+  cache_local->first_pe = CkMyPe();
   cache_init = false;
 
   if (decomp_type == OCT_DECOMP) {
