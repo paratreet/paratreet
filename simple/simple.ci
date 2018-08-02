@@ -2,7 +2,6 @@ mainmodule simple {
   include "BoundingBox.h";
   include "Splitter.h";
   include "CentroidData.h";
-  class CentroidVisitor;
   include "Node.h";
   include "TPHolder.h";
   class CProxy_Reader;
@@ -27,8 +26,6 @@ mainmodule simple {
     initnode void initialize();
     entry Main(CkArgMsg* m);
     entry [threaded] void run();
-    entry void doneUp();
-    entry [reductiontarget] void doneDown();
     entry [reductiontarget] void terminate(CkReductionMsg*);
 
     // debug
@@ -87,29 +84,25 @@ mainmodule simple {
   array [1d] TreeElement {
     entry TreeElement();
     entry [createhere] void receiveProxies (TPHolder<Data>, int, CProxy_CacheManager<Data>);
-    template <typename Visitor>
     entry void receiveData (Data);
-    entry void requestData(int);
+    entry void requestData (int);
     entry void print();
     entry void reset();
   };
 
   array [1d] TreeElement<CentroidData>;
-  extern entry void TreeElement<CentroidData> receiveData<CentroidVisitor>(CentroidData);
 
   template <typename Data>
   array [1d] TreePiece {
     entry TreePiece(const CkCallback&, int, int, CProxy_TreeElement<Data>, CProxy_Resumer<Data>, CProxy_CacheManager<Data>);
     entry void receive(ParticleMsg*);
     entry void check(const CkCallback&);
-    entry void build(const CkCallback&);
+    entry void build(CkCallback&);
     entry void triggerRequest();
     template<typename Visitor>
-    entry void upOnly();
+    entry void startDown(CkCallback&);
     template<typename Visitor>
-    entry void startDown();
-    template<typename Visitor>
-    entry void startUpAndDown();
+    entry void startUpAndDown(CkCallback&);
     template<typename Visitor>
     entry void goDown(Key);
     entry void requestNodes(Key, int);
@@ -121,12 +114,11 @@ mainmodule simple {
   };
 
   array [1d] TreePiece<CentroidData>;
-  extern entry void TreePiece<CentroidData> upOnly<CentroidVisitor> ();
 
-  extern entry void TreePiece<CentroidData> startDown<GravityVisitor> ();
-  extern entry void TreePiece<CentroidData> startUpAndDown<DensityVisitor> ();
-  extern entry void TreePiece<CentroidData> startDown<PressureVisitor> ();
-  extern entry void TreePiece<CentroidData> startDown<CountVisitor> ();
+  extern entry void TreePiece<CentroidData> startDown<GravityVisitor> (CkCallback&);
+  extern entry void TreePiece<CentroidData> startUpAndDown<DensityVisitor> (CkCallback&);
+  extern entry void TreePiece<CentroidData> startDown<PressureVisitor> (CkCallback&);
+  extern entry void TreePiece<CentroidData> startDown<CountVisitor> (CkCallback&);
 
   extern entry void TreePiece<CentroidData> goDown<GravityVisitor> (Key);
   extern entry void TreePiece<CentroidData> goDown<DensityVisitor> (Key);

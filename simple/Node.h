@@ -60,7 +60,7 @@ struct Node {
     this->owner_tp_end = owner_tp_end;
     this->parent = parent;
     this->n_children = 0;
-    this->wait_count = -1;
+    this->wait_count = 8;
     this->cm_index = -1;
     for (int i = 0; i < BRANCH_FACTOR; i++) this->children[i] = nullptr;
     this->requested.store(false);

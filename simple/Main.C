@@ -9,7 +9,6 @@
 #include "BufferedVec.h"
 #include "Utility.h"
 #include "TreeElement.h"
-#include "CentroidVisitor.h"
 #include "DensityVisitor.h"
 #include "GravityVisitor.h"
 #include "PressureVisitor.h"
@@ -38,7 +37,6 @@ class Main : public CBase_Main {
   double start_time;
   std::string input_str;
   int cur_iteration;
-  bool down_finished;
 
   BoundingBox universe;
   Key smallest_particle_key;
@@ -52,27 +50,6 @@ class Main : public CBase_Main {
   public:
   static void initialize() {
     BoundingBox::registerReducer();
-  }
-  
-  void doneUp() {
-    CkPrintf("[Main, iter %d] Calculating Centroid: %lf seconds\n", cur_iteration, CkWallTimer() - start_time);
-    start_time = CkWallTimer();
-    down_finished = false;
-    TPHolder<CentroidData> tp_holder (treepieces);
-    //centroid_calculator.print(); 
-    treepieces.startDown<GravityVisitor>();
-    // treepieces.startDown<CountVisitor>();
-  }
-
-  void doneDown() {
-    down_finished = true;
-    CkPrintf("[Main, iter %d] Downward traversal done: %lf seconds\n", cur_iteration, CkWallTimer() - start_time);
-    // count_manager.sum(CkCallback(CkReductionTarget(Main, terminate), thisProxy));
-    CkExit();
-    /*if (++cur_iteration < num_iterations)
-      nextIteration();
-    else
-      terminate();*/
   }
 
   void terminate(CkReductionMsg* m) {
@@ -104,7 +81,7 @@ class Main : public CBase_Main {
     max_particles_per_leaf = MAX_PARTICLES_PER_LEAF;
     decomp_type = OCT_DECOMP;
     tree_type = OCT_TREE;
-    num_iterations = 10;
+    num_iterations = 1;
     cur_iteration = 0;
 
     // handle arguments
@@ -265,8 +242,15 @@ class Main : public CBase_Main {
 
     // perform downward and upward traversals (Barnes-Hut)
     start_time = CkWallTimer();
-    treepieces.upOnly<CentroidVisitor>();
-  }
+    treepieces.template startDown<GravityVisitor>(CkCallbackResumeThread());
+
+    CkPrintf("[Main, iter %d] Downward traversal done: %lf seconds\n", cur_iteration, CkWallTimer() - start_time);
+    //count_manager.sum(CkCallback(CkReductionTarget(Main, terminate), thisProxy));
+    CkExit();
+    //if (++cur_iteration < num_iterations) nextIteration();
+    //else terminate();
+
+ }
 
   void nextIteration() {
     CkPrintf("[Main, iter %d] Start redistributing particles...\n", cur_iteration);
@@ -319,7 +303,6 @@ class Main : public CBase_Main {
 
     // start traversals
     start_time = CkWallTimer();
-    treepieces.upOnly<CentroidVisitor>();
   }
 
   void findOctSplitters() {

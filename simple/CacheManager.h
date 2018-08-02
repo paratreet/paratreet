@@ -23,6 +23,7 @@ public:
   bool processor_set;
   bool isNG;
   CProxy_Resumer<Data> resumer;
+  CkCallback build_cb;
 
   CacheManager() { // : root(nullptr), curr_waiting (std::map<Key, std::vector<int> >()) {}
     Node<Data>* node = new Node<Data>(1, 0, 0, nullptr, 0, 0, nullptr);
@@ -31,8 +32,10 @@ public:
     root = node;
     processor_set = false;
     isNG = this->isNodeGroup();
-    if (isNG && !this->thisIndex) CkPrintf("Cache is node local\n");
-    else if (!this->thisIndex) CkPrintf("Cache is pe local\n");
+    if (this->thisIndex == 0) {
+      if (isNG) CkPrintf("Cache is node local\n");
+      else CkPrintf("Cache is pe local\n");
+    }
   }
 
   ~CacheManager() {
@@ -41,7 +44,7 @@ public:
     temp->triggerFree();
     delete temp;
   }
-  void connect (Node<Data>*);
+  void connect(Node<Data>*);
   void requestNodes(std::pair<Key, int>);
   void serviceRequest(Node<Data>*, int);
   void addCache(MultiMsg<Data>*);
@@ -146,6 +149,7 @@ void CacheManager<Data>::restoreData(std::pair<Key, Data> param) {
   Node<Data>* node = new Node<Data>(key, Node<Data>::CachedBoundary, param.second, 8, (key > 1) ? root->findNode(key / 8) : nullptr);
   insertNode(node, true, false);
   connect(node);
+  if (key == 1) this->contribute(build_cb);
 }
 
 template <typename Data>
@@ -172,8 +176,9 @@ void CacheManager<Data>::connect(Node<Data>* node) {
     node->parent = it->second;
     if (this->isNG) block.unlock();
     swapIn(node);
-    if (!processor_set) CkAbort("processor not set");
-    processor(resumer, isNG, this->thisIndex, node->key);
+    if (processor_set) processor(resumer, isNG, this->thisIndex, node->key);
+    else if (node->key > 1)
+      CkPrintf("processor not set when connecting node %d\n", node->key);
   }
   else buffer.insert(std::make_pair(node->key, node));
   if (this->isNG) block.unlock();
