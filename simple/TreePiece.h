@@ -348,7 +348,7 @@ void TreePiece<Data>::upOnly() {
     }
     else {
       Node<Data>* parent = node->parent;
-      parent->data = parent->data + node->data;
+      parent->data += node->data;
       parent->wait_count--;
       if (parent->wait_count == 0) going_up.push(parent); 
     }

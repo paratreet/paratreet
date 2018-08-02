@@ -31,7 +31,7 @@ struct CentroidData {
     count += n_particles;
   }
 
-  const CentroidData& operator+ (const CentroidData& cd) { // needed for upward traversal
+  const CentroidData& operator+=(const CentroidData& cd) { // needed for upward traversal
     moment += cd.moment;
     sum_mass += cd.sum_mass;
     box.grow(cd.box);

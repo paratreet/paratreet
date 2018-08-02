@@ -58,7 +58,7 @@ void TreeElement<Data>::requestData(int cm_index) {
 
 template <typename Data>
 void TreeElement<Data>::receiveData (Data datai) {
-  data = data + datai;
+  data += datai;
   wait_count--;
   if (wait_count == 0) {
     if (this->thisIndex == 1) {
