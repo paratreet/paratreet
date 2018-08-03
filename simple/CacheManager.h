@@ -15,10 +15,10 @@
 template <typename Data>
 class CacheManager : public CBase_CacheManager<Data> {
 public:
-  std::mutex block, dlock; //block controls buffer and missing
+  std::mutex block; //controls buffer and missing
   Node<Data>* root;
   std::unordered_map<Key, Node<Data>*> buffer, missed;
-  std::vector<Node<Data>*> delete_at_end;
+  std::vector<std::vector<Node<Data>*>> delete_at_end;
   std::function<void(CProxy_Resumer<Data>, bool, int, Key)> processor;
   bool processor_set;
   bool isNG;
@@ -34,10 +34,11 @@ public:
     processor_set = false;
     isNG = false;
     first_pe = -1;
+    delete_at_end.resize(CkNodeSize(0));
   }
 
   ~CacheManager() {
-    for (auto dae : delete_at_end) delete dae;
+    for (auto& dae : delete_at_end) for (auto to_delete : dae) delete to_delete;
     Node<Data>* temp = root;
     temp->triggerFree();
     delete temp;
@@ -160,9 +161,7 @@ void CacheManager<Data>::swapIn(Node<Data>* to_swap) {
   else {
     std::swap(root, to_swap);
   }
-  if (this->isNG) dlock.lock();
-  delete_at_end.push_back(to_swap);
-  if (this->isNG) dlock.unlock();
+  delete_at_end[CkMyRank()].push_back(to_swap);
 }
 
 template <typename Data>
@@ -185,12 +184,12 @@ void CacheManager<Data>::connect(Node<Data>* node) {
 template <typename Data>
 void CacheManager<Data>::insertNode(Node<Data>* node, bool above_tp, bool should_swap) {
   //CkPrintf("inserting node %d of type %d with %d children\n", node->key, node->type, node->n_children);
-  if (above_tp && this->isNG) block.lock();
   for (int i = 0; i < node->n_children; i++) {
     Node<Data>* new_child;
     Key child_key = (node->key << 3) + i;
     bool add_placeholder = false;
     if (above_tp) {
+      if (this->isNG) block.lock();
       auto it = buffer.find(child_key);
       if (it != buffer.end()) {
         new_child = it->second;
@@ -200,6 +199,7 @@ void CacheManager<Data>::insertNode(Node<Data>* node, bool above_tp, bool should
         missed.insert(std::make_pair(child_key, node));
         add_placeholder = true;
       }
+      if (this->isNG) block.unlock();
     }
     if (!above_tp || add_placeholder) {
       new_child = new Node<Data> (child_key, node->depth+1, 0, nullptr, 0, 0, node);
@@ -208,7 +208,6 @@ void CacheManager<Data>::insertNode(Node<Data>* node, bool above_tp, bool should
     }
     node->children[i] = new_child;
   }
-  if (above_tp && this->isNG) block.unlock();
   if (should_swap) swapIn(node);
 }
 
