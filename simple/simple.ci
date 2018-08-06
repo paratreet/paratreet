@@ -65,10 +65,10 @@ mainmodule simple {
   };
   group Resumer<CentroidData>;
 
-  extern entry void Resumer<CentroidData> process<GravityVisitor> (Key);
-  extern entry void Resumer<CentroidData> process<DensityVisitor> (Key);
-  extern entry void Resumer<CentroidData> process<PressureVisitor> (Key);
-  extern entry void Resumer<CentroidData> process<CountVisitor> (Key);
+  extern entry [expedited] void Resumer<CentroidData> process<GravityVisitor> (Key);
+  extern entry [expedited] void Resumer<CentroidData> process<DensityVisitor> (Key);
+  extern entry [expedited] void Resumer<CentroidData> process<PressureVisitor> (Key);
+  extern entry [expedited] void Resumer<CentroidData> process<CountVisitor> (Key);
 
   template <typename Data>
   array [1d] TreeElement {
