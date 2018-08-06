@@ -19,7 +19,7 @@ struct Node {
   int owner_tp_start;
   int owner_tp_end;
   Node* parent;
-  std::array<Node*, BRANCH_FACTOR> children;
+  std::array<std::atomic<Node*>, BRANCH_FACTOR> children;
   int n_children;
   int wait_count;
   int cm_index;
@@ -62,7 +62,7 @@ struct Node {
     this->n_children = 0;
     this->wait_count = 8;
     this->cm_index = -1;
-    for (int i = 0; i < BRANCH_FACTOR; i++) this->children[i] = nullptr;
+    for (int i = 0; i < BRANCH_FACTOR; i++) this->children[i].store(nullptr);
     this->requested.store(false);
   }
 
@@ -79,12 +79,12 @@ struct Node {
     n_children = n.n_children;
     wait_count = n.wait_count;
     cm_index = n.cm_index;
-    for (int i = 0; i < BRANCH_FACTOR; i++) this->children[i] = nullptr;
+    for (int i = 0; i < BRANCH_FACTOR; i++) this->children[i].store(nullptr);
   }
 
   void triggerFree() {
     for (int i = 0; i < children.size(); i++) {
-      Node* node = children[i];
+      Node* node = children[i].load();
       if (node == nullptr) continue;
       node->triggerFree();
       delete node;
@@ -130,7 +130,7 @@ struct Node {
     if (n_children == 0) return;
 
     for (int i = 0; i < n_children; i++) {
-      Node* child = children[i];
+      Node* child = children[i].load();
       out << key << " -> " << child->key << ";" << std::endl;
       child->dot(out);
     }
@@ -144,7 +144,7 @@ struct Node {
     }
     Node<Data>* node = this;
     for (int i = remainders.size()-1; i >= 0; i--) {
-      if (node && remainders[i] < node->children.size()) node = node->children[remainders[i]];
+      if (node && remainders[i] < node->children.size()) node = node->children[remainders[i]].load();
       else return nullptr;
     }
     return node;

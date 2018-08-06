@@ -307,7 +307,7 @@ bool TreePiece<Data>::recursiveBuild(Node<Data>* node, bool saw_tp_key) {
       // create child and store in vector
       Node<Data>* child = new Node<Data>(child_key, node->depth + 1, n_particles, node->particles + start, 0, n_treepieces - 1, node);
       //Node<Data>* child = new Node<Data>(child_key, node->depth + 1, node->particles + start, n_particles, child_owner_start, child_owner_end, node);
-      node->children[i] = child;
+      node->children[i].store(child);
 
       // recursive tree build
       bool local = recursiveBuild(child, saw_tp_key);
@@ -361,7 +361,7 @@ void TreePiece<Data>::initCache(CkCallback cbi) {
     cache_local->build_cb = cbi;
     root_from_tp_key = root->findNode(tp_key);
     cache_local->connect(root_from_tp_key);
-    root_from_tp_key->parent->children[tp_key % 8] = nullptr;
+    root_from_tp_key->parent->children[tp_key % 8].store(nullptr);
     root->triggerFree();
     cache_init = true;
   }
@@ -446,7 +446,7 @@ void TreePiece<Data>::goDown(Key new_key) {
         case Node<Data>::CachedBoundary: case Node<Data>::CachedRemote: case Node<Data>::Internal: {
           if (v.node(node, leaves[i])) {
             for (int i = 0; i < node->children.size(); i++) {
-              nodes.push(node->children[i]);
+              nodes.push(node->children[i].load());
             }
           }
           break;
@@ -475,7 +475,8 @@ void TreePiece<Data>::goDown(Key new_key) {
         num_done++;
       }
       else {
-        for (auto child : trav_tops[i]->parent->children) {
+        for (int j = 0; j < trav_tops[i]->parent->children.size(); j++) {
+          auto child = trav_tops[i]->parent->children[j].load();
           if (child != trav_tops[i]) {
              if (trav_tops[i]->parent->type == Node<Data>::Boundary) child->type = Node<Data>::RemoteAboveTPKey;
              curr_nodes_insertions.push_back(std::make_pair(child->key, i));

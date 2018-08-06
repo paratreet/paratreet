@@ -83,7 +83,7 @@ Node<Data>* CacheManager<Data>::addCacheHelper(Particle* particles, int n_partic
       }
       else {
         if (first_node->key == (node->key >> 3)) node->parent = first_node;
-        else node->parent = first_node->children[(node->key >> 3) % 8];
+        else node->parent = first_node->children[(node->key >> 3) % 8].load();
       }
       if (node->type == Node<Data>::Leaf || node->type == Node<Data>::EmptyLeaf) {
         node->type = Node<Data>::CachedRemoteLeaf;
@@ -126,10 +126,10 @@ void CacheManager<Data>::serviceRequest(Node<Data>* node, int cm_index) {
   std::vector<Particle> sending_particles;
   nodes.push_back(*node);
   for (int i = 0; i < node->n_children; i++) {
-    Node<Data>* child = node->children[i];
+    Node<Data>* child = node->children[i].load();
     nodes.push_back(*child);
     for (int j = 0; j < child->n_children; j++) 
-      nodes.push_back(*(child->children[j]));
+      nodes.push_back(*(child->children[j].load()));
   }
   for (auto& to_send : nodes) {
     to_send.cm_index = this->thisIndex;
@@ -154,9 +154,8 @@ void CacheManager<Data>::restoreData(std::pair<Key, Data> param) {
 template <typename Data>
 void CacheManager<Data>::swapIn(Node<Data>* to_swap) {
   //CkPrintf("swapping in node %d\n", to_swap->key);
-  Node<Data>* copy;
   if (to_swap->key > 1) {
-    std::swap(to_swap, to_swap->parent->children[to_swap->key % 8]);
+    to_swap->parent->children[to_swap->key % 8].exchange(to_swap);
   }
   else {
     std::swap(root, to_swap);
@@ -178,6 +177,7 @@ void CacheManager<Data>::connect(Node<Data>* node) {
       CkPrintf("processor not set when connecting node %d\n", node->key);
   }
   else buffer.insert(std::make_pair(node->key, node));
+  // perhaps call processor?
   if (this->isNG) block.unlock();
 }
 
@@ -206,7 +206,7 @@ void CacheManager<Data>::insertNode(Node<Data>* node, bool above_tp, bool should
       new_child->type = (above_tp) ? Node<Data>::RemoteAboveTPKey : Node<Data>::Remote;
       if (!above_tp) new_child->cm_index = node->cm_index;
     }
-    node->children[i] = new_child;
+    node->children[i].store(new_child);
   }
   if (should_swap) swapIn(node);
 }
