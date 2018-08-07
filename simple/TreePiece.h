@@ -41,15 +41,16 @@ class TreePiece : public CBase_TreePiece<Data> {
   Node<Data>* root;
   Node<Data>* root_from_tp_key;
   std::unordered_map<Key, std::vector<int>> curr_nodes;
-  std::vector<int> num_waiting;
   std::vector<Node<Data>*> trav_tops;
+  std::vector<std::pair<Node<Data>*, int>> local_travs;
   CProxy_TreeElement<Data> global_data;
   CProxy_CacheManager<Data> cache_manager;
   CacheManager<Data>* cache_local;
   CProxy_Resumer<Data> resumer;
   bool cache_init;
-  int num_done;
   // debug
+  int num_done;
+  std::vector<int> num_waiting;
   std::vector<Particle> flushed_particles;
 
 public:
@@ -70,6 +71,8 @@ public:
   void requestNodes(Key, int);
   template<typename Visitor>
   void goDown(Key); 
+  template<typename Visitor>
+  void processLocal();
   void print(Node<Data>*);
   void perturb (Real timestep);
   void flush(CProxy_Reader);
@@ -425,10 +428,9 @@ void TreePiece<Data>::goDown(Key new_key) {
     start_node = result;
   }
   //CkPrintf("going down on key %d while its type is %d\n", new_key, start_node->type);
-
-  CkAssert(start_node);
-  for (auto i : now_ready) {
-    num_waiting[i]--;
+  for (int index = 0; index < now_ready.size(); index++) {
+    int bucket = now_ready[index];
+    num_waiting[bucket]--;
     std::stack<Node<Data>*> nodes;
     nodes.push(start_node);
     while (nodes.size()) {
@@ -436,21 +438,27 @@ void TreePiece<Data>::goDown(Key new_key) {
       nodes.pop();
       //CkPrintf("tp %d, key = %d, type = %d, pe %d\n", this->thisIndex, node->key, node->type, CkMyPe());
       switch (node->type) {
-        case Node<Data>::CachedBoundary: case Node<Data>::CachedRemote: case Node<Data>::Internal: {
-          if (v.node(node, leaves[i])) {
+        case Node<Data>::Leaf: case Node<Data>::CachedRemoteLeaf: {
+          v.leaf(node, leaves[bucket]);
+          break;
+        }
+        case Node<Data>::Internal: {
+#if MULTINODE
+          local_travs.push_back(std::make_pair(node, bucket));
+          break;
+#endif
+        }
+        case Node<Data>::CachedBoundary: case Node<Data>::CachedRemote: {
+          if (v.node(node, leaves[bucket])) {
             for (int i = 0; i < node->children.size(); i++) {
               nodes.push(node->children[i].load());
             }
           }
           break;
         }
-        case Node<Data>::CachedRemoteLeaf: case Node<Data>::Leaf: {
-          v.leaf(node, leaves[i]);
-          break;
-        }
         case Node<Data>::Boundary: case Node<Data>::RemoteAboveTPKey: case Node<Data>::Remote: case Node<Data>::RemoteLeaf: {
-          curr_nodes_insertions.push_back(std::make_pair(node->key, i));
-          num_waiting[i]++;
+          curr_nodes_insertions.push_back(std::make_pair(node->key, bucket));
+          num_waiting[bucket]++;
           bool prev = node->requested.exchange(true);
           if (!prev) {
             if (node->type == Node<Data>::Boundary || node->type == Node<Data>::RemoteAboveTPKey)
@@ -461,23 +469,23 @@ void TreePiece<Data>::goDown(Key new_key) {
           if (!list.size() || list.back() != this->thisIndex) list.push_back(this->thisIndex);
         }
       }
-    } 
-    if (num_waiting[i] == 0) {
-      if (trav_tops[i] == nullptr) trav_tops[i] = cache_local->root;
-      if (trav_tops[i]->parent == nullptr) {
+    }
+    if (num_waiting[bucket] == 0) {
+      if (trav_tops[bucket] == nullptr) trav_tops[bucket] = cache_local->root;
+      if (trav_tops[bucket]->parent == nullptr) {
         num_done++;
       }
       else {
-        for (int j = 0; j < trav_tops[i]->parent->children.size(); j++) {
-          auto child = trav_tops[i]->parent->children[j].load();
-          if (child != trav_tops[i]) {
-             if (trav_tops[i]->parent->type == Node<Data>::Boundary) child->type = Node<Data>::RemoteAboveTPKey;
-             curr_nodes_insertions.push_back(std::make_pair(child->key, i));
-             num_waiting[i]++;
+        for (int j = 0; j < trav_tops[bucket]->parent->children.size(); j++) {
+          auto child = trav_tops[bucket]->parent->children[j].load();
+          if (child != trav_tops[bucket]) {
+             if (trav_tops[bucket]->parent->type == Node<Data>::Boundary) child->type = Node<Data>::RemoteAboveTPKey;
+             curr_nodes_insertions.push_back(std::make_pair(child->key, bucket));
+             num_waiting[bucket]++;
              this->thisProxy[this->thisIndex].template goDown<Visitor> (child->key);
           }
         }
-        trav_tops[i] = trav_tops[i]->parent;
+        trav_tops[bucket] = trav_tops[bucket]->parent;
       }
     }
     //else CkPrintf("tp %d leaf %d still waiting\n", this->thisIndex, i);
@@ -488,6 +496,35 @@ void TreePiece<Data>::goDown(Key new_key) {
   if (num_done == leaves.size()) {
     //CkPrintf("tp %d finished!, we got key %d\n", this->thisIndex, new_key);
   }
+  if (local_travs.size()) {
+    this->thisProxy[this->thisIndex].template processLocal<Visitor>();
+    // also try processLocal<Visitor>(); for a slightly different effect
+  }
+}
+
+template <typename Data>
+template <typename Visitor>
+void TreePiece<Data>::processLocal() {
+  Visitor v;
+  for (auto local_trav : local_travs) {
+    std::stack<Node<Data>*> nodes;
+    nodes.push(local_trav.first);
+    while (nodes.size()) {
+      Node<Data>* node = nodes.top();
+      nodes.pop();
+      if (node->type == Node<Data>::Internal) {
+        if (v.node(node, leaves[local_trav.second])) {
+          for (int j = 0; j < node->n_children; j++) {
+            nodes.push(node->children[j].load());
+          }
+        }
+      }
+      else {
+        v.leaf(node, leaves[local_trav.second]);
+      }
+    }
+  }
+  local_travs.resize(0);
 }
 
 template <typename Data>
