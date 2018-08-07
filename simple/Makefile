@@ -1,6 +1,6 @@
 CHARM_HOME ?= ~/charm/netlrts-linux-x86_64-smp
 STRUCTURE_PATH = ../utility/structures
-OPTS = -g -I$(STRUCTURE_PATH)
+OPTS = -g -I$(STRUCTURE_PATH) -DGROUPCACHE=0 -DDELAYLOCAL=0
 CHARMC = $(CHARM_HOME)/bin/charmc $(OPTS)
 LD_LIBS = -L$(STRUCTURE_PATH) -lTipsy
 
@@ -60,4 +60,4 @@ Node.h: common.h
 Resumer.h:
 
 test: all
-	./charmrun ./simple -f ../inputgen/100k.tipsy +p3 ++ppn 3 +pemap 1-3 +comap 0 ++local
+	./charmrun ./simple -f ../inputgen/100k.tipsy +p3 ++ppn 3 +pemap 1-3 +commap 0 ++local

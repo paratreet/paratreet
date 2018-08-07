@@ -443,7 +443,7 @@ void TreePiece<Data>::goDown(Key new_key) {
           break;
         }
         case Node<Data>::Internal: {
-#if MULTINODE
+#if DELAYLOCAL
           local_travs.push_back(std::make_pair(node, bucket));
           break;
 #endif
@@ -496,10 +496,6 @@ void TreePiece<Data>::goDown(Key new_key) {
   if (num_done == leaves.size()) {
     //CkPrintf("tp %d finished!, we got key %d\n", this->thisIndex, new_key);
   }
-  if (local_travs.size()) {
-    this->thisProxy[this->thisIndex].template processLocal<Visitor>();
-    // also try processLocal<Visitor>(); for a slightly different effect
-  }
 }
 
 template <typename Data>
@@ -524,7 +520,6 @@ void TreePiece<Data>::processLocal() {
       }
     }
   }
-  local_travs.resize(0);
 }
 
 template <typename Data>

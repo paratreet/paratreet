@@ -245,6 +245,10 @@ class Main : public CBase_Main {
     start_time = CkWallTimer();
     treepieces.template startDown<GravityVisitor>();
     CkWaitQD();
+#ifdef DELAYLOCAL
+    treepieces.template processLocal<GravityVisitor>();
+    CkWaitQD();
+#endif
     CkPrintf("[Main, iter %d] Downward traversal done: %lf seconds\n", cur_iteration, CkWallTimer() - start_time);
     //count_manager.sum(CkCallback(CkReductionTarget(Main, terminate), thisProxy));
     CkExit();
