@@ -246,10 +246,12 @@ class Main : public CBase_Main {
     treepieces.template startDown<GravityVisitor>();
     CkWaitQD();
 #ifdef DELAYLOCAL
-    treepieces.template processLocal<GravityVisitor>();
-    CkWaitQD();
+    treepieces.template processLocal<GravityVisitor>(CkCallbackResumeThread());
 #endif
     CkPrintf("[Main, iter %d] Downward traversal done: %lf seconds\n", cur_iteration, CkWallTimer() - start_time);
+    start_time = CkWallTimer();
+    treepieces.template interact<GravityVisitor>(CkCallbackResumeThread());
+    CkPrintf("[Main, iter %d] Interactions done: %lf seconds\n", cur_iteration, CkWallTimer() - start_time);
     //count_manager.sum(CkCallback(CkReductionTarget(Main, terminate), thisProxy));
     CkExit();
     //if (++cur_iteration < num_iterations) nextIteration();

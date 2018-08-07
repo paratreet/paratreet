@@ -21,6 +21,7 @@
 #include <cstring>
 #include <atomic>
 #include <mutex>
+#include <bitset>
 
 extern CProxy_Reader readers;
 extern int max_particles_per_leaf;
@@ -47,6 +48,7 @@ class TreePiece : public CBase_TreePiece<Data> {
   CProxy_CacheManager<Data> cache_manager;
   CacheManager<Data>* cache_local;
   CProxy_Resumer<Data> resumer;
+  std::map<Node<Data>*, std::bitset<MAX_PARTICLES_PER_TP>> interactions; 
   bool cache_init;
   // debug
   int num_done;
@@ -69,10 +71,13 @@ public:
   template<typename Visitor>
   void startUpAndDown();
   void requestNodes(Key, int);
+  inline void addInteraction(Node<Data>*, int);
   template<typename Visitor>
   void goDown(Key); 
   template<typename Visitor>
-  void processLocal();
+  void processLocal(const CkCallback&);
+  template <typename Visitor>
+  void interact(const CkCallback&);
   void print(Node<Data>*);
   void perturb (Real timestep);
   void flush(CProxy_Reader);
@@ -439,7 +444,7 @@ void TreePiece<Data>::goDown(Key new_key) {
       //CkPrintf("tp %d, key = %d, type = %d, pe %d\n", this->thisIndex, node->key, node->type, CkMyPe());
       switch (node->type) {
         case Node<Data>::Leaf: case Node<Data>::CachedRemoteLeaf: {
-          v.leaf(node, leaves[bucket]);
+          interactions[node].set(bucket);
           break;
         }
         case Node<Data>::Internal: {
@@ -500,7 +505,7 @@ void TreePiece<Data>::goDown(Key new_key) {
 
 template <typename Data>
 template <typename Visitor>
-void TreePiece<Data>::processLocal() {
+void TreePiece<Data>::processLocal(const CkCallback& cb) {
   Visitor v;
   for (auto local_trav : local_travs) {
     std::stack<Node<Data>*> nodes;
@@ -516,17 +521,30 @@ void TreePiece<Data>::processLocal() {
         }
       }
       else {
-        v.leaf(node, leaves[local_trav.second]);
+        interactions[node].set(local_trav.second);
       }
     }
   }
+  this->contribute(cb);
+}
+
+template <typename Data>
+template <typename Visitor>
+void TreePiece<Data>::interact(const CkCallback& cb) {
+  Visitor v;
+  for (auto it : interactions) {
+    for (int j = 0; j < leaves.size(); j++) {
+      if (it.second[j]) v.leaf(it.first, leaves[j]);
+    }
+  }
+  this->contribute(cb);
 }
 
 template <typename Data>
 void TreePiece<Data>::perturb (Real timestep) {
   for (auto leaf : leaves) {
     for (int i = 0; i < leaf->n_particles; i++) {
-      leaf->particles[i].perturb(timestep, leaf->data.sum_forces[i]);
+      leaf->particles[i].perturb(timestep, leaf->sum_forces[i]);
     }
   }
 }

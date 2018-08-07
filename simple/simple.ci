@@ -103,7 +103,9 @@ mainmodule simple {
     template<typename Visitor>
     entry void goDown(Key);
     template<typename Visitor>
-    entry void processLocal();
+    entry void processLocal(const CkCallback&);
+    template<typename Visitor>
+    entry void interact(const CkCallback&);
     entry void requestNodes(Key, int);
     entry void perturb(Real timestep);
     entry void flush(CProxy_Reader);
@@ -123,10 +125,15 @@ mainmodule simple {
   extern entry void TreePiece<CentroidData> goDown<PressureVisitor> (Key);
   extern entry void TreePiece<CentroidData> goDown<CountVisitor> (Key);
 
-  extern entry void TreePiece<CentroidData> processLocal<GravityVisitor> ();
-  extern entry void TreePiece<CentroidData> processLocal<DensityVisitor> ();
-  extern entry void TreePiece<CentroidData> processLocal<PressureVisitor> ();
-  extern entry void TreePiece<CentroidData> processLocal<CountVisitor> ();
+  extern entry void TreePiece<CentroidData> processLocal<GravityVisitor> (const CkCallback&);
+  extern entry void TreePiece<CentroidData> processLocal<DensityVisitor> (const CkCallback&);
+  extern entry void TreePiece<CentroidData> processLocal<PressureVisitor> (const CkCallback&);
+  extern entry void TreePiece<CentroidData> processLocal<CountVisitor> (const CkCallback&);
+
+  extern entry void TreePiece<CentroidData> interact<GravityVisitor> (const CkCallback&);
+  extern entry void TreePiece<CentroidData> interact<DensityVisitor> (const CkCallback&);
+  extern entry void TreePiece<CentroidData> interact<PressureVisitor> (const CkCallback&);
+  extern entry void TreePiece<CentroidData> interact<CountVisitor> (const CkCallback&);
 
   group Reader {
     entry Reader();

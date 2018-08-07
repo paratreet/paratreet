@@ -12,15 +12,13 @@
 struct CentroidData {
   Vector3D<Real> moment;
   Real sum_mass;
-  std::vector<Vector3D<Real> > sum_forces;
   std::vector< std::priority_queue<Particle, std::vector<Particle>, particle_comp> > neighbors;
   std::vector< std::vector<Particle> > nearby;
   OrientedBox<Real> box;
   int count;
 
   CentroidData() : 
-  moment(Vector3D<Real> (0,0,0)), sum_mass(0),
-  sum_forces(std::vector< Vector3D<Real> > ()), count(0) {}
+  moment(Vector3D<Real> (0,0,0)), sum_mass(0), count(0) {}
 
   CentroidData(Particle* particles, int n_particles) : CentroidData() {
     for (int i = 0; i < n_particles; i++) {

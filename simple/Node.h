@@ -24,6 +24,7 @@ struct Node {
   int wait_count;
   int cm_index;
   std::atomic<bool> requested;
+  std::vector<Vector3D<Real> > sum_forces;
 
   void pup (PUP::er& p) {
     pup_bytes(&p, (void *)&type, sizeof(Type));

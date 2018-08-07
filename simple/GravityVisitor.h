@@ -36,7 +36,7 @@ private:
 public:
   GravityVisitor() {}
   void leaf(Node<CentroidData>* from, Node<CentroidData>* on) { // we're calculating force from node X on node Y
-    addGravity(from, on, on->data.sum_forces, true);
+    addGravity(from, on, on->sum_forces, true);
   }
   bool node(Node<CentroidData>* from, Node<CentroidData>* on) {
     const Real theta = .5, total_volume = 3290.05;
@@ -44,7 +44,7 @@ public:
     if (theta == 0 || distsq(from->data.getCentroid(), on->data.getCentroid()) < s * s / (theta * theta)) {
       return true;
     }
-    addGravity(from, on, on->data.sum_forces, false);
+    addGravity(from, on, on->sum_forces, false);
     return false;
   }
   void pup(PUP::er& p) {}
