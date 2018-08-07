@@ -59,8 +59,5 @@ Node.h: common.h
 
 Resumer.h:
 
-nottest: all
-	./charmrun ./simple -f ../inputgen/100k.tipsy +p3 ++local
-
 test: all
 	./charmrun ./simple -f ../inputgen/100k.tipsy +p3 ++ppn 3 +pemap 1-3 +comap 0 ++local

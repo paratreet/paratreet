@@ -44,14 +44,22 @@ mainmodule simple {
   message MultiMsg<CentroidData>;
 
   template <typename Data>
+#ifdef GROUPCACHE
+  group CacheManager {
+#else
   nodegroup CacheManager {
+#endif
     entry CacheManager();
     entry void requestNodes(std::pair<Key, int>);
     entry void addCache(MultiMsg<Data>*);
     entry void addCache(MultiData<Data>);
     entry void restoreData(std::pair<Key, Data>);
   };
+#ifdef GROUPCACHE
+  group CacheManager<CentroidData>;
+#else
   nodegroup CacheManager<CentroidData>;
+#endif
 
   extern entry [aggregate] void CacheManager<CentroidData> restoreData(std::pair<Key, CentroidData>);
   extern entry [aggregate] void CacheManager<CentroidData> addCache(MultiData<CentroidData>);

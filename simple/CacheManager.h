@@ -22,7 +22,6 @@ public:
   std::function<void(CProxy_Resumer<Data>, bool, int, Key)> processor;
   bool processor_set;
   bool isNG;
-  int first_pe;
   CProxy_Resumer<Data> resumer;
   CkCallback build_cb;
 
@@ -32,8 +31,7 @@ public:
     missed.insert(std::make_pair(node->key, nullptr));
     root = node;
     processor_set = false;
-    isNG = false;
-    first_pe = -1;
+    isNG = this->isNodeGroup();
     delete_at_end.resize(CkNodeSize(0));
   }
 
