@@ -47,7 +47,6 @@ class TreePiece : public CBase_TreePiece<Data> {
   CProxy_CacheManager<Data> cache_manager;
   CacheManager<Data>* cache_local;
   CProxy_Resumer<Data> resumer;
-  CkCallback current_cb;
   bool cache_init;
   int num_done;
   // debug
@@ -58,23 +57,23 @@ public:
   void receive(ParticleMsg*);
   void check(const CkCallback&);
   void triggerRequest();
-  void build(CkCallback);
+  void build();
   bool recursiveBuild(Node<Data>*, bool);
   void upOnly();
-  inline void initCache(CkCallback);
+  inline void initCache();
   template<typename Visitor>
   void initProcessor();
   template<typename Visitor>
-  void startDown(CkCallback);
+  void startDown();
   template<typename Visitor>
-  void startUpAndDown(CkCallback);
+  void startUpAndDown();
   void requestNodes(Key, int);
   template<typename Visitor>
   void goDown(Key); 
   void print(Node<Data>*);
   void perturb (Real timestep);
   void flush(CProxy_Reader);
-  void rebuild(const CkCallback&);
+  void rebuild();
 
   // debug
   void checkParticlesChanged(const CkCallback& cb) {
@@ -154,7 +153,7 @@ void TreePiece<Data>::triggerRequest() {
 }
 
 template <typename Data>
-void TreePiece<Data>::build(CkCallback cb) {
+void TreePiece<Data>::build() {
   // sort particles received from readers
   std::sort(particles.begin(), particles.end());
 
@@ -165,7 +164,7 @@ void TreePiece<Data>::build(CkCallback cb) {
   root = new Node<Data>(1, 0, particles.size(), &particles[0], 0, n_treepieces - 1, nullptr);
   recursiveBuild(root, false);
 
-  initCache(cb);
+  initCache();
   upOnly();
 }
 
@@ -353,9 +352,8 @@ void TreePiece<Data>::upOnly() {
 }
 
 template <typename Data>
-void TreePiece<Data>::initCache(CkCallback cbi) {
+void TreePiece<Data>::initCache() {
   if (!cache_init) {
-    cache_local->build_cb = cbi;
     root_from_tp_key = root->findNode(tp_key);
     cache_local->connect(root_from_tp_key);
     root_from_tp_key->parent->children[tp_key % 8].store(nullptr);
@@ -381,8 +379,7 @@ void TreePiece<Data>::initProcessor() {
 
 template <typename Data>
 template <typename Visitor>
-void TreePiece<Data>::startDown(CkCallback cbi) {
-  current_cb = cbi;
+void TreePiece<Data>::startDown() {
   initProcessor<Visitor>();
   for (int i = 0; i < leaves.size(); i++) curr_nodes[1].push_back(i);
   num_waiting = std::vector<int> (leaves.size(), 1);
@@ -393,12 +390,11 @@ void TreePiece<Data>::startDown(CkCallback cbi) {
 
 template <typename Data>
 template <typename Visitor>
-void TreePiece<Data>::startUpAndDown(CkCallback cbi) {
-  current_cb = cbi;
+void TreePiece<Data>::startUpAndDown() {
   initProcessor<Visitor>();
   if (!leaves.size()) {
     //CkPrintf("tp %d finished!\n", this->thisIndex);
-    this->contribute(current_cb);
+    return;
   }
   num_waiting = std::vector<int> (leaves.size(), 1);
   num_done = 0;
@@ -491,7 +487,6 @@ void TreePiece<Data>::goDown(Key new_key) {
   //if (curr_nodes.size()) CkPrintf("still missing at least node %d on tp %d, leaf %d\n", curr_nodes.begin()->first, this->thisIndex, curr_nodes.begin()->second[0]);
   if (num_done == leaves.size()) {
     //CkPrintf("tp %d finished!, we got key %d\n", this->thisIndex, new_key);
-    this->contribute(current_cb);
   }
 }
 
@@ -517,13 +512,13 @@ void TreePiece<Data>::flush(CProxy_Reader readers) {
 }
 
 template <typename Data>
-void TreePiece<Data>::rebuild(const CkCallback& cb) {
+void TreePiece<Data>::rebuild() {
   // clean up old tree information
   root->triggerFree();
   root = nullptr;
 
   // build a new tree from scratch
-  build(cb);
+  build();
 }
 
 template <typename Data>

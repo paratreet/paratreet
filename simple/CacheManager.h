@@ -23,7 +23,6 @@ public:
   bool processor_set;
   bool isNG;
   CProxy_Resumer<Data> resumer;
-  CkCallback build_cb;
 
   CacheManager() { // : root(nullptr), curr_waiting (std::map<Key, std::vector<int> >()) {}
     Node<Data>* node = new Node<Data>(1, 0, 0, nullptr, 0, 0, nullptr);
@@ -146,7 +145,6 @@ void CacheManager<Data>::restoreData(std::pair<Key, Data> param) {
   Node<Data>* node = new Node<Data>(key, Node<Data>::CachedBoundary, param.second, 8, (key > 1) ? root->findNode(key / 8) : nullptr);
   insertNode(node, true, false);
   connect(node);
-  if (key == 1) this->contribute(build_cb);
 }
 
 template <typename Data>
