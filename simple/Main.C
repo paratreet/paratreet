@@ -237,20 +237,20 @@ class Main : public CBase_Main {
 
     // start local tree build in TreePieces
     start_time = CkWallTimer();
-    treepieces.build();
+    treepieces.build(true);
     CkWaitQD();
-    CkPrintf("[Main] Local tree build: %lf seconds\n", CkWallTimer() - start_time);
+    CkPrintf("[Main, iter %d] Local tree build: %lf seconds\n", CkWallTimer() - start_time);
 
     // perform downward and upward traversals (Barnes-Hut)
     start_time = CkWallTimer();
     treepieces.template startDown<GravityVisitor>();
     CkWaitQD();
 #ifdef DELAYLOCAL
-    treepieces.template processLocal<GravityVisitor>(CkCallbackResumeThread());
+    treepieces.processLocal(CkCallbackResumeThread());
 #endif
     CkPrintf("[Main, iter %d] Downward traversal done: %lf seconds\n", cur_iteration, CkWallTimer() - start_time);
     start_time = CkWallTimer();
-    treepieces.template interact<GravityVisitor>(CkCallbackResumeThread());
+    treepieces.interact(CkCallbackResumeThread());
     CkPrintf("[Main, iter %d] Interactions done: %lf seconds\n", cur_iteration, CkWallTimer() - start_time);
     //count_manager.sum(CkCallback(CkReductionTarget(Main, terminate), thisProxy));
     CkExit();
@@ -300,7 +300,7 @@ class Main : public CBase_Main {
 
     // rebuild local tree in TreePieces
     start_time = CkWallTimer();
-    treepieces.rebuild();
+    treepieces.rebuild(true);
     CkPrintf("[Main, iter %d] Local tree rebuild: %lf seconds\n", cur_iteration, CkWallTimer()-start_time);
 
     // debug

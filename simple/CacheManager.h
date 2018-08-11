@@ -19,8 +19,6 @@ public:
   Node<Data>* root;
   std::unordered_map<Key, Node<Data>*> buffer, missed;
   std::vector<std::vector<Node<Data>*>> delete_at_end;
-  std::function<void(CProxy_Resumer<Data>, bool, int, Key)> processor;
-  bool processor_set;
   bool isNG;
   CProxy_Resumer<Data> resumer;
 
@@ -29,7 +27,6 @@ public:
     node->type = Node<Data>::Boundary;
     missed.insert(std::make_pair(node->key, nullptr));
     root = node;
-    processor_set = false;
     isNG = this->isNodeGroup();
     delete_at_end.resize(CkNodeSize(0));
   }
@@ -49,20 +46,21 @@ public:
   void restoreData(std::pair<Key, Data>);
   void insertNode(Node<Data>*, bool, bool);
   void swapIn(Node<Data>*);
+  void process(Key);
 };
 
 template <typename Data>
 void CacheManager<Data>::addCache(MultiMsg<Data>* multimsg) {
   Node<Data>* top_node = addCacheHelper(multimsg->particles, multimsg->n_particles, multimsg->nodes, multimsg->n_nodes);
   delete multimsg;
-  processor(resumer, isNG, this->thisIndex, top_node->key);
+  process(top_node->key);
 }
 
 template <typename Data>
 void CacheManager<Data>::addCache(MultiData<Data> multidata) {
   //CkPrintf("adding cache for node %d\n", multidata.nodes[0].key);
   Node<Data>* top_node = addCacheHelper(multidata.particles, multidata.n_particles, multidata.nodes, multidata.n_nodes);
-  processor(resumer, isNG, this->thisIndex, top_node->key);
+  process(top_node->key);
 }
 
 template <typename Data>
@@ -75,7 +73,7 @@ Node<Data>* CacheManager<Data>::addCacheHelper(Particle* particles, int n_partic
     for (int j = 0; j < n_nodes; j++) {
       Node<Data>* node = new Node<Data>(nodes[j]);
       if (j == 0) {
-        node->parent = first_node_placeholder->parent;
+        node->parent = (first_node_placeholder) ? first_node_placeholder->parent : nullptr;
         first_node = node;
       }
       else {
@@ -168,12 +166,11 @@ void CacheManager<Data>::connect(Node<Data>* node) {
     node->parent = it->second;
     if (this->isNG) block.unlock();
     swapIn(node);
-    if (processor_set) processor(resumer, isNG, this->thisIndex, node->key);
-    else if (node->key > 1)
-      CkPrintf("processor not set when connecting node %d\n", node->key);
+    process(node->key);
   }
   else buffer.insert(std::make_pair(node->key, node));
-  // perhaps call processor?
+  // perhaps call process?
+  // yes -- if were doing a dual tree walk
   if (this->isNG) block.unlock();
 }
 
@@ -205,6 +202,14 @@ void CacheManager<Data>::insertNode(Node<Data>* node, bool above_tp, bool should
     node->children[i].store(new_child);
   }
   if (should_swap) swapIn(node);
+}
+
+template <typename Data>
+void CacheManager<Data>::process(Key key) {
+  if (!isNG) resumer[this->thisIndex].process (key);
+  else for (int i = 0; i < CkNodeSize(0); i++) {
+    resumer[this->thisIndex * CkNodeSize(0) + i].process(key);
+  }
 }
 
 #endif //SIMPLE_CACHEMANAGER_H_

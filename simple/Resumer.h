@@ -14,14 +14,13 @@ public:
   std::unordered_map<int, Node<Data>*> nodehash;
   std::unordered_map<Key, std::vector<int>> waiting;
 
-  template <typename Visitor>
   void process(Key key) {
     Node<Data>* node = cache_local->root->findNode(key); // try getting its ancestor from nodehash
     nodehash.insert(std::make_pair(key, node));
     auto it = waiting.find(key);
     if (it == waiting.end()) return;
     for (auto tp_index : it->second) {
-      tp_proxy[tp_index].template goDown<Visitor> (key);
+      tp_proxy[tp_index].template goDown(key);
     }
     waiting.erase(it);
   }
