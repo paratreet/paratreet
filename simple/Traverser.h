@@ -83,24 +83,22 @@ public:
         nodes.pop();
         //CkPrintf("tp %d, key = %d, type = %d, pe %d\n", this->thisIndex, node->key, node->type, CkMyPe());
         switch (node->type) {
-          case Node<Data>::Leaf: case Node<Data>::CachedRemoteLeaf: {
+          case Node<Data>::Leaf: case Node<Data>::CachedRemoteLeaf:
             tp->interactions[node].set(bucket);
             break;
-          }
-          case Node<Data>::Internal: {
+          case Node<Data>::Internal:
 #if DELAYLOCAL
             tp->local_travs.push_back(std::make_pair(node, bucket));
             break;
 #endif
-          }
-          case Node<Data>::CachedBoundary: case Node<Data>::CachedRemote: {
+          case Node<Data>::CachedBoundary: case Node<Data>::CachedRemote:
             if (v.node(node, tp->leaves[bucket])) {
               for (int i = 0; i < node->children.size(); i++) {
                 nodes.push(node->children[i].load());
               }
             }
-          }
-          case Node<Data>::Boundary: case Node<Data>::RemoteAboveTPKey: case Node<Data>::Remote: case Node<Data>::RemoteLeaf: {
+            break;
+          case Node<Data>::Boundary: case Node<Data>::RemoteAboveTPKey: case Node<Data>::Remote: case Node<Data>::RemoteLeaf:
             curr_nodes_insertions.push_back(std::make_pair(node->key, bucket));
             bool prev = node->requested.exchange(true);
             if (!prev) {
@@ -110,7 +108,6 @@ public:
             }
             std::vector<int>& list = tp->resumer.ckLocalBranch()->waiting[node->key];
             if (!list.size() || list.back() != tp->thisIndex) list.push_back(tp->thisIndex);
-          }
         }
       }
     }
@@ -162,24 +159,23 @@ public:
         nodes.pop();
         //CkPrintf("tp %d, key = %d, type = %d, pe %d\n", this->thisIndex, node->key, node->type, CkMyPe());
         switch (node->type) {
-          case Node<Data>::Leaf: case Node<Data>::CachedRemoteLeaf: {
+          case Node<Data>::Leaf: case Node<Data>::CachedRemoteLeaf:
             tp->interactions[node].set(bucket);
             break;
-          }
-          case Node<Data>::Internal: {
+          case Node<Data>::Internal:
 #if DELAYLOCAL
             tp->local_travs.push_back(std::make_pair(node, bucket));
             break;
 #endif
-          }
           case Node<Data>::CachedBoundary: case Node<Data>::CachedRemote: {
             if (v.node(node, tp->leaves[bucket])) {
               for (int i = 0; i < node->children.size(); i++) {
                 nodes.push(node->children[i].load());
               }
             }
+            break;
           }
-          case Node<Data>::Boundary: case Node<Data>::RemoteAboveTPKey: case Node<Data>::Remote: case Node<Data>::RemoteLeaf: {
+          case Node<Data>::Boundary: case Node<Data>::RemoteAboveTPKey: case Node<Data>::Remote: case Node<Data>::RemoteLeaf:
             curr_nodes_insertions.push_back(std::make_pair(node->key, bucket));
             num_waiting[bucket]++;
             bool prev = node->requested.exchange(true);
@@ -189,8 +185,7 @@ public:
               else tp->cache_manager[node->cm_index].requestNodes(std::make_pair(node->key, tp->cache_local->thisIndex));
             }
             std::vector<int>& list = tp->resumer.ckLocalBranch()->waiting[node->key];
-             if (!list.size() || list.back() != tp->thisIndex) list.push_back(tp->thisIndex);
-          }
+            if (!list.size() || list.back() != tp->thisIndex) list.push_back(tp->thisIndex);
         }
       }
       if (num_waiting[bucket] == 0) {
@@ -256,7 +251,7 @@ public:
         nodes.pop();
         //CkPrintf("tp %d, key = %d, type = %d, pe %d\n", this->thisIndex, node->key, node->type, CkMyPe());
         switch (node->type) {
-          case Node<Data>::Leaf: case Node<Data>::CachedRemoteLeaf: {
+          case Node<Data>::Leaf: case Node<Data>::CachedRemoteLeaf:
             for (int i = 0; i < tp->leaves.size(); i++) {
               if (tp->leaves[i] == currpl) {
                 tp->interactions[node].set(i);
@@ -264,8 +259,7 @@ public:
               }
             }
             break;
-          }
-          case Node<Data>::Internal: case Node<Data>::CachedBoundary: case Node<Data>::CachedRemote: {
+          case Node<Data>::Internal: case Node<Data>::CachedBoundary: case Node<Data>::CachedRemote:
             if (v.node(node, payload)) {
               for (int i = 0; i < node->children.size(); i++) {
                 for (int j = 0; j < payload->children.size(); j++) {
@@ -273,8 +267,8 @@ public:
                 }
               }
             }
-          }
-          case Node<Data>::Boundary: case Node<Data>::RemoteAboveTPKey: case Node<Data>::Remote: case Node<Data>::RemoteLeaf: {
+            break;
+          case Node<Data>::Boundary: case Node<Data>::RemoteAboveTPKey: case Node<Data>::Remote: case Node<Data>::RemoteLeaf:
             curr_nodes_insertions.push_back(std::make_pair(node->key, payload));
             bool prev = node->requested.exchange(true);
             if (!prev) {
@@ -284,7 +278,7 @@ public:
             }
             std::vector<int>& list = tp->resumer.ckLocalBranch()->waiting[node->key];
             if (!list.size() || list.back() != tp->thisIndex) list.push_back(tp->thisIndex);
-          }
+            break;
         }
       }
     }

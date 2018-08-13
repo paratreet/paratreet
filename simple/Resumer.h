@@ -1,5 +1,5 @@
 #ifndef SIMPLE_RESUMER_H_
-#define SIMPLE_RESUMER_H
+#define SIMPLE_RESUMER_H_
 
 #include "simple.decl.h"
 #include "common.h"

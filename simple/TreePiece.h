@@ -11,6 +11,7 @@
 #include "CacheManager.h"
 #include "Resumer.h"
 #include "Traverser.h"
+#include "Driver.h"
 
 #include <queue>
 #include <set>
@@ -54,7 +55,8 @@ public:
   // debug
   std::vector<Particle> flushed_particles;
 
-  TreePiece(const CkCallback&, int, int, CProxy_TreeElement<Data>, CProxy_Resumer<Data>, CProxy_CacheManager<Data>);
+  TreePiece(const CkCallback&, int, int, CProxy_TreeElement<Data>,
+    CProxy_Resumer<Data>, CProxy_CacheManager<Data>, CProxy_Driver<Data>);
   void receive(ParticleMsg*);
   void check(const CkCallback&);
   void triggerRequest();
@@ -92,7 +94,7 @@ public:
   }
 };
 template <typename Data>
-TreePiece<Data>::TreePiece(const CkCallback& cb, int n_total_particles_, int n_treepieces_, CProxy_TreeElement<Data> global_datai, CProxy_Resumer<Data> resumeri, CProxy_CacheManager<Data> cache_manageri) : n_total_particles(n_total_particles_), n_treepieces(n_treepieces_), particle_index(0) {
+TreePiece<Data>::TreePiece(const CkCallback& cb, int n_total_particles_, int n_treepieces_, CProxy_TreeElement<Data> global_datai, CProxy_Resumer<Data> resumeri, CProxy_CacheManager<Data> cache_manageri, CProxy_Driver<Data> driver) : n_total_particles(n_total_particles_), n_treepieces(n_treepieces_), particle_index(0) {
   global_data = global_datai;
   resumer = resumeri;
   resumer.ckLocalBranch()->tp_proxy = this->thisProxy;
@@ -114,12 +116,12 @@ TreePiece<Data>::TreePiece(const CkCallback& cb, int n_total_particles_, int n_t
       n_expected++;
       // TODO tp_key needs to be found in local tree build
   }
-  global_data[tp_key].receiveProxies(TPHolder<Data>(this->thisProxy), this->thisIndex, cache_manager);
+  global_data[tp_key].recvProxies(TPHolder<Data>(this->thisProxy), this->thisIndex, cache_manager, driver);
   Key temp = tp_key;
   while (temp > 0 && temp % 8 == 0) {
     temp /= 8;
     //CkPrintf("temp = %d\n", temp);
-    global_data[temp].receiveProxies(TPHolder<Data>(this->thisProxy), -1, cache_manager);
+    global_data[temp].recvProxies(TPHolder<Data>(this->thisProxy), -1, cache_manager, driver);
  }
   this->contribute(cb);
   root_from_tp_key = nullptr;
@@ -328,7 +330,7 @@ void TreePiece<Data>::upOnly() {
     Node<Data>* node = going_up.front();
     going_up.pop();
     if (node->key == tp_key) {
-      global_data[tp_key >> 3].receiveData(node->data);
+      global_data[tp_key >> 3].recvData(node->data, true);
     }
     else {
       Node<Data>* parent = node->parent;
@@ -342,7 +344,7 @@ template <typename Data>
 void TreePiece<Data>::initCache() {
   if (!cache_init) {
     root_from_tp_key = root->findNode(tp_key);
-    cache_local->connect(root_from_tp_key);
+    cache_local->connect(root_from_tp_key, false);
     root_from_tp_key->parent->children[tp_key % 8].store(nullptr);
     root->triggerFree();
     cache_init = true;

@@ -37,17 +37,25 @@ public:
     temp->triggerFree();
     delete temp;
   }
-  void connect(Node<Data>*);
+  void connect(Node<Data>*, bool);
   void requestNodes(std::pair<Key, int>);
   void serviceRequest(Node<Data>*, int);
+  void recvStarterPack(std::pair<Key, Data>* pack, int n, CkCallback);
   void addCache(MultiMsg<Data>*);
   void addCache(MultiData<Data>);
   Node<Data>* addCacheHelper(Particle*, int, Node<Data>*, int);
   void restoreData(std::pair<Key, Data>);
+  void restoreDataHelper(std::pair<Key, Data>&, bool);
   void insertNode(Node<Data>*, bool, bool);
   void swapIn(Node<Data>*);
   void process(Key);
 };
+
+template <typename Data>
+void CacheManager<Data>::recvStarterPack(std::pair<Key, Data>* pack, int n, CkCallback cb) {
+  for (int i = 0; i < n; i++) restoreDataHelper(pack[i], false);
+  this->contribute(cb);
+}
 
 template <typename Data>
 void CacheManager<Data>::addCache(MultiMsg<Data>* multimsg) {
@@ -138,11 +146,16 @@ void CacheManager<Data>::serviceRequest(Node<Data>* node, int cm_index) {
 
 template <typename Data>
 void CacheManager<Data>::restoreData(std::pair<Key, Data> param) {
-  //CkPrintf("restoring data for node %d\n", param.first);
+  restoreDataHelper(param, true);
+}
+
+template <typename Data>
+void CacheManager<Data>::restoreDataHelper(std::pair<Key, Data>& param, bool should_process) {
+  //if (!should_process) CkPrintf("restoring data for node %d\n", param.first);
   Key key = param.first;
   Node<Data>* node = new Node<Data>(key, Node<Data>::CachedBoundary, param.second, 8, (key > 1) ? root->findNode(key / 8) : nullptr);
   insertNode(node, true, false);
-  connect(node);
+  connect(node, should_process);
 }
 
 template <typename Data>
@@ -158,7 +171,7 @@ void CacheManager<Data>::swapIn(Node<Data>* to_swap) {
 }
 
 template <typename Data>
-void CacheManager<Data>::connect(Node<Data>* node) {
+void CacheManager<Data>::connect(Node<Data>* node, bool should_process) {
   //CkPrintf("connecting node %d\n", node->key);
   if (this->isNG) block.lock();
   auto it = missed.find(node->key);

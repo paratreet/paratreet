@@ -20,25 +20,26 @@ private:
   int tp_index;
   CProxy_TreePiece<Data> tp_proxy;
   CProxy_CacheManager<Data> cache_manager;
+  CProxy_Driver<Data> driver;
 public:
   TreeElement();
   void reset();
-  void receiveProxies(TPHolder<Data>, int, CProxy_CacheManager<Data>);
-  void receiveData (Data);
+  void recvProxies(TPHolder<Data>, int, CProxy_CacheManager<Data>, CProxy_Driver<Data>);
+  void recvData (Data, bool);
   void requestData(int);
   void print() {
     CkPrintf("[TE %d] on PE %d from tp_index %d\n", this->thisIndex, CkMyPe(), tp_index);
   }
 };
 
-extern CProxy_Main mainProxy;
-
 template <typename Data>
-void TreeElement<Data>::receiveProxies(TPHolder<Data> tp_holderi, int tp_indexi, CProxy_CacheManager<Data> cache_manageri) {
+void TreeElement<Data>::recvProxies(TPHolder<Data> tp_holderi, int tp_indexi,
+    CProxy_CacheManager<Data> cache_manageri, CProxy_Driver<Data> driveri) {
   tp_proxy = tp_holderi.tp_proxy;
   tp_index = tp_indexi;
   cache_manager = cache_manageri;
   wait_count = 8;
+  driver = driveri;
 }
 
 template <typename Data>
@@ -57,16 +58,17 @@ void TreeElement<Data>::requestData(int cm_index) {
 }
 
 template <typename Data>
-void TreeElement<Data>::receiveData (Data datai) {
+void TreeElement<Data>::recvData (Data datai, bool from_TP) {
   data += datai;
   wait_count--;
   if (wait_count == 0) {
+    driver.recvTE(std::make_pair(this->thisIndex, data));
     if (this->thisIndex == 1) {
       CkPrintf("%f %f %f %f\n", data.sum_mass, data.moment.x, data.moment.y, data.moment.z);
-      cache_manager.restoreData(std::make_pair(1, data));
+      //cache_manager.restoreData(std::make_pair(1, data));
     }
     else {
-      this->thisProxy[this->thisIndex >> 3].receiveData(data);
+      this->thisProxy[this->thisIndex >> 3].recvData(data, false);
     }
   }
 }

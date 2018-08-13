@@ -51,6 +51,7 @@ mainmodule simple {
 #endif
     entry CacheManager();
     entry void requestNodes(std::pair<Key, int>);
+    entry void recvStarterPack(std::pair<Key, Data> pack [n], int n, CkCallback);
     entry void addCache(MultiMsg<Data>*);
     entry void addCache(MultiData<Data>);
     entry void restoreData(std::pair<Key, Data>);
@@ -66,6 +67,14 @@ mainmodule simple {
   extern entry [aggregate] void CacheManager<CentroidData> requestNodes(std::pair<Key, int>);
 
   template <typename Data>
+  chare Driver {
+    entry Driver(CProxy_CacheManager<Data>);
+    entry void recvTE(std::pair<Key, Data>);
+    entry void loadCache(int, CkCallback);
+  }
+  chare Driver<CentroidData>;
+
+  template <typename Data>
   group Resumer {
     entry Resumer();
     entry [expedited] void process(Key);
@@ -75,8 +84,8 @@ mainmodule simple {
   template <typename Data>
   array [1d] TreeElement {
     entry TreeElement();
-    entry [createhere] void receiveProxies (TPHolder<Data>, int, CProxy_CacheManager<Data>);
-    entry void receiveData (Data);
+    entry [createhere] void recvProxies (TPHolder<Data>, int, CProxy_CacheManager<Data>, CProxy_Driver<Data>);
+    entry void recvData (Data, bool);
     entry void requestData (int);
     entry void print();
     entry void reset();
@@ -85,7 +94,7 @@ mainmodule simple {
 
   template <typename Data>
   array [1d] TreePiece {
-    entry TreePiece(const CkCallback&, int, int, CProxy_TreeElement<Data>, CProxy_Resumer<Data>, CProxy_CacheManager<Data>);
+    entry TreePiece(const CkCallback&, int, int, CProxy_TreeElement<Data>, CProxy_Resumer<Data>, CProxy_CacheManager<Data>, CProxy_Driver<Data>);
     entry void receive(ParticleMsg*);
     entry void check(const CkCallback&);
     entry void build(bool);

@@ -15,6 +15,8 @@
 #include "CountVisitor.h"
 #include "CacheManager.h"
 #include "CountManager.h"
+#include "Resumer.h"
+#include "Driver.h"
 
 /* readonly */ CProxy_Main mainProxy;
 /* readonly */ CProxy_Reader readers;
@@ -30,14 +32,14 @@
 /* readonly */ CProxy_CacheManager<CentroidData> centroid_cache;
 /* readonly */ CProxy_Resumer<CentroidData> centroid_resumer;
 /* readonly */ CProxy_CountManager count_manager;
-
+/* readonly */ CProxy_Driver<CentroidData> centroid_driver;
 
 class Main : public CBase_Main {
   double total_start_time;
   double start_time;
   std::string input_str;
   int cur_iteration;
-
+  int num_share_levels;
   BoundingBox universe;
   Key smallest_particle_key;
   Key largest_particle_key;
@@ -83,6 +85,7 @@ class Main : public CBase_Main {
     tree_type = OCT_TREE;
     num_iterations = 1;
     cur_iteration = 0;
+    num_share_levels = 3;
 
     // handle arguments
     int c;
@@ -117,6 +120,9 @@ class Main : public CBase_Main {
           break;
         case 'i':
           num_iterations = atoi(optarg);
+          break;
+        case 's':
+          num_share_levels = atoi(optarg);
           break;
         default:
           CkPrintf("Usage:\n");
@@ -157,6 +163,7 @@ class Main : public CBase_Main {
     centroid_calculator = CProxy_TreeElement<CentroidData>::ckNew();
     centroid_cache = CProxy_CacheManager<CentroidData>::ckNew();
     centroid_resumer = CProxy_Resumer<CentroidData>::ckNew();
+    centroid_driver = CProxy_Driver<CentroidData>::ckNew(centroid_cache);
     count_manager = CProxy_CountManager::ckNew(0.00001, 10000, 5);
 
     // start!
@@ -211,7 +218,7 @@ class Main : public CBase_Main {
     }
 
     // create treepieces
-    treepieces = CProxy_TreePiece<CentroidData>::ckNew(CkCallbackResumeThread(), universe.n_particles, n_treepieces, centroid_calculator, centroid_resumer, centroid_cache, n_treepieces);
+    treepieces = CProxy_TreePiece<CentroidData>::ckNew(CkCallbackResumeThread(), universe.n_particles, n_treepieces, centroid_calculator, centroid_resumer, centroid_cache, centroid_driver, n_treepieces);
     CkPrintf("[Main] Created %d TreePieces\n", n_treepieces);
 
     // flush particles to home TreePieces
@@ -240,7 +247,7 @@ class Main : public CBase_Main {
     treepieces.build(true);
     CkWaitQD();
     CkPrintf("[Main, iter %d] Local tree build: %lf seconds\n", CkWallTimer() - start_time);
-
+    centroid_driver.loadCache(num_share_levels, CkCallbackResumeThread());
     // perform downward and upward traversals (Barnes-Hut)
     start_time = CkWallTimer();
     treepieces.template startDown<GravityVisitor>();
