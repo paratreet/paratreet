@@ -40,13 +40,6 @@ class Main : public CBase_Main {
   std::string input_str;
   int cur_iteration;
   int num_share_levels;
-  BoundingBox universe;
-  Key smallest_particle_key;
-  Key largest_particle_key;
-
-  std::vector<Splitter> splitters;
-
-  CProxy_TreePiece<CentroidData> treepieces; // cannot be a global variable
   int n_treepieces;
 
   public:
@@ -163,7 +156,7 @@ class Main : public CBase_Main {
     centroid_calculator = CProxy_TreeElement<CentroidData>::ckNew();
     centroid_cache = CProxy_CacheManager<CentroidData>::ckNew();
     centroid_resumer = CProxy_Resumer<CentroidData>::ckNew();
-    centroid_driver = CProxy_Driver<CentroidData>::ckNew(centroid_cache);
+    centroid_driver = CProxy_Driver<CentroidData>::ckNew(centroid_cache, 0);
     count_manager = CProxy_CountManager::ckNew(0.00001, 10000, 5);
 
     // start!
@@ -172,100 +165,12 @@ class Main : public CBase_Main {
   }
 
   void run() {
-    // useful particle keys
-    smallest_particle_key = Utility::removeLeadingZeros(Key(1));
-    largest_particle_key = (~Key(0));
-
-    // load Tipsy data and build universe
-    start_time = CkWallTimer();
-    CkReductionMsg* result;
-    readers.load(input_file, CkCallbackResumeThread((void*&)result));
-    CkPrintf("[Main] Loading Tipsy data and building universe: %lf seconds\n", CkWallTimer() - start_time);
-
-    universe = *((BoundingBox*)result->getData());
-    delete result;
-
-#ifdef DEBUG
-    std::cout << "[Main] Universal bounding box: " << universe << " with volume " << universe.box.volume() << std::endl;
-#endif
-
-    // assign keys and sort particles locally
-    start_time = CkWallTimer();
-    readers.assignKeys(universe, CkCallbackResumeThread());
-    CkPrintf("[Main] Assigning keys and sorting particles: %lf seconds\n", CkWallTimer() - start_time);
-
-    // OCT decomposition: find and sort splitters, send them to Readers for flushing
-    // SFC decomposition: globally sort particles (sample sort)
-    start_time = CkWallTimer();
-    if (decomp_type == OCT_DECOMP) {
-      findOctSplitters();
-      std::sort(splitters.begin(), splitters.end());
-      CkPrintf("[Main] Finding and sorting splitters: %lf seconds\n",
-          CkWallTimer() - start_time);
-      readers.setSplitters(splitters, CkCallbackResumeThread());
-    }
-    else if (decomp_type == SFC_DECOMP) {
-      //findSfcSplitters();
-      //readers.setSplitters(sfc_splitters, bin_counts, CkCallbackResumeThread());
-      globalSampleSort();
-      CkPrintf("[Main] Global sample sort of particles: %lf seconds\n",
-          CkWallTimer() - start_time);
-
-#ifdef DEBUG
-      // check if particles are correctly sorted globally
-      readers[0].checkSort(Key(0), CkCallbackResumeThread());
-#endif
-    }
-
-    // create treepieces
-    treepieces = CProxy_TreePiece<CentroidData>::ckNew(CkCallbackResumeThread(), universe.n_particles, n_treepieces, centroid_calculator, centroid_resumer, centroid_cache, centroid_driver, n_treepieces);
-    CkPrintf("[Main] Created %d TreePieces\n", n_treepieces);
-
-    // flush particles to home TreePieces
-    start_time = CkWallTimer();
-    if (decomp_type == OCT_DECOMP) {
-      readers.flush(universe.n_particles, n_treepieces, treepieces);
-      CkStartQD(CkCallbackResumeThread());
-    }
-    else if (decomp_type == SFC_DECOMP) {
-      treepieces.triggerRequest();
-      CkStartQD(CkCallbackResumeThread()); // lol is this right
-    }
-    CkPrintf("[Main] Flushing particles to TreePieces: %lf seconds\n", CkWallTimer() - start_time);
-
-#ifdef DEBUG
-    // check if all treepieces have received the right number of particles
-    treepieces.check(CkCallbackResumeThread());
-#endif
-
-    // free splitter memory
-    if (decomp_type == OCT_DECOMP)
-      splitters.resize(0);
-
-    // start local tree build in TreePieces
-    start_time = CkWallTimer();
-    treepieces.build(true);
-    CkWaitQD();
-    CkPrintf("[Main, iter %d] Local tree build: %lf seconds\n", CkWallTimer() - start_time);
-    centroid_driver.loadCache(num_share_levels, CkCallbackResumeThread());
-    // perform downward and upward traversals (Barnes-Hut)
-    start_time = CkWallTimer();
-    treepieces.template startDown<GravityVisitor>();
-    CkWaitQD();
-#ifdef DELAYLOCAL
-    treepieces.processLocal(CkCallbackResumeThread());
-#endif
-    CkPrintf("[Main, iter %d] Downward traversal done: %lf seconds\n", cur_iteration, CkWallTimer() - start_time);
-    start_time = CkWallTimer();
-    treepieces.interact(CkCallbackResumeThread());
-    CkPrintf("[Main, iter %d] Interactions done: %lf seconds\n", cur_iteration, CkWallTimer() - start_time);
-    //count_manager.sum(CkCallback(CkReductionTarget(Main, terminate), thisProxy));
+    centroid_driver.load(CkCallbackResumeThread());
+    centroid_driver.run(CkCallbackResumeThread());
     CkExit();
-    //if (++cur_iteration < num_iterations) nextIteration();
-    //else terminate();
+  }
 
- }
-
+#if 0
   void nextIteration() {
     CkPrintf("[Main, iter %d] Start redistributing particles...\n", cur_iteration);
 
@@ -452,6 +357,7 @@ class Main : public CBase_Main {
     // sort particles in local bucket
     readers.localSort(CkCallbackResumeThread());
   }
+#endif
 };
 
 #include "simple.def.h"

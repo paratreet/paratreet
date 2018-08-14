@@ -71,6 +71,8 @@ mainmodule simple {
     entry Driver(CProxy_CacheManager<Data>);
     entry void recvTE(std::pair<Key, Data>);
     entry void loadCache(int, CkCallback);
+    entry [threaded] void load(CkCallback cb);
+    entry [threaded] void run(CkCallback cb);
   }
   chare Driver<CentroidData>;
 
