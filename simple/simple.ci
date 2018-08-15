@@ -6,6 +6,7 @@ mainmodule simple {
   include "TPHolder.h";
   class CProxy_Reader;
   include "MultiData.h";
+  include "Config.h";
 
   readonly CProxy_Main mainProxy;
   readonly CProxy_Reader readers;
@@ -71,7 +72,7 @@ mainmodule simple {
     entry Driver(CProxy_CacheManager<Data>);
     entry void recvTE(std::pair<Key, Data>);
     entry void loadCache(int, CkCallback);
-    entry [threaded] void load(CkCallback cb);
+    entry [threaded] void load(Config config, CkCallback cb);
     entry [threaded] void run(CkCallback cb);
   }
   chare Driver<CentroidData>;

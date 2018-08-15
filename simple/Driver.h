@@ -62,7 +62,7 @@ public:
     cache_manager.recvStarterPack(storage.data(), send_size, cb);
   }
 
-  void load(CkCallback cb) {
+  void load(Config config, CkCallback cb) {
     total_start_time = CkWallTimer();
     // useful particle keys
     smallest_particle_key = Utility::removeLeadingZeros(Key(1));
