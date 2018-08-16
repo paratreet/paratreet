@@ -92,8 +92,8 @@ Node<Data>* CacheManager<Data>::addCacheHelper(Particle* particles, int n_partic
         node->type = Node<Data>::CachedRemoteLeaf;
         if (node->n_particles) node->particles = new Particle [node->n_particles];
         for (int i = 0; i < node->n_particles; i++) {
-          if (p_index < n_particles) node->particles[i] = particles[p_index++];
-          else CkPrintf("yikes not good\n");
+          CkAssert(p_index < n_particles);
+          node->particles[i] = particles[p_index++];
         }
       }
       else if (node->type == Node<Data>::Internal) {
@@ -101,7 +101,7 @@ Node<Data>* CacheManager<Data>::addCacheHelper(Particle* particles, int n_partic
       }
       insertNode(node, false, j > 0);
     }
-  } else CkPrintf("something strange afoot\n");
+  } else CkAbort("Invalid node placeholder type in CacheManager::addCacheHelper");
   swapIn(first_node);
   return first_node;
 }
@@ -117,14 +117,17 @@ void CacheManager<Data>::requestNodes(std::pair<Key, int> param) {
     node = buffer[temp]->findNode(key);
     if (isNG) block.unlock();
   }
-  if (!node) CkPrintf("node found for key %d on cm %d\n", param.first, this->thisIndex);
+  if (!node) {
+    CkPrintf("CacheManager::requestNodes: node not found for key %d on cm %d\n", param.first, this->thisIndex);
+    CkAbort("CacheManager::requestNodes: node not found");
+  }
   serviceRequest(node, param.second);
 }
 
 template <typename Data>
 void CacheManager<Data>::serviceRequest(Node<Data>* node, int cm_index) {
   if (cm_index == this->thisIndex) return; // you'll get it later!
-  if (!node) CkPrintf("UH OH\n");
+  CkAssert(node != 0);
   std::vector<Node<Data>> nodes;
   std::vector<Particle> sending_particles;
   nodes.push_back(*node);
