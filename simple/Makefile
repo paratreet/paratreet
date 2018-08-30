@@ -1,16 +1,17 @@
 CHARM_HOME ?= ~/charm/netlrts-linux-x86_64-smp
 STRUCTURE_PATH = ../utility/structures
-OPTS = -g -I$(STRUCTURE_PATH) -DGROUPCACHE=0 -DDELAYLOCAL=0
+OPTS = -g -I$(STRUCTURE_PATH) -DGROUPCACHE=0 -DDELAYLOCAL=0 -DUSE_GPU
 CHARMC = $(CHARM_HOME)/bin/charmc $(OPTS)
 LD_LIBS = -L$(STRUCTURE_PATH) -lTipsy
+CUDA_LD_LIBS = -L$(CUDATOOLKIT_HOME)/lib64 -lcudart
 
 BINARY = simple
-OBJS = Main.o Reader.o Particle.o BoundingBox.o
+OBJS = Main.o Reader.o Particle.o BoundingBox.o GravityInteraction.o
 
 all: $(BINARY)
 
 $(BINARY): $(OBJS)
-	$(CHARMC) -language charm++ -o $(BINARY) $(OBJS) $(LD_LIBS)
+	$(CHARMC) -language charm++ -o $(BINARY) $(OBJS) $(LD_LIBS) $(CUDA_LD_LIBS)
 
 proj: $(OBJS)
 	$(CHARMC) -language charm++ -tracemode projections -o $(BINARY) $(OBJS) $(LD_LIBS)
@@ -62,6 +63,9 @@ Resumer.h:
 Traverser.h:
 
 Driver.h:
+
+GravityInteraction.o: GravityInteraction.cu
+	nvcc -c -std=c++11 -O3 -I$(STRUCTURE_PATH) -I$(CUDATOOLKIT_HOME)/include -o $@ $<
 
 test: all
 	./charmrun ./simple -f ../inputgen/100k.tipsy +p3 ++ppn 3 +pemap 1-3 +commap 0 ++local

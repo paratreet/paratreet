@@ -18,7 +18,10 @@ struct Particle {
 
   Particle();
 
-  void pup(PUP::er&) ;
+#ifndef __CUDACC__
+  // Don't want NVCC to see this Charm++ specific function
+  void pup(PUP::er&);
+#endif
 
   void reset();
 

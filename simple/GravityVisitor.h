@@ -5,6 +5,7 @@
 //#include "CentroidData.h"
 #include "common.h"
 #include <cmath>
+#include "GravityInteraction.h"
 
 class GravityVisitor {
 private:
@@ -17,6 +18,8 @@ private:
   void addGravity(Node<CentroidData>* from, Node<CentroidData>* on, std::vector<Vector3D<Real> >& sum_forces, bool isLeaf) {
     const Real gconst = 0.000000000066742; // very small
     sum_forces.resize(on->n_particles);
+#ifndef USE_GPU
+    // CPU version
     for (int i = 0; i < on->n_particles; i++) {
       if (isLeaf) {
         for (int j = 0; j < from->n_particles; j++) {
@@ -32,6 +35,10 @@ private:
           * gconst * from->data.sum_mass * on->particles[i].mass / (rsq * std::sqrt(rsq));
       }
     }
+#else
+    invokeKernel(from->particles, from->n_particles, from->data.getCentroid(),
+          from->data.sum_mass, on->particles, on->n_particles, &sum_forces[0], gconst, isLeaf);
+#endif
   }
 public:
   GravityVisitor() {}
