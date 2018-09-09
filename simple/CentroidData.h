@@ -49,7 +49,7 @@ struct CentroidData {
     p | box;
     p | count;
   }
-  Vector3D<Real> getCentroid() {
+  Vector3D<Real> getCentroid() const {
     return moment / sum_mass;
   }
 };

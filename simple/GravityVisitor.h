@@ -6,6 +6,8 @@
 #include "common.h"
 #include <cmath>
 
+extern CProxy_Driver<CentroidData> centroid_driver;
+
 class GravityVisitor {
 private:
   Real distsq(Vector3D<Real> p1, Vector3D<Real> p2) {
@@ -14,37 +16,38 @@ private:
     dsq += (p1.z - p2.z) * (p1.z - p2.z);
     return dsq;
   }
-  void addGravity(Node<CentroidData>* from, Node<CentroidData>* on, std::vector<Vector3D<Real> >& sum_forces, bool isLeaf) {
+  void addGravity(const Node<CentroidData>* source, Node<CentroidData>* target, std::vector<Vector3D<Real> >& sum_forces, bool isLeaf) {
     const Real gconst = 0.000000000066742; // very small
-    sum_forces.resize(on->n_particles);
-    for (int i = 0; i < on->n_particles; i++) {
+    sum_forces.resize(target->n_particles);
+    for (int i = 0; i < target->n_particles; i++) {
       if (isLeaf) {
-        for (int j = 0; j < from->n_particles; j++) {
-          if (on->particles[i].key == on->particles[j].key) continue;
-          Real rsq = distsq(from->particles[j].position, on->particles[i].position);
-          sum_forces[i] += (from->particles[j].position - on->particles[i].position)
-            * gconst * from->particles[j].mass * on->particles[i].mass / (rsq * std::sqrt(rsq));
+        for (int j = 0; j < source->n_particles; j++) {
+          if (target->particles[i].key == target->particles[j].key) continue;
+          Real rsq = distsq(source->particles[j].position, target->particles[i].position);
+          sum_forces[i] += (source->particles[j].position - target->particles[i].position)
+            * gconst * source->particles[j].mass * target->particles[i].mass / (rsq * std::sqrt(rsq));
         }
       }
       else {
-        Real rsq = distsq(from->data.getCentroid(), on->particles[i].position);
-        sum_forces[i] += (from->data.getCentroid() - on->particles[i].position)
-          * gconst * from->data.sum_mass * on->particles[i].mass / (rsq * std::sqrt(rsq));
+        Real rsq = distsq(source->data.getCentroid(), target->particles[i].position);
+        sum_forces[i] += (source->data.getCentroid() - target->particles[i].position)
+          * gconst * source->data.sum_mass * target->particles[i].mass / (rsq * std::sqrt(rsq));
       }
     }
   }
 public:
   GravityVisitor() {}
-  void leaf(Node<CentroidData>* from, Node<CentroidData>* on) { // we're calculating force from node X on node Y
-    addGravity(from, on, on->sum_forces, true);
+  void leaf(const Node<CentroidData>* source, Node<CentroidData>* target) { // we're calculating force from node X on node Y
+    centroid_driver.countLeaf();
+    addGravity(source, target, target->sum_forces, true);
   }
-  bool node(Node<CentroidData>* from, Node<CentroidData>* on) {
-    const Real theta = .5, total_volume = 3290.05;
-    Real s = std::pow(total_volume, 1/3.) * std::pow(2, -1 * Utility::getDepthFromKey(from->key));
-    if (theta == 0 || distsq(from->data.getCentroid(), on->data.getCentroid()) < s * s / (theta * theta)) {
+  bool node(const Node<CentroidData>* source, Node<CentroidData>* target) {
+    const Real theta = .5, total_volume = 41050;
+    Real s = std::pow(total_volume, 1/3.) * std::pow(2, -1 * Utility::getDepthFromKey(source->key));
+    if (theta == 0 || distsq(source->data.getCentroid(), target->data.getCentroid()) < s * s / (theta * theta)) {
       return true;
     }
-    addGravity(from, on, on->sum_forces, false);
+    addGravity(source, target, target->sum_forces, false);
     return false;
   }
   void pup(PUP::er& p) {}
