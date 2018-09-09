@@ -50,7 +50,7 @@ public:
   CProxy_CacheManager<Data> cache_manager;
   CacheManager<Data>* cache_local;
   CProxy_Resumer<Data> resumer;
-  std::map<Node<Data>*, std::bitset<MAX_PARTICLES_PER_TP>> interactions; 
+  std::vector<std::vector<Node<Data>*>> interactions;
   bool cache_init;
   // debug
   std::vector<Particle> flushed_particles;
@@ -156,6 +156,7 @@ void TreePiece<Data>::build(bool to_search) {
 #endif
   root = new Node<Data>(1, 0, particles.size(), &particles[0], 0, n_treepieces - 1, nullptr);
   recursiveBuild(root, false);
+  interactions = std::vector<vector<Node<Data>*>> (leaves.size());
   if (to_search) initCache();
   upOnly();
 }

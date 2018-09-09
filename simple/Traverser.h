@@ -32,7 +32,7 @@ public:
           }
         }
         else {
-          tp->interactions[node].set(local_trav.second);
+          tp->interactions[local_trav.second].push_back(node);
         }
       }
     }
@@ -41,9 +41,9 @@ public:
   void interactBase(TreePiece<Data>* tp)
   {
     Visitor v;
-    for (auto it : tp->interactions) {
-      for (int j = 0; j < tp->leaves.size(); j++) {
-        if (it.second[j]) v.leaf(it.first, tp->leaves[j]);
+    for (int i = 0; i < tp->interactions.size(); i++) {
+      for (Node<Data>* source : tp->interactions[i]) {
+        v.leaf(source, tp->leaves[i]);
       }
     }
   }
@@ -84,7 +84,7 @@ public:
         //CkPrintf("tp %d, key = %d, type = %d, pe %d\n", this->thisIndex, node->key, node->type, CkMyPe());
         switch (node->type) {
           case Node<Data>::Leaf: case Node<Data>::CachedRemoteLeaf:
-            tp->interactions[node].set(bucket);
+            tp->interactions[bucket].push_back(node);
             break;
           case Node<Data>::Internal:
 #if DELAYLOCAL
@@ -160,7 +160,7 @@ public:
         //CkPrintf("tp %d, key = %d, type = %d, pe %d\n", this->thisIndex, node->key, node->type, CkMyPe());
         switch (node->type) {
           case Node<Data>::Leaf: case Node<Data>::CachedRemoteLeaf:
-            tp->interactions[node].set(bucket);
+            tp->interactions[bucket].push_back(node);
             break;
           case Node<Data>::Internal:
 #if DELAYLOCAL
@@ -254,7 +254,7 @@ public:
           case Node<Data>::Leaf: case Node<Data>::CachedRemoteLeaf:
             for (int i = 0; i < tp->leaves.size(); i++) {
               if (tp->leaves[i] == currpl) {
-                tp->interactions[node].set(i);
+                tp->interactions[i].push_back(node); // needs change
                 break;
               }
             }
