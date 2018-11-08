@@ -24,7 +24,7 @@ private:
 public:
   TreeElement();
   void reset();
-  void recvProxies(TPHolder<Data>, int, CProxy_CacheManager<Data>, CProxy_Driver<Data>);
+  void recvProxies(TPHolder<Data>, int, CProxy_CacheManager<Data>, DPHolder<Data>);
   void recvData (Data, bool);
   void requestData(int);
   void print() {
@@ -34,12 +34,12 @@ public:
 
 template <typename Data>
 void TreeElement<Data>::recvProxies(TPHolder<Data> tp_holderi, int tp_indexi,
-    CProxy_CacheManager<Data> cache_manageri, CProxy_Driver<Data> driveri) {
+    CProxy_CacheManager<Data> cache_manageri, DPHolder<Data> dp_holder) {
   tp_proxy = tp_holderi.tp_proxy;
   tp_index = tp_indexi;
   cache_manager = cache_manageri;
   wait_count = 8;
-  driver = driveri;
+  driver = dp_holder.d_proxy;
 }
 
 template <typename Data>
@@ -53,6 +53,7 @@ void TreeElement<Data>::reset() {
 
 template <typename Data>
 void TreeElement<Data>::requestData(int cm_index) {
+  CkPrintf("requested data from te %d\n", this->thisIndex);
   if (tp_index >= 0) tp_proxy[tp_index].requestNodes(this->thisIndex, cm_index);
   else cache_manager[cm_index].restoreData(std::make_pair(this->thisIndex, data));
 }

@@ -46,8 +46,13 @@ class Driver : public CBase_Driver<Data> {
 public:
   CProxy_CacheManager<Data> cache_manager;
   std::vector<std::pair<Key, Data>> storage;
+  bool storage_sorted;
+  int leaf_count;
 
-  Driver(CProxy_CacheManager<Data> cache_manageri) : cache_manager(cache_manageri) {}
+  Driver(CProxy_CacheManager<Data> cache_manageri) : cache_manager(cache_manageri), storage_sorted(false), leaf_count(0) {}
+
+  void countLeaf() {leaf_count++;}
+
   void recvTE(std::pair<Key, Data> param) {
     storage.emplace_back(param);
   }
@@ -115,9 +120,42 @@ public:
     treepieces.build(true);
     CkWaitQD();
     CkPrintf("[Driver] Local tree build: %lf seconds\n", CkWallTimer() - start_time);
-    centroid_driver.loadCache(num_share_levels, CkCallbackResumeThread());
-
+    start_time = CkWallTimer();
+    centroid_cache.template startPrefetch<GravityVisitor>(this->thisProxy, centroid_calculator, CkCallback::ignore);
+    CkWaitQD();
+    //centroid_driver.loadCache(num_share_levels, CkCallbackResumeThread());
+    CkPrintf("[Driver] TE prefetch: %lf seconds\n", CkWallTimer() - start_time);
     cb.send();
+  }
+
+  template <typename Visitor>
+  void prefetch(Data nodewide_data, int cm_index, TEHolder<Data> te_holder, CkCallback cb) {
+    // do traversal on the root, send everything
+    if (!storage_sorted) {
+      Comparator<Data> comp;
+      std::sort(storage.begin(), storage.end(), comp);
+      storage_sorted = true;
+    }
+
+    std::queue<Key> nodes; // better for cache. plus no requirement here on order
+    nodes.push(0);
+    std::vector<std::pair<Key, Data>> to_send;
+    Visitor v;
+    while (nodes.size()) {
+      Key node = nodes.front();
+      nodes.pop();
+      to_send.push_back(storage[node]);
+      if (v.cell(std::make_pair(node + 1, storage[node].second), std::make_pair(0, nodewide_data))) {
+        ckout << node+1 << ' ' << true << endl;
+        Key start_child = (node+1) * 8 - 1;
+        for (Key child_index = start_child; child_index < start_child + 8; child_index++) {
+          if (child_index >= storage.size()) te_holder.te_proxy[child_index].requestData(cm_index);
+          else nodes.push(child_index);
+        }
+      }
+      else ckout << node+1 << ' ' << false << endl;
+    }
+    cache_manager.recvStarterPack(to_send.data(), to_send.size(), cb);
   }
 
   void run(CkCallback cb) {
@@ -132,6 +170,7 @@ public:
     start_time = CkWallTimer();
     treepieces.interact(CkCallbackResumeThread());
     CkPrintf("[Driver] Interactions done: %lf seconds\n", CkWallTimer() - start_time);
+    CkPrintf("%d leaf-leaf interactions done\n", leaf_count);
     //count_manager.sum(CkCallback(CkReductionTarget(Main, terminate), thisProxy));
     cb.send();
   }

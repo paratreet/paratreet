@@ -55,8 +55,8 @@ public:
   // debug
   std::vector<Particle> flushed_particles;
 
-  TreePiece(const CkCallback&, int, int, CProxy_TreeElement<Data>,
-    CProxy_Resumer<Data>, CProxy_CacheManager<Data>, CProxy_Driver<Data>);
+  TreePiece(const CkCallback&, int, int, TEHolder<Data>,
+    CProxy_Resumer<Data>, CProxy_CacheManager<Data>, DPHolder<Data>);
   void receive(ParticleMsg*);
   void check(const CkCallback&);
   void triggerRequest();
@@ -94,8 +94,8 @@ public:
   }
 };
 template <typename Data>
-TreePiece<Data>::TreePiece(const CkCallback& cb, int n_total_particles_, int n_treepieces_, CProxy_TreeElement<Data> global_datai, CProxy_Resumer<Data> resumeri, CProxy_CacheManager<Data> cache_manageri, CProxy_Driver<Data> driver) : n_total_particles(n_total_particles_), n_treepieces(n_treepieces_), particle_index(0) {
-  global_data = global_datai;
+TreePiece<Data>::TreePiece(const CkCallback& cb, int n_total_particles_, int n_treepieces_, TEHolder<Data> global_datai, CProxy_Resumer<Data> resumeri, CProxy_CacheManager<Data> cache_manageri, DPHolder<Data> dp_holder) : n_total_particles(n_total_particles_), n_treepieces(n_treepieces_), particle_index(0) {
+  global_data = global_datai.te_proxy;
   resumer = resumeri;
   resumer.ckLocalBranch()->tp_proxy = this->thisProxy;
   cache_manager = cache_manageri;
@@ -116,12 +116,12 @@ TreePiece<Data>::TreePiece(const CkCallback& cb, int n_total_particles_, int n_t
       n_expected++;
       // TODO tp_key needs to be found in local tree build
   }
-  global_data[tp_key].recvProxies(TPHolder<Data>(this->thisProxy), this->thisIndex, cache_manager, driver);
+  global_data[tp_key].recvProxies(TPHolder<Data>(this->thisProxy), this->thisIndex, cache_manager, dp_holder);
   Key temp = tp_key;
   while (temp > 0 && temp % 8 == 0) {
     temp /= 8;
     //CkPrintf("temp = %d\n", temp);
-    global_data[temp].recvProxies(TPHolder<Data>(this->thisProxy), -1, cache_manager, driver);
+    global_data[temp].recvProxies(TPHolder<Data>(this->thisProxy), -1, cache_manager, dp_holder);
  }
   this->contribute(cb);
   root_from_tp_key = nullptr;

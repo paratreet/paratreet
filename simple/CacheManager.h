@@ -21,6 +21,7 @@ public:
   std::vector<std::vector<Node<Data>*>> delete_at_end;
   bool isNG;
   CProxy_Resumer<Data> resumer;
+  Data nodewide_data;
 
   CacheManager() { // : root(nullptr), curr_waiting (std::map<Key, std::vector<int> >()) {}
     Node<Data>* node = new Node<Data>(1, 0, 0, nullptr, 0, 0, nullptr);
@@ -37,6 +38,9 @@ public:
     temp->triggerFree();
     delete temp;
   }
+  void buildNodeBox(Node<Data>*);
+  template <typename Visitor>
+  void startPrefetch(DPHolder<Data>, TEHolder<Data>, CkCallback);
   void connect(Node<Data>*, bool);
   void requestNodes(std::pair<Key, int>);
   void serviceRequest(Node<Data>*, int);
@@ -52,7 +56,19 @@ public:
 };
 
 template <typename Data>
+void CacheManager<Data>::buildNodeBox(Node<Data>* node) {
+  nodewide_data += node->data;
+}
+
+template <typename Data>
+template <typename Visitor>
+void CacheManager<Data>::startPrefetch(DPHolder<Data> dp_holder, TEHolder<Data> global_data, CkCallback cb) {
+  dp_holder.d_proxy.template prefetch<Visitor>(nodewide_data, CkMyNode(), global_data.te_proxy, cb);
+}
+
+template <typename Data>
 void CacheManager<Data>::recvStarterPack(std::pair<Key, Data>* pack, int n, CkCallback cb) {
+  CkPrintf("receiving starter pack, size = %d\n", n);
   for (int i = 0; i < n; i++) restoreDataHelper(pack[i], false);
   this->contribute(cb);
 }

@@ -3,7 +3,7 @@ mainmodule simple {
   include "Splitter.h";
   include "CentroidData.h";
   include "Node.h";
-  include "TPHolder.h";
+  include "ProxyHolders.h";
   class CProxy_Reader;
   include "MultiData.h";
   include "Config.h";
@@ -56,6 +56,8 @@ mainmodule simple {
     entry void addCache(MultiMsg<Data>*);
     entry void addCache(MultiData<Data>);
     entry void restoreData(std::pair<Key, Data>);
+    template <typename Visitor>
+    entry void startPrefetch(DPHolder<Data>, TEHolder<Data>, CkCallback);
   };
 #if GROUPCACHE
   group CacheManager<CentroidData>;
@@ -66,16 +68,7 @@ mainmodule simple {
   extern entry [aggregate] void CacheManager<CentroidData> restoreData(std::pair<Key, CentroidData>);
   extern entry [aggregate] void CacheManager<CentroidData> addCache(MultiData<CentroidData>);
   extern entry [aggregate] void CacheManager<CentroidData> requestNodes(std::pair<Key, int>);
-
-  template <typename Data>
-  chare Driver {
-    entry Driver(CProxy_CacheManager<Data>);
-    entry void recvTE(std::pair<Key, Data>);
-    entry void loadCache(int, CkCallback);
-    entry [threaded] void load(Config config, CkCallback cb);
-    entry [threaded] void run(CkCallback cb);
-  }
-  chare Driver<CentroidData>;
+  extern entry void CacheManager<CentroidData> startPrefetch<GravityVisitor>(DPHolder<CentroidData>, TEHolder<CentroidData>, CkCallback); 
 
   template <typename Data>
   group Resumer {
@@ -85,19 +78,8 @@ mainmodule simple {
   group Resumer<CentroidData>;
 
   template <typename Data>
-  array [1d] TreeElement {
-    entry TreeElement();
-    entry [createhere] void recvProxies (TPHolder<Data>, int, CProxy_CacheManager<Data>, CProxy_Driver<Data>);
-    entry void recvData (Data, bool);
-    entry void requestData (int);
-    entry void print();
-    entry void reset();
-  };
-  array [1d] TreeElement<CentroidData>;
-
-  template <typename Data>
   array [1d] TreePiece {
-    entry TreePiece(const CkCallback&, int, int, CProxy_TreeElement<Data>, CProxy_Resumer<Data>, CProxy_CacheManager<Data>, CProxy_Driver<Data>);
+    entry TreePiece(const CkCallback&, int, int, TEHolder<Data>, CProxy_Resumer<Data>, CProxy_CacheManager<Data>, DPHolder<Data>);
     entry void receive(ParticleMsg*);
     entry void check(const CkCallback&);
     entry void build(bool);
@@ -121,6 +103,31 @@ mainmodule simple {
   extern entry void TreePiece<CentroidData> startUpAndDown<DensityVisitor> ();
   extern entry void TreePiece<CentroidData> startDown<PressureVisitor> ();
   extern entry void TreePiece<CentroidData> startDual<CountVisitor> (Key keys_ptr[n], int n);
+
+  template <typename Data>
+  array [1d] TreeElement {
+    entry TreeElement();
+    entry [createhere] void recvProxies (TPHolder<Data>, int, CProxy_CacheManager<Data>, DPHolder<Data>);
+    entry void recvData (Data, bool);
+    entry void requestData (int);
+    entry void print();
+    entry void reset();
+  };
+  array [1d] TreeElement<CentroidData>;
+
+  template <typename Data>
+  chare Driver {
+    entry Driver(CProxy_CacheManager<Data>);
+    entry void countLeaf();
+    entry void recvTE(std::pair<Key, Data>);
+    entry void loadCache(int, CkCallback);
+    template <typename Visitor>
+    entry void prefetch(Data, int, TEHolder<Data>, CkCallback);
+    entry [threaded] void load(Config config, CkCallback cb);
+    entry [threaded] void run(CkCallback cb);
+  }
+  chare Driver<CentroidData>;
+  extern entry void Driver<CentroidData> prefetch<GravityVisitor> (CentroidData, int, TEHolder<CentroidData>, CkCallback);
 
   group Reader {
     entry Reader();

@@ -50,6 +50,28 @@ public:
     addGravity(source, target, target->sum_forces, false);
     return false;
   }
+  bool cell(std::pair<Key, const CentroidData&> source, std::pair<Key, const CentroidData&> target) {
+    // find the closest particle in target to source's center
+    // check all eight corners of bounding box
+    // return true if one corner is within total_volume of node
+    // else return false
+    const OrientedBox<Real>& box = target.second.box;
+    for (int i = 0; i < 2; i++) {
+      for (int j = 0; j < 2; j++) {
+        for (int k = 0; k < 2; k++) {
+          Vector3D<Real> corner;
+          corner.x = (i) ? box.greater_corner.x : box.lesser_corner.x;
+          corner.y = (j) ? box.greater_corner.y : box.lesser_corner.y;
+          corner.z = (k) ? box.greater_corner.z : box.lesser_corner.z;
+          const Real theta = .5, total_volume = 41050;
+          Real s = std::pow(total_volume, 1/3.) * std::pow(2, -1 * Utility::getDepthFromKey(source.first));
+          if (theta == 0 || distsq(source.second.getCentroid(), corner) < s * s / (theta * theta)) {
+            return true;
+          }
+        }
+      }
+    }
+  }
   void pup(PUP::er& p) {}
 };
 
