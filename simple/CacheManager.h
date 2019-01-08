@@ -23,6 +23,9 @@ public:
   CProxy_Resumer<Data> resumer;
 
   CacheManager() { // : root(nullptr), curr_waiting (std::map<Key, std::vector<int> >()) {}
+    initialize();
+  }
+  void initialize() {
     Node<Data>* node = new Node<Data>(1, 0, 0, nullptr, 0, 0, nullptr);
     node->type = Node<Data>::Boundary;
     missed.insert(std::make_pair(node->key, nullptr));
@@ -32,10 +35,7 @@ public:
   }
 
   ~CacheManager() {
-    for (auto& dae : delete_at_end) for (auto to_delete : dae) delete to_delete;
-    Node<Data>* temp = root;
-    temp->triggerFree();
-    delete temp;
+    destroy(false);
   }
   void connect(Node<Data>*, bool);
   void requestNodes(std::pair<Key, int>);
@@ -49,6 +49,22 @@ public:
   void insertNode(Node<Data>*, bool, bool);
   void swapIn(Node<Data>*);
   void process(Key);
+  void destroy(bool restore) {
+    buffer.clear();
+    missed.clear();
+    for (auto& dae : delete_at_end) {
+        for (auto to_delete : dae) {
+          delete to_delete;
+        }
+        dae.resize(0);
+    }
+    if (root != nullptr) {
+      root->triggerFree();
+      delete root;
+      root = nullptr;
+   }
+   if (restore) initialize();
+  }
 };
 
 template <typename Data>
@@ -165,7 +181,7 @@ template <typename Data>
 void CacheManager<Data>::swapIn(Node<Data>* to_swap) {
   //CkPrintf("swapping in node %d\n", to_swap->key);
   if (to_swap->key > 1) {
-    to_swap->parent->children[to_swap->key % 8].exchange(to_swap);
+    to_swap = to_swap->parent->children[to_swap->key % 8].exchange(to_swap);
   }
   else {
     std::swap(root, to_swap);
