@@ -64,6 +64,10 @@ public:
 
   void load(Config config, CkCallback cb) {
     total_start_time = CkWallTimer();
+    makeNewTree(0);
+    cb.send();
+  }
+  void makeNewTree(int it) {
     // useful particle keys
     smallest_particle_key = Utility::removeLeadingZeros(Key(1));
     largest_particle_key = (~Key(0));
@@ -71,9 +75,14 @@ public:
     // load Tipsy data and build universe
     start_time = CkWallTimer();
     CkReductionMsg* result;
-    readers.load(input_file, CkCallbackResumeThread((void*&)result));
-    CkPrintf("[Driver] Loading Tipsy data and building universe: %lf seconds\n", CkWallTimer() - start_time);
-
+    if (it == 0) {
+      readers.load(input_file, CkCallbackResumeThread((void*&)result));
+      CkPrintf("[Driver, %d] Loading Tipsy data and building universe: %lf seconds\n", it, CkWallTimer() - start_time);
+    }
+    else {
+      readers.computeUniverseBoundingBox(CkCallbackResumeThread((void*&)result));
+      CkPrintf("[Driver, %d] Rebuilding universe: %lf seconds\n", it, CkWallTimer() - start_time);
+    }
     universe = *((BoundingBox*)result->getData());
     delete result;
 
@@ -84,23 +93,24 @@ public:
     // assign keys and sort particles locally
     start_time = CkWallTimer();
     readers.assignKeys(universe, CkCallbackResumeThread());
-    CkPrintf("[Driver] Assigning keys and sorting particles: %lf seconds\n", CkWallTimer() - start_time);
+    CkPrintf("[Driver, %d] Assigning keys and sorting particles: %lf seconds\n", it, CkWallTimer() - start_time);
 
     start_time = CkWallTimer();
     findOctSplitters();
     std::sort(splitters.begin(), splitters.end());
-    CkPrintf("[Driver] Finding and sorting splitters: %lf seconds\n", CkWallTimer() - start_time);
+    CkPrintf("[Driver, %d] Finding and sorting splitters: %lf seconds\n", it, CkWallTimer() - start_time);
     readers.setSplitters(splitters, CkCallbackResumeThread());
     
     // create treepieces
     treepieces = CProxy_TreePiece<CentroidData>::ckNew(CkCallbackResumeThread(), universe.n_particles, n_treepieces, centroid_calculator, centroid_resumer, centroid_cache, centroid_driver, n_treepieces);
-    CkPrintf("[Driver] Created %d TreePieces\n", n_treepieces);
+    CkWaitQD();
+    CkPrintf("[Driver, %d] Created %d TreePieces\n", it, n_treepieces);
 
     // flush particles to home TreePieces
     start_time = CkWallTimer();
     readers.flush(universe.n_particles, n_treepieces, treepieces);
     CkStartQD(CkCallbackResumeThread());
-    CkPrintf("[Driver] Flushing particles to TreePieces: %lf seconds\n", CkWallTimer() - start_time);
+    CkPrintf("[Driver, %d] Flushing particles to TreePieces: %lf seconds\n", it, CkWallTimer() - start_time);
 
 #ifdef DEBUG
     // check if all treepieces have received the right number of particles
@@ -109,30 +119,44 @@ public:
 
     // free splitter memory
     splitters.resize(0);
-
-    // start local tree build in TreePieces
-    start_time = CkWallTimer();
-    treepieces.build(true);
-    CkWaitQD();
-    CkPrintf("[Driver] Local tree build: %lf seconds\n", CkWallTimer() - start_time);
-    centroid_driver.loadCache(num_share_levels, CkCallbackResumeThread());
-
-    cb.send();
   }
 
-  void run(CkCallback cb) {
-    // perform downward and upward traversals (Barnes-Hut)
-    start_time = CkWallTimer();
-    treepieces.template startDown<GravityVisitor>();
-    CkWaitQD();
+  void run(CkCallback cb, int num_iterations) {
+    for (int it = 0; it < num_iterations; it++) {
+      // start local tree build in TreePieces
+      start_time = CkWallTimer();
+      treepieces.build(true);
+      CkWaitQD();
+      CkPrintf("[Driver, %d] Local tree build: %lf seconds\n", it, CkWallTimer() - start_time);
+      centroid_driver.loadCache(num_share_levels, CkCallbackResumeThread());
+      // perform downward and upward traversals (Barnes-Hut)
+      start_time = CkWallTimer();
+      treepieces.template startDown<GravityVisitor>();
+      CkWaitQD();
 #ifdef DELAYLOCAL
-    treepieces.processLocal(CkCallbackResumeThread());
+      treepieces.processLocal(CkCallbackResumeThread());
 #endif
-    CkPrintf("[Driver] Downward traversal done: %lf seconds\n", CkWallTimer() - start_time);
-    start_time = CkWallTimer();
-    treepieces.interact(CkCallbackResumeThread());
-    CkPrintf("[Driver] Interactions done: %lf seconds\n", CkWallTimer() - start_time);
-    //count_manager.sum(CkCallback(CkReductionTarget(Main, terminate), thisProxy));
+      CkPrintf("[Driver, %d] Downward traversal done: %lf seconds\n", it, CkWallTimer() - start_time);
+      start_time = CkWallTimer();
+      treepieces.interact(CkCallbackResumeThread());
+      CkPrintf("[Driver, %d] Interactions done: %lf seconds\n", it, CkWallTimer() - start_time);
+      //count_manager.sum(CkCallback(CkReductionTarget(Main, terminate), thisProxy));
+      start_time = CkWallTimer();
+      int flush_period = 1; // for example
+      if (it % flush_period == flush_period-1) {
+        treepieces.perturb(0.1, true); // 0.1s for example
+        CkWaitQD();
+        treepieces.ckDestroy();
+        makeNewTree(it+1);
+      }
+      else treepieces.perturb(0.1, false);
+      CkWaitQD();
+      CkPrintf("[Driver, %d] Perturbations done: %lf seconds\n", it, CkWallTimer() - start_time);
+      centroid_cache.destroy(true);
+      centroid_resumer.destroy();
+      storage.resize(0);
+      CkWaitQD();
+    }
     cb.send();
   }
 
