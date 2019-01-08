@@ -20,6 +20,7 @@ class Reader : public CBase_Reader {
   int particle_index;
 
   public:
+    BoundingBox universe;
     std::vector<Splitter> splitters;
     std::vector<Key> SFCsplitters;
     Reader();
