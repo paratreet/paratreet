@@ -14,6 +14,11 @@ public:
   std::unordered_map<int, Node<Data>*> nodehash;
   std::unordered_map<Key, std::vector<int>> waiting;
 
+  void destroy() {
+    nodehash.clear();
+    waiting.clear();
+  }
+
   void process(Key key) {
     Node<Data>* node = cache_local->root->findNode(key); // try getting its ancestor from nodehash
     nodehash.insert(std::make_pair(key, node));

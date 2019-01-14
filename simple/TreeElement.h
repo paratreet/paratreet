@@ -40,6 +40,7 @@ void TreeElement<Data>::recvProxies(TPHolder<Data> tp_holderi, int tp_indexi,
   cache_manager = cache_manageri;
   wait_count = 8;
   driver = dp_holder.d_proxy;
+  data = Data();
 }
 
 template <typename Data>
@@ -53,19 +54,19 @@ void TreeElement<Data>::reset() {
 
 template <typename Data>
 void TreeElement<Data>::requestData(int cm_index) {
-  CkPrintf("requested data from te %d\n", this->thisIndex);
   if (tp_index >= 0) tp_proxy[tp_index].requestNodes(this->thisIndex, cm_index);
   else cache_manager[cm_index].restoreData(std::make_pair(this->thisIndex, data));
 }
 
 template <typename Data>
 void TreeElement<Data>::recvData (Data datai, bool from_TP) {
+  if (wait_count == 0) reset();
   data += datai;
   wait_count--;
   if (wait_count == 0) {
     driver.recvTE(std::make_pair(this->thisIndex, data));
     if (this->thisIndex == 1) {
-      CkPrintf("%f %f %f %f\n", data.sum_mass, data.moment.x, data.moment.y, data.moment.z);
+      //CkPrintf("Total COM: %f %f %f\n", data.getCentroid().x, data.getCentroid().y, data.getCentroid().z);
       //cache_manager.restoreData(std::make_pair(1, data));
     }
     else {

@@ -28,7 +28,6 @@ mainmodule simple {
     entry Main(CkArgMsg* m);
     entry [threaded] void run();
     entry [reductiontarget] void terminate(CkReductionMsg*);
-
     // debug
     entry [reductiontarget] void checkParticlesChangedDone(bool result);
   };
@@ -58,6 +57,7 @@ mainmodule simple {
     entry void restoreData(std::pair<Key, Data>);
     template <typename Visitor>
     entry void startPrefetch(DPHolder<Data>, TEHolder<Data>, CkCallback);
+    entry void destroy(bool);
   };
 #if GROUPCACHE
   group CacheManager<CentroidData>;
@@ -73,6 +73,7 @@ mainmodule simple {
   template <typename Data>
   group Resumer {
     entry Resumer();
+    entry void destroy();
     entry [expedited] void process(Key);
   };
   group Resumer<CentroidData>;
@@ -91,9 +92,8 @@ mainmodule simple {
     entry void interact(const CkCallback&);
     entry void goDown(Key);
     entry void requestNodes(Key, int);
-    entry void perturb(Real timestep);
+    entry void perturb(Real timestep, bool);
     entry void flush(CProxy_Reader);
-    entry void rebuild(bool);
 
     entry void checkParticlesChanged(const CkCallback&);
   };
@@ -124,7 +124,7 @@ mainmodule simple {
     template <typename Visitor>
     entry void prefetch(Data, int, TEHolder<Data>, CkCallback);
     entry [threaded] void load(Config config, CkCallback cb);
-    entry [threaded] void run(CkCallback cb);
+    entry [threaded] void run(CkCallback cb, int);
   }
   chare Driver<CentroidData>;
   extern entry void Driver<CentroidData> prefetch<GravityVisitor> (CentroidData, int, TEHolder<CentroidData>, CkCallback);

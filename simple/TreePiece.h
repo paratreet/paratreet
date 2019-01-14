@@ -12,6 +12,7 @@
 #include "Resumer.h"
 #include "Traverser.h"
 #include "Driver.h"
+#include "OrientedBox.h"
 
 #include <queue>
 #include <set>
@@ -34,7 +35,7 @@ extern CProxy_Main mainProxy;
 template <typename Data>
 class TreePiece : public CBase_TreePiece<Data> {
 public:
-  std::vector<Particle> particles;
+  std::vector<Particle> particles, incoming_particles;
   std::vector<Node<Data>*> leaves;
   std::vector<Node<Data>*> empty_leaves;
   int n_total_particles;
@@ -62,7 +63,7 @@ public:
   void triggerRequest();
   void build(bool to_search);
   bool recursiveBuild(Node<Data>*, bool);
-  void upOnly();
+  void upOnly(bool);
   inline void initCache();
   void requestNodes(Key, int);
   template<typename Visitor> void startDown();
@@ -72,9 +73,8 @@ public:
   void processLocal(const CkCallback&);
   void interact(const CkCallback&);
   void print(Node<Data>*);
-  void perturb (Real timestep);
+  void perturb (Real timestep, bool);
   void flush(CProxy_Reader);
-  void rebuild(bool to_search);
 
   // debug
   void checkParticlesChanged(const CkCallback& cb) {
@@ -129,8 +129,9 @@ TreePiece<Data>::TreePiece(const CkCallback& cb, int n_total_particles_, int n_t
 template <typename Data>
 void TreePiece<Data>::receive(ParticleMsg* msg) {
   // copy particles to local vector
-  particles.resize(particle_index + msg->n_particles);
-  std::memcpy(&particles[particle_index], msg->particles, msg->n_particles * sizeof(Particle));
+  int initial_size = incoming_particles.size();
+  incoming_particles.resize(initial_size + msg->n_particles);
+  std::memcpy(&incoming_particles[initial_size], msg->particles, msg->n_particles * sizeof(Particle));
   particle_index += msg->n_particles;
   delete msg;
 }
@@ -148,17 +149,27 @@ void TreePiece<Data>::triggerRequest() {
 }
 template <typename Data>
 void TreePiece<Data>::build(bool to_search) {
+  int n_particles_saved = particles.size(), n_particles_received = incoming_particles.size();
+  particles.resize(n_particles_saved + n_particles_received);
+  for (int i = 0; i < n_particles_received; i++) {
+    particles[n_particles_saved + i] = incoming_particles[i];
+  }
+  incoming_particles.resize(0);
   // sort particles received from readers
   std::sort(particles.begin(), particles.end());
   // create global root and recurse
 #ifdef DEBUG
   CkPrintf("[TP %d] key: 0x%" PRIx64 " particles: %d\n", this->thisIndex, tp_key, particles.size());
 #endif
+  leaves.resize(0);
+  empty_leaves.resize(0);
+  local_travs.resize(0);
   root = new Node<Data>(1, 0, particles.size(), &particles[0], 0, n_treepieces - 1, nullptr);
   recursiveBuild(root, false);
-  interactions = std::vector<vector<Node<Data>*>> (leaves.size());
-  if (to_search) initCache();
-  upOnly();
+  interactions = std::vector<std::vector<Node<Data>*>> (leaves.size());
+  cache_init = false;
+  initCache();
+  upOnly(to_search);
 }
 template <typename Data>
 bool TreePiece<Data>::recursiveBuild(Node<Data>* node, bool saw_tp_key) {
@@ -293,7 +304,7 @@ bool TreePiece<Data>::recursiveBuild(Node<Data>* node, bool saw_tp_key) {
       */
 
       // create child and store in vector
-      Node<Data>* child = new Node<Data>(child_key, node->depth + 1, n_particles, node->particles + start, 0, n_treepieces - 1, node);
+      Node<Data>* child = new Node<Data>(child_key, node->depth + 1, n_particles, node->particles + start, 0, n_treepieces - 1, node, this->thisIndex);
       //Node<Data>* child = new Node<Data>(child_key, node->depth + 1, node->particles + start, n_particles, child_owner_start, child_owner_end, node);
       node->children[i].store(child);
 
@@ -312,6 +323,7 @@ bool TreePiece<Data>::recursiveBuild(Node<Data>* node, bool saw_tp_key) {
     }
     else {
       node->type = Node<Data>::Boundary;
+      node->tp_index = -1;
     }
 
     return (non_local_children == 0);
@@ -319,7 +331,7 @@ bool TreePiece<Data>::recursiveBuild(Node<Data>* node, bool saw_tp_key) {
   return false;
 }
 template <typename Data>
-void TreePiece<Data>::upOnly() {
+void TreePiece<Data>::upOnly(bool first_time = true) {
   std::queue<Node<Data>*> going_up;
   for (auto leaf : leaves) {
     leaf->data = Data(leaf->particles, leaf->n_particles);
@@ -392,13 +404,101 @@ void TreePiece<Data>::interact(const CkCallback& cb) {
   traverser->interact();
   this->contribute(cb);
 }
+
 template <typename Data>
-void TreePiece<Data>::perturb (Real timestep) {
-  for (auto leaf : leaves) {
-    for (int i = 0; i < leaf->n_particles; i++) {
-      leaf->particles[i].perturb(timestep, leaf->sum_forces[i]);
+void TreePiece<Data>::perturb (Real timestep, bool if_flush) {
+
+  if (if_flush) {
+    for (auto leaf : leaves) {
+      for (int i = 0; i < leaf->n_particles; i++) {
+        leaf->particles[i].perturb(timestep, leaf->sum_forces[i], readers.ckLocalBranch()->universe.box);
+      }
+    }
+    flush(readers);
+    return;
+  }
+
+  for (int i = 0; i < leaves.size(); i++) {
+    for (int j = 0; j < leaves[i]->n_particles; j++) {
+//      CkPrintf("sum forces y %lf\n", leaves[i]->sum_forces[j].y);
     }
   }
+
+  // SUM FORCES IS NAN
+
+  std::vector<Particle> in_particles;
+  std::map<int, std::vector<Particle>> out_particles;
+  std::vector<int> remainders;
+  Key temp = tp_key;
+  while (temp >= 8) {
+    remainders.push_back(temp % 8);
+    temp /= 8;
+  }
+  OrientedBox<Real> tp_box = readers.ckLocalBranch()->universe.box;
+  for (int i = remainders.size()-1; i >= 0; i--) {
+    for (int dim = 0; dim < 3; dim++) {
+      if (remainders[i] & (1 << (2-dim))) tp_box.lesser_corner[dim] = tp_box.center()[dim];
+      else tp_box.greater_corner[dim] = tp_box.center()[dim];
+    }
+  }
+
+  // calculate bounding box of TP
+  for (auto leaf : leaves) {
+    for (int i = 0; i < leaf->n_particles; i++) {
+      Particle& particle = leaf->particles[i];
+      Vector3D<Real> old_position = particle.position;
+      particle.perturb(timestep, leaf->sum_forces[i], readers.ckLocalBranch()->universe.box);
+      //CkPrintf("magitude of displacement = %lf\n", (old_position - leaf->particles[i].position).length());
+      //CkPrintf("total centroid is (%lf, %lf, %lf)\n", root->data.getCentroid().x, root->data.getCentroid().y, root->data.getCentroid().z);
+      OrientedBox<Real> curr_box = tp_box;
+      Node<Data>* node = root_from_tp_key;
+      int remainders_index = 0;
+      while (!curr_box.contains(particle.position)) {
+        //CkPrintf("not under umbrella of node %d with volume %lf\n", node->key, curr_box.volume());
+        if (node->parent == nullptr) CkPrintf("point (%lf, %lf, %lf) has force (%lf, %llf, %lf) and old position (%lf, %lf, %lf)\n",
+                particle.position.x, particle.position.y, particle.position.z,
+		leaf->sum_forces[i].x / .001, leaf->sum_forces[i].y / .001, leaf->sum_forces[i].z / .001,
+		old_position.x, old_position.y, old_position.z);
+	Vector3D<Real> new_point = 2 * curr_box.greater_corner - curr_box.lesser_corner;
+        if (remainders[remainders_index] & 4) new_point.x = 2 * curr_box.lesser_corner.x - curr_box.greater_corner.x;
+        if (remainders[remainders_index] & 2) new_point.y = 2 * curr_box.lesser_corner.y - curr_box.greater_corner.y;
+        if (remainders[remainders_index] & 1) new_point.z = 2 * curr_box.lesser_corner.z - curr_box.greater_corner.z;
+        curr_box.grow(new_point);
+        remainders_index++;
+        node = node->parent;
+      }
+      //if (node->tp_index >= 0) CkPrintf("node tp_index %d\n", node->tp_index);
+      while (node->tp_index < 0) {
+        int child = 0;
+        Vector3D<Real> mean = curr_box.center();
+        for (int dim = 0; dim < 3; dim++) {
+          if (particle.position[dim] > mean[dim]) {
+            child |= (1 << (2 - dim));
+            curr_box.lesser_corner[dim] = mean[dim];
+          }
+          else curr_box.greater_corner[dim] = mean[dim];
+        }
+        if (node->type == Node<Data>::RemoteAboveTPKey || node->type == Node<Data>::Remote) {
+          CkAbort("flush period too large for initial particle velocities");
+        }
+        Node<Data>* the_child = node->children[child].load();
+        if (the_child == nullptr) std::cout << "node has type " << node->type << std::endl;
+        node = node->children[child].load();
+        if (!node) CkPrintf("node not legit\n");
+      }
+
+      if (node == root_from_tp_key) in_particles.push_back(particle);
+      else {
+        std::vector<Particle>& particle_vec = out_particles[node->tp_index];
+        particle_vec.push_back(particle);
+      }
+    }
+  }
+  for (auto it = out_particles.begin(); it != out_particles.end(); it++) {
+    ParticleMsg* msg = new (it->second.size()) ParticleMsg (it->second.data(), it->second.size());
+    this->thisProxy[it->first].receive(msg);
+  } 
+  particles = in_particles;
 }
 template <typename Data>
 void TreePiece<Data>::flush(CProxy_Reader readers) {
@@ -410,15 +510,6 @@ void TreePiece<Data>::flush(CProxy_Reader readers) {
   readers[CkMyPe()].receive(msg);
   particles.resize(0);
   particle_index = 0;
-}
-template <typename Data>
-void TreePiece<Data>::rebuild(bool to_search) {
-  // clean up old tree information
-  root->triggerFree();
-  root = nullptr;
-
-  // build a new tree from scratch
-  build(to_search);
 }
 template <typename Data>
 void TreePiece<Data>::print(Node<Data>* root) {

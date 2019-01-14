@@ -112,8 +112,10 @@ void Reader::computeUniverseBoundingBox(const CkCallback& cb) {
   contribute(sizeof(BoundingBox), &box, BoundingBox::reducer(), cb);
 }
 
-void Reader::assignKeys(BoundingBox universe, const CkCallback& cb) {
+void Reader::assignKeys(BoundingBox universei, const CkCallback& cb) {
   // generate particle keys
+
+  universe = universei;
   for (unsigned int i = 0; i < particles.size(); i++) {
     particles[i].key = SFC::generateKey(particles[i].position, universe.box);
 

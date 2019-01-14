@@ -3,7 +3,7 @@
 
 //#include "simple.decl.h"
 #include "common.h"
-
+#include "BoundingBox.h"
 struct Particle {
   Key key;
   int order;
@@ -22,10 +22,15 @@ struct Particle {
 
   void reset();
 
-  void perturb (Real timestep, Vector3D<Real> force) {
+  void perturb (Real timestep, Vector3D<Real> force, OrientedBox<Real> universe) {
     acceleration = force / mass;
-    position = position + velocity * timestep + acceleration * timestep * timestep / 2;
-    velocity = velocity + acceleration * timestep;
+    position += (velocity * timestep);
+    position += (acceleration * timestep * timestep / 2);
+    for (int dim = 0; dim < 3; dim++) {
+      if (position[dim] < universe.lesser_corner[dim]) position[dim] += universe.greater_corner[dim] - universe.lesser_corner[dim];
+      else if (position[dim] > universe.greater_corner[dim]) position[dim] -= universe.greater_corner[dim] - universe.lesser_corner[dim];
+    }
+    velocity += (acceleration * timestep);
   }
 
   bool operator==(const Particle&) const;

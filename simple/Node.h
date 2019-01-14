@@ -22,6 +22,7 @@ struct Node {
   std::array<std::atomic<Node*>, BRANCH_FACTOR> children;
   int n_children;
   int wait_count;
+  int tp_index;
   int cm_index;
   std::atomic<bool> requested;
   std::vector<Vector3D<Real> > sum_forces;
@@ -36,6 +37,7 @@ struct Node {
     p | owner_tp_start;
     p | owner_tp_end;
     p | wait_count;
+    p | tp_index;
     p | cm_index;
     if (p.isUnpacking()) {
       particles = nullptr;
@@ -50,7 +52,7 @@ struct Node {
     this->data = data;
     this->n_children = n_children;
   }
-  Node(Key key, int depth, int n_particles, Particle* particles, int owner_tp_start, int owner_tp_end, Node* parent) {
+  Node(Key key, int depth, int n_particles, Particle* particles, int owner_tp_start, int owner_tp_end, Node* parent, int tp_indexi = -1) {
     this->type = Invalid;
     this->key = key;
     this->depth = depth;
@@ -62,6 +64,7 @@ struct Node {
     this->parent = parent;
     this->n_children = 0;
     this->wait_count = 8;
+    this->tp_index = tp_indexi;
     this->cm_index = -1;
     for (int i = 0; i < BRANCH_FACTOR; i++) this->children[i].store(nullptr);
     this->requested.store(false);
@@ -79,16 +82,20 @@ struct Node {
     parent = n.parent;
     n_children = n.n_children;
     wait_count = n.wait_count;
+    tp_index = n.tp_index;
     cm_index = n.cm_index;
     for (int i = 0; i < BRANCH_FACTOR; i++) this->children[i].store(nullptr);
   }
 
   void triggerFree() {
-    for (int i = 0; i < children.size(); i++) {
-      Node* node = children[i].load();
-      if (node == nullptr) continue;
-      node->triggerFree();
-      delete node;
+    if (type == Internal || type == Boundary || type == CachedRemote || type == CachedBoundary) {
+      for (int i = 0; i < children.size(); i++) {
+        Node* node = children[i].load();
+        if (node == nullptr) continue;
+        node->triggerFree();
+        delete node;
+        children[i].store(nullptr);
+      }
     }
     if (type == CachedRemoteLeaf && n_particles) {
       delete[] particles;

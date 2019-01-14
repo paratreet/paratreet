@@ -41,6 +41,7 @@ class Main : public CBase_Main {
   int cur_iteration;
   int num_share_levels;
   int n_treepieces;
+  int flush_period;
 
   public:
   static void initialize() {
@@ -76,13 +77,14 @@ class Main : public CBase_Main {
     max_particles_per_leaf = MAX_PARTICLES_PER_LEAF;
     decomp_type = OCT_DECOMP;
     tree_type = OCT_TREE;
-    num_iterations = 1;
+    num_iterations = 100;
     cur_iteration = 0;
     num_share_levels = 3;
+    flush_period = 1;
 
     // handle arguments
     int c;
-    while ((c = getopt(m->argc, m->argv, "f:n:p:l:d:t:i:")) != -1) {
+    while ((c = getopt(m->argc, m->argv, "f:n:p:l:d:t:i:s:u:")) != -1) {
       switch (c) {
         case 'f':
           input_file = optarg;
@@ -116,6 +118,9 @@ class Main : public CBase_Main {
           break;
         case 's':
           num_share_levels = atoi(optarg);
+          break;
+        case 'u':
+          flush_period = atoi(optarg);
           break;
         default:
           CkPrintf("Usage:\n");
@@ -170,7 +175,7 @@ class Main : public CBase_Main {
     config.tree_type = OCT_TREE;
     // ...
     centroid_driver.load(config, CkCallbackResumeThread());
-    centroid_driver.run(CkCallbackResumeThread());
+    centroid_driver.run(CkCallbackResumeThread(), num_iterations);
     CkExit();
   }
 

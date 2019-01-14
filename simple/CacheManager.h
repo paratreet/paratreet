@@ -24,6 +24,9 @@ public:
   Data nodewide_data;
 
   CacheManager() { // : root(nullptr), curr_waiting (std::map<Key, std::vector<int> >()) {}
+    initialize();
+  }
+  void initialize() {
     Node<Data>* node = new Node<Data>(1, 0, 0, nullptr, 0, 0, nullptr);
     node->type = Node<Data>::Boundary;
     missed.insert(std::make_pair(node->key, nullptr));
@@ -33,10 +36,7 @@ public:
   }
 
   ~CacheManager() {
-    for (auto& dae : delete_at_end) for (auto to_delete : dae) delete to_delete;
-    Node<Data>* temp = root;
-    temp->triggerFree();
-    delete temp;
+    destroy(false);
   }
   void buildNodeBox(Node<Data>*);
   template <typename Visitor>
@@ -53,6 +53,22 @@ public:
   void insertNode(Node<Data>*, bool, bool);
   void swapIn(Node<Data>*);
   void process(Key);
+  void destroy(bool restore) {
+    buffer.clear();
+    missed.clear();
+    for (auto& dae : delete_at_end) {
+        for (auto to_delete : dae) {
+          delete to_delete;
+        }
+        dae.resize(0);
+    }
+    if (root != nullptr) {
+      root->triggerFree();
+      delete root;
+      root = nullptr;
+   }
+   if (restore) initialize();
+  }
 };
 
 template <typename Data>
@@ -68,7 +84,7 @@ void CacheManager<Data>::startPrefetch(DPHolder<Data> dp_holder, TEHolder<Data> 
 
 template <typename Data>
 void CacheManager<Data>::recvStarterPack(std::pair<Key, Data>* pack, int n, CkCallback cb) {
-  CkPrintf("receiving starter pack, size = %d\n", n);
+  //CkPrintf("[Cache Manager] receiving starter pack, size = %d\n", n);
   for (int i = 0; i < n; i++) restoreDataHelper(pack[i], false);
   this->contribute(cb);
 }
@@ -181,7 +197,7 @@ template <typename Data>
 void CacheManager<Data>::swapIn(Node<Data>* to_swap) {
   //CkPrintf("swapping in node %d\n", to_swap->key);
   if (to_swap->key > 1) {
-    to_swap->parent->children[to_swap->key % 8].exchange(to_swap);
+    to_swap = to_swap->parent->children[to_swap->key % 8].exchange(to_swap);
   }
   else {
     std::swap(root, to_swap);
