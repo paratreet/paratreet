@@ -107,6 +107,7 @@ public:
     readers.setSplitters(splitters, CkCallbackResumeThread());
     
     // create treepieces
+    CkWaitQD();
     treepieces = CProxy_TreePiece<CentroidData>::ckNew(CkCallbackResumeThread(), universe.n_particles, n_treepieces, centroid_calculator, centroid_resumer, centroid_cache, centroid_driver, n_treepieces);
     CkWaitQD();
     CkPrintf("[Driver, %d] Created %d TreePieces\n", it, n_treepieces);
@@ -184,6 +185,7 @@ public:
       int flush_period = 1; // for example
       bool complete_rebuild = (it % flush_period == flush_period-1);
       treepieces.perturb(0.1, complete_rebuild); // 0.1s for example
+      CkPrintf("%d node-part interactions, %d part-part interactions\n", centroid_cache.ckLocalBranch()->node_counter, centroid_cache.ckLocalBranch()->part_counter);
       CkWaitQD();
       CkPrintf("[Driver, %d] Perturbations done: %lf seconds\n", it, CkWallTimer() - start_time);
       if (complete_rebuild) {

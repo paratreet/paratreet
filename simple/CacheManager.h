@@ -22,6 +22,11 @@ public:
   bool isNG;
   CProxy_Resumer<Data> resumer;
   Data nodewide_data;
+  int part_counter, node_counter;
+  void countInt(bool isLeaf) {
+    if (isLeaf) part_counter++;
+    else node_counter++;
+  }
 
   CacheManager() { // : root(nullptr), curr_waiting (std::map<Key, std::vector<int> >()) {}
     initialize();
@@ -84,7 +89,7 @@ void CacheManager<Data>::startPrefetch(DPHolder<Data> dp_holder, TEHolder<Data> 
 
 template <typename Data>
 void CacheManager<Data>::recvStarterPack(std::pair<Key, Data>* pack, int n, CkCallback cb) {
-  //CkPrintf("[Cache Manager] receiving starter pack, size = %d\n", n);
+  CkPrintf("[Cache Manager] receiving starter pack, size = %d\n", n);
   for (int i = 0; i < n; i++) restoreDataHelper(pack[i], false);
   this->contribute(cb);
 }

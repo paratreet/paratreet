@@ -170,6 +170,7 @@ void TreePiece<Data>::build(bool to_search) {
   cache_init = false;
   initCache();
   upOnly(to_search);
+  cache_local->buildNodeBox(root_from_tp_key);
 }
 template <typename Data>
 bool TreePiece<Data>::recursiveBuild(Node<Data>* node, bool saw_tp_key) {
