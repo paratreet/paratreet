@@ -153,7 +153,7 @@ public:
         }
       }
     }
-    cache_manager.recvStarterPack(to_send.data(), to_send.size(), cb);
+    cache_manager[cm_index].recvStarterPack(to_send.data(), to_send.size(), cb);
   }
 
   void run(CkCallback cb, int num_iterations) {
