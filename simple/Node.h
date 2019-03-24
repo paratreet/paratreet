@@ -57,6 +57,7 @@ struct Node {
     this->key = key;
     this->depth = depth;
     this->n_particles = n_particles;
+    this->sum_forces.resize(this->n_particles, Vector3D<Real>(0,0,0));
     this->particles = particles;
     this->data = Data();
     this->owner_tp_start = owner_tp_start;
@@ -77,6 +78,7 @@ struct Node {
     data = n.data;
     n_particles = n.n_particles;
     particles = n.particles;
+    sum_forces = n.sum_forces;
     owner_tp_start = n.owner_tp_start;
     owner_tp_end = n.owner_tp_end;
     parent = n.parent;

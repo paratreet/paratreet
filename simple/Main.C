@@ -28,6 +28,7 @@
 /* readonly */ int decomp_type;
 /* readonly */ int tree_type;
 /* readonly */ int num_iterations;
+/* readonly */ int num_share_levels;
 /* readonly */ CProxy_TreeElement<CentroidData> centroid_calculator;
 /* readonly */ CProxy_CacheManager<CentroidData> centroid_cache;
 /* readonly */ CProxy_Resumer<CentroidData> centroid_resumer;
@@ -39,7 +40,6 @@ class Main : public CBase_Main {
   double start_time;
   std::string input_str;
   int cur_iteration;
-  int num_share_levels;
   int n_treepieces;
   int flush_period;
 
@@ -77,7 +77,7 @@ class Main : public CBase_Main {
     max_particles_per_leaf = MAX_PARTICLES_PER_LEAF;
     decomp_type = OCT_DECOMP;
     tree_type = OCT_TREE;
-    num_iterations = 100;
+    num_iterations = 20;
     cur_iteration = 0;
     num_share_levels = 3;
     flush_period = 1;

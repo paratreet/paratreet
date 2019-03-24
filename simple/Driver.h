@@ -56,7 +56,8 @@ public:
   void recvTE(std::pair<Key, Data> param) {
     storage.emplace_back(param);
   }
-  void loadCache(int num_share_levels, CkCallback cb) {
+  void loadCache(CkCallback cb) {
+    CkPrintf("num_share_levels = %d\n", num_share_levels);
     Comparator<Data> comp;
     std::sort(storage.begin(), storage.end(), comp);
     int send_size = storage.size();
@@ -164,10 +165,10 @@ public:
       CkWaitQD();
       CkPrintf("[Driver] Local tree build: %lf seconds\n", CkWallTimer() - start_time);
       start_time = CkWallTimer();
-      centroid_cache.template startPrefetch<GravityVisitor>(this->thisProxy, centroid_calculator, CkCallback::ignore);
+      //centroid_cache.template startPrefetch<GravityVisitor>(this->thisProxy, centroid_calculator, CkCallback::ignore);
+      centroid_driver.loadCache(CkCallbackResumeThread());
       CkWaitQD();
-      //centroid_driver.loadCache(num_share_levels, CkCallbackResumeThread());
-      CkPrintf("[Driver] TE prefetch: %lf seconds\n", CkWallTimer() - start_time);
+      CkPrintf("[Driver] TE cache loading: %lf seconds\n", CkWallTimer() - start_time);
 
       // perform downward and upward traversals (Barnes-Hut)
       start_time = CkWallTimer();
@@ -182,7 +183,7 @@ public:
       CkPrintf("[Driver, %d] Interactions done: %lf seconds\n", it, CkWallTimer() - start_time);
       //count_manager.sum(CkCallback(CkReductionTarget(Main, terminate), thisProxy));
       start_time = CkWallTimer();
-      int flush_period = 1; // for example
+      int flush_period = 20; // for example
       bool complete_rebuild = (it % flush_period == flush_period-1);
       treepieces.perturb(0.1, complete_rebuild); // 0.1s for example
       CkPrintf("%d node-part interactions, %d part-part interactions\n", centroid_cache.ckLocalBranch()->node_counter, centroid_cache.ckLocalBranch()->part_counter);
@@ -203,7 +204,6 @@ public:
 private:
   double total_start_time;
   double start_time;
-  int num_share_levels;
   BoundingBox universe;
   Key smallest_particle_key;
   Key largest_particle_key;
