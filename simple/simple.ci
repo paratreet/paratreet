@@ -18,6 +18,7 @@ mainmodule simple {
   readonly int decomp_type;
   readonly int tree_type;
   readonly int num_iterations;
+  readonly int flush_period;
   readonly int num_share_levels;
   readonly CProxy_TreeElement<CentroidData> centroid_calculator;
   readonly CProxy_CacheManager<CentroidData> centroid_cache;

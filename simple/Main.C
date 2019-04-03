@@ -29,6 +29,7 @@
 /* readonly */ int tree_type;
 /* readonly */ int num_iterations;
 /* readonly */ int num_share_levels;
+/* readonly */ int flush_period;
 /* readonly */ CProxy_TreeElement<CentroidData> centroid_calculator;
 /* readonly */ CProxy_CacheManager<CentroidData> centroid_cache;
 /* readonly */ CProxy_Resumer<CentroidData> centroid_resumer;
@@ -41,7 +42,6 @@ class Main : public CBase_Main {
   std::string input_str;
   int cur_iteration;
   int n_treepieces;
-  int flush_period;
 
   public:
   static void initialize() {

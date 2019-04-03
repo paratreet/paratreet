@@ -30,6 +30,7 @@ extern int max_particles_per_leaf; // for local tree build
 extern int decomp_type;
 extern int tree_type;
 extern int num_iterations;
+extern int flush_period;
 extern CProxy_TreeElement<CentroidData> centroid_calculator;
 extern CProxy_CacheManager<CentroidData> centroid_cache;
 extern CProxy_Resumer<CentroidData> centroid_resumer;
@@ -57,7 +58,7 @@ public:
     storage.emplace_back(param);
   }
   void loadCache(CkCallback cb) {
-    CkPrintf("num_share_levels = %d\n", num_share_levels);
+    CkPrintf("Broadcasting top %d levels to caches\n", num_share_levels);
     Comparator<Data> comp;
     std::sort(storage.begin(), storage.end(), comp);
     int send_size = storage.size();
@@ -183,7 +184,6 @@ public:
       CkPrintf("[Driver, %d] Interactions done: %lf seconds\n", it, CkWallTimer() - start_time);
       //count_manager.sum(CkCallback(CkReductionTarget(Main, terminate), thisProxy));
       start_time = CkWallTimer();
-      int flush_period = 20; // for example
       bool complete_rebuild = (it % flush_period == flush_period-1);
       treepieces.perturb(0.1, complete_rebuild); // 0.1s for example
       CkPrintf("%d node-part interactions, %d part-part interactions\n", centroid_cache.ckLocalBranch()->node_counter, centroid_cache.ckLocalBranch()->part_counter);
