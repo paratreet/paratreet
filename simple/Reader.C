@@ -9,7 +9,8 @@ extern CProxy_Main mainProxy;
 extern int n_readers;
 extern int decomp_type;
 
-Reader::Reader() : particle_index(0) {}
+Reader::Reader() : particle_index(0) {
+}
 
 void Reader::load(std::string input_file, const CkCallback& cb) {
   // open tipsy file
@@ -82,6 +83,12 @@ void Reader::load(std::string input_file, const CkCallback& cb) {
     particles[i].order = start_particle + i;
     particles[i].potential = 0.0;
 
+    if (abs(particles[i].mass) < 1E-10) {
+      //CkPrintf("particle mass is %lf\n", particles[i].mass);
+      particles[i].mass = 1E-10;
+    }
+
+    particles[i].velocity = Vector3D<Real> (0, 0, 0);
     box.grow(particles[i].position);
     box.mass += particles[i].mass;
     box.ke += particles[i].mass * particles[i].velocity.lengthSquared();

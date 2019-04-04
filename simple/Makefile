@@ -1,8 +1,8 @@
-CHARM_HOME ?= ~/charm/netlrts-linux-x86_64-smp-prod
+CHARM_HOME ?= ~/charm/ofi-linux-x86_64-smp-prod
 STRUCTURE_PATH = ../utility/structures
-OPTS = -g -I$(STRUCTURE_PATH) -DGROUPCACHE=0 -DDELAYLOCAL=0
+OPTS = -g -I$(STRUCTURE_PATH) -DGROUPCACHE=0 -DDELAYLOCAL=0 -O3
 CHARMC = $(CHARM_HOME)/bin/charmc $(OPTS)
-LD_LIBS = -L$(STRUCTURE_PATH) -lTipsy
+LD_LIBS = -L$(STRUCTURE_PATH) -lTipsy -module CommonLBs
 
 BINARY = simple
 OBJS = Main.o Reader.o Particle.o BoundingBox.o
@@ -64,4 +64,5 @@ Traverser.h:
 Driver.h:
 
 test: all
-	./charmrun ./simple -f ../inputgen/100k.tipsy +p3 ++ppn 3 +pemap 1-3 +commap 0 ++local
+	ibrun ./simple -f ../inputgen/1m.tipsy +LBPeriod 0.5 +balancer GreedyRefineLB ++ppn 64 +pemap 1-64 +commap 0 ++local
+	#ibrun ./simple -f ~/lambs.00200 +balancer GreedyRefineLB ++ppn 64 +pemap 1-64 +commap 0 ++local

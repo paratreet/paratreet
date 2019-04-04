@@ -19,7 +19,9 @@ mainmodule simple {
   readonly int tree_type;
   readonly int num_iterations;
   readonly int flush_period;
+  readonly int lb_period;
   readonly int num_share_levels;
+  readonly int num_total_treepieces;
   readonly CProxy_TreeElement<CentroidData> centroid_calculator;
   readonly CProxy_CacheManager<CentroidData> centroid_cache;
   readonly CProxy_Resumer<CentroidData> centroid_resumer;
@@ -82,11 +84,13 @@ mainmodule simple {
 
   template <typename Data>
   array [1d] TreePiece {
-    entry TreePiece(const CkCallback&, int, int, TEHolder<Data>, CProxy_Resumer<Data>, CProxy_CacheManager<Data>, DPHolder<Data>);
+    entry TreePiece();
+    entry void setUp(const CkCallback&, int, int, TEHolder<Data>, CProxy_Resumer<Data>, CProxy_CacheManager<Data>, DPHolder<Data>);
     entry void receive(ParticleMsg*);
     entry void check(const CkCallback&);
     entry void build(bool);
     entry void triggerRequest();
+    entry void prepAtSync();
     template<typename Visitor> entry void startDown();
     template<typename Visitor> entry void startUpAndDown();
     template<typename Visitor> entry void startDual(Key keys_ptr[n], int n);

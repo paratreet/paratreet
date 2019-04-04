@@ -30,6 +30,9 @@
 /* readonly */ int num_iterations;
 /* readonly */ int num_share_levels;
 /* readonly */ int flush_period;
+/* readonly */ int lb_period;
+/* readonly */ int num_total_treepieces;
+/* readonly */ CProxy_TreePiece<CentroidData> treepieces;
 /* readonly */ CProxy_TreeElement<CentroidData> centroid_calculator;
 /* readonly */ CProxy_CacheManager<CentroidData> centroid_cache;
 /* readonly */ CProxy_Resumer<CentroidData> centroid_resumer;
@@ -80,7 +83,10 @@ class Main : public CBase_Main {
     num_iterations = 20;
     cur_iteration = 0;
     num_share_levels = 3;
-    flush_period = 1;
+    flush_period = 20;
+    lb_period = 1;
+
+    num_total_treepieces = 4000;
 
     // handle arguments
     int c;
@@ -157,6 +163,7 @@ class Main : public CBase_Main {
 
     // create Readers
     n_readers = CkNumPes();
+    treepieces = CProxy_TreePiece<CentroidData>::ckNew(num_total_treepieces);
     readers = CProxy_Reader::ckNew();
     centroid_calculator = CProxy_TreeElement<CentroidData>::ckNew();
     centroid_cache = CProxy_CacheManager<CentroidData>::ckNew();

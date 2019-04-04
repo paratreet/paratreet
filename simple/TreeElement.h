@@ -44,7 +44,9 @@ void TreeElement<Data>::recvProxies(TPHolder<Data> tp_holderi, int tp_indexi,
 }
 
 template <typename Data>
-TreeElement<Data>::TreeElement() : data(Data()) {}
+TreeElement<Data>::TreeElement() : data(Data()) {
+  this->setMigratable(false);
+}
 
 template <typename Data>
 void TreeElement<Data>::reset() {

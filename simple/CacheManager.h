@@ -12,6 +12,8 @@
 #include "MultiData.h"
 #include <mutex>
 
+extern CProxy_TreePiece<CentroidData> treepieces;
+
 template <typename Data>
 class CacheManager : public CBase_CacheManager<Data> {
 public:
@@ -89,7 +91,9 @@ void CacheManager<Data>::startPrefetch(DPHolder<Data> dp_holder, TEHolder<Data> 
 
 template <typename Data>
 void CacheManager<Data>::recvStarterPack(std::pair<Key, Data>* pack, int n, CkCallback cb) {
-  CkPrintf("[Cache Manager] receiving starter pack, size = %d\n", n);
+  if (this->thisIndex == 0) {
+    CkPrintf("[Cache Manager] receiving starter pack, size = %d\n", n);
+  }
   for (int i = 0; i < n; i++) restoreDataHelper(pack[i], false);
   this->contribute(cb);
 }

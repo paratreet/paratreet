@@ -31,6 +31,9 @@ extern int decomp_type;
 extern int tree_type;
 extern int num_iterations;
 extern int flush_period;
+extern int lb_period;
+extern int num_total_treepieces;
+extern CProxy_TreePiece<CentroidData> treepieces;
 extern CProxy_TreeElement<CentroidData> centroid_calculator;
 extern CProxy_CacheManager<CentroidData> centroid_cache;
 extern CProxy_Resumer<CentroidData> centroid_resumer;
@@ -110,9 +113,15 @@ public:
     
     // create treepieces
     CkWaitQD();
-    treepieces = CProxy_TreePiece<CentroidData>::ckNew(CkCallbackResumeThread(), universe.n_particles, n_treepieces, centroid_calculator, centroid_resumer, centroid_cache, centroid_driver, n_treepieces);
+    // TODO
+    CkPrintf("%d num_total_treepieces\n", num_total_treepieces);
+    CkPrintf("Going to create %d TreePieces\n", n_treepieces);
+    if (n_treepieces > num_total_treepieces) {
+      CkAbort("num_total_treepieces! too low\n");
+    }
+    treepieces.setUp(CkCallbackResumeThread(), universe.n_particles, n_treepieces, centroid_calculator, centroid_resumer, centroid_cache, centroid_driver);
     CkWaitQD();
-    CkPrintf("[Driver, %d] Created %d TreePieces\n", it, n_treepieces);
+    //CkPrintf("[Driver, %d] Created %d TreePieces\n", it, n_treepieces);
 
     // flush particles to home TreePieces
     start_time = CkWallTimer();
@@ -190,9 +199,9 @@ public:
       CkWaitQD();
       CkPrintf("[Driver, %d] Perturbations done: %lf seconds\n", it, CkWallTimer() - start_time);
       if (complete_rebuild) {
-        treepieces.ckDestroy();
         makeNewTree(it+1);
       }
+      else if (it % lb_period == lb_period-1) treepieces.prepAtSync();
       centroid_cache.destroy(true);
       centroid_resumer.destroy();
       storage.resize(0);
@@ -210,7 +219,8 @@ private:
 
   std::vector<Splitter> splitters;
 
-  CProxy_TreePiece<CentroidData> treepieces; // cannot be a global variable
+  // IS NOW A GLOBAL VARIABLES LMAO
+  // CProxy_TreePiece<CentroidData> treepieces; // cannot be a global variable
   int n_treepieces;
 
   void findOctSplitters() {
