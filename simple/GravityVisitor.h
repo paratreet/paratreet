@@ -20,7 +20,7 @@ private:
         if (target->particles[i].key == source->particles[j].key) continue;
 	Vector3D<Real> diff = source->particles[j].position - target->particles[i].position;
         Real rsq = diff.lengthSquared();
-	sum_forces[i] += diff * (gconst * source->particles[j].mass * target->particles[i].mass / (rsq * sqrt(rsq)));
+        sum_forces[i] += diff * (gconst * source->particles[j].mass * target->particles[i].mass / (rsq * sqrt(rsq)));
       }
     }
   }
@@ -43,7 +43,7 @@ private:
     if (theta * dsq < source->data.rsq) { 
       return true;
     }
-    addGravityNode(source, target, target->sum_forces);
+    if (source->data.sum_mass > 0) addGravityNode(source, target, target->sum_forces);
     return false;
   }
   bool cell(std::pair<Key, const CentroidData> source, std::pair<Key, const CentroidData> target) {
