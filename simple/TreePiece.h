@@ -61,7 +61,7 @@ public:
   void receive(ParticleMsg*);
   void check(const CkCallback&);
   void triggerRequest();
-  void build(bool to_search);
+  void build(bool to_search = true);
   bool recursiveBuild(Node<Data>*, bool);
   void upOnly(bool);
   inline void initCache();
@@ -332,7 +332,7 @@ bool TreePiece<Data>::recursiveBuild(Node<Data>* node, bool saw_tp_key) {
   return false;
 }
 template <typename Data>
-void TreePiece<Data>::upOnly(bool first_time = true) {
+void TreePiece<Data>::upOnly(bool first_time) {
   std::queue<Node<Data>*> going_up;
   for (auto leaf : leaves) {
     leaf->data = Data(leaf->particles, leaf->n_particles);
