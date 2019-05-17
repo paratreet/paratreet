@@ -70,8 +70,10 @@ struct Node {
     for (int i = 0; i < BRANCH_FACTOR; i++) this->children[i].store(nullptr);
     this->requested.store(false);
   }
-
   Node (const Node& n) {
+    *this = n;
+  }
+  Node& operator= (const Node& n) {
     type = n.type;
     key = n.key;
     depth = n.depth;

@@ -27,8 +27,8 @@ template <typename Data>
 inline MultiData<Data>::MultiData(Particle* particlesi, int n_particlesi, Node<Data>* nodesi, int n_nodesi) {
   n_particles = n_particlesi;
   n_nodes = n_nodesi;
-  memcpy(particles, particlesi, n_particles * sizeof(Particle));
-  memcpy(nodes, nodesi, n_nodes * sizeof(Node<Data>));
+  std::copy(particlesi, particlesi + n_particles, particles);
+  std::copy(nodesi, nodesi + n_nodes, nodes);
 }
 
 template <typename Data>
