@@ -48,11 +48,12 @@ public:
   CProxy_CacheManager<Data> cache_manager;
   std::vector<std::pair<Key, Data>> storage;
   bool storage_sorted;
-  int leaf_count;
 
-  Driver(CProxy_CacheManager<Data> cache_manageri) : cache_manager(cache_manageri), storage_sorted(false), leaf_count(0) {}
+  Driver(CProxy_CacheManager<Data> cache_manageri) : cache_manager(cache_manageri), storage_sorted(false) {}
 
-  void countLeaf() {leaf_count++;}
+  void countInts(int* intrn_counts) {
+    CkPrintf("%d node-part interactions, %d part-part interactions\n", intrn_counts[0], intrn_counts[1] / 2);
+  }
 
   void recvTE(std::pair<Key, Data> param) {
     storage.emplace_back(param);
@@ -164,12 +165,12 @@ public:
       start_time = CkWallTimer();
       treepieces.build(true);
       CkWaitQD();
-      CkPrintf("[Driver] Local tree build: %lf seconds\n", CkWallTimer() - start_time);
+      CkPrintf("[Driver, %d] Local tree build: %lf seconds\n", it, CkWallTimer() - start_time);
       start_time = CkWallTimer();
       //centroid_cache.template startPrefetch<GravityVisitor>(this->thisProxy, centroid_calculator, CkCallback::ignore);
       centroid_driver.loadCache(CkCallbackResumeThread());
       CkWaitQD();
-      CkPrintf("[Driver] TE cache loading: %lf seconds\n", CkWallTimer() - start_time);
+      CkPrintf("[Driver, %d] TE cache loading: %lf seconds\n", it, CkWallTimer() - start_time);
 
       // perform downward and upward traversals (Barnes-Hut)
       start_time = CkWallTimer();
@@ -186,7 +187,7 @@ public:
       start_time = CkWallTimer();
       bool complete_rebuild = (it % flush_period == flush_period-1);
       treepieces.perturb(0.1, complete_rebuild); // 0.1s for example
-      CkPrintf("%d node-part interactions, %d part-part interactions\n", centroid_cache.ckLocalBranch()->node_counter, centroid_cache.ckLocalBranch()->part_counter);
+      //CkPrintf("%d node-part interactions, %d part-part interactions\n", centroid_cache.ckLocalBranch()->node_counter, centroid_cache.ckLocalBranch()->part_counter);
       CkWaitQD();
       CkPrintf("[Driver, %d] Perturbations done: %lf seconds\n", it, CkWallTimer() - start_time);
       if (complete_rebuild) {

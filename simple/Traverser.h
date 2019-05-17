@@ -69,9 +69,8 @@ public:
     std::vector<std::pair<Key, int>> curr_nodes_insertions;
     Node<Data>* start_node = tp->root;
     if (new_key > 1) {
-      Node<Data>*& result = tp->resumer.ckLocalBranch()->nodehash[new_key];
+      Node<Data>* result = tp->resumer.ckLocalBranch()->fastNodeFind(new_key);
       if (!result) CkPrintf("not good!\n");
-      if (!result) result = tp->root->findNode(new_key);
       start_node = result;
     }
     //CkPrintf("going down on key %d while its type is %d\n", new_key, start_node->type);
@@ -102,9 +101,12 @@ public:
             curr_nodes_insertions.push_back(std::make_pair(node->key, bucket));
             bool prev = node->requested.exchange(true);
             if (!prev) {
-              if (node->type == Node<Data>::Boundary || node->type == Node<Data>::RemoteAboveTPKey)
+              if (node->type == Node<Data>::Boundary || node->type == Node<Data>::RemoteAboveTPKey) {
                 tp->global_data[node->key].requestData(tp->cache_local->thisIndex);
-              else tp->cache_manager[node->cm_index].requestNodes(std::make_pair(node->key, tp->cache_local->thisIndex));
+	      }
+              else {
+		tp->cache_manager[node->cm_index].requestNodes(std::make_pair(node->key, tp->cache_local->thisIndex));
+	      }
             }
             std::vector<int>& list = tp->resumer.ckLocalBranch()->waiting[node->key];
             if (!list.size() || list.back() != tp->thisIndex) list.push_back(tp->thisIndex);
@@ -138,9 +140,8 @@ public:
     std::vector<std::pair<Key, int>> curr_nodes_insertions;
     Node<Data>* start_node = tp->root;
     if (new_key > 1) {
-      Node<Data>*& result = tp->resumer.ckLocalBranch()->nodehash[new_key];
+      Node<Data>* result = tp->resumer.ckLocalBranch()->fastNodeFind(new_key);
       if (!result) CkPrintf("not good!\n");
-      if (!result) result = tp->root->findNode(new_key);
       start_node = result;
     }
     Node<Data> dummy_node;
@@ -231,9 +232,8 @@ public:
     std::vector<std::pair<Key, Node<Data>*>> curr_nodes_insertions;
     Node<Data>* start_node = tp->root;
     if (new_key > 1) {
-      Node<Data>*& result = tp->resumer.ckLocalBranch()->nodehash[new_key];
+      Node<Data>* result = tp->resumer.ckLocalBranch()->fastNodeFind(new_key);
       if (!result) CkPrintf("not good!\n");
-      if (!result) result = tp->root->findNode(new_key);
       start_node = result;
     }
     Node<Data> dummy_node;

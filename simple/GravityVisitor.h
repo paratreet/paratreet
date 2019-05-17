@@ -6,23 +6,26 @@
 #include "common.h"
 #include <cmath>
 
-extern CProxy_Driver<CentroidData> centroid_driver;
-extern CProxy_CacheManager<CentroidData> centroid_cache;
+extern CProxy_Resumer<CentroidData> centroid_resumer;
 
 class GravityVisitor {
 private:
   const Real gconst = 0.000000000066742;
   const Real theta = 0.5;
   void addGravityLeaf(const Node<CentroidData>* __restrict__ source, Node<CentroidData>* __restrict__ target, std::vector<Vector3D<Real> >& sum_forces) {
+    int curr_counter = 0;
     for (int i = 0; i < target->n_particles; i++) {
-      //centroid_cache.ckLocalBranch()->countInt(1);
       for (int j = 0; j < source->n_particles; j++) {
         if (target->particles[i].key == source->particles[j].key) continue;
+	curr_counter++;
 	Vector3D<Real> diff = source->particles[j].position - target->particles[i].position;
         Real rsq = diff.lengthSquared();
         sum_forces[i] += diff * (gconst * source->particles[j].mass * target->particles[i].mass / (rsq * sqrt(rsq)));
       }
     }
+#if COUNT_INTRNS
+    centroid_resumer.ckLocalBranch()->countInts(curr_counter);
+#endif
   }
   void addGravityNode(const Node<CentroidData>* __restrict__ source, Node<CentroidData>* __restrict__ target, std::vector<Vector3D<Real> >& sum_forces) {
     for (int i = 0; i < target->n_particles; i++) {
@@ -30,11 +33,13 @@ private:
       Real rsq = diff.lengthSquared();
       sum_forces[i] += diff * (gconst * source->data.sum_mass * target->particles[i].mass / (rsq * sqrt(rsq)));
     }
+#if COUNT_INTRNS
+    centroid_resumer.ckLocalBranch()->countInts(-target->n_particles);
+#endif
   }
   public:
   GravityVisitor() {}
   void leaf(const Node<CentroidData>* source, Node<CentroidData>* target) { // we're calculating force from node source on node target
-    //centroid_driver.countLeaf();
     addGravityLeaf(source, target, target->sum_forces);
   }
   bool node(const Node<CentroidData>* source, Node<CentroidData>* target) {

@@ -15,18 +15,12 @@
 template <typename Data>
 class CacheManager : public CBase_CacheManager<Data> {
 public:
-  std::mutex block; //controls buffer and missing
+  std::mutex local_tps_lock;
   Node<Data>* root;
-  std::unordered_map<Key, Node<Data>*> buffer, missed;
+  std::unordered_map<Key, Node<Data>*> local_tps;
   std::vector<std::vector<Node<Data>*>> delete_at_end;
-  bool isNG;
   CProxy_Resumer<Data> resumer;
   Data nodewide_data;
-  int part_counter, node_counter;
-  void countInt(bool isLeaf) {
-    if (isLeaf) part_counter++;
-    else node_counter++;
-  }
 
   CacheManager() { // : root(nullptr), curr_waiting (std::map<Key, std::vector<int> >()) {}
     initialize();
@@ -34,9 +28,7 @@ public:
   void initialize() {
     Node<Data>* node = new Node<Data>(1, 0, 0, nullptr, 0, 0, nullptr);
     node->type = Node<Data>::Boundary;
-    missed.insert(std::make_pair(node->key, nullptr));
     root = node;
-    isNG = this->isNodeGroup();
     delete_at_end.resize(CkNodeSize(0));
   }
 
@@ -56,11 +48,10 @@ public:
   void restoreData(std::pair<Key, Data>);
   void restoreDataHelper(std::pair<Key, Data>&, bool);
   void insertNode(Node<Data>*, bool, bool);
-  void swapIn(Node<Data>*);
+  void swapIn(Node<Data>*, bool from_addCache = false);
   void process(Key);
   void destroy(bool restore) {
-    buffer.clear();
-    missed.clear();
+    local_tps.clear();
     for (auto& dae : delete_at_end) {
         for (auto to_delete : dae) {
           delete to_delete;
@@ -110,7 +101,7 @@ void CacheManager<Data>::addCache(MultiData<Data> multidata) {
 
 template <typename Data>
 Node<Data>* CacheManager<Data>::addCacheHelper(Particle* particles, int n_particles, Node<Data>* nodes, int n_nodes) {
-  Node<Data>* first_node_placeholder = root->findNode(nodes[0].key);
+  Node<Data>* first_node_placeholder = resumer.ckLocalBranch()->fastNodeFind(nodes[0].key, false);
   //CkPrintf("adding cache for node %d on cm %d\n", nodes[0].key, this->thisIndex);
   Node<Data>* first_node;
   if (first_node_placeholder->type != Node<Data>::CachedRemote && first_node_placeholder->type != Node<Data>::CachedRemoteLeaf) {
@@ -139,21 +130,16 @@ Node<Data>* CacheManager<Data>::addCacheHelper(Particle* particles, int n_partic
       insertNode(node, false, j > 0);
     }
   } else CkAbort("Invalid node placeholder type in CacheManager::addCacheHelper");
-  swapIn(first_node);
+  swapIn(first_node, true);
   return first_node;
 }
 
 template <typename Data>
 void CacheManager<Data>::requestNodes(std::pair<Key, int> param) {
   Key key = param.first;
-  Node<Data>* node = root->findNode(key);
-  if (!node) {
-    Key temp = key;
-    if (isNG) block.lock();
-    while (!buffer.count(temp)) temp /= 8;
-    node = buffer[temp]->findNode(key);
-    if (isNG) block.unlock();
-  }
+  Key temp = key;
+  while (!local_tps.count(temp)) temp /= BRANCH_FACTOR;
+  Node<Data>* node = local_tps[temp]->findNode(key);
   if (!node) {
     CkPrintf("CacheManager::requestNodes: node not found for key %d on cm %d\n", param.first, this->thisIndex);
     CkAbort("CacheManager::requestNodes: node not found");
@@ -164,23 +150,22 @@ void CacheManager<Data>::requestNodes(std::pair<Key, int> param) {
 template <typename Data>
 void CacheManager<Data>::serviceRequest(Node<Data>* node, int cm_index) {
   if (cm_index == this->thisIndex) return; // you'll get it later!
-  CkAssert(node != 0);
-  std::vector<Node<Data>> nodes;
+  std::vector<Node<Data>> sending_nodes;
   std::vector<Particle> sending_particles;
-  nodes.push_back(*node);
+  sending_nodes.push_back(*node);
   for (int i = 0; i < node->n_children; i++) {
     Node<Data>* child = node->children[i].load();
-    nodes.push_back(*child);
-    for (int j = 0; j < child->n_children; j++) 
-      nodes.push_back(*(child->children[j].load()));
+    sending_nodes.push_back(*child);
+    for (int j = 0; j < child->n_children; j++)
+      sending_nodes.push_back(*(child->children[j].load()));
   }
-  for (auto& to_send : nodes) {
+  for (auto& to_send : sending_nodes) {
     to_send.cm_index = this->thisIndex;
     if (to_send.type == Node<Data>::Leaf) {
       sending_particles.insert(sending_particles.end(), to_send.particles, to_send.particles + to_send.n_particles);
     }
   }
-  MultiData<Data> multidata (sending_particles.data(), sending_particles.size(), nodes.data(), nodes.size());
+  MultiData<Data> multidata (sending_particles.data(), sending_particles.size(), sending_nodes.data(), sending_nodes.size());
   this->thisProxy[cm_index].addCache(multidata);
 }
 
@@ -199,10 +184,13 @@ void CacheManager<Data>::restoreDataHelper(std::pair<Key, Data>& param, bool sho
 }
 
 template <typename Data>
-void CacheManager<Data>::swapIn(Node<Data>* to_swap) {
+void CacheManager<Data>::swapIn(Node<Data>* to_swap, bool from_addCache) {
   //CkPrintf("swapping in node %d\n", to_swap->key);
   if (to_swap->key > 1) {
     to_swap = to_swap->parent->children[to_swap->key % 8].exchange(to_swap);
+    if (from_addCache) {
+      
+    }
   }
   else {
     std::swap(root, to_swap);
@@ -213,18 +201,21 @@ void CacheManager<Data>::swapIn(Node<Data>* to_swap) {
 template <typename Data>
 void CacheManager<Data>::connect(Node<Data>* node, bool should_process) {
   //CkPrintf("connecting node %d\n", node->key);
-  if (this->isNG) block.lock();
-  auto it = missed.find(node->key);
-  if (it != missed.end()) {
-    node->parent = it->second;
-    if (this->isNG) block.unlock();
-    swapIn(node);
+  if (node->type == Node<Data>::CachedBoundary) {
+    node->parent = (node->key == 1) ? nullptr : root->findNode(node->key / BRANCH_FACTOR);//it->second;
+    swapIn(node, false);
     process(node->key);
   }
-  else buffer.insert(std::make_pair(node->key, node));
+  else {
+    if (this->isNodeGroup()) local_tps_lock.lock();
+    local_tps.insert(std::make_pair(node->key, node));
+    if (this->isNodeGroup()) local_tps_lock.unlock();
+    if (node->type == Node<Data>::CachedBoundary) {
+      CkPrintf("local_tps used for a non TP node!\n");
+    }
+  }
   // perhaps call process?
-  // yes -- if were doing a dual tree walk
-  if (this->isNG) block.unlock();
+  // yes if were doing a dual tree walk
 }
 
 template <typename Data>
@@ -235,17 +226,14 @@ void CacheManager<Data>::insertNode(Node<Data>* node, bool above_tp, bool should
     Key child_key = (node->key << 3) + i;
     bool add_placeholder = false;
     if (above_tp) {
-      if (this->isNG) block.lock();
-      auto it = buffer.find(child_key);
-      if (it != buffer.end()) {
+      auto it = local_tps.find(child_key);
+      if (it != local_tps.end()) {
         new_child = it->second;
         new_child->parent = node;
       } 
       else {
-        missed.insert(std::make_pair(child_key, node));
         add_placeholder = true;
       }
-      if (this->isNG) block.unlock();
     }
     if (!above_tp || add_placeholder) {
       new_child = new Node<Data> (child_key, node->depth+1, 0, nullptr, 0, 0, node);
@@ -259,7 +247,7 @@ void CacheManager<Data>::insertNode(Node<Data>* node, bool above_tp, bool should
 
 template <typename Data>
 void CacheManager<Data>::process(Key key) {
-  if (!isNG) resumer[this->thisIndex].process (key);
+  if (!this->isNodeGroup()) resumer[this->thisIndex].process (key);
   else for (int i = 0; i < CkNodeSize(0); i++) {
     resumer[this->thisIndex * CkNodeSize(0) + i].process(key);
   }
