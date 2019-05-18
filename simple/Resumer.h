@@ -14,7 +14,8 @@ public:
   CProxy_TreePiece<Data> tp_proxy;
   CacheManager<Data>* cache_local;
   int n_part_ints, n_node_ints;
-  std::unordered_map<int, Node<Data>*> nodehash;
+  std::unordered_map<Key, Node<Data>*> nodehash;
+  std::queue<Key> LRU_counter;
   std::unordered_map<Key, std::vector<int>> waiting;
 
   void destroy() {
@@ -25,6 +26,7 @@ public:
 #endif
     n_part_ints = n_node_ints = 0;
     nodehash.clear();
+    LRU_counter = std::queue<Key>();
     waiting.clear();
   }
 
@@ -34,20 +36,31 @@ public:
     if (n_ints > 0 ) n_part_ints += n_ints;
     else n_node_ints -= n_ints;
   }
- 
-  Node<Data>* fastNodeFind(Key key, bool insert = true) {
-    Node<Data>* result = nodehash[key];
-    if (result == nullptr && nodehash.count(key / BRANCH_FACTOR)) {
-      result = nodehash[key / BRANCH_FACTOR]->findNode(key);
+
+  void insertNode(Node<Data>* node) {
+    nodehash[node->key] = node;
+    LRU_counter.push(node->key);
+    while (nodehash.size() >= LOCAL_CACHE_SIZE) {
+      nodehash.erase(LRU_counter.front());
+      LRU_counter.pop();
     }
-    int bf_cubed = 1 << (LOG_BRANCH_FACTOR * 3);
-    if (result == nullptr && nodehash.count(key / bf_cubed)) {
-      result = nodehash[key / bf_cubed]->findNode(key);
+  }
+
+  Node<Data>* fastNodeFind(Key key, bool lf_placeholder = false) {
+    Node<Data>* result = nodehash[key];
+    if (lf_placeholder) {
+      if (result == nullptr && nodehash[key / BRANCH_FACTOR]) {
+        result = nodehash[key / BRANCH_FACTOR]->findNode(key);
+      }
+      int bf_cubed = 1 << (LOG_BRANCH_FACTOR * 3);
+      if (result == nullptr && nodehash[key / bf_cubed]) {
+        result = nodehash[key / bf_cubed]->findNode(key);
+      }
     }
     if (result == nullptr) {
       result = cache_local->root->findNode(key);
     }
-    if (insert) nodehash[key] = result;
+    if (!lf_placeholder) insertNode(result);
     return result;
   }
 

@@ -23,6 +23,8 @@ typedef double Real;
 #define MAX_PARTICLES_PER_TP 1000
 #define MAX_PARTICLES_PER_LEAF 10
 
+#define LOCAL_CACHE_SIZE 5000
+
 /* Tree types */
 #define OCT_TREE 20
 

@@ -101,7 +101,7 @@ void CacheManager<Data>::addCache(MultiData<Data> multidata) {
 
 template <typename Data>
 Node<Data>* CacheManager<Data>::addCacheHelper(Particle* particles, int n_particles, Node<Data>* nodes, int n_nodes) {
-  Node<Data>* first_node_placeholder = resumer.ckLocalBranch()->fastNodeFind(nodes[0].key, false);
+  Node<Data>* first_node_placeholder = resumer.ckLocalBranch()->fastNodeFind(nodes[0].key, true);
   //CkPrintf("adding cache for node %d on cm %d\n", nodes[0].key, this->thisIndex);
   Node<Data>* first_node;
   if (first_node_placeholder->type != Node<Data>::CachedRemote && first_node_placeholder->type != Node<Data>::CachedRemoteLeaf) {
