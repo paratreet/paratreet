@@ -47,15 +47,18 @@ public:
   }
 
   Node<Data>* fastNodeFind(Key key, bool lf_placeholder = false) {
-    Node<Data>* result = nodehash[key];
+    Node<Data>* result = nullptr;
     if (lf_placeholder) {
-      if (result == nullptr && nodehash[key / BRANCH_FACTOR]) {
+      if (result == nullptr && nodehash.count(key / BRANCH_FACTOR)) {
         result = nodehash[key / BRANCH_FACTOR]->findNode(key);
       }
       int bf_cubed = 1 << (LOG_BRANCH_FACTOR * 3);
-      if (result == nullptr && nodehash[key / bf_cubed]) {
+      if (result == nullptr && nodehash.count(key / bf_cubed)) {
         result = nodehash[key / bf_cubed]->findNode(key);
       }
+    }
+    else if (nodehash.count(key)) {
+      result = nodehash[key];
     }
     if (result == nullptr) {
       result = cache_local->root->findNode(key);
