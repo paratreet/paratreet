@@ -137,7 +137,7 @@ void TreePiece<Data>::receive(ParticleMsg* msg) {
 }
 template <typename Data>
 void TreePiece<Data>::check(const CkCallback& cb) {
-  if (n_expected != particles.size()) {
+  if (n_expected != incoming_particles.size()) {
     CkPrintf("[TP %d] ERROR! Only %d particles out of %d received\n", this->thisIndex, particles.size(), n_expected);
     CkAbort("Failure on receiving particles");
   }
@@ -151,9 +151,7 @@ template <typename Data>
 void TreePiece<Data>::build(bool to_search) {
   int n_particles_saved = particles.size(), n_particles_received = incoming_particles.size();
   particles.resize(n_particles_saved + n_particles_received);
-  for (int i = 0; i < n_particles_received; i++) {
-    particles[n_particles_saved + i] = incoming_particles[i];
-  }
+  std::copy(incoming_particles.begin(), incoming_particles.end(), particles.begin() + n_particles_saved);
   incoming_particles.resize(0);
   // sort particles received from readers
   std::sort(particles.begin(), particles.end());
@@ -170,7 +168,6 @@ void TreePiece<Data>::build(bool to_search) {
   cache_init = false;
   initCache();
   upOnly(to_search);
-  cache_local->buildNodeBox(root_from_tp_key);
 }
 template <typename Data>
 bool TreePiece<Data>::recursiveBuild(Node<Data>* node, bool saw_tp_key) {
