@@ -18,6 +18,7 @@ public:
   std::mutex local_tps_lock;
   Node<Data>* root;
   std::unordered_map<Key, Node<Data>*> local_tps;
+  std::set<Key> open_list;
   std::vector<std::vector<Node<Data>*>> delete_at_end;
   CProxy_Resumer<Data> resumer;
   Data nodewide_data;
@@ -35,9 +36,10 @@ public:
   ~CacheManager() {
     destroy(false);
   }
-  void buildNodeBox(Node<Data>*);
+  void prepPrefetch(Node<Data>*);
   template <typename Visitor>
   void startPrefetch(DPHolder<Data>, TEHolder<Data>, CkCallback);
+  void startParentPrefetch(DPHolder<Data>, TEHolder<Data>, CkCallback);
   void connect(Node<Data>*, bool);
   void requestNodes(std::pair<Key, int>);
   void serviceRequest(Node<Data>*, int);
@@ -48,10 +50,11 @@ public:
   void restoreData(std::pair<Key, Data>);
   void restoreDataHelper(std::pair<Key, Data>&, bool);
   void insertNode(Node<Data>*, bool, bool);
-  void swapIn(Node<Data>*, bool from_addCache = false);
+  void swapIn(Node<Data>*);
   void process(Key);
   void destroy(bool restore) {
     local_tps.clear();
+    open_list.clear();
     for (auto& dae : delete_at_end) {
         for (auto to_delete : dae) {
           delete to_delete;
@@ -68,20 +71,36 @@ public:
 };
 
 template <typename Data>
-void CacheManager<Data>::buildNodeBox(Node<Data>* node) {
-  nodewide_data += node->data;
+template <typename Visitor>
+void CacheManager<Data>::startPrefetch(DPHolder<Data> dp_holder, TEHolder<Data> global_data, CkCallback cb) {
+  dp_holder.d_proxy.template prefetch<Visitor>(nodewide_data, this->thisIndex, global_data.te_proxy, cb);
 }
 
 template <typename Data>
-template <typename Visitor>
-void CacheManager<Data>::startPrefetch(DPHolder<Data> dp_holder, TEHolder<Data> global_data, CkCallback cb) {
-  dp_holder.d_proxy.template prefetch<Visitor>(nodewide_data, CkMyNode(), global_data.te_proxy, cb);
+void CacheManager<Data>::startParentPrefetch(DPHolder<Data> dp_holder, TEHolder<Data> global_data, CkCallback cb) {
+  std::set<Key> request_list;
+  for (Key k : open_list) {
+    for (int i = 0; i < BRANCH_FACTOR; i++) {
+      request_list.insert(k * BRANCH_FACTOR + i);
+    }
+  }
+  request_list.insert(1);
+  std::vector<Key> flat_rl (request_list.size());
+  std::copy(request_list.begin(), request_list.end(), flat_rl.begin());
+  dp_holder.d_proxy.request(flat_rl.data(), flat_rl.size(), this->thisIndex, global_data.te_proxy, cb);
 }
 
 template <typename Data>
 void CacheManager<Data>::recvStarterPack(std::pair<Key, Data>* pack, int n, CkCallback cb) {
-  CkPrintf("[Cache Manager] receiving starter pack, size = %d\n", n);
-  for (int i = 0; i < n; i++) restoreDataHelper(pack[i], false);
+  CkPrintf("[CacheManager %d] receiving starter pack, size = %d\n", this->thisIndex, n);
+  for (int i = 0; i < n; i++) {
+#if DEBUG
+    CkPrintf("[CM %d] receiving node %d in starter pack\n", this->thisIndex, pack[i].first);
+#endif
+    if (!local_tps.count(pack[i].first)) {
+      restoreDataHelper(pack[i], false);
+    }
+  }
   this->contribute(cb);
 }
 
@@ -94,7 +113,9 @@ void CacheManager<Data>::addCache(MultiMsg<Data>* multimsg) {
 
 template <typename Data>
 void CacheManager<Data>::addCache(MultiData<Data> multidata) {
-  //CkPrintf("adding cache for node %d\n", multidata.nodes[0].key);
+#if DEBUG
+  CkPrintf("adding cache for node %d\n", multidata.nodes[0].key);
+#endif
   Node<Data>* top_node = addCacheHelper(multidata.particles, multidata.n_particles, multidata.nodes, multidata.n_nodes);
   process(top_node->key);
 }
@@ -102,7 +123,9 @@ void CacheManager<Data>::addCache(MultiData<Data> multidata) {
 template <typename Data>
 Node<Data>* CacheManager<Data>::addCacheHelper(Particle* particles, int n_particles, Node<Data>* nodes, int n_nodes) {
   Node<Data>* first_node_placeholder = resumer.ckLocalBranch()->fastNodeFind(nodes[0].key, true);
-  //CkPrintf("adding cache for node %d on cm %d\n", nodes[0].key, this->thisIndex);
+#if DEBUG
+  CkPrintf("adding cache for node %d on cm %d\n", nodes[0].key, this->thisIndex);
+#endif
   Node<Data>* first_node;
   if (first_node_placeholder->type != Node<Data>::CachedRemote && first_node_placeholder->type != Node<Data>::CachedRemoteLeaf) {
     int p_index = 0;
@@ -113,8 +136,8 @@ Node<Data>* CacheManager<Data>::addCacheHelper(Particle* particles, int n_partic
         first_node = node;
       }
       else {
-        if (first_node->key == (node->key >> 3)) node->parent = first_node;
-        else node->parent = first_node->children[(node->key >> 3) % 8].load();
+        if (first_node->key == (node->key >> LOG_BRANCH_FACTOR)) node->parent = first_node;
+        else node->parent = first_node->children[(node->key >> LOG_BRANCH_FACTOR) % BRANCH_FACTOR].load();
       }
       if (node->type == Node<Data>::Leaf || node->type == Node<Data>::EmptyLeaf) {
         node->type = Node<Data>::CachedRemoteLeaf;
@@ -130,7 +153,7 @@ Node<Data>* CacheManager<Data>::addCacheHelper(Particle* particles, int n_partic
       insertNode(node, false, j > 0);
     }
   } else CkAbort("Invalid node placeholder type in CacheManager::addCacheHelper");
-  swapIn(first_node, true);
+  swapIn(first_node);
   return first_node;
 }
 
@@ -176,21 +199,19 @@ void CacheManager<Data>::restoreData(std::pair<Key, Data> param) {
 
 template <typename Data>
 void CacheManager<Data>::restoreDataHelper(std::pair<Key, Data>& param, bool should_process) {
-  //if (!should_process) CkPrintf("restoring data for node %d\n", param.first);
+#if DEBUG
+  if (!should_process) CkPrintf("restoring data for node %d\n", param.first);
+#endif
   Key key = param.first;
-  Node<Data>* node = new Node<Data>(key, Node<Data>::CachedBoundary, param.second, 8, (key > 1) ? root->findNode(key / 8) : nullptr);
+  Node<Data>* node = new Node<Data>(key, Node<Data>::CachedBoundary, param.second, BRANCH_FACTOR, (key > 1) ? root->findNode(key >> LOG_BRANCH_FACTOR) : nullptr);
   insertNode(node, true, false);
   connect(node, should_process);
 }
 
 template <typename Data>
-void CacheManager<Data>::swapIn(Node<Data>* to_swap, bool from_addCache) {
-  //CkPrintf("swapping in node %d\n", to_swap->key);
+void CacheManager<Data>::swapIn(Node<Data>* to_swap) {
   if (to_swap->key > 1) {
-    to_swap = to_swap->parent->children[to_swap->key % 8].exchange(to_swap);
-    if (from_addCache) {
-      
-    }
+    to_swap = to_swap->parent->children[to_swap->key % BRANCH_FACTOR].exchange(to_swap);
   }
   else {
     std::swap(root, to_swap);
@@ -199,16 +220,30 @@ void CacheManager<Data>::swapIn(Node<Data>* to_swap, bool from_addCache) {
 }
 
 template <typename Data>
+void CacheManager<Data>::prepPrefetch(Node<Data>* node) {
+  // THIS IS IN LOCK
+  nodewide_data += node->data;
+  Key curr_key = node->key;
+  while (curr_key > 1) {
+    curr_key /= BRANCH_FACTOR;
+    open_list.insert(curr_key);
+  }
+}
+
+template <typename Data>
 void CacheManager<Data>::connect(Node<Data>* node, bool should_process) {
-  //CkPrintf("connecting node %d\n", node->key);
+#if DEBUG
+  CkPrintf("connecting node %d of type %d\n", node->key, node->type);
+#endif
   if (node->type == Node<Data>::CachedBoundary) {
-    node->parent = (node->key == 1) ? nullptr : root->findNode(node->key / BRANCH_FACTOR);//it->second;
-    swapIn(node, false);
-    process(node->key);
+    //node->parent = (node->key == 1) ? nullptr : root->findNode(node->key / BRANCH_FACTOR);
+    swapIn(node);
+    if (should_process) process(node->key);
   }
   else {
     if (this->isNodeGroup()) local_tps_lock.lock();
     local_tps.insert(std::make_pair(node->key, node));
+    prepPrefetch(node);
     if (this->isNodeGroup()) local_tps_lock.unlock();
     if (node->type == Node<Data>::CachedBoundary) {
       CkPrintf("local_tps used for a non TP node!\n");
@@ -220,17 +255,19 @@ void CacheManager<Data>::connect(Node<Data>* node, bool should_process) {
 
 template <typename Data>
 void CacheManager<Data>::insertNode(Node<Data>* node, bool above_tp, bool should_swap) {
-  //CkPrintf("inserting node %d of type %d with %d children\n", node->key, node->type, node->n_children);
+#if DEBUG
+  CkPrintf("inserting node %d of type %d with %d children\n", node->key, node->type, node->n_children);
+#endif
   for (int i = 0; i < node->n_children; i++) {
     Node<Data>* new_child;
-    Key child_key = (node->key << 3) + i;
+    Key child_key = (node->key << LOG_BRANCH_FACTOR) + i;
     bool add_placeholder = false;
     if (above_tp) {
       auto it = local_tps.find(child_key);
       if (it != local_tps.end()) {
         new_child = it->second;
         new_child->parent = node;
-      } 
+      }
       else {
         add_placeholder = true;
       }

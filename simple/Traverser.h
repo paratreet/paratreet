@@ -73,14 +73,18 @@ public:
       if (!result) CkPrintf("not good!\n");
       start_node = result;
     }
-    //CkPrintf("going down on key %d while its type is %d\n", new_key, start_node->type);
+#if DEBUG
+    CkPrintf("going down on key %d while its type is %d\n", new_key, start_node->type);
+#endif
     for (auto bucket : now_ready) {
       std::stack<Node<Data>*> nodes;
       nodes.push(start_node);
       while (nodes.size()) {
         Node<Data>* node = nodes.top();
         nodes.pop();
-        //CkPrintf("tp %d, key = %d, type = %d, pe %d\n", this->thisIndex, node->key, node->type, CkMyPe());
+#if DEBUG
+        CkPrintf("tp %d, key = %d, type = %d, pe %d\n", tp->thisIndex, node->key, node->type, CkMyPe());
+#endif
         switch (node->type) {
           case Node<Data>::Leaf: case Node<Data>::CachedRemoteLeaf:
             tp->interactions[bucket].push_back(node);
@@ -127,30 +131,27 @@ private:
   std::vector<Node<Data>*> trav_tops;
 public:
   UpnDTraverser(TreePiece<Data>* tpi) : tp(tpi) {
-    for (int i = 0; i < tp->leaves.size(); i++) curr_nodes[tp->leaves[i]->key].push_back(i);
+    trav_tops.resize(tp->leaves.size());
+    for (int i = 0; i < tp->leaves.size(); i++) {
+      curr_nodes[tp->leaves[i]->key].push_back(i);
+      trav_tops[i] = tp->leaves[i];
+    }
     num_waiting = std::vector<int> (tp->leaves.size(), 1);
-    trav_tops = std::vector<Node<Data>*> (tp->leaves.size(), nullptr);
   }
-  void processLocal() {this->template processLocalBase<Visitor> (tp);}
-  void interact() {this->template interactBase<Visitor> (tp);}
+  void processLocal() {CkPrintf("no need to process local traversals\n");}
+  void interact() {CkPrintf("no need to perform interactions\n");}
+
   virtual void traverse(Key new_key) {
     Visitor v;
-    if (new_key == 1) tp->root = tp->cache_local->root;
     auto& now_ready = curr_nodes[new_key];
     std::vector<std::pair<Key, int>> curr_nodes_insertions;
-    Node<Data>* start_node = tp->root;
-    if (new_key > 1) {
-      Node<Data>* result = tp->resumer.ckLocalBranch()->fastNodeFind(new_key);
-      if (!result) CkPrintf("not good!\n");
-      start_node = result;
-    }
-    Node<Data> dummy_node;
-    if (!start_node) {// only possible in early dual tree
-      dummy_node.key = new_key;
-      dummy_node.requested.store(true);
-      dummy_node.type = Node<Data>::Remote; // doesn't matter which of the 4
-      start_node = &dummy_node;
-    }
+    Node<Data>* start_node;
+    if (new_key == 1) start_node = tp->cache_local->root;
+    else start_node = tp->resumer.ckLocalBranch()->fastNodeFind(new_key);
+    if (!start_node) CkPrintf("not good!\n");
+#if DEBUG
+    CkPrintf("going down on key %d while its type is %d, pe is %d\n", new_key, start_node->type, CkMyPe());
+#endif
     for (auto bucket : now_ready) {
       num_waiting[bucket]--;
       std::stack<Node<Data>*> nodes;
@@ -158,16 +159,14 @@ public:
       while (nodes.size()) {
         Node<Data>* node = nodes.top();
         nodes.pop();
-        //CkPrintf("tp %d, key = %d, type = %d, pe %d\n", this->thisIndex, node->key, node->type, CkMyPe());
+#if DEBUG
+        CkPrintf("tp %d, key = %d, type = %d, pe %d\n", tp->thisIndex, node->key, node->type, CkMyPe());
+#endif
         switch (node->type) {
           case Node<Data>::Leaf: case Node<Data>::CachedRemoteLeaf:
-            tp->interactions[bucket].push_back(node);
+            v.leaf(node, tp->leaves[bucket]);
             break;
           case Node<Data>::Internal:
-#if DELAYLOCAL
-            tp->local_travs.push_back(std::make_pair(node, bucket));
-            break;
-#endif
           case Node<Data>::CachedBoundary: case Node<Data>::CachedRemote: {
             if (v.node(node, tp->leaves[bucket])) {
               for (int i = 0; i < node->children.size(); i++) {
@@ -190,12 +189,16 @@ public:
         }
       }
       if (num_waiting[bucket] == 0) {
-        if (trav_tops[bucket] == nullptr) trav_tops[bucket] = tp->cache_local->root;
         if (trav_tops[bucket]->parent) {
-          for (int j = 0; j < trav_tops[bucket]->parent->children.size(); j++) {
-            auto child = trav_tops[bucket]->parent->children[j].load();
+          for (int j = 0; j < BRANCH_FACTOR; j++) {
+            Node<Data>* child = trav_tops[bucket]->parent->children[j].load();
+            if (child == nullptr) {
+              CkPrintf("child of key %d and parent type %d is nullptr\n", trav_tops[bucket]->parent->key * 8 + j, trav_tops[bucket]->parent->type);
+            }
             if (child != trav_tops[bucket]) {
-               if (trav_tops[bucket]->parent->type == Node<Data>::Boundary) child->type = Node<Data>::RemoteAboveTPKey;
+               if (trav_tops[bucket]->parent->type == Node<Data>::Boundary) {
+                 child->type = Node<Data>::RemoteAboveTPKey;
+               }
                curr_nodes_insertions.push_back(std::make_pair(child->key, bucket));
                num_waiting[bucket]++;
                tp->thisProxy[tp->thisIndex].goDown(child->key);
@@ -205,7 +208,7 @@ public:
         }
       }
     }
-    //else CkPrintf("tp %d leaf %d still waiting\n", this->thisIndex, i);
+    //else CkPrintf("tp %d leaf %d still waiting\n", tp->thisIndex, i);
     curr_nodes.erase(new_key);
     for (auto cn : curr_nodes_insertions) curr_nodes[cn.first].push_back(cn.second);
   }
@@ -249,7 +252,7 @@ public:
       while (nodes.size()) {
         Node<Data>* node = nodes.top().first, *currpl = nodes.top().second;
         nodes.pop();
-        //CkPrintf("tp %d, key = %d, type = %d, pe %d\n", this->thisIndex, node->key, node->type, CkMyPe());
+        //CkPrintf("tp %d, key = %d, type = %d, pe %d\n", tp->thisIndex, node->key, node->type, CkMyPe());
         switch (node->type) {
           case Node<Data>::Leaf: case Node<Data>::CachedRemoteLeaf:
             for (int i = 0; i < tp->leaves.size(); i++) {

@@ -59,6 +59,7 @@ mainmodule simple {
     entry void restoreData(std::pair<Key, Data>);
     template <typename Visitor>
     entry void startPrefetch(DPHolder<Data>, TEHolder<Data>, CkCallback);
+    entry void startParentPrefetch(DPHolder<Data>, TEHolder<Data>, CkCallback);
     entry void destroy(bool);
   };
 #if GROUPCACHE
@@ -125,6 +126,7 @@ mainmodule simple {
     entry void loadCache(CkCallback);
     template <typename Visitor>
     entry void prefetch(Data, int, TEHolder<Data>, CkCallback);
+    entry void request(Key request_list [list_size], int list_size, int, TEHolder<Data>, CkCallback);
     entry [threaded] void load(Config config, CkCallback cb);
     entry [threaded] void run(CkCallback cb, int);
   }

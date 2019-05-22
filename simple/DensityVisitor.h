@@ -10,6 +10,7 @@
 struct DensityVisitor {
 // in leaf check for not same particle plz
 private:
+  const int k = 5;
   Real distsq(Vector3D<Real> p1, Vector3D<Real> p2) {
     Real dsq = (p1.x - p2.x) * (p1.x - p2.x);
     dsq += (p1.y - p2.y) * (p1.y - p2.y);
@@ -27,7 +28,6 @@ public:
         on->data.neighbors.push_back(pq);
       }
     }
-    const int k = 5;
     if (on->data.neighbors[0].size() < k) return true; // they all fill first k at the same time
     const Real total_volume = 3290.05;
     Real dist = std::sqrt(distsq(from->data.getCentroid(), on->data.getCentroid()));
@@ -44,7 +44,7 @@ public:
   }
 
   void leaf(Node<CentroidData>* from, Node<CentroidData>* on) {
-    const int k = 5;
+    return;
     on->data.neighbors.resize(on->n_particles);
     for (int i = 0; i < on->n_particles; i++) {
       for (int j = 0; j < from->n_particles; j++) {

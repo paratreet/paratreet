@@ -131,15 +131,16 @@ public:
 
   }
 
+  void sortStorage() {
+    Comparator<Data> comp;
+    std::sort(storage.begin(), storage.end(), comp);
+    storage_sorted = true;
+  }
+
   template <typename Visitor>
   void prefetch(Data nodewide_data, int cm_index, TEHolder<Data> te_holder, CkCallback cb) {
     // do traversal on the root, send everything
-    if (!storage_sorted) {
-      Comparator<Data> comp;
-      std::sort(storage.begin(), storage.end(), comp);
-      storage_sorted = true;
-    }
-
+    if (!storage_sorted) sortStorage();
     std::queue<Key> nodes; // better for cache. plus no requirement here on order
     nodes.push(0);
     std::vector<std::pair<Key, Data>> to_send;
@@ -149,11 +150,34 @@ public:
       nodes.pop();
       to_send.push_back(storage[node]);
       if (v.cell(std::make_pair(node + 1, storage[node].second), std::make_pair(0, nodewide_data))) {
-        Key start_child = (node+1) * 8 - 1;
-        for (Key child_index = start_child; child_index < start_child + 8; child_index++) {
-          if (child_index >= storage.size()) te_holder.te_proxy[child_index].requestData(cm_index);
-          else nodes.push(child_index);
+        Key start_child = (node+1) * BRANCH_FACTOR - 1;
+        for (Key child_index = start_child; child_index < start_child + BRANCH_FACTOR; child_index++) {
+          //if (child_index >= storage.size()) te_holder.te_proxy[child_index].requestData(cm_index);
+          if (child_index < storage.size()) nodes.push(child_index);
         }
+      }
+    }
+    cache_manager[cm_index].recvStarterPack(to_send.data(), to_send.size(), cb);
+  }
+  void request(Key* request_list, int list_size, int cm_index, TEHolder<Data> te_holder, CkCallback cb) {
+    if (!storage_sorted) sortStorage();
+    Comparator<Data> comp;
+    typename std::vector<std::pair<Key, Data> >::iterator it = storage.begin();
+    std::vector<std::pair<Key, Data>> to_send;
+    for (int i = 0; i < list_size; i++) {
+      Key key = request_list[i];
+      it = std::lower_bound(storage.begin(), storage.end(), std::make_pair(key, Data()), comp);
+      
+      if (key == 742 && it->first != 742) CkPrintf("BIG PROB, got %d\n", it->first);
+      if (it == storage.end()) {break; }/*
+        for (; i < list_size; i++) {
+          te_holder.te_proxy[request_list[i]].requestData(cm_index);
+        }
+        break;
+      }*/
+      else if (it->first == key) {
+        to_send.push_back(*it);
+        it++;
       }
     }
     cache_manager[cm_index].recvStarterPack(to_send.data(), to_send.size(), cb);
@@ -167,24 +191,25 @@ public:
       CkWaitQD();
       CkPrintf("[Driver, %d] Local tree build: %lf seconds\n", it, CkWallTimer() - start_time);
       start_time = CkWallTimer();
-      //centroid_cache.template startPrefetch<GravityVisitor>(this->thisProxy, centroid_calculator, CkCallback::ignore);
-      centroid_driver.loadCache(CkCallbackResumeThread());
+      centroid_cache.startParentPrefetch(this->thisProxy, centroid_calculator, CkCallback::ignore);
+      //centroid_driver.loadCache(CkCallbackResumeThread());
       CkWaitQD();
       CkPrintf("[Driver, %d] TE cache loading: %lf seconds\n", it, CkWallTimer() - start_time);
 
       // perform downward and upward traversals (Barnes-Hut)
       start_time = CkWallTimer();
-      treepieces.template startDown<GravityVisitor>();
+      //treepieces.template startDown<GravityVisitor>();
+      treepieces.template startUpAndDown<DensityVisitor>();
       CkWaitQD();
-#ifdef DELAYLOCAL
-      treepieces.processLocal(CkCallbackResumeThread());
+#if DELAYLOCAL
+      //treepieces.processLocal(CkCallbackResumeThread());
 #endif
-      CkPrintf("[Driver, %d] Downward traversal done: %lf seconds\n", it, CkWallTimer() - start_time);
-      start_time = CkWallTimer();
+      CkPrintf("[Driver, %d] Traversal done: %lf seconds\n", it, CkWallTimer() - start_time);
+      /*start_time = CkWallTimer();
       treepieces.interact(CkCallbackResumeThread());
       CkPrintf("[Driver, %d] Interactions done: %lf seconds\n", it, CkWallTimer() - start_time);
-      //count_manager.sum(CkCallback(CkReductionTarget(Main, terminate), thisProxy));
-      start_time = CkWallTimer();
+      count_manager.sum(CkCallback(CkReductionTarget(Main, terminate), thisProxy));
+      */start_time = CkWallTimer();
       bool complete_rebuild = (it % flush_period == flush_period-1);
       treepieces.perturb(0.1, complete_rebuild); // 0.1s for example
       //CkPrintf("%d node-part interactions, %d part-part interactions\n", centroid_cache.ckLocalBranch()->node_counter, centroid_cache.ckLocalBranch()->part_counter);
@@ -197,6 +222,7 @@ public:
       centroid_cache.destroy(true);
       centroid_resumer.destroy();
       storage.resize(0);
+      storage_sorted = false;
       CkWaitQD();
     }
     cb.send();
