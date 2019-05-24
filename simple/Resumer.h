@@ -72,7 +72,7 @@ public:
     auto it = waiting.find(key);
     if (it == waiting.end()) return;
     for (auto tp_index : it->second) {
-      tp_proxy[tp_index].template goDown(key);
+      tp_proxy[tp_index].goDown(key);
     }
     waiting.erase(it);
   }

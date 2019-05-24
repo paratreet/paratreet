@@ -56,7 +56,10 @@ private:
     // check all eight corners of bounding box
     // return true if one corner is within total_volume of node
     // else return false
+
     const OrientedBox<Real> box = target.data->box;
+    if (box.contains(source.data->getCentroid())) return true;
+
     for (int i = 0; i < 2; i++) {
       for (int j = 0; j < 2; j++) {
         for (int k = 0; k < 2; k++) {

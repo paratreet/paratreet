@@ -166,8 +166,8 @@ void TreePiece<Data>::build(bool to_search) {
   recursiveBuild(root, false);
   interactions = std::vector<std::vector<Node<Data>*>> (leaves.size());
   cache_init = false;
-  initCache();
   upOnly(to_search);
+  initCache();
 }
 template <typename Data>
 bool TreePiece<Data>::recursiveBuild(Node<Data>* node, bool saw_tp_key) {
@@ -182,7 +182,9 @@ bool TreePiece<Data>::recursiveBuild(Node<Data>* node, bool saw_tp_key) {
     // check if we are inside the subtree rooted at the treepiece's key
     if (!saw_tp_key) {
       saw_tp_key = (node->key == tp_key);
+      if (saw_tp_key) root_from_tp_key = node;
     }
+
 
     bool is_light = (node->n_particles <= ceil(BUCKET_TOLERANCE * max_particles_per_leaf));
     bool is_prefix = Utility::isPrefix(node->key, tp_key);
@@ -354,7 +356,6 @@ void TreePiece<Data>::upOnly(bool first_time) {
 template <typename Data>
 void TreePiece<Data>::initCache() {
   if (!cache_init) {
-    root_from_tp_key = root->findNode(tp_key);
     cache_local->connect(root_from_tp_key, false);
     root_from_tp_key->parent->children[tp_key % 8].store(nullptr);
     root->triggerFree();
@@ -390,7 +391,7 @@ void TreePiece<Data>::requestNodes(Key key, int cm_index) {
 }
 template <typename Data>
 void TreePiece<Data>::goDown(Key new_key) {
-  traverser->template traverse(new_key);
+  traverser->traverse(new_key);
 }
 template <typename Data>
 void TreePiece<Data>::processLocal(const CkCallback& cb) {

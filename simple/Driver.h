@@ -141,22 +141,29 @@ public:
   void prefetch(Data nodewide_data, int cm_index, TEHolder<Data> te_holder, CkCallback cb) {
     // do traversal on the root, send everything
     if (!storage_sorted) sortStorage();
-    std::queue<Key> nodes; // better for cache. plus no requirement here on order
-    nodes.push(0);
+    std::queue<int> node_indices; // better for cache. plus no requirement here on order
+    node_indices.push(0);
     std::vector<std::pair<Key, Data>> to_send;
     Visitor v;
-    while (nodes.size()) {
-      Key node = nodes.front();
-      nodes.pop();
-      to_send.push_back(storage[node]);
+    Comparator<Data> comp;
+    typename std::vector<std::pair<Key, Data> >::iterator it;
+
+    while (node_indices.size()) {
+      std::pair<Key, Data> node = storage[node_indices.front()];
+      node_indices.pop();
+      to_send.push_back(node);
+
       Node<Data> dummy_node1, dummy_node2;
-      dummy_node1.data = storage[node].second;
+      dummy_node1.data = node.second;
       dummy_node2.data = nodewide_data;
       if (v.cell(SourceNode<Data>(&dummy_node1), TargetNode<Data>(&dummy_node2))) {
-        Key start_child = (node+1) * BRANCH_FACTOR - 1;
-        for (Key child_index = start_child; child_index < start_child + BRANCH_FACTOR; child_index++) {
-          //if (child_index >= storage.size()) te_holder.te_proxy[child_index].requestData(cm_index);
-          if (child_index < storage.size()) nodes.push(child_index);
+
+        for (int i = 0; i < BRANCH_FACTOR; i++) {
+          Key key = node.first * BRANCH_FACTOR + i;
+          it = std::lower_bound(storage.begin(), storage.end(), std::make_pair(key, Data()), comp);
+          if (it != storage.end() && it->first == key) {
+            node_indices.push(it - storage.begin());
+          }
         }
       }
     }
@@ -165,21 +172,13 @@ public:
   void request(Key* request_list, int list_size, int cm_index, TEHolder<Data> te_holder, CkCallback cb) {
     if (!storage_sorted) sortStorage();
     Comparator<Data> comp;
-    typename std::vector<std::pair<Key, Data> >::iterator it = storage.begin();
+    typename std::vector<std::pair<Key, Data> >::iterator it;
     std::vector<std::pair<Key, Data>> to_send;
     for (int i = 0; i < list_size; i++) {
       Key key = request_list[i];
       it = std::lower_bound(storage.begin(), storage.end(), std::make_pair(key, Data()), comp);
-      
-      if (it == storage.end()) {break; }/*
-        for (; i < list_size; i++) {
-          te_holder.te_proxy[request_list[i]].requestData(cm_index);
-        }
-        break;
-      }*/
-      else if (it->first == key) {
+      if (it != storage.end() && it->first == key) {
         to_send.push_back(*it);
-        it++;
       }
     }
     cache_manager[cm_index].recvStarterPack(to_send.data(), to_send.size(), cb);
@@ -193,8 +192,8 @@ public:
       CkWaitQD();
       CkPrintf("[Driver, %d] Local tree build: %lf seconds\n", it, CkWallTimer() - start_time);
       start_time = CkWallTimer();
-      //centroid_cache.startParentPrefetch(this->thisProxy, centroid_calculator, CkCallback::ignore);
-      centroid_driver.loadCache(CkCallbackResumeThread());
+      centroid_cache.template startPrefetch<GravityVisitor>(this->thisProxy, centroid_calculator, CkCallback::ignore);
+      //centroid_driver.loadCache(CkCallbackResumeThread());
       CkWaitQD();
       CkPrintf("[Driver, %d] TE cache loading: %lf seconds\n", it, CkWallTimer() - start_time);
 
