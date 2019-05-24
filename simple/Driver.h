@@ -149,7 +149,10 @@ public:
       Key node = nodes.front();
       nodes.pop();
       to_send.push_back(storage[node]);
-      if (v.cell(std::make_pair(node + 1, storage[node].second), std::make_pair(0, nodewide_data))) {
+      Node<Data> dummy_node1, dummy_node2;
+      dummy_node1.data = storage[node].second;
+      dummy_node2.data = nodewide_data;
+      if (v.cell(SourceNode<Data>(&dummy_node1), TargetNode<Data>(&dummy_node2))) {
         Key start_child = (node+1) * BRANCH_FACTOR - 1;
         for (Key child_index = start_child; child_index < start_child + BRANCH_FACTOR; child_index++) {
           //if (child_index >= storage.size()) te_holder.te_proxy[child_index].requestData(cm_index);
@@ -168,7 +171,6 @@ public:
       Key key = request_list[i];
       it = std::lower_bound(storage.begin(), storage.end(), std::make_pair(key, Data()), comp);
       
-      if (key == 742 && it->first != 742) CkPrintf("BIG PROB, got %d\n", it->first);
       if (it == storage.end()) {break; }/*
         for (; i < list_size; i++) {
           te_holder.te_proxy[request_list[i]].requestData(cm_index);
@@ -191,28 +193,27 @@ public:
       CkWaitQD();
       CkPrintf("[Driver, %d] Local tree build: %lf seconds\n", it, CkWallTimer() - start_time);
       start_time = CkWallTimer();
-      centroid_cache.startParentPrefetch(this->thisProxy, centroid_calculator, CkCallback::ignore);
-      //centroid_driver.loadCache(CkCallbackResumeThread());
+      //centroid_cache.startParentPrefetch(this->thisProxy, centroid_calculator, CkCallback::ignore);
+      centroid_driver.loadCache(CkCallbackResumeThread());
       CkWaitQD();
       CkPrintf("[Driver, %d] TE cache loading: %lf seconds\n", it, CkWallTimer() - start_time);
 
       // perform downward and upward traversals (Barnes-Hut)
       start_time = CkWallTimer();
-      //treepieces.template startDown<GravityVisitor>();
-      treepieces.template startUpAndDown<DensityVisitor>();
+      treepieces.template startDown<GravityVisitor>();
+      //treepieces.template startUpAndDown<DensityVisitor>();
       CkWaitQD();
 #if DELAYLOCAL
       //treepieces.processLocal(CkCallbackResumeThread());
 #endif
       CkPrintf("[Driver, %d] Traversal done: %lf seconds\n", it, CkWallTimer() - start_time);
-      /*start_time = CkWallTimer();
+      start_time = CkWallTimer();
       treepieces.interact(CkCallbackResumeThread());
       CkPrintf("[Driver, %d] Interactions done: %lf seconds\n", it, CkWallTimer() - start_time);
-      count_manager.sum(CkCallback(CkReductionTarget(Main, terminate), thisProxy));
-      */start_time = CkWallTimer();
+      //count_manager.sum(CkCallback(CkReductionTarget(Main, terminate), thisProxy));
+      start_time = CkWallTimer();
       bool complete_rebuild = (it % flush_period == flush_period-1);
       treepieces.perturb(0.1, complete_rebuild); // 0.1s for example
-      //CkPrintf("%d node-part interactions, %d part-part interactions\n", centroid_cache.ckLocalBranch()->node_counter, centroid_cache.ckLocalBranch()->part_counter);
       CkWaitQD();
       CkPrintf("[Driver, %d] Perturbations done: %lf seconds\n", it, CkWallTimer() - start_time);
       if (complete_rebuild) {

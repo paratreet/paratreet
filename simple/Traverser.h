@@ -7,6 +7,7 @@
 #include <stack>
 #include <unordered_map>
 #include <vector>
+#include "UserNode.h"
 
 template <typename Data>
 class Traverser {
@@ -25,7 +26,7 @@ public:
         Node<Data>* node = nodes.top();
         nodes.pop();
         if (node->type == Node<Data>::Internal) {
-          if (v.node(node, tp->leaves[local_trav.second])) {
+          if (v.node(SourceNode<Data>(node), TargetNode<Data>(tp->leaves[local_trav.second]))) {
             for (int j = 0; j < node->n_children; j++) {
               nodes.push(node->children[j].load());
             }
@@ -43,7 +44,7 @@ public:
     Visitor v;
     for (int i = 0; i < tp->interactions.size(); i++) {
       for (Node<Data>* source : tp->interactions[i]) {
-        v.leaf(source, tp->leaves[i]);
+        v.leaf(SourceNode<Data>(source), TargetNode<Data>(tp->leaves[i]));
       }
     }
   }
@@ -95,7 +96,7 @@ public:
             break;
 #endif
           case Node<Data>::CachedBoundary: case Node<Data>::CachedRemote:
-            if (v.node(node, tp->leaves[bucket])) {
+            if (v.node(SourceNode<Data>(node), TargetNode<Data>(tp->leaves[bucket]))) {
               for (int i = 0; i < node->children.size(); i++) {
                 nodes.push(node->children[i].load());
               }
@@ -164,11 +165,11 @@ public:
 #endif
         switch (node->type) {
           case Node<Data>::Leaf: case Node<Data>::CachedRemoteLeaf:
-            v.leaf(node, tp->leaves[bucket]);
+            v.leaf(SourceNode<Data>(node), TargetNode<Data>(tp->leaves[bucket]));
             break;
           case Node<Data>::Internal:
           case Node<Data>::CachedBoundary: case Node<Data>::CachedRemote: {
-            if (v.node(node, tp->leaves[bucket])) {
+            if (v.node(SourceNode<Data>(node), TargetNode<Data>(tp->leaves[bucket]))) {
               for (int i = 0; i < node->children.size(); i++) {
                 nodes.push(node->children[i].load());
               }
@@ -263,7 +264,7 @@ public:
             }
             break;
           case Node<Data>::Internal: case Node<Data>::CachedBoundary: case Node<Data>::CachedRemote:
-            if (v.node(node, payload)) {
+            if (v.node(SourceNode<Data>(node), TargetNode<Data>(payload))) {
               for (int i = 0; i < node->children.size(); i++) {
                 for (int j = 0; j < payload->children.size(); j++) {
                   nodes.push(std::make_pair(node->children[i].load(), payload->children[j].load()));

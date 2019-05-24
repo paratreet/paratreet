@@ -16,8 +16,8 @@ private:
   }
 
 public:
-  bool node(Node<CentroidData>* from, Node<CentroidData>* on) {
-    const Real radius = 1, total_volume = 3290.05;
+  bool node(SourceNode<CentroidData> from, TargetNode<CentroidData> on) {
+    /*const Real radius = 1, total_volume = 3290.05;
     if (from->data.sum_mass < .000001) {CkPrintf("%d\n", from->key); return false;}
     Real dist = std::sqrt(distsq(from->data.getCentroid(), on->data.getCentroid()));
     Real s_from = std::pow(total_volume, 1/3.) * std::pow(2, -1 * Utility::getDepthFromKey(from->key));
@@ -26,12 +26,12 @@ public:
     for (int i = 0; i < on->n_particles; i++) {
       Real subdist = std::sqrt(distsq(from->data.getCentroid(), on->particles[i].position));
       if (subdist - std::sqrt(2) * s_from < radius) return true;
-    }
+    }*/
     return false;
   }
 
-  void leaf(Node<CentroidData>* from, Node<CentroidData>* on) {
-    const Real radius = 1;
+  void leaf(SourceNode<CentroidData> from, TargetNode<CentroidData> on) {
+    /*const Real radius = 1;
     on->data.nearby.resize(on->n_particles);
     for (int i = 0; i < on->n_particles; i++) {
       for (int j = 0; j < from->n_particles; j++) {
@@ -39,7 +39,7 @@ public:
           on->data.nearby[i].push_back(from->particles[j]);
         }
       }
-    }
+    }*/
   }
 };
 

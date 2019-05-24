@@ -19,33 +19,33 @@ private:
   }
 
 public:
-  bool node(Node<CentroidData>* from, Node<CentroidData>* on) {
-    if (!on->data.neighbors.size()) {
-      on->data.neighbors.reserve(on->n_particles);
-      for (int i = 0; i < on->n_particles; i++) {
-        particle_comp c (on->particles[i]);
+  bool node(SourceNode<CentroidData> source, TargetNode<CentroidData> target) {
+/*    if (!target->data->neighbors.size()) {
+      target->data->neighbors.reserve(target->n_particles);
+      for (int i = 0; i < target->n_particles; i++) {
+        particle_comp c (target->particles[i]);
         std::priority_queue<Particle, std::vector<Particle>, particle_comp> pq;
-        on->data.neighbors.push_back(pq);
+        target.data->neighbors.push_back(pq);
       }
     }
-    if (on->data.neighbors[0].size() < k) return true; // they all fill first k at the same time
+    if (target ->data.neighbors[0].size() < k) return true; // they all fill first k at the same time
     const Real total_volume = 3290.05;
-    Real dist = std::sqrt(distsq(from->data.getCentroid(), on->data.getCentroid()));
-    Real s_on = std::pow(total_volume, 1/3.) * std::pow(2, -1 * Utility::getDepthFromKey(on->key));
-    Real s_from = std::pow(total_volume, 1/3.) * std::pow(2, -1 * Utility::getDepthFromKey(from->key));
-    Real radius = std::sqrt(distsq(on->data.neighbors[0].top().position, from->data.getCentroid())); // not perfect but we give enough wiggle room
+    Real dist = std::sqrt(distsq(source->data.getCentroid(), on->data.getCentroid()));
+    Real s_target = std::pow(total_volume, 1/3.) * std::pow(2, -1 * Utility::getDepthFromKey(on->key));
+    Real s_source = std::pow(total_volume, 1/3.) * std::pow(2, -1 * Utility::getDepthFromKey(source->key));
+    Real radius = std::sqrt(distsq(on->data.neighbors[0].top().position, source->data.getCentroid())); // not perfect but we give enough wiggle room
     if (dist - std::sqrt(2) * (s_from + s_on) > radius) return false;
     for (int i = 0; i < on->n_particles; i++) {
       Real subradius = std::sqrt(distsq(on->data.neighbors[i].top().position, from->data.getCentroid()));
       Real subdist = std::sqrt(distsq(from->data.getCentroid(), on->particles[i].position));
       if (subdist - std::sqrt(2) * s_from < subradius) return true;
     }   
-    return false;
+*/  return true;
   }
 
-  void leaf(Node<CentroidData>* from, Node<CentroidData>* on) {
+  void leaf(SourceNode<CentroidData> source, TargetNode<CentroidData> target) {
     return;
-    on->data.neighbors.resize(on->n_particles);
+    /*target->data.neighbors.resize(on->n_particles);
     for (int i = 0; i < on->n_particles; i++) {
       for (int j = 0; j < from->n_particles; j++) {
         if (on->data.neighbors[i].size() < k) on->data.neighbors[i].push(from->particles[j]);
@@ -54,7 +54,7 @@ public:
           on->data.neighbors[i].push(from->particles[j]);
         }   
       }   
-    }   
+    }*/  
   }
 };
 
