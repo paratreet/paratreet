@@ -156,7 +156,7 @@ void TreePiece<Data>::build(bool to_search) {
   // sort particles received from readers
   std::sort(particles.begin(), particles.end());
   // create global root and recurse
-#ifdef DEBUG
+#if DEBUG
   CkPrintf("[TP %d] key: 0x%" PRIx64 " particles: %d\n", this->thisIndex, tp_key, particles.size());
 #endif
   leaves.resize(0);

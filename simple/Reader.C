@@ -91,7 +91,7 @@ void Reader::load(std::string input_file, const CkCallback& cb) {
   box.ke /= 2.0;
   box.n_particles = particles.size();
 
-#ifdef DEBUG
+#if DEBUG
   std::cout << "[Reader " << thisIndex << "] Built bounding box: " << box << std::endl;
 #endif
 
@@ -250,7 +250,7 @@ void Reader::redistribute() {
   // send particles home
   for (int bucket = 0; bucket < n_readers; bucket++) {
     if (particle_messages[bucket] != NULL) {
-#ifdef DEBUG
+#if DEBUG
       CkPrintf("[Reader %d] Sending %d particles to Reader %d\n", thisIndex,
           particle_messages[bucket]->n_particles, bucket);
 #endif
