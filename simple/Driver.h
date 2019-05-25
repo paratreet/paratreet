@@ -192,23 +192,24 @@ public:
       CkWaitQD();
       CkPrintf("[Driver, %d] Local tree build: %lf seconds\n", it, CkWallTimer() - start_time);
       start_time = CkWallTimer();
-      centroid_cache.template startPrefetch<GravityVisitor>(this->thisProxy, centroid_calculator, CkCallback::ignore);
+      centroid_cache.startParentPrefetch(this->thisProxy, centroid_calculator, CkCallback::ignore);
+      //centroid_cache.template startPrefetch<GravityVisitor>(this->thisProxy, centroid_calculator, CkCallback::ignore);
       //centroid_driver.loadCache(CkCallbackResumeThread());
       CkWaitQD();
       CkPrintf("[Driver, %d] TE cache loading: %lf seconds\n", it, CkWallTimer() - start_time);
 
       // perform downward and upward traversals (Barnes-Hut)
       start_time = CkWallTimer();
-      treepieces.template startDown<GravityVisitor>();
-      //treepieces.template startUpAndDown<DensityVisitor>();
+      //treepieces.template startDown<GravityVisitor>();
+      treepieces.template startUpAndDown<DensityVisitor>();
       CkWaitQD();
 #if DELAYLOCAL
       //treepieces.processLocal(CkCallbackResumeThread());
 #endif
       CkPrintf("[Driver, %d] Traversal done: %lf seconds\n", it, CkWallTimer() - start_time);
-      start_time = CkWallTimer();
-      treepieces.interact(CkCallbackResumeThread());
-      CkPrintf("[Driver, %d] Interactions done: %lf seconds\n", it, CkWallTimer() - start_time);
+      //start_time = CkWallTimer();
+      //treepieces.interact(CkCallbackResumeThread());
+      //CkPrintf("[Driver, %d] Interactions done: %lf seconds\n", it, CkWallTimer() - start_time);
       //count_manager.sum(CkCallback(CkReductionTarget(Main, terminate), thisProxy));
       start_time = CkWallTimer();
       bool complete_rebuild = (it % flush_period == flush_period-1);

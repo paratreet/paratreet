@@ -118,8 +118,8 @@ TreePiece<Data>::TreePiece(const CkCallback& cb, int n_total_particles_, int n_t
   }
   global_data[tp_key].recvProxies(TPHolder<Data>(this->thisProxy), this->thisIndex, cache_manager, dp_holder);
   Key temp = tp_key;
-  while (temp > 0 && temp % 8 == 0) {
-    temp /= 8;
+  while (temp > 0 && temp % BRANCH_FACTOR == 0) {
+    temp /= BRANCH_FACTOR;
     //CkPrintf("temp = %d\n", temp);
     global_data[temp].recvProxies(TPHolder<Data>(this->thisProxy), -1, cache_manager, dp_holder);
  }
@@ -343,7 +343,7 @@ void TreePiece<Data>::upOnly(bool first_time) {
     Node<Data>* node = going_up.front();
     going_up.pop();
     if (node->key == tp_key) {
-      global_data[tp_key >> 3].recvData(node->data, true);
+      global_data[tp_key >> LOG_BRANCH_FACTOR].recvData(node->data, true);
     }
     else {
       Node<Data>* parent = node->parent;
@@ -357,7 +357,7 @@ template <typename Data>
 void TreePiece<Data>::initCache() {
   if (!cache_init) {
     cache_local->connect(root_from_tp_key, false);
-    root_from_tp_key->parent->children[tp_key % 8].store(nullptr);
+    root_from_tp_key->parent->children[tp_key % BRANCH_FACTOR].store(nullptr);
     root->triggerFree();
     cache_init = true;
   }
@@ -429,9 +429,9 @@ void TreePiece<Data>::perturb (Real timestep, bool if_flush) {
   std::map<int, std::vector<Particle>> out_particles;
   std::vector<int> remainders;
   Key temp = tp_key;
-  while (temp >= 8) {
-    remainders.push_back(temp % 8);
-    temp /= 8;
+  while (temp >= BRANCH_FACTOR) {
+    remainders.push_back(temp % BRANCH_FACTOR);
+    temp /= BRANCH_FACTOR;
   }
   OrientedBox<Real> tp_box = readers.ckLocalBranch()->universe.box;
   for (int i = remainders.size()-1; i >= 0; i--) {

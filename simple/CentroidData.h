@@ -12,8 +12,7 @@
 struct CentroidData {
   Vector3D<Real> moment;
   Real sum_mass;
-  std::vector< std::priority_queue<Particle, std::vector<Particle>, particle_comp> > neighbors;
-  std::vector< std::vector<Particle> > nearby;
+  std::vector< std::priority_queue<Particle, std::vector<Particle>, particle_comp> > neighbors; // used for sph
   OrientedBox<Real> box;
   int count;
   Real rsq;

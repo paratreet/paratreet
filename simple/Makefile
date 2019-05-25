@@ -23,47 +23,21 @@ clean:
 
 common.h: $(STRUCTURE_PATH)/Vector3D.h $(STRUCTURE_PATH)/SFC.h Utility.h
 
-Main.o: Main.C $(BINARY).decl.h common.h Reader.h TreePiece.h BoundingBox.h BufferedVec.h TreeElement.h CacheManager.h Node.h Resumer.h Traverser.h Driver.h
+Main.o: Main.C $(BINARY).decl.h common.h Reader.h TreePiece.h BoundingBox.h BufferedVec.h TreeElement.h CacheManager.h Node.h Resumer.h Traverser.h Driver.h UserNode.h GravityVisitor.h DensityVisitor.h PressureVisitor.h CountVisitor.h
 	$(CHARMC) -c $<
 
 CacheManager.h: $(BINARY).decl.h
 
-Reader.h: $(BINARY).decl.h common.h Particle.h BoundingBox.h Splitter.h
-
 Reader.o: Reader.C Reader.h
 	$(CHARMC) -c $<
-
-Particle.h: $(BINARY).decl.h common.h
 
 Particle.o: Particle.C Particle.h
 	$(CHARMC) -c $<
 
-BoundingBox.h: $(STRUCTURE_PATH)/OrientedBox.h common.h
-
 BoundingBox.o: BoundingBox.C BoundingBox.h
 	$(CHARMC) -c $<
 
-TreePiece.h: $(BINARY).decl.h $(BINARY).def.h common.h Particle.h Node.h Utility.h Reader.C
-
-TreeElement.h: $(BINARY).decl.h $(BINARY).def.h
-
-CentroidData.h: common.h
-
-GravityVisitor.h: $(BINARY).decl.h CentroidData.h
-
-PressureVisitor.h: $(BINARY).decl.h CentroidData.h
-
-DensityVisitor.h: $(BINARY).decl.h CentroidData.h ParticleComp.h
-
-Node.h: common.h
-
-Resumer.h:
-
-Traverser.h: UserNode.h GravityVisitor.h DensityVisitor.h PressureVisitor.h CountVisitor.h
-
-Driver.h:
-
-UserNode.h:
 
 test: all
 	./charmrun ./simple -f ../inputgen/100k.tipsy +p3 ++ppn 3 +pemap 1-3 +commap 0 ++local
+
