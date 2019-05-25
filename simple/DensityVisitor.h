@@ -26,7 +26,7 @@ public:
     if (target.data->neighbors[0].size() < k) return true; // they all fill first k at the same time
     Real dsq = (source.data->getCentroid() - target.data->getCentroid()).lengthSquared();
     Real rsq = (target.data->neighbors[0].top().position - source.data->getCentroid()).lengthSquared();
-    // this isn't entirely correct because we need to look at the whole bounding box
+    // we need to look at the whole bounding box instead of just the centroid
 
     return (dsq < rsq);
   }
