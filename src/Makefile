@@ -18,9 +18,6 @@ proj: $(OBJS)
 $(BINARY).decl.h: $(BINARY).ci
 	$(CHARMC) $(BINARY).ci
 
-clean:
-	rm -f *.decl.h *.def.h conv-host *.o $(BINARY) charmrun
-
 common.h: $(STRUCTURE_PATH)/Vector3D.h $(STRUCTURE_PATH)/SFC.h Utility.h
 
 Main.o: Main.C $(BINARY).decl.h common.h Reader.h TreePiece.h BoundingBox.h BufferedVec.h TreeElement.h CacheManager.h Node.h Resumer.h Traverser.h Driver.h UserNode.h GravityVisitor.h DensityVisitor.h PressureVisitor.h CountVisitor.h
@@ -37,6 +34,8 @@ Particle.o: Particle.C Particle.h
 BoundingBox.o: BoundingBox.C BoundingBox.h
 	$(CHARMC) -c $<
 
-
 test: all
 	./charmrun ./paratreet -f ../inputgen/100k.tipsy +p3 ++ppn 3 +pemap 1-3 +commap 0 ++local
+
+clean:
+	rm -f *.decl.h *.def.h conv-host *.o $(BINARY) charmrun
