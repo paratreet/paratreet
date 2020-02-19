@@ -71,10 +71,10 @@ public:
   }
 
   void load(Config config, CkCallback cb) {
-    total_start_time = CkWallTimer();
     makeNewTree(0);
     cb.send();
   }
+
   void makeNewTree(int it) {
     // useful particle keys
     smallest_particle_key = Utility::removeLeadingZeros(Key(1));
@@ -230,7 +230,6 @@ public:
   }
 
 private:
-  double total_start_time;
   double start_time;
   BoundingBox universe;
   Key smallest_particle_key;

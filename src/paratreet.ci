@@ -29,9 +29,7 @@ mainmodule paratreet {
     initnode void initialize();
     entry Main(CkArgMsg* m);
     entry [threaded] void run();
-    entry [reductiontarget] void terminate(CkReductionMsg*);
-    // debug
-    entry [reductiontarget] void checkParticlesChangedDone(bool result);
+    entry [reductiontarget] void checkParticlesChangedDone(bool result); // For debugging
   };
 
   message ParticleMsg {
@@ -136,7 +134,7 @@ mainmodule paratreet {
   group Reader {
     entry Reader();
     entry void load(std::string, const CkCallback&);
-    entry void computeUniverseBoundingBox(const CkCallback&);    
+    entry void computeUniverseBoundingBox(const CkCallback&);
     entry void assignKeys(BoundingBox, const CkCallback&);
     template <typename Data>
     entry void request(CProxy_TreePiece<Data>, int, int);
