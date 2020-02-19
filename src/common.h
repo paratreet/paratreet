@@ -2,12 +2,11 @@
 #define PARATREET_COMMON_H_
 
 #include <string>
-#include <cinttypes> // for printing keys in hex
-//#include <vector>
+#include <cinttypes> // For printing keys in hex
 #include "Vector3D.h"
 #include "SFC.h"
 
-/* Floating point type */
+// Floating point type
 #ifndef USE_DOUBLE_FP
 typedef float Real;
 #define REAL_MAX FLT_MAX
@@ -16,23 +15,28 @@ typedef double Real;
 #define REAL_MAX DBL_MAX
 #endif
 
-/* Decomposition types */
+// Simulation domain dimensions
+#define NDIM 3
+
+// Decomposition types
 #define OCT_DECOMP 10
 #define SFC_DECOMP 11
 
-#define MAX_PARTICLES_PER_TP 1000
-#define MAX_PARTICLES_PER_LEAF 10
-
-#define LOCAL_CACHE_SIZE 5000
-
-/* Tree types */
+// Tree types
 #define OCT_TREE 20
 
+// Branching factor
 #define BRANCH_FACTOR 8
 #define LOG_BRANCH_FACTOR 3
 
-#define NDIM 3
+// Hyperparameters
+#define MAX_PARTICLES_PER_TP 1000
+#define MAX_PARTICLES_PER_LEAF 10
+#define LOCAL_CACHE_SIZE 5000
+#define DECOMP_TOLERANCE 1.0
+#define BUCKET_TOLERANCE 1.0
 
+// Particle key
 typedef SFC::Key Key;
 #ifndef CHAR_BIT
 #define CHAR_BIT 8
@@ -40,9 +44,6 @@ typedef SFC::Key Key;
 #define KEY_BITS (sizeof(Key)*CHAR_BIT)
 #define BITS_PER_DIM (KEY_BITS/NDIM)
 #define BOXES_PER_DIM (1<<(BITS_PER_DIM))
-
-#define DECOMP_TOLERANCE 1.0
-#define BUCKET_TOLERANCE 1.0
 
 #define UP_ONLY 7
 
