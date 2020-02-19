@@ -164,7 +164,7 @@ void CacheManager<Data>::requestNodes(std::pair<Key, int> param) {
   while (!local_tps.count(temp)) temp /= BRANCH_FACTOR;
   Node<Data>* node = local_tps[temp]->findNode(key);
   if (!node) {
-    CkPrintf("CacheManager::requestNodes: node not found for key %d on cm %d\n", param.first, this->thisIndex);
+    CkPrintf("CacheManager::requestNodes: node not found for key %lu on cm %d\n", param.first, this->thisIndex);
     CkAbort("CacheManager::requestNodes: node not found");
   }
   serviceRequest(node, param.second);

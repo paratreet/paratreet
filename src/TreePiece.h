@@ -138,7 +138,7 @@ void TreePiece<Data>::receive(ParticleMsg* msg) {
 template <typename Data>
 void TreePiece<Data>::check(const CkCallback& cb) {
   if (n_expected != incoming_particles.size()) {
-    CkPrintf("[TP %d] ERROR! Only %d particles out of %d received\n", this->thisIndex, particles.size(), n_expected);
+    CkPrintf("[TP %d] ERROR! Only %zu particles out of %d received\n", this->thisIndex, particles.size(), n_expected);
     CkAbort("Failure on receiving particles");
   }
   this->contribute(cb);
@@ -386,7 +386,7 @@ void TreePiece<Data>::startDual(Key* keys_ptr, int n) {
 template <typename Data>
 void TreePiece<Data>::requestNodes(Key key, int cm_index) {
   Node<Data>* node = root_from_tp_key->findNode(key);
-  if (!node) CkPrintf("null found for key %d on tp %d\n", key, this->thisIndex);
+  if (!node) CkPrintf("null found for key %lu on tp %d\n", key, this->thisIndex);
   cache_local->serviceRequest(node, cm_index);
 }
 template <typename Data>
@@ -454,7 +454,7 @@ void TreePiece<Data>::perturb (Real timestep, bool if_flush) {
       int remainders_index = 0;
       while (!curr_box.contains(particle.position)) {
         //CkPrintf("not under umbrella of node %d with volume %lf\n", node->key, curr_box.volume());
-        if (node->parent == nullptr) CkPrintf("point (%lf, %lf, %lf) has force (%lf, %llf, %lf) and old position (%lf, %lf, %lf)\n",
+        if (node->parent == nullptr) CkPrintf("point (%lf, %lf, %lf) has force (%lf, %lf, %lf) and old position (%lf, %lf, %lf)\n",
                 particle.position.x, particle.position.y, particle.position.z,
 		leaf->sum_forces[i].x / .001, leaf->sum_forces[i].y / .001, leaf->sum_forces[i].z / .001,
 		old_position.x, old_position.y, old_position.z);

@@ -120,7 +120,7 @@ void Reader::flush(int n_total_particles, int n_treepieces, CProxy_TreePiece<Dat
   }
 
   if (flush_count != particles.size()) {
-    CkPrintf("[Reader %d] ERROR! Flushed %d out of %d particles\n", thisIndex, flush_count, particles.size());
+    CkPrintf("[Reader %d] ERROR! Flushed %d out of %zu particles\n", thisIndex, flush_count, particles.size());
     CkAbort("Flush failure");
   }
 

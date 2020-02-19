@@ -52,6 +52,7 @@ struct Node {
     this->data = data;
     this->n_children = n_children;
   }
+
   Node(Key key, int depth, int n_particles, Particle* particles, int owner_tp_start, int owner_tp_end, Node* parent, int tp_indexi = -1) {
     this->type = Invalid;
     this->key = key;
@@ -70,9 +71,11 @@ struct Node {
     for (int i = 0; i < BRANCH_FACTOR; i++) this->children[i].store(nullptr);
     this->requested.store(false);
   }
+
   Node (const Node& n) {
     *this = n;
   }
+
   Node& operator= (const Node& n) {
     type = n.type;
     key = n.key;
@@ -89,6 +92,8 @@ struct Node {
     tp_index = n.tp_index;
     cm_index = n.cm_index;
     for (int i = 0; i < BRANCH_FACTOR; i++) this->children[i].store(nullptr);
+
+    return *this;
   }
 
   void triggerFree() {

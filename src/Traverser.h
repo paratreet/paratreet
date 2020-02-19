@@ -87,34 +87,53 @@ public:
         CkPrintf("tp %d, key = %d, type = %d, pe %d\n", tp->thisIndex, node->key, node->type, CkMyPe());
 #endif
         switch (node->type) {
-          case Node<Data>::Leaf: case Node<Data>::CachedRemoteLeaf:
-            tp->interactions[bucket].push_back(node);
-            break;
+          case Node<Data>::Leaf:
+          case Node<Data>::CachedRemoteLeaf:
+            {
+              tp->interactions[bucket].push_back(node);
+              break;
+            }
           case Node<Data>::Internal:
+            {
 #if DELAYLOCAL
-            tp->local_travs.push_back(std::make_pair(node, bucket));
-            break;
+              tp->local_travs.push_back(std::make_pair(node, bucket));
+              break;
 #endif
-          case Node<Data>::CachedBoundary: case Node<Data>::CachedRemote:
-            if (v.node(SourceNode<Data>(node), TargetNode<Data>(tp->leaves[bucket]))) {
-              for (int i = 0; i < node->children.size(); i++) {
-                nodes.push(node->children[i].load());
+            }
+          case Node<Data>::CachedBoundary:
+          case Node<Data>::CachedRemote:
+            {
+              if (v.node(SourceNode<Data>(node), TargetNode<Data>(tp->leaves[bucket]))) {
+                for (int i = 0; i < node->children.size(); i++) {
+                  nodes.push(node->children[i].load());
+                }
               }
+              break;
             }
-            break;
-          case Node<Data>::Boundary: case Node<Data>::RemoteAboveTPKey: case Node<Data>::Remote: case Node<Data>::RemoteLeaf:
-            curr_nodes_insertions.push_back(std::make_pair(node->key, bucket));
-            bool prev = node->requested.exchange(true);
-            if (!prev) {
-              if (node->type == Node<Data>::Boundary || node->type == Node<Data>::RemoteAboveTPKey) {
-                tp->global_data[node->key].requestData(tp->cache_local->thisIndex);
-	      }
-              else {
-		tp->cache_manager[node->cm_index].requestNodes(std::make_pair(node->key, tp->cache_local->thisIndex));
-	      }
+          case Node<Data>::Boundary:
+          case Node<Data>::RemoteAboveTPKey:
+          case Node<Data>::Remote:
+          case Node<Data>::RemoteLeaf:
+            {
+              curr_nodes_insertions.push_back(std::make_pair(node->key, bucket));
+              bool prev = node->requested.exchange(true);
+              if (!prev) {
+                if (node->type == Node<Data>::Boundary || node->type == Node<Data>::RemoteAboveTPKey) {
+                  tp->global_data[node->key].requestData(tp->cache_local->thisIndex);
+                }
+                else {
+                  tp->cache_manager[node->cm_index].requestNodes(std::make_pair(node->key, tp->cache_local->thisIndex));
+                }
+              }
+              std::vector<int>& list = tp->resumer.ckLocalBranch()->waiting[node->key];
+              if (!list.size() || list.back() != tp->thisIndex) list.push_back(tp->thisIndex);
+              break;
             }
-            std::vector<int>& list = tp->resumer.ckLocalBranch()->waiting[node->key];
-            if (!list.size() || list.back() != tp->thisIndex) list.push_back(tp->thisIndex);
+          default:
+            {
+              CkAbort("Invalid node type");
+              break;
+            }
         }
       }
     }
@@ -164,29 +183,43 @@ public:
         CkPrintf("tp %d, key = %d, type = %d, pe %d\n", tp->thisIndex, node->key, node->type, CkMyPe());
 #endif
         switch (node->type) {
-          case Node<Data>::Leaf: case Node<Data>::CachedRemoteLeaf:
-            v.leaf(SourceNode<Data>(node), TargetNode<Data>(tp->leaves[bucket]));
-            break;
+          case Node<Data>::Leaf:
+          case Node<Data>::CachedRemoteLeaf:
+            {
+              v.leaf(SourceNode<Data>(node), TargetNode<Data>(tp->leaves[bucket]));
+              break;
+            }
           case Node<Data>::Internal:
-          case Node<Data>::CachedBoundary: case Node<Data>::CachedRemote: {
-            if (v.node(SourceNode<Data>(node), TargetNode<Data>(tp->leaves[bucket]))) {
-              for (int i = 0; i < node->children.size(); i++) {
-                nodes.push(node->children[i].load());
+          case Node<Data>::CachedBoundary:
+          case Node<Data>::CachedRemote:
+            {
+              if (v.node(SourceNode<Data>(node), TargetNode<Data>(tp->leaves[bucket]))) {
+                for (int i = 0; i < node->children.size(); i++) {
+                  nodes.push(node->children[i].load());
+                }
               }
+              break;
             }
+          case Node<Data>::Boundary:
+          case Node<Data>::RemoteAboveTPKey:
+          case Node<Data>::Remote:
+          case Node<Data>::RemoteLeaf:
+            {
+              curr_nodes_insertions.push_back(std::make_pair(node->key, bucket));
+              num_waiting[bucket]++;
+              bool prev = node->requested.exchange(true);
+              if (!prev) {
+                if (node->type == Node<Data>::Boundary || node->type == Node<Data>::RemoteAboveTPKey)
+                  tp->global_data[node->key].requestData(tp->cache_local->thisIndex);
+                else tp->cache_manager[node->cm_index].requestNodes(std::make_pair(node->key, tp->cache_local->thisIndex));
+              }
+              std::vector<int>& list = tp->resumer.ckLocalBranch()->waiting[node->key];
+              if (!list.size() || list.back() != tp->thisIndex) list.push_back(tp->thisIndex);
+              break;
+            }
+          default:
+            CkAbort("Invalid node type");
             break;
-          }
-          case Node<Data>::Boundary: case Node<Data>::RemoteAboveTPKey: case Node<Data>::Remote: case Node<Data>::RemoteLeaf:
-            curr_nodes_insertions.push_back(std::make_pair(node->key, bucket));
-            num_waiting[bucket]++;
-            bool prev = node->requested.exchange(true);
-            if (!prev) {
-              if (node->type == Node<Data>::Boundary || node->type == Node<Data>::RemoteAboveTPKey)
-                tp->global_data[node->key].requestData(tp->cache_local->thisIndex);
-              else tp->cache_manager[node->cm_index].requestNodes(std::make_pair(node->key, tp->cache_local->thisIndex));
-            }
-            std::vector<int>& list = tp->resumer.ckLocalBranch()->waiting[node->key];
-            if (!list.size() || list.back() != tp->thisIndex) list.push_back(tp->thisIndex);
         }
       }
       if (num_waiting[bucket] == 0) {
@@ -194,7 +227,7 @@ public:
           for (int j = 0; j < BRANCH_FACTOR; j++) {
             Node<Data>* child = trav_tops[bucket]->parent->children[j].load();
             if (child == nullptr) {
-              CkPrintf("child of key %d and parent type %d is nullptr\n", trav_tops[bucket]->parent->key * 8 + j, trav_tops[bucket]->parent->type);
+              CkPrintf("child of key %lu and parent type %d is nullptr\n", trav_tops[bucket]->parent->key * 8 + j, trav_tops[bucket]->parent->type);
             }
             if (child != trav_tops[bucket]) {
                if (trav_tops[bucket]->parent->type == Node<Data>::Boundary) {
@@ -255,34 +288,51 @@ public:
         nodes.pop();
         //CkPrintf("tp %d, key = %d, type = %d, pe %d\n", tp->thisIndex, node->key, node->type, CkMyPe());
         switch (node->type) {
-          case Node<Data>::Leaf: case Node<Data>::CachedRemoteLeaf:
-            for (int i = 0; i < tp->leaves.size(); i++) {
-              if (tp->leaves[i] == currpl) {
-                tp->interactions[i].push_back(node); // needs change
-                break;
-              }
-            }
-            break;
-          case Node<Data>::Internal: case Node<Data>::CachedBoundary: case Node<Data>::CachedRemote:
-            if (v.node(SourceNode<Data>(node), TargetNode<Data>(payload))) {
-              for (int i = 0; i < node->children.size(); i++) {
-                for (int j = 0; j < payload->children.size(); j++) {
-                  nodes.push(std::make_pair(node->children[i].load(), payload->children[j].load()));
+          case Node<Data>::Leaf:
+          case Node<Data>::CachedRemoteLeaf:
+            {
+              for (int i = 0; i < tp->leaves.size(); i++) {
+                if (tp->leaves[i] == currpl) {
+                  tp->interactions[i].push_back(node); // needs change
+                  break;
                 }
               }
+              break;
             }
-            break;
-          case Node<Data>::Boundary: case Node<Data>::RemoteAboveTPKey: case Node<Data>::Remote: case Node<Data>::RemoteLeaf:
-            curr_nodes_insertions.push_back(std::make_pair(node->key, payload));
-            bool prev = node->requested.exchange(true);
-            if (!prev) {
-              if (node->type == Node<Data>::Boundary || node->type == Node<Data>::RemoteAboveTPKey)
-                tp->global_data[node->key].requestData(tp->cache_local->thisIndex);
-              else tp->cache_manager[node->cm_index].requestNodes(std::make_pair(node->key, tp->cache_local->thisIndex));
+          case Node<Data>::Internal:
+          case Node<Data>::CachedBoundary:
+          case Node<Data>::CachedRemote:
+            {
+              if (v.node(SourceNode<Data>(node), TargetNode<Data>(payload))) {
+                for (int i = 0; i < node->children.size(); i++) {
+                  for (int j = 0; j < payload->children.size(); j++) {
+                    nodes.push(std::make_pair(node->children[i].load(), payload->children[j].load()));
+                  }
+                }
+              }
+              break;
             }
-            std::vector<int>& list = tp->resumer.ckLocalBranch()->waiting[node->key];
-            if (!list.size() || list.back() != tp->thisIndex) list.push_back(tp->thisIndex);
-            break;
+          case Node<Data>::Boundary:
+          case Node<Data>::RemoteAboveTPKey:
+          case Node<Data>::Remote:
+          case Node<Data>::RemoteLeaf:
+            {
+              curr_nodes_insertions.push_back(std::make_pair(node->key, payload));
+              bool prev = node->requested.exchange(true);
+              if (!prev) {
+                if (node->type == Node<Data>::Boundary || node->type == Node<Data>::RemoteAboveTPKey)
+                  tp->global_data[node->key].requestData(tp->cache_local->thisIndex);
+                else tp->cache_manager[node->cm_index].requestNodes(std::make_pair(node->key, tp->cache_local->thisIndex));
+              }
+              std::vector<int>& list = tp->resumer.ckLocalBranch()->waiting[node->key];
+              if (!list.size() || list.back() != tp->thisIndex) list.push_back(tp->thisIndex);
+              break;
+            }
+          default:
+            {
+              CkAbort("Invalid node type");
+              break;
+            }
         }
       }
     }
