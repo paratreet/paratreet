@@ -163,7 +163,7 @@ class Main : public CBase_Main {
 
   void run() {
     // Delegate to Driver
-    centroid_driver.load(CkCallbackResumeThread());
+    centroid_driver.init(CkCallbackResumeThread());
     centroid_driver.run(CkCallbackResumeThread());
 
     CkExit();

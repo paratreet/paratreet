@@ -118,14 +118,14 @@ mainmodule paratreet {
   template <typename Data>
   chare Driver {
     entry Driver(CProxy_CacheManager<Data>);
+    entry [threaded] void init(CkCallback cb);
+    entry [threaded] void run(CkCallback cb);
     entry [reductiontarget] void countInts(int intrn_counts [2]);
     entry void recvTE(std::pair<Key, Data>);
     entry void loadCache(CkCallback);
     template <typename Visitor>
     entry void prefetch(Data, int, TEHolder<Data>, CkCallback);
     entry void request(Key request_list [list_size], int list_size, int, TEHolder<Data>, CkCallback);
-    entry [threaded] void load(CkCallback cb);
-    entry [threaded] void run(CkCallback cb);
   }
   chare Driver<CentroidData>;
   extern entry void Driver<CentroidData> prefetch<GravityVisitor> (CentroidData, int, TEHolder<CentroidData>, CkCallback);
