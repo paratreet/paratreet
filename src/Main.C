@@ -162,13 +162,9 @@ class Main : public CBase_Main {
   }
 
   void run() {
-    Config config;
-    config.input_file = input_file;
-    config.tree_type = OCT_TREE;
-
     // Delegate to Driver
-    centroid_driver.load(config, CkCallbackResumeThread());
-    centroid_driver.run(CkCallbackResumeThread(), num_iterations);
+    centroid_driver.load(CkCallbackResumeThread());
+    centroid_driver.run(CkCallbackResumeThread());
 
     CkExit();
   }

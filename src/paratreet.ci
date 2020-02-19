@@ -6,7 +6,6 @@ mainmodule paratreet {
   include "ProxyHolders.h";
   class CProxy_Reader;
   include "MultiData.h";
-  include "Config.h";
 
   readonly CProxy_Main mainProxy;
   readonly CProxy_Reader readers;
@@ -125,8 +124,8 @@ mainmodule paratreet {
     template <typename Visitor>
     entry void prefetch(Data, int, TEHolder<Data>, CkCallback);
     entry void request(Key request_list [list_size], int list_size, int, TEHolder<Data>, CkCallback);
-    entry [threaded] void load(Config config, CkCallback cb);
-    entry [threaded] void run(CkCallback cb, int);
+    entry [threaded] void load(CkCallback cb);
+    entry [threaded] void run(CkCallback cb);
   }
   chare Driver<CentroidData>;
   extern entry void Driver<CentroidData> prefetch<GravityVisitor> (CentroidData, int, TEHolder<CentroidData>, CkCallback);

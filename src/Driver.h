@@ -70,7 +70,7 @@ public:
     cache_manager.recvStarterPack(storage.data(), send_size, cb);
   }
 
-  void load(Config config, CkCallback cb) {
+  void load(CkCallback cb) {
     makeNewTree(0);
     cb.send();
   }
@@ -184,7 +184,7 @@ public:
     cache_manager[cm_index].recvStarterPack(to_send.data(), to_send.size(), cb);
   }
 
-  void run(CkCallback cb, int num_iterations) {
+  void run(CkCallback cb) {
     for (int it = 0; it < num_iterations; it++) {
       // start local tree build in TreePieces
       start_time = CkWallTimer();
