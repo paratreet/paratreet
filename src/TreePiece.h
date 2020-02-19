@@ -1,7 +1,7 @@
-#ifndef SIMPLE_TREEPIECE_H_
-#define SIMPLE_TREEPIECE_H_
+#ifndef PARATREET_TREEPIECE_H_
+#define PARATREET_TREEPIECE_H_
 
-#include "simple.decl.h"
+#include "paratreet.decl.h"
 #include "common.h"
 #include "templates.h"
 #include "ParticleMsg.h"
@@ -522,4 +522,4 @@ void TreePiece<Data>::print(Node<Data>* root) {
   out.close();
 }
 
-#endif // SIMPLE_TREEPIECE_H_
+#endif // PARATREET_TREEPIECE_H_

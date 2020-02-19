@@ -1,12 +1,11 @@
-#ifndef SIMPLE_DENSITYVISITOR_H_
-#define SIMPLE_DENSITYVISITOR_H_
+#ifndef PARATREET_DENSITYVISITOR_H_
+#define PARATREET_DENSITYVISITOR_H_
 
-#include "simple.decl.h"
+#include "paratreet.decl.h"
 #include "common.h"
 #include <cmath>
 #include <vector>
 #include <queue>
-//#include "ParticleComp.h"
 
 struct DensityVisitor {
 // in leaf check for not same particle plz
@@ -44,4 +43,4 @@ public:
   }
 };
 
-#endif // SIMPLE_DENSITYVISITOR_H_
+#endif // PARATREET_DENSITYVISITOR_H_

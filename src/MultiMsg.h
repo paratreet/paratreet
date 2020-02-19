@@ -1,10 +1,10 @@
-#ifndef SIMPLE_MULTIMSG_H_
-#define SIMPLE_MULTIMSG_H_
+#ifndef PARATREET_MULTIMSG_H_
+#define PARATREET_MULTIMSG_H_
 
 #include "Particle.h"
 #include "Node.h"
 #include "common.h"
-#include "simple.decl.h"
+#include "paratreet.decl.h"
 #include "templates.h"
 
 template <typename Data>
@@ -33,4 +33,4 @@ inline MultiMsg<Data>::MultiMsg(Particle* particlesi, int n_particlesi, Node<Dat
   memcpy(nodes, nodesi, n_nodes * sizeof(Node<Data>));
 }
 
-#endif // SIMPLE_MULTIMSG_H_
+#endif // PARATREET_MULTIMSG_H_

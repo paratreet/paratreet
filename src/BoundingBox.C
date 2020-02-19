@@ -19,7 +19,7 @@ void BoundingBox::grow(const Vector3D<Real> &v){
 }
 
 /*
- * This method is called when performing a reduction over 
+ * This method is called when performing a reduction over
  * BoundingBox's. It subsumes the bounding box of the 'other'
  * and accumulates its energy in its own. If a PE has no
  * particles, its contributions are not counted.
@@ -58,7 +58,7 @@ ostream &operator<<(ostream &os, const BoundingBox &bb){
      << bb.pe + bb.ke << ", "
      << bb.box
      << ">";
-      
+
   return os;
 }
 

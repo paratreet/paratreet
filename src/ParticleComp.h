@@ -1,3 +1,6 @@
+#ifndef PARATREET_PARTICLECOMP_H_
+#define PARATREET_PARTICLECOMP_H_
+
 #include "Particle.h"
 
 struct particle_comp {
@@ -8,3 +11,5 @@ struct particle_comp {
     return (a.position - p.position).lengthSquared() < (b.position - p.position).lengthSquared();
   }
 };
+
+#endif // PARATREET_PARTICLECOMP_H_

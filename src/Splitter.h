@@ -1,5 +1,5 @@
-#ifndef SIMPLE_SPLITTER_H_
-#define SIMPLE_SPLITTER_H_
+#ifndef PARATREET_SPLITTER_H_
+#define PARATREET_SPLITTER_H_
 
 #include "common.h"
 
@@ -45,4 +45,4 @@ struct Splitter {
   }
 };
 
-#endif // SIMPLE_SPLITTER_H_
+#endif // PARATREET_SPLITTER_H_

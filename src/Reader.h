@@ -1,12 +1,11 @@
-#ifndef SIMPLE_READER_H_
-#define SIMPLE_READER_H_
+#ifndef PARATREET_READER_H_
+#define PARATREET_READER_H_
 
-#include "simple.decl.h"
+#include "paratreet.decl.h"
 #include "common.h"
 #include "ParticleMsg.h"
 #include "BoundingBox.h"
 #include "Splitter.h"
-
 #include "Utility.h"
 
 extern CProxy_Main mainProxy;
@@ -66,7 +65,7 @@ void Reader::request(CProxy_TreePiece<Data> tp_proxy, int index, int num_to_give
 template <typename Data>
 void Reader::flush(int n_total_particles, int n_treepieces, CProxy_TreePiece<Data> treepieces) {
   int flush_count = 0;
-  
+
   if (decomp_type == OCT_DECOMP) {
     // OCT decomposition
     int start = 0;
@@ -130,4 +129,4 @@ void Reader::flush(int n_total_particles, int n_treepieces, CProxy_TreePiece<Dat
   particle_index = 0;
 }
 
-#endif // SIMPLE_READER_H_
+#endif // PARATREET_READER_H_

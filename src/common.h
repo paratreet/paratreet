@@ -1,5 +1,5 @@
-#ifndef SIMPLE_COMMON_H_
-#define SIMPLE_COMMON_H_
+#ifndef PARATREET_COMMON_H_
+#define PARATREET_COMMON_H_
 
 #include <string>
 #include <cinttypes> // for printing keys in hex
@@ -46,4 +46,4 @@ typedef SFC::Key Key;
 
 #define UP_ONLY 7
 
-#endif // SIMPLE_COMMON_H_
+#endif // PARATREET_COMMON_H_

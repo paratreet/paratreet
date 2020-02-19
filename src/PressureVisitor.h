@@ -1,7 +1,7 @@
-#ifndef SIMPLE_PRESSUREVISITOR_H_
-#define SIMPLE_PRESSUREVISITOR_H_
+#ifndef PARATREET_PRESSUREVISITOR_H_
+#define PARATREET_PRESSUREVISITOR_H_
 
-#include "simple.decl.h"
+#include "paratreet.decl.h"
 #include "common.h"
 #include <cmath>
 
@@ -29,4 +29,4 @@ public:
   }
 };
 
-#endif // SIMPLE_PRESSUREVISITOR_H_
+#endif // PARATREET_PRESSUREVISITOR_H_

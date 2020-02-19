@@ -4,7 +4,7 @@ OPTS = -g -I$(STRUCTURE_PATH) -DGROUPCACHE=0 -DDELAYLOCAL=0 -DCOUNT_INTRNS=0 -DD
 CHARMC = $(CHARM_HOME)/bin/charmc $(OPTS)
 LD_LIBS = -L$(STRUCTURE_PATH) -lTipsy
 
-BINARY = simple
+BINARY = paratreet
 OBJS = Main.o Reader.o Particle.o BoundingBox.o
 
 all: $(BINARY)
@@ -39,5 +39,4 @@ BoundingBox.o: BoundingBox.C BoundingBox.h
 
 
 test: all
-	./charmrun ./simple -f ../inputgen/100k.tipsy +p3 ++ppn 3 +pemap 1-3 +commap 0 ++local
-
+	./charmrun ./paratreet -f ../inputgen/100k.tipsy +p3 ++ppn 3 +pemap 1-3 +commap 0 ++local

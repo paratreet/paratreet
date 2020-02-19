@@ -1,7 +1,7 @@
-#ifndef SIMPLE_DRIVER_H_
-#define SIMPLE_DRIVER_H_
+#ifndef PARATREET_DRIVER_H_
+#define PARATREET_DRIVER_H_
 
-#include "simple.decl.h"
+#include "paratreet.decl.h"
 #include "common.h"
 #include <algorithm>
 #include <vector>
@@ -324,4 +324,4 @@ private:
   }
 };
 
-#endif // SIMPLE_DRIVER_H_
+#endif // PARATREET_DRIVER_H_

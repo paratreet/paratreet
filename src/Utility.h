@@ -1,5 +1,5 @@
-#ifndef SIMPLE_UTILITY_H_
-#define SIMPLE_UTILITY_H_
+#ifndef PARATREET_UTILITY_H_
+#define PARATREET_UTILITY_H_
 
 #include "common.h"
 
@@ -110,4 +110,4 @@ class Utility {
   }
 };
 
-#endif // SIMPLE_UTILITY_H_
+#endif // PARATREET_UTILITY_H_

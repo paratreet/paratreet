@@ -1,12 +1,13 @@
-#ifndef SIMPLE_COUNTVISITOR_H_
-#define SIMPLE_COUNTVISITOR_H_
+#ifndef PARATREET_COUNTVISITOR_H_
+#define PARATREET_COUNTVISITOR_H_
 
-#include "simple.decl.h"
-#include "CountManager.h"
-#include "common.h"
 #include <cmath>
 #include <vector>
 #include <queue>
+
+#include "paratreet.decl.h"
+#include "CountManager.h"
+#include "common.h"
 
 class CountVisitor {
 private:
@@ -60,4 +61,4 @@ public:
   }
 };
 
-#endif // SIMPLE_DENSITYVISITOR_H_
+#endif // PARATREET_COUNTVISITOR_H_

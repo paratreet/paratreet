@@ -1,9 +1,9 @@
-#ifndef SIMPLE_PARTICLEMSG_H_
-#define SIMPLE_PARTICLEMSG_H_
+#ifndef PARATREET_PARTICLEMSG_H_
+#define PARATREET_PARTICLEMSG_H_
 
 #include "Particle.h"
 #include "common.h"
-#include "simple.decl.h"
+#include "paratreet.decl.h"
 
 struct ParticleMsg : public CMessage_ParticleMsg {
   Particle* particles;
@@ -23,4 +23,4 @@ inline ParticleMsg::ParticleMsg(Particle* p, int n) {
   n_particles = n;
 }
 
-#endif // SIMPLE_PARTICLEMSG_H_
+#endif // PARATREET_PARTICLEMSG_H_

@@ -1,4 +1,4 @@
-mainmodule simple {
+mainmodule paratreet {
   include "BoundingBox.h";
   include "Splitter.h";
   include "CentroidData.h";

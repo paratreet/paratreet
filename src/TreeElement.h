@@ -1,7 +1,7 @@
-#ifndef SIMPLE_TREEELEMENT_H_
-#define SIMPLE_TREEELEMENT_H_
+#ifndef PARATREET_TREEELEMENT_H_
+#define PARATREET_TREEELEMENT_H_
 
-#include "simple.decl.h"
+#include "paratreet.decl.h"
 #include "templates.h"
 #include "Node.h"
 #include "CacheManager.h"
@@ -75,4 +75,4 @@ void TreeElement<Data>::recvData (Data datai, bool from_TP) {
   }
 }
 
-#endif // SIMPLE_TREEELEMENT_H_
+#endif // PARATREET_TREEELEMENT_H_

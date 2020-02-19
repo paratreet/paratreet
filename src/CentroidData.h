@@ -1,5 +1,5 @@
-#ifndef SIMPLE_CENTROIDDATA_H_
-#define SIMPLE_CENTROIDDATA_H_
+#ifndef PARATREET_CENTROIDDATA_H_
+#define PARATREET_CENTROIDDATA_H_
 
 #include "common.h"
 #include <vector>
@@ -17,7 +17,7 @@ struct CentroidData {
   int count;
   Real rsq;
 
-  CentroidData() : 
+  CentroidData() :
   moment(Vector3D<Real> (0,0,0)), sum_mass(0), count(0), rsq(0.) {}
 
   CentroidData(Particle* particles, int n_particles) : CentroidData() {
@@ -63,4 +63,4 @@ struct CentroidData {
   }
 };
 
-#endif // SIMPLE_CENTROID_H_
+#endif // PARATREET_CENTROID_H_

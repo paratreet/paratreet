@@ -1,5 +1,5 @@
-#ifndef SIMPLE_NODE_H_
-#define SIMPLE_NODE_H_
+#ifndef PARATREET_NODE_H_
+#define PARATREET_NODE_H_
 
 #include "common.h"
 #include "Particle.h"
@@ -9,7 +9,7 @@
 template <typename Data>
 struct Node {
   enum Type { Invalid = 0, Leaf, EmptyLeaf, RemoteLeaf, RemoteEmptyLeaf, Remote, Internal, Boundary, RemoteAboveTPKey, CachedRemote, CachedRemoteLeaf, CachedBoundary };
-  
+
   Type type;
   Key key;
   int depth;
@@ -163,4 +163,4 @@ struct Node {
   }
 };
 
-#endif // SIMPLE_NODE_H_
+#endif // PARATREET_NODE_H_

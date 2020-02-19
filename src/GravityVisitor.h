@@ -1,8 +1,7 @@
-#ifndef SIMPLE_GRAVITYVISITOR_H_
-#define SIMPLE_GRAVITYVISITOR_H_
+#ifndef PARATREET_GRAVITYVISITOR_H_
+#define PARATREET_GRAVITYVISITOR_H_
 
-#include "simple.decl.h"
-//#include "CentroidData.h"
+#include "paratreet.decl.h"
 #include "common.h"
 #include <cmath>
 
@@ -45,7 +44,7 @@ private:
   bool node(SourceNode<CentroidData> source, TargetNode<CentroidData> target) {
     Vector3D<Real> dr = source.data->getCentroid() - target.data->getCentroid();
     Real dsq = dr.lengthSquared();
-    if (theta * dsq < source.data->rsq) { 
+    if (theta * dsq < source.data->rsq) {
       return true;
     }
     if (source.data->sum_mass > 0) addGravityNode(source, target);
@@ -79,4 +78,4 @@ private:
   }
 };
 
-#endif //SIMPLE_GRAVITYVISITOR_H_
+#endif //PARATREET_GRAVITYVISITOR_H_

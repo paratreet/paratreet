@@ -1,5 +1,5 @@
-#ifndef SIMPLE_BUFFERED_VEC_H_
-#define SIMPLE_BUFFERED_VEC_H_
+#ifndef PARATREET_BUFFERED_VEC_H_
+#define PARATREET_BUFFERED_VEC_H_
 
 #include "common.h"
 
@@ -47,4 +47,4 @@ class BufferedVec {
   }
 };
 
-#endif // SIMPLE_BUFFERED_VEC_H_
+#endif // PARATREET_BUFFERED_VEC_H_

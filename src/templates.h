@@ -1,8 +1,8 @@
-#ifndef SIMPLE_TEMPLATES_H_
-#define SIMPLE_TEMPLATES_H_
+#ifndef PARATREET_TEMPLATES_H_
+#define PARATREET_TEMPLATES_H_
 
 #define CK_TEMPLATES_ONLY
-#include "simple.def.h"
+#include "paratreet.def.h"
 #undef CK_TEMPLATES_ONLY
 
-#endif // SIMPLE_TEMPLATES_H_
+#endif // PARATREET_TEMPLATES_H_

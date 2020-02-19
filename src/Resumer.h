@@ -1,7 +1,7 @@
-#ifndef SIMPLE_RESUMER_H_
-#define SIMPLE_RESUMER_H_
+#ifndef PARATREET_RESUMER_H_
+#define PARATREET_RESUMER_H_
 
-#include "simple.decl.h"
+#include "paratreet.decl.h"
 #include "common.h"
 #include <unordered_map>
 #include <vector>
@@ -78,4 +78,4 @@ public:
   }
 };
 
-#endif // SIMPLE_RESUMER_H_
+#endif // PARATREET_RESUMER_H_

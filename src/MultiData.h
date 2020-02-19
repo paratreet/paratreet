@@ -1,10 +1,10 @@
-#ifndef SIMPLE_MULTIDATA_H_
-#define SIMPLE_MULTIDATA_H_
+#ifndef PARATREET_MULTIDATA_H_
+#define PARATREET_MULTIDATA_H_
 
 #include "Particle.h"
 #include "Node.h"
 #include "common.h"
-#include "simple.decl.h"
+#include "paratreet.decl.h"
 
 template <typename Data>
 struct MultiData {
@@ -20,7 +20,7 @@ struct MultiData {
 template <typename Data>
 inline MultiData<Data>::MultiData() {
   n_particles = 0;
-  n_nodes = 0;  
+  n_nodes = 0;
 }
 
 template <typename Data>
@@ -40,4 +40,4 @@ void MultiData<Data>::pup(PUP::er& p) {
 }
 
 
-#endif // SIMPLE_MULTIDATA_H_
+#endif // PARATREET_MULTIDATA_H_

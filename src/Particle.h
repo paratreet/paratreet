@@ -1,9 +1,9 @@
-#ifndef SIMPLE_PARTICLE_H_
-#define SIMPLE_PARTICLE_H_
+#ifndef PARATREET_PARTICLE_H_
+#define PARATREET_PARTICLE_H_
 
-//#include "simple.decl.h"
 #include "common.h"
 #include "BoundingBox.h"
+
 struct Particle {
   Key key;
   int order;
@@ -48,4 +48,4 @@ struct Particle {
   friend bool operator<(const Key&, const Particle&);
 };
 
-#endif // SIMPLE_PARTICLE_H_
+#endif // PARATREET_PARTICLE_H_

@@ -1,9 +1,9 @@
-#ifndef SIMPLE_COUNTMANAGER_H_
-#define SIMPLE_COUNTMANAGER_H_
+#ifndef PARATREET_COUNTMANAGER_H_
+#define PARATREET_COUNTMANAGER_H_
 
 #include "common.h"
 #include "Vector3D.h"
-#include "simple.decl.h"
+#include "paratreet.decl.h"
 
 #include <cstring>
 #include <cmath>
@@ -53,4 +53,4 @@ struct CountManager : public CBase_CountManager {
 
 };
 
-#endif 
+#endif

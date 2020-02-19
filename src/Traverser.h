@@ -1,9 +1,9 @@
-#ifndef SIMPLE_TRAVERSER_H_
-#define SIMPLE_TRAVERSER_H_
+#ifndef PARATREET_TRAVERSER_H_
+#define PARATREET_TRAVERSER_H_
 
 #include "TreePiece.h"
 #include "common.h"
-#include "simple.decl.h"
+#include "paratreet.decl.h"
 #include <stack>
 #include <unordered_map>
 #include <vector>
@@ -291,4 +291,4 @@ public:
   }
 };
 
-#endif // SIMPLE_TRAVERSER_H_
+#endif // PARATREET_TRAVERSER_H_

@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <numeric>
-#include "simple.decl.h"
+
+#include "paratreet.decl.h"
 #include "common.h"
 #include "Reader.h"
 #include "Splitter.h"
@@ -140,7 +141,7 @@ class Main : public CBase_Main {
       CkAbort("max particles per tp runtime value doesn't match compile time value!\n");
 
     // print settings
-    CkPrintf("\n[SIMPLE TREE]\n");
+    CkPrintf("\n[PARATREET]\n");
     CkPrintf("Input file: %s\n", input_file.c_str());
     CkPrintf("Decomposition type: %s\n", (decomp_type == OCT_DECOMP) ? "OCT" : "SFC");
     CkPrintf("Tree type: %s\n", (tree_type == OCT_TREE) ? "OCT" : "SFC");
@@ -369,4 +370,4 @@ class Main : public CBase_Main {
 #endif
 };
 
-#include "simple.def.h"
+#include "paratreet.def.h"

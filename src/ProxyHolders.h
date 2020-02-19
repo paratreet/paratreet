@@ -1,4 +1,7 @@
-#include "simple.decl.h"
+#ifndef PARATREET_PROXYHOLDERS_H_
+#define PARATREET_PROXYHOLDERS_H_
+
+#include "paratreet.decl.h"
 
 template <typename Data>
 class CProxy_TreePiece;
@@ -6,7 +9,7 @@ class CProxy_TreePiece;
 template <typename Data>
 struct TPHolder {
   CProxy_TreePiece<Data> tp_proxy;
-  TPHolder (CProxy_TreePiece<Data> tp_proxyi) : 
+  TPHolder (CProxy_TreePiece<Data> tp_proxyi) :
   tp_proxy(tp_proxyi) {}
   TPHolder() {}
   void pup (PUP::er& p) {
@@ -41,3 +44,5 @@ struct DPHolder {
     p | d_proxy;
   }
 };
+
+#endif // PARATREET_PROXYHOLDERS_H_

@@ -1,5 +1,5 @@
-#ifndef SIMPLE_USERNODE_H_
-#define SIMPLE_USERNODE_H_
+#ifndef PARATREET_USERNODE_H_
+#define PARATREET_USERNODE_H_
 
 #include "Particle.h"
 #include "Node.h"
@@ -34,4 +34,4 @@ struct TargetNode {
 };
 
 
-#endif // SIMPLE_NODE_H_
+#endif // PARATREET_NODE_H_

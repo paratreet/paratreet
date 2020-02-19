@@ -1,7 +1,7 @@
-#ifndef SIMPLE_CACHEMANAGER_H_
-#define SIMPLE_CACHEMANAGER_H_
+#ifndef PARATREET_CACHEMANAGER_H_
+#define PARATREET_CACHEMANAGER_H_
 
-#include "simple.decl.h"
+#include "paratreet.decl.h"
 #include "common.h"
 #include "MultiMsg.h"
 #include "Utility.h"
@@ -290,4 +290,4 @@ void CacheManager<Data>::process(Key key) {
   }
 }
 
-#endif //SIMPLE_CACHEMANAGER_H_
+#endif //PARATREET_CACHEMANAGER_H_

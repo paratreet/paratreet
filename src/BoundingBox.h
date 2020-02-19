@@ -1,5 +1,5 @@
-#ifndef SIMPLE_BOUNDING_BOX_H_
-#define SIMPLE_BOUNDING_BOX_H_
+#ifndef PARATREET_BOUNDING_BOX_H_
+#define PARATREET_BOUNDING_BOX_H_
 
 #include "OrientedBox.h"
 #include "common.h"
@@ -8,7 +8,7 @@
  * BoundingBox:
  * Used to calculate the bounding box of all particles in the
  * simulation universe. It also keeps track of particle energy,
- * to see whether there is a drift in the total system energy 
+ * to see whether there is a drift in the total system energy
  * through the simulation.
  */
 struct BoundingBox {
@@ -48,4 +48,4 @@ ostream &operator<<(ostream &os, const BoundingBox &bb);
 
 CkReductionMsg *reduceBoxes(int n_msg, CkReductionMsg** msgs);
 
-#endif // SIMPLE_BOUNDING_BOX_H_
+#endif // PARATREET_BOUNDING_BOX_H_

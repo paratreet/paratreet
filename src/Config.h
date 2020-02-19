@@ -1,5 +1,5 @@
-#ifndef SIMPLE_CONFIG_H_
-#define SIMPLE_CONFIG_H_
+#ifndef PARATREET_CONFIG_H_
+#define PARATREET_CONFIG_H_
 
 #include <string>
 
