@@ -1,4 +1,4 @@
-# Compilation
+## Compilation
 
 Dependent git repositories (currently only `utility`) are tracked as git submodules.
 All the following commands are executed from the top level directory.
@@ -22,7 +22,7 @@ $ cd src
 $ make
 ```
 
-# Execution
+## Execution
 
 To run a 1000 particle simulation locally with 4 PEs (in SMP mode):
 ```
