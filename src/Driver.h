@@ -148,21 +148,21 @@ public:
 
       // Prefetch into cache
       start_time = CkWallTimer();
+      /*
       centroid_cache.startParentPrefetch(this->thisProxy, centroid_calculator,
           CkCallback::ignore);
-      /*
       centroid_cache.template startPrefetch<GravityVisitor>(this->thisProxy,
           centroid_calculator, CkCallback::ignore);
-      centroid_driver.loadCache(CkCallbackResumeThread());
       */
+      centroid_driver.loadCache(CkCallbackResumeThread());
       CkWaitQD();
       CkPrintf("[Driver, %d] TreeElement cache loading: %.3lf ms\n", iter,
           (CkWallTimer() - start_time) * 1000);
 
       // Perform downward and upward traversals (Barnes-Hut)
       start_time = CkWallTimer();
-      treepieces.template startUpAndDown<DensityVisitor>();
-      //treepieces.template startDown<GravityVisitor>();
+      //treepieces.template startUpAndDown<DensityVisitor>();
+      treepieces.template startDown<GravityVisitor>();
       CkWaitQD();
 #if DELAYLOCAL
       //treepieces.processLocal(CkCallbackResumeThread());
