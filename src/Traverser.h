@@ -131,7 +131,6 @@ public:
             }
           default:
             {
-              CkAbort("Invalid node type");
               break;
             }
         }
@@ -218,8 +217,9 @@ public:
               break;
             }
           default:
-            CkAbort("Invalid node type");
-            break;
+            {
+              break;
+            }
         }
       }
       if (num_waiting[bucket] == 0) {
@@ -330,7 +330,6 @@ public:
             }
           default:
             {
-              CkAbort("Invalid node type");
               break;
             }
         }
