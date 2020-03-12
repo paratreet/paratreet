@@ -1,4 +1,4 @@
-CHARM_HOME ?= ~/charm/
+CHARM_HOME ?= $(HOME)/charm-paratreet
 STRUCTURE_PATH = ../utility/structures
 OPTS = -g -I$(STRUCTURE_PATH) -DGROUPCACHE=0 -DDELAYLOCAL=0 -DCOUNT_INTRNS=0 -DDEBUG=0
 CHARMC = $(CHARM_HOME)/bin/charmc $(OPTS)
@@ -25,13 +25,7 @@ Main.o: Main.C $(BINARY).decl.h common.h Reader.h TreePiece.h BoundingBox.h Buff
 
 CacheManager.h: $(BINARY).decl.h
 
-Reader.o: Reader.C Reader.h
-	$(CHARMC) -c $<
-
-Particle.o: Particle.C Particle.h
-	$(CHARMC) -c $<
-
-BoundingBox.o: BoundingBox.C BoundingBox.h
+%.o: %.C %.h
 	$(CHARMC) -c $<
 
 test: all
