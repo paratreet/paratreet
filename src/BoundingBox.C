@@ -1,4 +1,5 @@
 #include "BoundingBox.h"
+#include <iomanip>
 
 CkReduction::reducerType BoundingBox::boxReducer;
 
@@ -54,6 +55,7 @@ void BoundingBox::pup(PUP::er &p){
 ostream &operator<<(ostream &os, const BoundingBox &bb){
   os << "<"
      << bb.n_particles << ", "
+     << std::fixed << std::setprecision(3)
      << bb.mass << ", "
      << bb.pe + bb.ke << ", "
      << bb.box
