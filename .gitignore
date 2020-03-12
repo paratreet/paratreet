@@ -1,4 +1,5 @@
 *.decl.h
 *.def.h
 *.o
+*.swp
 charmrun
