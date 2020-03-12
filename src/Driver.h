@@ -103,7 +103,7 @@ public:
     if (decomp_type == OCT_DECOMP) {
       findOctSplitters();
     } else {
-      CkAbort("Only OCT decomposition is currently supported\n");
+      CkAbort("Only OCT decomposition is currently supported");
     }
     std::sort(splitters.begin(), splitters.end());
     readers.setSplitters(splitters, CkCallbackResumeThread());
@@ -141,7 +141,11 @@ public:
 
       // Start local tree build in TreePieces
       start_time = CkWallTimer();
-      treepieces.build(true);
+      if (tree_type == OCT_TREE) {
+        treepieces.localTreeBuild(true);
+      } else {
+        CkAbort("Only octree is currently supported");
+      }
       CkWaitQD();
       CkPrintf("Local tree build: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
 

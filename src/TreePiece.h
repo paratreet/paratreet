@@ -61,7 +61,7 @@ public:
   void receive(ParticleMsg*);
   void check(const CkCallback&);
   void triggerRequest();
-  void build(bool to_search = true);
+  void localTreeBuild(bool to_search = true);
   bool recursiveBuild(Node<Data>*, bool);
   void upOnly(bool);
   inline void initCache();
@@ -155,7 +155,7 @@ void TreePiece<Data>::triggerRequest() {
 }
 
 template <typename Data>
-void TreePiece<Data>::build(bool to_search) {
+void TreePiece<Data>::localTreeBuild(bool to_search) {
   int n_particles_saved = particles.size();
   int n_particles_received = incoming_particles.size();
 
@@ -167,16 +167,20 @@ void TreePiece<Data>::build(bool to_search) {
   // Sort particles
   std::sort(particles.begin(), particles.end());
 
-  // Create global root and recurse
-#if DEBUG
-  CkPrintf("[TP %d] key: 0x%" PRIx64 " particles: %d\n", this->thisIndex, tp_key, particles.size());
-#endif
+  // Clear existing data
   leaves.clear();
   empty_leaves.clear();
   local_travs.clear();
+
+  // Create global root and build local tree recursively
+#if DEBUG
+  CkPrintf("[TP %d] key: 0x%" PRIx64 " particles: %d\n", this->thisIndex, tp_key, particles.size());
+#endif
   root = new Node<Data>(1, 0, particles.size(), &particles[0], 0, n_treepieces - 1, nullptr);
   recursiveBuild(root, false);
-  interactions = std::vector<std::vector<Node<Data>*>> (leaves.size());
+
+  // TODO: Interactions and cache
+  interactions = std::vector<std::vector<Node<Data>*>>(leaves.size());
   cache_init = false;
   upOnly(to_search);
   initCache();
@@ -191,157 +195,155 @@ bool TreePiece<Data>::recursiveBuild(Node<Data>* node, bool saw_tp_key) {
   // store reference to splitters
   //static std::vector<Splitter>& splitters = readers.ckLocalBranch()->splitters;
 
-  if (tree_type == OCT_TREE) {
-    // check if we are inside the subtree rooted at the treepiece's key
-    if (!saw_tp_key) {
-      saw_tp_key = (node->key == tp_key);
-      if (saw_tp_key) root_from_tp_key = node;
-    }
+  // Check if we are inside the subtree rooted at the treepiece's key
+  if (!saw_tp_key) {
+    saw_tp_key = (node->key == tp_key);
+    if (saw_tp_key) root_from_tp_key = node;
+  }
 
+  bool is_light = (node->n_particles <= ceil(BUCKET_TOLERANCE * max_particles_per_leaf));
+  bool is_prefix = Utility::isPrefix(node->key, tp_key);
+  /*
+  */
 
-    bool is_light = (node->n_particles <= ceil(BUCKET_TOLERANCE * max_particles_per_leaf));
-    bool is_prefix = Utility::isPrefix(node->key, tp_key);
-    /*
-    int owner_start = node->owner_tp_start;
-    int owner_end = node->owner_tp_end;
-    bool single_owner = (owner_start == owner_end);
-    */
-
-    if (saw_tp_key) {
-      // XXX if we are under the TP key, we can stop going deeper if node is light
-      if (is_light) {
-        if (node->n_particles == 0) {
-          node->type = Node<Data>::EmptyLeaf;
-          empty_leaves.push_back(node);
-        }
-        else {
-          node->type = Node<Data>::Leaf;
-          leaves.push_back(node);
-        }
-        return true;
-      }
-    }
-    else { // still on the way to TP, we could have diverged
-      if (!is_prefix) {
-        // diverged, should be remote
-        node->type = Node<Data>::Remote;
-
-        return false;
-      }
-    }
-
-    // for all other cases, we go deeper
-
-    /*
+  if (saw_tp_key) {
+    // If we are under the TP key, we can stop going deeper if node is light
     if (is_light) {
-      if (saw_tp_key) {
-        // we can make the node a local leaf
-        if (node->n_particles == 0)
-          node->type = Node<Data>::EmptyLeaf;
-        else
-          node->type = Node<Data>::Leaf;
-
-          return true;
+      if (node->n_particles == 0) {
+        node->type = Node<Data>::EmptyLeaf;
+        empty_leaves.push_back(node);
       }
-      else if (!is_prefix) {
-        // we have diverged from the path to the subtree rooted at the treepiece's key
-        // so designate as remote
-        node->type = Node<Data>::Remote;
+      else {
+        node->type = Node<Data>::Leaf;
+        leaves.push_back(node);
+      }
+      return true;
+    }
+  } else { // Still on the way to TP, or we could have diverged
+    if (!is_prefix) {
+      // Diverged, should be marked as are mote node
+      node->type = Node<Data>::Remote;
 
-        CkAssert(node->n_particles == 0);
-        CkAssert(node->n_children == 0);
+      return false;
+    }
+  }
 
-        if (single_owner) {
-          int assigned = splitters[owner_start].n_particles;
-          if (assigned == 0) {
-            node->type = Node<Data>::RemoteEmptyLeaf;
-          }
-          else if (assigned <= BUCKET_TOLERANCE * max_particles_per_leaf) {
-            node->type = Node<Data>::RemoteLeaf;
-          }
-          else {
-            node->type = Node<Data>::Remote;
-            node->n_children = BRANCH_FACTOR;
-          }
+  // For all other cases, we go deeper
+  /* XXX: For SFC?
+  int owner_start = node->owner_tp_start;
+  int owner_end = node->owner_tp_end;
+  bool single_owner = (owner_start == owner_end);
+
+  if (is_light) {
+    if (saw_tp_key) {
+      // we can make the node a local leaf
+      if (node->n_particles == 0)
+        node->type = Node<Data>::EmptyLeaf;
+      else
+        node->type = Node<Data>::Leaf;
+
+        return true;
+    }
+    else if (!is_prefix) {
+      // we have diverged from the path to the subtree rooted at the treepiece's key
+      // so designate as remote
+      node->type = Node<Data>::Remote;
+
+      CkAssert(node->n_particles == 0);
+      CkAssert(node->n_children == 0);
+
+      if (single_owner) {
+        int assigned = splitters[owner_start].n_particles;
+        if (assigned == 0) {
+          node->type = Node<Data>::RemoteEmptyLeaf;
+        }
+        else if (assigned <= BUCKET_TOLERANCE * max_particles_per_leaf) {
+          node->type = Node<Data>::RemoteLeaf;
         }
         else {
           node->type = Node<Data>::Remote;
           node->n_children = BRANCH_FACTOR;
         }
-
-        return false;
       }
       else {
-        CkAbort("Error: can a light node be an internal node (above a TP root)?");
+        node->type = Node<Data>::Remote;
+        node->n_children = BRANCH_FACTOR;
+      }
+
+      return false;
+    }
+    else {
+      CkAbort("Error: can a light node be an internal node (above a TP root)?");
+    }
+  }
+  */
+
+  // Create children
+  node->n_children = BRANCH_FACTOR;
+  Key child_key = node->key << LOG_BRANCH_FACTOR;
+  int start = 0;
+  int finish = start + node->n_particles;
+  int non_local_children = 0;
+
+  for (int i = 0; i < node->n_children; i++) {
+    Key sibling_splitter = Utility::removeLeadingZeros(child_key + 1);
+
+    // Find number of particles in child
+    int first_ge_idx;
+    if (i < node->n_children - 1) {
+      first_ge_idx = Utility::binarySearchGE(sibling_splitter, node->particles, start, finish);
+    } else {
+      first_ge_idx = finish;
+    }
+    int n_particles = first_ge_idx - start;
+
+    /*
+    // find owner treepieces of child
+    int child_owner_start = owner_start;
+    int child_owner_end;
+    if (single_owner) {
+      child_owner_end = child_owner_start;
+    }
+    else {
+      if (i < node->n_children - 1) {
+        int first_ge_tp = Utility::binarySearchGE(sibling_splitter, &splitters[0], owner_start, owner_end);
+        child_owner_end = first_ge_tp - 1;
+        owner_start = first_ge_tp;
+      }
+      else {
+        child_owner_end = owner_end;
       }
     }
     */
 
-    // create children
-    node->n_children = BRANCH_FACTOR;
-    Key child_key = node->key << LOG_BRANCH_FACTOR;
-    int start = 0;
-    int finish = start + node->n_particles;
-    int non_local_children = 0;
+    // Create child and store in vector
+    Node<Data>* child = new Node<Data>(child_key, node->depth + 1, n_particles,
+        node->particles + start, 0, n_treepieces - 1, node, this->thisIndex);
+    /*
+    Node<Data>* child = new Node<Data>(child_key, node->depth + 1, node->particles + start,
+        n_particles, child_owner_start, child_owner_end, node);
+    */
+    node->children[i].store(child);
 
-    for (int i = 0; i < node->n_children; i++) {
-      Key sibling_splitter = Utility::removeLeadingZeros(child_key + 1);
+    // Recursive tree build
+    bool local = recursiveBuild(child, saw_tp_key);
+    if (!local) non_local_children++;
 
-      // find number of particles in child
-      int first_ge_idx;
-      if (i < node->n_children - 1) {
-        first_ge_idx = Utility::binarySearchGE(sibling_splitter, node->particles, start, finish);
-      }
-      else {
-        first_ge_idx = finish;
-      }
-      int n_particles = first_ge_idx - start;
-
-      /*
-      // find owner treepieces of child
-      int child_owner_start = owner_start;
-      int child_owner_end;
-      if (single_owner) {
-        child_owner_end = child_owner_start;
-      }
-      else {
-        if (i < node->n_children - 1) {
-          int first_ge_tp = Utility::binarySearchGE(sibling_splitter, &splitters[0], owner_start, owner_end);
-          child_owner_end = first_ge_tp - 1;
-          owner_start = first_ge_tp;
-        }
-        else {
-          child_owner_end = owner_end;
-        }
-      }
-      */
-
-      // create child and store in vector
-      Node<Data>* child = new Node<Data>(child_key, node->depth + 1, n_particles, node->particles + start, 0, n_treepieces - 1, node, this->thisIndex);
-      //Node<Data>* child = new Node<Data>(child_key, node->depth + 1, node->particles + start, n_particles, child_owner_start, child_owner_end, node);
-      node->children[i].store(child);
-
-      // recursive tree build
-      bool local = recursiveBuild(child, saw_tp_key);
-
-      if (!local) {
-        non_local_children++;
-      }
-
-      start = first_ge_idx;
-      child_key++;
-    }
-    if (non_local_children == 0) {
-      node->type = Node<Data>::Internal;
-    }
-    else {
-      node->type = Node<Data>::Boundary;
-      node->tp_index = -1;
-    }
-
-    return (non_local_children == 0);
+    start = first_ge_idx;
+    child_key++;
   }
-  return false;
+
+  if (non_local_children == 0) {
+    // All children are local, this is an internal node
+    node->type = Node<Data>::Internal;
+  }
+  else {
+    // Some or all children are remote, this is a boundary node
+    node->type = Node<Data>::Boundary;
+    node->tp_index = -1;
+  }
+
+  return (non_local_children == 0);
 }
 
 template <typename Data>
