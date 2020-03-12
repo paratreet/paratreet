@@ -1,4 +1,15 @@
-## Compilation
+# ParaTreeT: Parallel Tree Toolkit
+
+--------------------------------------------------------------------------------
+
+## Installation
+
+### 1. Build Charm++
+
+See https://github.com/UIUC-PPL/charm for instructions on building Charm++.
+We recommend building a stable release, by checking out a branch such as `v6.10.1`.
+
+### 2. Build ParaTreeT
 
 Dependent git repositories (currently only `utility`) are tracked as git submodules.
 All the following commands are executed from the top level directory.
@@ -19,12 +30,17 @@ $ make
 3. Build the ParaTreeT library.
 ```
 $ cd src
-$ make
+$ make -j
 ```
 
 ## Execution
 
-To run a 1000 particle simulation locally with 4 PEs (in SMP mode):
+To run a miniscule test simulation with 1000 particles split into TreePieces of at most 100 particles each, on 4 PEs (in SMP mode, 1 comm thread):
 ```
-$ ./charmrun +p4 ++ppn 4 +pemap 1-3 +commap 0 ++local ./paratreet -f ../inputgen/1k.tipsy
+$ ./charmrun +p3 ./paratreet -f ../inputgen/1k.tipsy -p 100 ++ppn 3 +pemap 1-3 +commap 0 ++local
+```
+
+On `jsrun` machines (e.g. LLNL Lassen, OLCF Summit):
+```
+$ jsrun -n1 -a1 -c4 ./paratreet -f ../inputgen/1k.tipsy -p 100 +ppn 4 +pemap L0-12:4
 ```
