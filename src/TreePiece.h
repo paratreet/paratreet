@@ -93,6 +93,7 @@ public:
     this->contribute(sizeof(bool), &result, CkReduction::logical_and_bool, cb);
   }
 };
+
 template <typename Data>
 TreePiece<Data>::TreePiece(const CkCallback& cb, int n_total_particles_, int n_treepieces_, TEHolder<Data> global_datai, CProxy_Resumer<Data> resumeri, CProxy_CacheManager<Data> cache_manageri, DPHolder<Data> dp_holder) : n_total_particles(n_total_particles_), n_treepieces(n_treepieces_), particle_index(0) {
   global_data = global_datai.te_proxy;
@@ -126,6 +127,7 @@ TreePiece<Data>::TreePiece(const CkCallback& cb, int n_total_particles_, int n_t
   this->contribute(cb);
   root_from_tp_key = nullptr;
 }
+
 template <typename Data>
 void TreePiece<Data>::receive(ParticleMsg* msg) {
   // copy particles to local vector
@@ -135,6 +137,7 @@ void TreePiece<Data>::receive(ParticleMsg* msg) {
   particle_index += msg->n_particles;
   delete msg;
 }
+
 template <typename Data>
 void TreePiece<Data>::check(const CkCallback& cb) {
   if (n_expected != incoming_particles.size()) {
@@ -143,10 +146,12 @@ void TreePiece<Data>::check(const CkCallback& cb) {
   }
   this->contribute(cb);
 }
+
 template <typename Data>
 void TreePiece<Data>::triggerRequest() {
   readers.ckLocalBranch()->request(this->thisProxy, this->thisIndex, n_expected);
 }
+
 template <typename Data>
 void TreePiece<Data>::build(bool to_search) {
   int n_particles_saved = particles.size(), n_particles_received = incoming_particles.size();
@@ -169,6 +174,7 @@ void TreePiece<Data>::build(bool to_search) {
   upOnly(to_search);
   initCache();
 }
+
 template <typename Data>
 bool TreePiece<Data>::recursiveBuild(Node<Data>* node, bool saw_tp_key) {
 #if DEBUG
@@ -330,6 +336,7 @@ bool TreePiece<Data>::recursiveBuild(Node<Data>* node, bool saw_tp_key) {
   }
   return false;
 }
+
 template <typename Data>
 void TreePiece<Data>::upOnly(bool first_time) {
   std::queue<Node<Data>*> going_up;
@@ -353,6 +360,7 @@ void TreePiece<Data>::upOnly(bool first_time) {
     }
   }
 }
+
 template <typename Data>
 void TreePiece<Data>::initCache() {
   if (!cache_init) {
@@ -362,12 +370,14 @@ void TreePiece<Data>::initCache() {
     cache_init = true;
   }
 }
+
 template <typename Data>
 template <typename Visitor>
 void TreePiece<Data>::startDown() {
   traverser = new DownTraverser<Data, Visitor>(this);
   goDown(1);
 }
+
 template <typename Data>
 template <typename Visitor>
 void TreePiece<Data>::startUpAndDown() {
@@ -375,6 +385,7 @@ void TreePiece<Data>::startUpAndDown() {
   traverser = new UpnDTraverser<Data, Visitor>(this);
   for (auto leaf : leaves) goDown(leaf->key);
 }
+
 template <typename Data>
 template <typename Visitor>
 void TreePiece<Data>::startDual(Key* keys_ptr, int n) {
@@ -383,21 +394,25 @@ void TreePiece<Data>::startDual(Key* keys_ptr, int n) {
   for (auto key : keys) goDown(key);
   // root needs to be the root of the searched tree, not the searching tree
 }
+
 template <typename Data>
 void TreePiece<Data>::requestNodes(Key key, int cm_index) {
   Node<Data>* node = root_from_tp_key->findNode(key);
   if (!node) CkPrintf("null found for key %lu on tp %d\n", key, this->thisIndex);
   cache_local->serviceRequest(node, cm_index);
 }
+
 template <typename Data>
 void TreePiece<Data>::goDown(Key new_key) {
   traverser->traverse(new_key);
 }
+
 template <typename Data>
 void TreePiece<Data>::processLocal(const CkCallback& cb) {
   traverser->processLocal();
   this->contribute(cb);
 }
+
 template <typename Data>
 void TreePiece<Data>::interact(const CkCallback& cb) {
   traverser->interact();
@@ -406,7 +421,6 @@ void TreePiece<Data>::interact(const CkCallback& cb) {
 
 template <typename Data>
 void TreePiece<Data>::perturb (Real timestep, bool if_flush) {
-
   if (if_flush) {
     for (auto leaf : leaves) {
       for (int i = 0; i < leaf->n_particles; i++) {
@@ -499,6 +513,7 @@ void TreePiece<Data>::perturb (Real timestep, bool if_flush) {
   } 
   particles = in_particles;
 }
+
 template <typename Data>
 void TreePiece<Data>::flush(CProxy_Reader readers) {
   // debug
@@ -510,6 +525,7 @@ void TreePiece<Data>::flush(CProxy_Reader readers) {
   particles.resize(0);
   particle_index = 0;
 }
+
 template <typename Data>
 void TreePiece<Data>::print(Node<Data>* root) {
   ostringstream oss;

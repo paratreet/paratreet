@@ -347,6 +347,7 @@ public:
     }
     cache_manager[cm_index].recvStarterPack(to_send.data(), to_send.size(), cb);
   }
+
   void request(Key* request_list, int list_size, int cm_index, TEHolder<Data> te_holder, CkCallback cb) {
     if (!storage_sorted) sortStorage();
     Comparator<Data> comp;

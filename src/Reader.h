@@ -24,7 +24,7 @@ class Reader : public CBase_Reader {
     std::vector<Key> SFCsplitters;
     Reader();
 
-    // loading particles and assigning keys
+    // Loading particles and assigning keys
     void load(std::string, const CkCallback&);
     void computeUniverseBoundingBox(const CkCallback& cb);
     void assignKeys(BoundingBox, const CkCallback&);
@@ -44,7 +44,7 @@ class Reader : public CBase_Reader {
     template <typename Data>
     void request(CProxy_TreePiece<Data>, int, int);
 
-    // sending particles to home TreePieces
+    // Sending particles to home TreePieces
     template <typename Data>
     void flush(int, int, CProxy_TreePiece<Data>);
 };
@@ -71,7 +71,7 @@ void Reader::flush(int n_total_particles, int n_treepieces, CProxy_TreePiece<Dat
     int start = 0;
     int finish = particles.size();
 
-    // find particles that belong to each splitter range and flush them
+    // Find particles that belong to each splitter range and flush them
     for (int i = 0; i < splitters.size(); i++) {
       int begin = Utility::binarySearchGE(splitters[i].from, &particles[0], start, finish);
       int end = Utility::binarySearchGE(splitters[i].to, &particles[0], begin, finish);
@@ -87,12 +87,12 @@ void Reader::flush(int n_total_particles, int n_treepieces, CProxy_TreePiece<Dat
       start = end;
     }
 
-    // free splitter memory
-    splitters.resize(0);
+    // Free splitter memory
+    splitters.clear();
   }
   else if (decomp_type == SFC_DECOMP) {
     // TODO SFC decomposition
-    // probably need to use prefix sum
+    // Probably need to use prefix sum
     int n_particles_left = particles.size();
     for (int i = 0; i < n_treepieces; i++) {
       int n_need = n_total_particles / n_treepieces;
@@ -124,8 +124,8 @@ void Reader::flush(int n_total_particles, int n_treepieces, CProxy_TreePiece<Dat
     CkAbort("Flush failure");
   }
 
-  // clean up
-  particles.resize(0);
+  // Clean up
+  particles.clear();
   particle_index = 0;
 }
 

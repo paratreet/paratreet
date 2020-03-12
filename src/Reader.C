@@ -12,14 +12,14 @@ extern int decomp_type;
 Reader::Reader() : particle_index(0) {}
 
 void Reader::load(std::string input_file, const CkCallback& cb) {
-  // open tipsy file
+  // Open tipsy file
   Tipsy::TipsyReader r(input_file);
   if (!r.status()) {
     CkPrintf("[%u] Could not open tipsy file (%s)\n", thisIndex, input_file.c_str());
     CkExit();
   }
 
-  // read header and count particles
+  // Read header and count particles
   Tipsy::header tipsyHeader = r.getHeader();
   int n_total = tipsyHeader.nbodies;
   int n_sph = tipsyHeader.nsph;
@@ -37,15 +37,15 @@ void Reader::load(std::string input_file, const CkCallback& cb) {
     start_particle += excess;
   }
 
-  // prepare bounding box
+  // Prepare bounding box
   box.reset();
   box.pe = 0.0;
   box.ke = 0.0;
 
-  // reserve space
+  // Reserve space
   particles.resize(n_particles);
 
-  // read particles and grow bounding box
+  // Read particles and grow bounding box
   if (!r.seekParticleNum(start_particle)) {
     CkAbort("Could not seek to particle\n");
   }
@@ -95,7 +95,7 @@ void Reader::load(std::string input_file, const CkCallback& cb) {
   std::cout << "[Reader " << thisIndex << "] Built bounding box: " << box << std::endl;
 #endif
 
-  // reduce to universal bounding box
+  // Reduce to universal bounding box
   contribute(sizeof(BoundingBox), &box, BoundingBox::reducer(), cb);
 }
 
@@ -112,24 +112,23 @@ void Reader::computeUniverseBoundingBox(const CkCallback& cb) {
   contribute(sizeof(BoundingBox), &box, BoundingBox::reducer(), cb);
 }
 
-void Reader::assignKeys(BoundingBox universei, const CkCallback& cb) {
-  // generate particle keys
-
-  universe = universei;
+void Reader::assignKeys(BoundingBox universe_, const CkCallback& cb) {
+  // Generate particle keys
+  universe = universe_;
   for (unsigned int i = 0; i < particles.size(); i++) {
     particles[i].key = SFC::generateKey(particles[i].position, universe.box);
 
-    // add placeholder bit
+    // Add placeholder bit
     particles[i].key |= (Key)1 << (KEY_BITS-1);
   }
 
+  // Sort particles for decomposition
+  // No need for SFC, as particles will be sorted globally
   if (decomp_type == OCT_DECOMP) {
-    // sort particles for decomposition
-    // no need for SFC, as particles will be sorted globally
     std::sort(particles.begin(), particles.end());
   }
 
-  // back to callee
+  // Back to callee
   contribute(cb);
 }
 void Reader::countOct(std::vector<Key> splitter_keys, const CkCallback& cb) {
@@ -139,9 +138,9 @@ void Reader::countOct(std::vector<Key> splitter_keys, const CkCallback& cb) {
     splitter_keys[i] = Utility::removeLeadingZeros(splitter_keys[i]);
   }
 
-  // search for the first particle whose key is greater or equal to the input key,
-  // in the range [start, finish)
-  // should also work for OCT as the particle keys are SFC keys
+  // Search for the first particle whose key is greater or equal to the input key,
+  // in the range [start, finish). This should also work for OCT as the particle
+  // keys are SFC keys.
   int start = 0;
   int finish = particles.size();
   Key from, to;
@@ -157,7 +156,7 @@ void Reader::countOct(std::vector<Key> splitter_keys, const CkCallback& cb) {
       start = end;
     }
   }
-  else { // no particles
+  else { // No particles
     for (int i = 0; i < counts.size(); i++){
       counts[i] = 0;
     }
@@ -202,28 +201,28 @@ void Reader::countSfc(const std::vector<Key>& splitter_keys, const CkCallback& c
 void Reader::pickSamples(const int oversampling_ratio, const CkCallback& cb) {
   Key* sample_keys = new Key[oversampling_ratio];
 
-  // not random, just equal intervals
+  // Not random, just equal intervals
   for (int i = 0; i < oversampling_ratio; i++) {
     int index = (particles.size() / (oversampling_ratio + 1)) * (i + 1);
     sample_keys[i] = particles[index].key;
   }
 
-  // accumulate samples
+  // Accumulate samples
   contribute(sizeof(Key) * oversampling_ratio, sample_keys, CkReduction::concat, cb);
   delete[] sample_keys;
 }
 
 void Reader::prepMessages(const std::vector<Key>& splitter_keys, const CkCallback& cb) {
-  // place particles in respective buckets
+  // Place particles in respective buckets
   std::vector<std::vector<Particle>> send_vectors(n_readers);
   for (int i = 0; i < particles.size(); i++) {
-    // use upper bound splitter index to determine Reader index
+    // Use upper bound splitter index to determine Reader index
     // [lower splitter, upper splitter)
     int bucket = Utility::binarySearchG(particles[i], &splitter_keys[0], 0, splitter_keys.size()) - 1;
     send_vectors[bucket].push_back(particles[i]);
   }
 
-  // prepare particle messages
+  // Prepare particle messages
   int old_total = particles.size();
   int new_total = 0;
   for (int bucket = 0; bucket < n_readers; bucket++) {
@@ -239,7 +238,7 @@ void Reader::prepMessages(const std::vector<Key>& splitter_keys, const CkCallbac
     }
   }
 
-  // check if all particles are assigned to buckets
+  // Check if all particles are assigned to buckets
   if (new_total != old_total)
     CkAbort("Failed to move all particles into buckets");
 
@@ -247,7 +246,7 @@ void Reader::prepMessages(const std::vector<Key>& splitter_keys, const CkCallbac
 }
 
 void Reader::redistribute() {
-  // send particles home
+  // Send particles home
   for (int bucket = 0; bucket < n_readers; bucket++) {
     if (particle_messages[bucket] != NULL) {
 #if DEBUG
@@ -260,12 +259,12 @@ void Reader::redistribute() {
 }
 
 void Reader::receive(ParticleMsg* msg) {
-  // copy particles to local vector
+  // Copy particles to local vector
   particles.resize(particle_index + msg->n_particles);
   std::memcpy(&particles[particle_index], msg->particles, msg->n_particles * sizeof(Particle));
   particle_index += msg->n_particles;
   delete msg;
-  SFCsplitters.push_back(Key(0)); // maybe use something different than splitters variable?
+  SFCsplitters.push_back(Key(0)); // Maybe use something different than splitters variable?
 }
 
 void Reader::localSort(const CkCallback& cb) {
