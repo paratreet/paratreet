@@ -12,7 +12,7 @@ We recommend building a stable release, by checking out a branch such as `v6.10.
 Dependent git repositories (currently only `utility`) are tracked as git submodules.
 All the following commands are executed from the top level directory.
 
-1. Intialize and update all submodule folders.
+1. Initialize and update all submodule folders.
 ```
 $ git submodule init
 $ git submodule update
