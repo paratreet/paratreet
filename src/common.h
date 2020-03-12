@@ -30,7 +30,6 @@ typedef double Real;
 #define LOG_BRANCH_FACTOR 3
 
 // Hyperparameters
-#define MAX_PARTICLES_PER_TP 1000
 #define MAX_PARTICLES_PER_LEAF 10
 #define LOCAL_CACHE_SIZE 5000
 #define DECOMP_TOLERANCE 1.0
