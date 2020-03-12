@@ -89,8 +89,7 @@ void Reader::flush(int n_total_particles, int n_treepieces, CProxy_TreePiece<Dat
 
     // Free splitter memory
     splitters.clear();
-  }
-  else if (decomp_type == SFC_DECOMP) {
+  } else if (decomp_type == SFC_DECOMP) {
     // TODO SFC decomposition
     // Probably need to use prefix sum
     int n_particles_left = particles.size();
@@ -120,8 +119,8 @@ void Reader::flush(int n_total_particles, int n_treepieces, CProxy_TreePiece<Dat
   }
 
   if (flush_count != particles.size()) {
-    CkPrintf("[Reader %d] ERROR! Flushed %d out of %zu particles\n", thisIndex, flush_count, particles.size());
-    CkAbort("Flush failure");
+    CkAbort("Reader %d failure: flushed %d out of %zu particles\n", thisIndex,
+        flush_count, particles.size());
   }
 
   // Clean up

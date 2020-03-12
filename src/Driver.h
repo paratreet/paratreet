@@ -65,69 +65,67 @@ public:
     smallest_particle_key = Utility::removeLeadingZeros(Key(1));
     largest_particle_key = (~Key(0));
 
-    makeNewTree(0);
+    CkPrintf("\n* Initialization\n");
+    decompose(0);
     cb.send();
   }
 
-  // Creates a new tree, by either loading particle information from input file or
-  // re-computing the universal bounding box
-  void makeNewTree(int iter) {
+  // Performs decomposition by distributing particles among TreePieces,
+  // by either loading particle information from input file or re-computing
+  // the universal bounding box
+  void decompose(int iter) {
     // Build universe
     start_time = CkWallTimer();
     CkReductionMsg* result;
     if (iter == 0) {
       readers.load(input_file, CkCallbackResumeThread((void*&)result));
-      CkPrintf("[Driver, %d] Loading Tipsy data and building universe: %.3lf ms\n",
-          iter, (CkWallTimer() - start_time) * 1000);
-    }
-    else {
-      readers.computeUniverseBoundingBox(CkCallbackResumeThread((void*&)result));
-      CkPrintf("[Driver, %d] Rebuilding universe: %.3lf ms\n", iter,
+      CkPrintf("Loading Tipsy data and building universe: %.3lf ms\n",
           (CkWallTimer() - start_time) * 1000);
+    } else {
+      readers.computeUniverseBoundingBox(CkCallbackResumeThread((void*&)result));
+      CkPrintf("Rebuilding universe: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
     }
     universe = *((BoundingBox*)result->getData());
     delete result;
 
-#ifdef DEBUG
-    std::cout << "[Driver, " << iter << "] Universal bounding box: " << universe
-      << " with volume " << universe.box.volume() << std::endl;
-#endif
+    std::cout << "Universal bounding box: " << universe << " with volume "
+      << universe.box.volume() << std::endl;
 
     // Assign keys and sort particles locally
     start_time = CkWallTimer();
     readers.assignKeys(universe, CkCallbackResumeThread());
-    CkPrintf("[Driver, %d] Assigning keys and sorting particles: %.3lf ms\n",
-        iter, (CkWallTimer() - start_time) * 1000);
+    CkPrintf("Assigning keys and sorting particles: %.3lf ms\n",
+        (CkWallTimer() - start_time) * 1000);
 
     // Set up splitters for decomposition
-    // TODO: Support other types of decompositions
+    // TODO: Support decompositions other than OCT
     start_time = CkWallTimer();
     if (decomp_type == OCT_DECOMP) {
       findOctSplitters();
-    }
-    else {
-      CkPrintf("Currently only OCT decomposition is supported\n");
-      CkExit();
+    } else {
+      CkAbort("Only OCT decomposition is currently supported\n");
     }
     std::sort(splitters.begin(), splitters.end());
     readers.setSplitters(splitters, CkCallbackResumeThread());
-    CkPrintf("[Driver, %d] Setting up splitters for decomposition: %.3lf ms\n",
-        iter, (CkWallTimer() - start_time) * 1000);
+    CkPrintf("Setting up splitters for decomposition: %.3lf ms\n",
+        (CkWallTimer() - start_time) * 1000);
 
-    // Create treepieces
+    // Create TreePieces
+    start_time = CkWallTimer();
     treepieces = CProxy_TreePiece<CentroidData>::ckNew(CkCallbackResumeThread(),
         universe.n_particles, n_treepieces, centroid_calculator, centroid_resumer,
         centroid_cache, centroid_driver, n_treepieces);
-    CkPrintf("[Driver, %d] Created %d TreePieces\n", iter, n_treepieces);
+    CkPrintf("Created %d TreePieces: %.3lf ms\n", n_treepieces,
+        (CkWallTimer() - start_time) * 1000);
 
     // Flush decomposed particles to home TreePieces
     start_time = CkWallTimer();
     readers.flush(universe.n_particles, n_treepieces, treepieces);
     CkStartQD(CkCallbackResumeThread());
-    CkPrintf("[Driver, %d] Flushing particles to TreePieces: %.3lf ms\n", iter,
+    CkPrintf("Flushing particles to TreePieces: %.3lf ms\n",
         (CkWallTimer() - start_time) * 1000);
 
-#ifdef DEBUG
+#if DEBUG
     // Check if all treepieces have received the right number of particles
     treepieces.check(CkCallbackResumeThread());
 #endif
@@ -139,12 +137,13 @@ public:
   // Core iterative loop of the simulation
   void run(CkCallback cb) {
     for (int iter = 0; iter < num_iterations; iter++) {
+      CkPrintf("\n* Iteration %d\n", iter);
+
       // Start local tree build in TreePieces
       start_time = CkWallTimer();
       treepieces.build(true);
       CkWaitQD();
-      CkPrintf("[Driver, %d] Local tree build: %.3lf ms\n", iter,
-          (CkWallTimer() - start_time) * 1000);
+      CkPrintf("Local tree build: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
 
       // Prefetch into cache
       start_time = CkWallTimer();
@@ -156,7 +155,7 @@ public:
       */
       centroid_driver.loadCache(CkCallbackResumeThread());
       CkWaitQD();
-      CkPrintf("[Driver, %d] TreeElement cache loading: %.3lf ms\n", iter,
+      CkPrintf("TreeElement cache loading: %.3lf ms\n",
           (CkWallTimer() - start_time) * 1000);
 
       // Perform downward and upward traversals (Barnes-Hut)
@@ -167,14 +166,13 @@ public:
 #if DELAYLOCAL
       //treepieces.processLocal(CkCallbackResumeThread());
 #endif
-      CkPrintf("[Driver, %d] Traversal done: %.3lf ms\n", iter,
-          (CkWallTimer() - start_time) * 1000);
+      CkPrintf("Tree traversal: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
 
       // TODO: Perform interactions
       /*
       start_time = CkWallTimer();
       treepieces.interact(CkCallbackResumeThread());
-      CkPrintf("[Driver, %d] Interactions done: %lf seconds\n", iter, CkWallTimer() - start_time);
+      CkPrintf("Interactions: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
       count_manager.sum(CkCallback(CkReductionTarget(Main, terminate), thisProxy));
       */
 
@@ -183,13 +181,12 @@ public:
       bool complete_rebuild = (iter % flush_period == flush_period-1);
       treepieces.perturb(0.1, complete_rebuild); // 0.1s for example
       CkWaitQD();
-      CkPrintf("[Driver, %d] Perturbations done: %.3lf ms\n", iter,
-          (CkWallTimer() - start_time) * 1000);
+      CkPrintf("Perturbations: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
 
-      // Completely rebuild the tree
+      // Destroy treepices and perform decomposition from scratch
       if (complete_rebuild) {
         treepieces.ckDestroy();
-        makeNewTree(iter+1);
+        decompose(iter+1);
       }
 
       // Clear cache and other storages used in this iteration

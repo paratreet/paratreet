@@ -15,8 +15,7 @@ void Reader::load(std::string input_file, const CkCallback& cb) {
   // Open tipsy file
   Tipsy::TipsyReader r(input_file);
   if (!r.status()) {
-    CkPrintf("[%u] Could not open tipsy file (%s)\n", thisIndex, input_file.c_str());
-    CkExit();
+    CkAbort("Reader %d failed to open tipsy file %s\n", thisIndex, input_file.c_str());
   }
 
   // Read header and count particles
@@ -32,8 +31,7 @@ void Reader::load(std::string input_file, const CkCallback& cb) {
   if (thisIndex < (unsigned int)excess) {
     n_particles++;
     start_particle += thisIndex;
-  }
-  else {
+  } else {
     start_particle += excess;
   }
 
@@ -131,6 +129,7 @@ void Reader::assignKeys(BoundingBox universe_, const CkCallback& cb) {
   // Back to callee
   contribute(cb);
 }
+
 void Reader::countOct(std::vector<Key> splitter_keys, const CkCallback& cb) {
   std::vector<int> counts;
   counts.resize(splitter_keys.size()/2);

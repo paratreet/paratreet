@@ -130,7 +130,9 @@ TreePiece<Data>::TreePiece(const CkCallback& cb, int n_total_particles_, int n_t
 
 template <typename Data>
 void TreePiece<Data>::receive(ParticleMsg* msg) {
-  // copy particles to local vector
+  // Copy particles to local vector
+  // TODO: Remove memcpy by just storing the pointer to msg->particles
+  // and using it in tree build
   int initial_size = incoming_particles.size();
   incoming_particles.resize(initial_size + msg->n_particles);
   std::memcpy(&incoming_particles[initial_size], msg->particles, msg->n_particles * sizeof(Particle));
@@ -154,19 +156,24 @@ void TreePiece<Data>::triggerRequest() {
 
 template <typename Data>
 void TreePiece<Data>::build(bool to_search) {
-  int n_particles_saved = particles.size(), n_particles_received = incoming_particles.size();
+  int n_particles_saved = particles.size();
+  int n_particles_received = incoming_particles.size();
+
+  // Copy over received particles
   particles.resize(n_particles_saved + n_particles_received);
   std::copy(incoming_particles.begin(), incoming_particles.end(), particles.begin() + n_particles_saved);
-  incoming_particles.resize(0);
-  // sort particles received from readers
+  incoming_particles.clear();
+
+  // Sort particles
   std::sort(particles.begin(), particles.end());
-  // create global root and recurse
+
+  // Create global root and recurse
 #if DEBUG
   CkPrintf("[TP %d] key: 0x%" PRIx64 " particles: %d\n", this->thisIndex, tp_key, particles.size());
 #endif
-  leaves.resize(0);
-  empty_leaves.resize(0);
-  local_travs.resize(0);
+  leaves.clear();
+  empty_leaves.clear();
+  local_travs.clear();
   root = new Node<Data>(1, 0, particles.size(), &particles[0], 0, n_treepieces - 1, nullptr);
   recursiveBuild(root, false);
   interactions = std::vector<std::vector<Node<Data>*>> (leaves.size());
