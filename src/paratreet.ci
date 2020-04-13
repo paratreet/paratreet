@@ -83,7 +83,7 @@ mainmodule paratreet {
     entry TreePiece(const CkCallback&, int, int, TEHolder<Data>, CProxy_Resumer<Data>, CProxy_CacheManager<Data>, DPHolder<Data>);
     entry void receive(ParticleMsg*);
     entry void check(const CkCallback&);
-    entry void localTreeBuild(bool);
+    entry void buildTree();
     entry void triggerRequest();
     template<typename Visitor> entry void startDown();
     template<typename Visitor> entry void startUpAndDown();

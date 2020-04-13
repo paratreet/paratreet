@@ -61,15 +61,15 @@ public:
   void receive(ParticleMsg*);
   void check(const CkCallback&);
   void triggerRequest();
-  void localTreeBuild(bool to_search = true);
+  void buildTree();
   bool recursiveBuild(Node<Data>*, bool);
-  void upOnly(bool);
+  void populateTree();
   inline void initCache();
   void requestNodes(Key, int);
   template<typename Visitor> void startDown();
   template<typename Visitor> void startUpAndDown();
   template<typename Visitor> void startDual(Key*, int);
-  void goDown(Key); 
+  void goDown(Key);
   void processLocal(const CkCallback&);
   void interact(const CkCallback&);
   void print(Node<Data>*);
@@ -155,7 +155,7 @@ void TreePiece<Data>::triggerRequest() {
 }
 
 template <typename Data>
-void TreePiece<Data>::localTreeBuild(bool to_search) {
+void TreePiece<Data>::buildTree() {
   int n_particles_saved = particles.size();
   int n_particles_received = incoming_particles.size();
 
@@ -179,10 +179,14 @@ void TreePiece<Data>::localTreeBuild(bool to_search) {
   root = new Node<Data>(1, 0, particles.size(), &particles[0], 0, n_treepieces - 1, nullptr);
   recursiveBuild(root, false);
 
-  // TODO: Interactions and cache
+  // Initialize interactions vector: filled in during traversal
   interactions = std::vector<std::vector<Node<Data>*>>(leaves.size());
+
+  // Populate the tree structure (including TreeElements)
+  populateTree();
+
+  // Initialize cache
   cache_init = false;
-  upOnly(to_search);
   initCache();
 }
 
@@ -347,25 +351,28 @@ bool TreePiece<Data>::recursiveBuild(Node<Data>* node, bool saw_tp_key) {
 }
 
 template <typename Data>
-void TreePiece<Data>::upOnly(bool first_time) {
+void TreePiece<Data>::populateTree() {
+  // Populates the global tree structure by going up the tree
   std::queue<Node<Data>*> going_up;
+
   for (auto leaf : leaves) {
     leaf->data = Data(leaf->particles, leaf->n_particles);
     going_up.push(leaf);
   }
+
   if (!leaves.size()) going_up.push(root_from_tp_key);
   else for (auto empty_leaf : empty_leaves) going_up.push(empty_leaf);
+
   while (going_up.size()) {
     Node<Data>* node = going_up.front();
     going_up.pop();
     if (node->key == tp_key) {
       global_data[tp_key >> LOG_BRANCH_FACTOR].recvData(node->data, true);
-    }
-    else {
+    } else {
       Node<Data>* parent = node->parent;
       parent->data += node->data;
       parent->wait_count--;
-      if (parent->wait_count == 0) going_up.push(parent); 
+      if (parent->wait_count == 0) going_up.push(parent);
     }
   }
 }

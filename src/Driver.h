@@ -139,15 +139,15 @@ public:
     for (int iter = 0; iter < num_iterations; iter++) {
       CkPrintf("\n* Iteration %d\n", iter);
 
-      // Start local tree build in TreePieces
+      // Start tree build in TreePieces
       start_time = CkWallTimer();
       if (tree_type == OCT_TREE) {
-        treepieces.localTreeBuild(true);
+        treepieces.buildTree();
       } else {
         CkAbort("Only octree is currently supported");
       }
       CkWaitQD();
-      CkPrintf("Local tree build: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
+      CkPrintf("Tree build: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
 
       // Prefetch into cache
       start_time = CkWallTimer();
