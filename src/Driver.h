@@ -35,7 +35,6 @@ extern CProxy_TreeCanopy<CentroidData> centroid_calculator;
 extern CProxy_CacheManager<CentroidData> centroid_cache;
 extern CProxy_Resumer<CentroidData> centroid_resumer;
 extern CProxy_CountManager count_manager;
-extern CProxy_Driver<CentroidData> centroid_driver;
 
 template <typename Data>
 struct Comparator {
@@ -114,7 +113,7 @@ public:
     start_time = CkWallTimer();
     treepieces = CProxy_TreePiece<CentroidData>::ckNew(CkCallbackResumeThread(),
         universe.n_particles, n_treepieces, centroid_calculator, centroid_resumer,
-        centroid_cache, centroid_driver, n_treepieces);
+        centroid_cache, this->thisProxy, n_treepieces);
     CkPrintf("Created %d TreePieces: %.3lf ms\n", n_treepieces,
         (CkWallTimer() - start_time) * 1000);
 
@@ -157,7 +156,7 @@ public:
       centroid_cache.template startPrefetch<GravityVisitor>(this->thisProxy,
           centroid_calculator, CkCallback::ignore);
       */
-      centroid_driver.loadCache(CkCallbackResumeThread());
+      this->thisProxy.loadCache(CkCallbackResumeThread());
       CkWaitQD();
       CkPrintf("TreeCanopy cache loading: %.3lf ms\n",
           (CkWallTimer() - start_time) * 1000);
@@ -177,7 +176,7 @@ public:
       start_time = CkWallTimer();
       treepieces.interact(CkCallbackResumeThread());
       CkPrintf("Interactions: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
-      count_manager.sum(CkCallback(CkReductionTarget(Main, terminate), thisProxy));
+      count_manager.sum(CkCallback(CkReductionTarget(Main, terminate), this->thisProxy));
       */
 
       // Move the particles in TreePieces
