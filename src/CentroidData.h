@@ -8,7 +8,6 @@
 #include "ParticleComp.h"
 #include "OrientedBox.h"
 
-
 struct CentroidData {
   Vector3D<Real> moment;
   Real sum_mass;
@@ -43,6 +42,7 @@ struct CentroidData {
     count += cd.count;
     return *this;
   }
+
   const CentroidData& operator= (const CentroidData& cd) {
     moment = cd.moment;
     sum_mass = cd.sum_mass;
@@ -51,6 +51,7 @@ struct CentroidData {
     rsq = cd.rsq;
     return *this;
   }
+
   void pup(PUP::er& p) {
     p | moment;
     p | sum_mass;
@@ -58,6 +59,7 @@ struct CentroidData {
     p | count;
     p | rsq;
   }
+
   Vector3D<Real> getCentroid() const {
     return moment / sum_mass;
   }
