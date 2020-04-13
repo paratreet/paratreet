@@ -38,8 +38,8 @@ public:
   }
   void prepPrefetch(Node<Data>*);
   template <typename Visitor>
-  void startPrefetch(DPHolder<Data>, TEHolder<Data>, CkCallback);
-  void startParentPrefetch(DPHolder<Data>, TEHolder<Data>, CkCallback);
+  void startPrefetch(DPHolder<Data>, TCHolder<Data>, CkCallback);
+  void startParentPrefetch(DPHolder<Data>, TCHolder<Data>, CkCallback);
   void connect(Node<Data>*, bool);
   void requestNodes(std::pair<Key, int>);
   void serviceRequest(Node<Data>*, int);
@@ -72,12 +72,12 @@ public:
 
 template <typename Data>
 template <typename Visitor>
-void CacheManager<Data>::startPrefetch(DPHolder<Data> dp_holder, TEHolder<Data> global_data, CkCallback cb) {
-  dp_holder.d_proxy.template prefetch<Visitor>(nodewide_data, this->thisIndex, global_data.te_proxy, cb);
+void CacheManager<Data>::startPrefetch(DPHolder<Data> dp_holder, TCHolder<Data> global_data, CkCallback cb) {
+  dp_holder.d_proxy.template prefetch<Visitor>(nodewide_data, this->thisIndex, global_data.tc_proxy, cb);
 }
 
 template <typename Data>
-void CacheManager<Data>::startParentPrefetch(DPHolder<Data> dp_holder, TEHolder<Data> global_data, CkCallback cb) {
+void CacheManager<Data>::startParentPrefetch(DPHolder<Data> dp_holder, TCHolder<Data> global_data, CkCallback cb) {
   std::set<Key> request_list;
   for (Key k : open_list) {
     for (int i = 0; i < BRANCH_FACTOR; i++) {
@@ -87,7 +87,7 @@ void CacheManager<Data>::startParentPrefetch(DPHolder<Data> dp_holder, TEHolder<
   request_list.insert(1);
   std::vector<Key> flat_rl (request_list.size());
   std::copy(request_list.begin(), request_list.end(), flat_rl.begin());
-  dp_holder.d_proxy.request(flat_rl.data(), flat_rl.size(), this->thisIndex, global_data.te_proxy, cb);
+  dp_holder.d_proxy.request(flat_rl.data(), flat_rl.size(), this->thisIndex, global_data.tc_proxy, cb);
 }
 
 template <typename Data>

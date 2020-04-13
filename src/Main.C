@@ -6,10 +6,10 @@
 #include "Reader.h"
 #include "Splitter.h"
 #include "TreePiece.h"
+#include "TreeCanopy.h"
 #include "BoundingBox.h"
 #include "BufferedVec.h"
 #include "Utility.h"
-#include "TreeElement.h"
 #include "DensityVisitor.h"
 #include "GravityVisitor.h"
 #include "PressureVisitor.h"
@@ -31,7 +31,7 @@
 /* readonly */ int num_iterations;
 /* readonly */ int num_share_levels;
 /* readonly */ int flush_period;
-/* readonly */ CProxy_TreeElement<CentroidData> centroid_calculator;
+/* readonly */ CProxy_TreeCanopy<CentroidData> centroid_calculator;
 /* readonly */ CProxy_CacheManager<CentroidData> centroid_cache;
 /* readonly */ CProxy_Resumer<CentroidData> centroid_resumer;
 /* readonly */ CProxy_CountManager count_manager;
@@ -148,7 +148,7 @@ class Main : public CBase_Main {
     readers = CProxy_Reader::ckNew();
 
     // Create centroid data related chares
-    centroid_calculator = CProxy_TreeElement<CentroidData>::ckNew();
+    centroid_calculator = CProxy_TreeCanopy<CentroidData>::ckNew();
     centroid_cache = CProxy_CacheManager<CentroidData>::ckNew();
     centroid_resumer = CProxy_Resumer<CentroidData>::ckNew();
     centroid_driver = CProxy_Driver<CentroidData>::ckNew(centroid_cache, 0);

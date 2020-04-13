@@ -47,7 +47,7 @@ public:
   Node<Data>* root_from_tp_key;
   Traverser<Data>* traverser;
   std::vector<std::pair<Node<Data>*, int>> local_travs;
-  CProxy_TreeElement<Data> global_data;
+  CProxy_TreeCanopy<Data> global_data;
   CProxy_CacheManager<Data> cache_manager;
   CacheManager<Data>* cache_local;
   CProxy_Resumer<Data> resumer;
@@ -56,7 +56,7 @@ public:
   // debug
   std::vector<Particle> flushed_particles;
 
-  TreePiece(const CkCallback&, int, int, TEHolder<Data>,
+  TreePiece(const CkCallback&, int, int, TCHolder<Data>,
     CProxy_Resumer<Data>, CProxy_CacheManager<Data>, DPHolder<Data>);
   void receive(ParticleMsg*);
   void check(const CkCallback&);
@@ -95,8 +95,8 @@ public:
 };
 
 template <typename Data>
-TreePiece<Data>::TreePiece(const CkCallback& cb, int n_total_particles_, int n_treepieces_, TEHolder<Data> global_datai, CProxy_Resumer<Data> resumeri, CProxy_CacheManager<Data> cache_manageri, DPHolder<Data> dp_holder) : n_total_particles(n_total_particles_), n_treepieces(n_treepieces_), particle_index(0) {
-  global_data = global_datai.te_proxy;
+TreePiece<Data>::TreePiece(const CkCallback& cb, int n_total_particles_, int n_treepieces_, TCHolder<Data> global_datai, CProxy_Resumer<Data> resumeri, CProxy_CacheManager<Data> cache_manageri, DPHolder<Data> dp_holder) : n_total_particles(n_total_particles_), n_treepieces(n_treepieces_), particle_index(0) {
+  global_data = global_datai.tc_proxy;
   resumer = resumeri;
   resumer.ckLocalBranch()->tp_proxy = this->thisProxy;
   cache_manager = cache_manageri;
@@ -182,7 +182,7 @@ void TreePiece<Data>::buildTree() {
   // Initialize interactions vector: filled in during traversal
   interactions = std::vector<std::vector<Node<Data>*>>(leaves.size());
 
-  // Populate the tree structure (including TreeElements)
+  // Populate the tree structure (including TreeCanopy)
   populateTree();
 
   // Initialize cache
@@ -368,7 +368,7 @@ void TreePiece<Data>::populateTree() {
     going_up.pop();
     if (node->key == tp_key) {
       // We are at the root of the TreePiece, send accumulated data to
-      // parent TreeElement
+      // parent TreeCanopy
       global_data[tp_key >> LOG_BRANCH_FACTOR].recvData(node->data, true);
     } else {
       // Add this node's data to the parent, and add parent to the queue

@@ -1,5 +1,5 @@
-#ifndef PARATREET_TREEELEMENT_H_
-#define PARATREET_TREEELEMENT_H_
+#ifndef PARATREET_TREECANOPY_H_
+#define PARATREET_TREECANOPY_H_
 
 #include "paratreet.decl.h"
 #include "templates.h"
@@ -13,7 +13,7 @@ template<typename Data>
 class CProxy_CacheManager;
 
 template <typename Data>
-class TreeElement : public CBase_TreeElement<Data> {
+class TreeCanopy : public CBase_TreeCanopy<Data> {
 private:
   Data data;
   int wait_count;
@@ -22,18 +22,18 @@ private:
   CProxy_CacheManager<Data> cache_manager;
   CProxy_Driver<Data> driver;
 public:
-  TreeElement();
+  TreeCanopy();
   void reset();
   void recvProxies(TPHolder<Data>, int, CProxy_CacheManager<Data>, DPHolder<Data>);
   void recvData (Data, bool);
   void requestData(int);
   void print() {
-    CkPrintf("[TE %d] on PE %d from tp_index %d\n", this->thisIndex, CkMyPe(), tp_index);
+    CkPrintf("[TC %d] on PE %d from tp_index %d\n", this->thisIndex, CkMyPe(), tp_index);
   }
 };
 
 template <typename Data>
-void TreeElement<Data>::recvProxies(TPHolder<Data> tp_holderi, int tp_indexi,
+void TreeCanopy<Data>::recvProxies(TPHolder<Data> tp_holderi, int tp_indexi,
     CProxy_CacheManager<Data> cache_manageri, DPHolder<Data> dp_holder) {
   tp_proxy = tp_holderi.tp_proxy;
   tp_index = tp_indexi;
@@ -44,22 +44,22 @@ void TreeElement<Data>::recvProxies(TPHolder<Data> tp_holderi, int tp_indexi,
 }
 
 template <typename Data>
-TreeElement<Data>::TreeElement() : data(Data()) {}
+TreeCanopy<Data>::TreeCanopy() : data(Data()) {}
 
 template <typename Data>
-void TreeElement<Data>::reset() {
+void TreeCanopy<Data>::reset() {
   data = Data();
   wait_count = 8;
 }
 
 template <typename Data>
-void TreeElement<Data>::requestData(int cm_index) {
+void TreeCanopy<Data>::requestData(int cm_index) {
   if (tp_index >= 0) tp_proxy[tp_index].requestNodes(this->thisIndex, cm_index);
   else cache_manager[cm_index].restoreData(std::make_pair(this->thisIndex, data));
 }
 
 template <typename Data>
-void TreeElement<Data>::recvData (Data datai, bool from_TP) {
+void TreeCanopy<Data>::recvData (Data datai, bool from_TP) {
   if (wait_count == 0) reset();
   data += datai;
   wait_count--;
@@ -75,4 +75,4 @@ void TreeElement<Data>::recvData (Data datai, bool from_TP) {
   }
 }
 
-#endif // PARATREET_TREEELEMENT_H_
+#endif // PARATREET_TREECANOPY_H_

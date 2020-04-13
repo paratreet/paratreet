@@ -10,10 +10,10 @@
 #include "Reader.h"
 #include "Splitter.h"
 #include "TreePiece.h"
+#include "TreeCanopy.h"
 #include "BoundingBox.h"
 #include "BufferedVec.h"
 #include "Utility.h"
-#include "TreeElement.h"
 #include "DensityVisitor.h"
 #include "GravityVisitor.h"
 #include "PressureVisitor.h"
@@ -31,7 +31,7 @@ extern int decomp_type;
 extern int tree_type;
 extern int num_iterations;
 extern int flush_period;
-extern CProxy_TreeElement<CentroidData> centroid_calculator;
+extern CProxy_TreeCanopy<CentroidData> centroid_calculator;
 extern CProxy_CacheManager<CentroidData> centroid_cache;
 extern CProxy_Resumer<CentroidData> centroid_resumer;
 extern CProxy_CountManager count_manager;
@@ -159,7 +159,7 @@ public:
       */
       centroid_driver.loadCache(CkCallbackResumeThread());
       CkWaitQD();
-      CkPrintf("TreeElement cache loading: %.3lf ms\n",
+      CkPrintf("TreeCanopy cache loading: %.3lf ms\n",
           (CkWallTimer() - start_time) * 1000);
 
       // Perform downward and upward traversals (Barnes-Hut)
@@ -317,7 +317,7 @@ public:
   }
 
   template <typename Visitor>
-  void prefetch(Data nodewide_data, int cm_index, TEHolder<Data> te_holder, CkCallback cb) {
+  void prefetch(Data nodewide_data, int cm_index, TCHolder<Data> tc_holder, CkCallback cb) {
     // do traversal on the root, send everything
     if (!storage_sorted) sortStorage();
     std::queue<int> node_indices; // better for cache. plus no requirement here on order
@@ -349,7 +349,7 @@ public:
     cache_manager[cm_index].recvStarterPack(to_send.data(), to_send.size(), cb);
   }
 
-  void request(Key* request_list, int list_size, int cm_index, TEHolder<Data> te_holder, CkCallback cb) {
+  void request(Key* request_list, int list_size, int cm_index, TCHolder<Data> tc_holder, CkCallback cb) {
     if (!storage_sorted) sortStorage();
     Comparator<Data> comp;
     typename std::vector<std::pair<Key, Data> >::iterator it;

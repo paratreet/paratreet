@@ -9,25 +9,23 @@ class CProxy_TreePiece;
 template <typename Data>
 struct TPHolder {
   CProxy_TreePiece<Data> tp_proxy;
-  TPHolder (CProxy_TreePiece<Data> tp_proxyi) :
-  tp_proxy(tp_proxyi) {}
+  TPHolder(CProxy_TreePiece<Data> tp_proxy_) : tp_proxy(tp_proxy_) {}
   TPHolder() {}
-  void pup (PUP::er& p) {
+  void pup(PUP::er& p) {
     p | tp_proxy;
   }
 };
 
 template <typename Data>
-class CProxy_TreeElement;
+class CProxy_TreeCanopy;
 
 template <typename Data>
-struct TEHolder {
-  CProxy_TreeElement<Data> te_proxy;
-  TEHolder (CProxy_TreeElement<Data> te_proxyi) :
-  te_proxy(te_proxyi) {}
-  TEHolder() {}
-  void pup (PUP::er& p) {
-    p | te_proxy;
+struct TCHolder {
+  CProxy_TreeCanopy<Data> tc_proxy;
+  TCHolder(CProxy_TreeCanopy<Data> tc_proxy_) : tc_proxy(tc_proxy_) {}
+  TCHolder() {}
+  void pup(PUP::er& p) {
+    p | tc_proxy;
   }
 };
 
@@ -37,10 +35,9 @@ class CProxy_Driver;
 template <typename Data>
 struct DPHolder {
   CProxy_Driver<Data> d_proxy;
-  DPHolder (CProxy_Driver<Data> d_proxyi) :
-  d_proxy(d_proxyi) {}
+  DPHolder(CProxy_Driver<Data> d_proxy_) : d_proxy(d_proxy_) {}
   DPHolder() {}
-  void pup (PUP::er& p) {
+  void pup(PUP::er& p) {
     p | d_proxy;
   }
 };
