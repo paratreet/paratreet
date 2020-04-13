@@ -367,8 +367,12 @@ void TreePiece<Data>::populateTree() {
     Node<Data>* node = going_up.front();
     going_up.pop();
     if (node->key == tp_key) {
+      // We are at the root of the TreePiece, send accumulated data to
+      // parent TreeElement
       global_data[tp_key >> LOG_BRANCH_FACTOR].recvData(node->data, true);
     } else {
+      // Add this node's data to the parent, and add parent to the queue
+      // if all children have contributed
       Node<Data>* parent = node->parent;
       parent->data += node->data;
       parent->wait_count--;
