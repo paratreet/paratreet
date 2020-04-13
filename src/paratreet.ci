@@ -55,8 +55,8 @@ mainmodule paratreet {
     entry void addCache(MultiData<Data>);
     entry void restoreData(std::pair<Key, Data>);
     template <typename Visitor>
-    entry void startPrefetch(DPHolder<Data>, TCHolder<Data>, CkCallback);
-    entry void startParentPrefetch(DPHolder<Data>, TCHolder<Data>, CkCallback);
+    entry void startPrefetch(DPHolder<Data>, CkCallback);
+    entry void startParentPrefetch(DPHolder<Data>, CkCallback);
     entry void destroy(bool);
   };
 #if GROUPCACHE
@@ -68,7 +68,7 @@ mainmodule paratreet {
   extern entry [aggregate] void CacheManager<CentroidData> restoreData(std::pair<Key, CentroidData>);
   extern entry [aggregate] void CacheManager<CentroidData> addCache(MultiData<CentroidData>);
   extern entry [aggregate] void CacheManager<CentroidData> requestNodes(std::pair<Key, int>);
-  extern entry void CacheManager<CentroidData> startPrefetch<GravityVisitor>(DPHolder<CentroidData>, TCHolder<CentroidData>, CkCallback); 
+  extern entry void CacheManager<CentroidData> startPrefetch<GravityVisitor>(DPHolder<CentroidData>, CkCallback); 
 
   template <typename Data>
   group Resumer {
@@ -124,11 +124,11 @@ mainmodule paratreet {
     entry void recvTE(std::pair<Key, Data>);
     entry void loadCache(CkCallback);
     template <typename Visitor>
-    entry void prefetch(Data, int, TCHolder<Data>, CkCallback);
-    entry void request(Key request_list [list_size], int list_size, int, TCHolder<Data>, CkCallback);
+    entry void prefetch(Data, int, CkCallback);
+    entry void request(Key request_list [list_size], int list_size, int, CkCallback);
   }
   chare Driver<CentroidData>;
-  extern entry void Driver<CentroidData> prefetch<GravityVisitor> (CentroidData, int, TCHolder<CentroidData>, CkCallback);
+  extern entry void Driver<CentroidData> prefetch<GravityVisitor> (CentroidData, int, CkCallback);
 
   group Reader {
     entry Reader();

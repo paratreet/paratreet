@@ -15,16 +15,8 @@
 #include "OrientedBox.h"
 
 #include <queue>
-#include <set>
-#include <stack>
-#include <queue>
 #include <vector>
 #include <fstream>
-#include <sstream>
-#include <cstring>
-#include <atomic>
-#include <mutex>
-#include <bitset>
 
 extern CProxy_Reader readers;
 extern int max_particles_per_leaf;
@@ -42,19 +34,18 @@ public:
   int n_treepieces;
   int particle_index;
   int n_expected;
-  Key tp_key; // should be a prefix of all particle keys underneath this node
+  Key tp_key; // Should be a prefix of all particle keys underneath this node
   Node<Data>* root;
   Node<Data>* root_from_tp_key;
   Traverser<Data>* traverser;
   std::vector<std::pair<Node<Data>*, int>> local_travs;
-  CProxy_TreeCanopy<Data> global_data;
+  CProxy_TreeCanopy<Data> tc_proxy;
   CProxy_CacheManager<Data> cache_manager;
   CacheManager<Data>* cache_local;
   CProxy_Resumer<Data> resumer;
   std::vector<std::vector<Node<Data>*>> interactions;
   bool cache_init;
-  // debug
-  std::vector<Particle> flushed_particles;
+  std::vector<Particle> flushed_particles; // For debugging
 
   TreePiece(const CkCallback&, int, int, TCHolder<Data>,
     CProxy_Resumer<Data>, CProxy_CacheManager<Data>, DPHolder<Data>);
@@ -76,7 +67,7 @@ public:
   void perturb (Real timestep, bool);
   void flush(CProxy_Reader);
 
-  // debug
+  // For debugging
   void checkParticlesChanged(const CkCallback& cb) {
     bool result = true;
     if (particles.size() != flushed_particles.size()) {
@@ -95,11 +86,16 @@ public:
 };
 
 template <typename Data>
-TreePiece<Data>::TreePiece(const CkCallback& cb, int n_total_particles_, int n_treepieces_, TCHolder<Data> global_datai, CProxy_Resumer<Data> resumeri, CProxy_CacheManager<Data> cache_manageri, DPHolder<Data> dp_holder) : n_total_particles(n_total_particles_), n_treepieces(n_treepieces_), particle_index(0) {
-  global_data = global_datai.tc_proxy;
-  resumer = resumeri;
+TreePiece<Data>::TreePiece(const CkCallback& cb, int n_total_particles_,
+    int n_treepieces_, TCHolder<Data> tc_holder, CProxy_Resumer<Data> resumer_,
+    CProxy_CacheManager<Data> cache_manager_, DPHolder<Data> dp_holder) {
+  n_total_particles = n_total_particles_;
+  n_treepieces = n_treepieces_;
+  particle_index = 0;
+  tc_proxy = tc_holder.proxy;
+  resumer = resumer_;
   resumer.ckLocalBranch()->tp_proxy = this->thisProxy;
-  cache_manager = cache_manageri;
+  cache_manager = cache_manager_;
   cache_local = cache_manager.ckLocalBranch();
   resumer.ckLocalBranch()->cache_local = cache_local;
   cache_local->resumer = resumer;
@@ -109,20 +105,19 @@ TreePiece<Data>::TreePiece(const CkCallback& cb, int n_total_particles_, int n_t
     // OCT decomposition
     n_expected = readers.ckLocalBranch()->splitters[this->thisIndex].n_particles;
     tp_key = readers.ckLocalBranch()->splitters[this->thisIndex].tp_key;
-  }
-  else if (decomp_type == SFC_DECOMP) {
+  } else if (decomp_type == SFC_DECOMP) {
     // SFC decomposition
     n_expected = n_total_particles / n_treepieces;
     if (this->thisIndex < (n_total_particles % n_treepieces))
       n_expected++;
-      // TODO tp_key needs to be found in local tree build
+    // TODO tp_key needs to be found in local tree build
   }
-  global_data[tp_key].recvProxies(TPHolder<Data>(this->thisProxy), this->thisIndex, cache_manager, dp_holder);
+
+  tc_proxy[tp_key].recvProxies(TPHolder<Data>(this->thisProxy), this->thisIndex, cache_manager, dp_holder);
   Key temp = tp_key;
   while (temp > 0 && temp % BRANCH_FACTOR == 0) {
     temp /= BRANCH_FACTOR;
-    //CkPrintf("temp = %d\n", temp);
-    global_data[temp].recvProxies(TPHolder<Data>(this->thisProxy), -1, cache_manager, dp_holder);
+    tc_proxy[temp].recvProxies(TPHolder<Data>(this->thisProxy), -1, cache_manager, dp_holder);
  }
   this->contribute(cb);
   root_from_tp_key = nullptr;
@@ -369,7 +364,7 @@ void TreePiece<Data>::populateTree() {
     if (node->key == tp_key) {
       // We are at the root of the TreePiece, send accumulated data to
       // parent TreeCanopy
-      global_data[tp_key >> LOG_BRANCH_FACTOR].recvData(node->data, true);
+      tc_proxy[tp_key >> LOG_BRANCH_FACTOR].recvData(node->data, true);
     } else {
       // Add this node's data to the parent, and add parent to the queue
       // if all children have contributed

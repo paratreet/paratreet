@@ -25,23 +25,12 @@ public:
   TreeCanopy();
   void reset();
   void recvProxies(TPHolder<Data>, int, CProxy_CacheManager<Data>, DPHolder<Data>);
-  void recvData (Data, bool);
+  void recvData(Data, bool);
   void requestData(int);
   void print() {
     CkPrintf("[TC %d] on PE %d from tp_index %d\n", this->thisIndex, CkMyPe(), tp_index);
   }
 };
-
-template <typename Data>
-void TreeCanopy<Data>::recvProxies(TPHolder<Data> tp_holderi, int tp_indexi,
-    CProxy_CacheManager<Data> cache_manageri, DPHolder<Data> dp_holder) {
-  tp_proxy = tp_holderi.tp_proxy;
-  tp_index = tp_indexi;
-  cache_manager = cache_manageri;
-  wait_count = 8;
-  driver = dp_holder.d_proxy;
-  data = Data();
-}
 
 template <typename Data>
 TreeCanopy<Data>::TreeCanopy() : data(Data()) {}
@@ -50,6 +39,17 @@ template <typename Data>
 void TreeCanopy<Data>::reset() {
   data = Data();
   wait_count = 8;
+}
+
+template <typename Data>
+void TreeCanopy<Data>::recvProxies(TPHolder<Data> tp_holder, int tp_index_,
+    CProxy_CacheManager<Data> cache_manager_, DPHolder<Data> dp_holder) {
+  tp_proxy = tp_holder.proxy;
+  tp_index = tp_index_;
+  cache_manager = cache_manager_;
+  wait_count = 8;
+  driver = dp_holder.proxy;
+  data = Data();
 }
 
 template <typename Data>

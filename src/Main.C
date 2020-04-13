@@ -58,7 +58,7 @@ class Main : public CBase_Main {
     max_particles_per_leaf = MAX_PARTICLES_PER_LEAF;
     decomp_type = OCT_DECOMP;
     tree_type = OCT_TREE;
-    num_iterations = 20;
+    num_iterations = 3;
     num_share_levels = 3;
     flush_period = 1;
 

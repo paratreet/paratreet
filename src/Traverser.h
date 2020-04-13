@@ -119,7 +119,7 @@ public:
               bool prev = node->requested.exchange(true);
               if (!prev) {
                 if (node->type == Node<Data>::Boundary || node->type == Node<Data>::RemoteAboveTPKey) {
-                  tp->global_data[node->key].requestData(tp->cache_local->thisIndex);
+                  tp->tc_proxy[node->key].requestData(tp->cache_local->thisIndex);
                 }
                 else {
                   tp->cache_manager[node->cm_index].requestNodes(std::make_pair(node->key, tp->cache_local->thisIndex));
@@ -209,7 +209,7 @@ public:
               bool prev = node->requested.exchange(true);
               if (!prev) {
                 if (node->type == Node<Data>::Boundary || node->type == Node<Data>::RemoteAboveTPKey)
-                  tp->global_data[node->key].requestData(tp->cache_local->thisIndex);
+                  tp->tc_proxy[node->key].requestData(tp->cache_local->thisIndex);
                 else tp->cache_manager[node->cm_index].requestNodes(std::make_pair(node->key, tp->cache_local->thisIndex));
               }
               std::vector<int>& list = tp->resumer.ckLocalBranch()->waiting[node->key];
@@ -321,7 +321,7 @@ public:
               bool prev = node->requested.exchange(true);
               if (!prev) {
                 if (node->type == Node<Data>::Boundary || node->type == Node<Data>::RemoteAboveTPKey)
-                  tp->global_data[node->key].requestData(tp->cache_local->thisIndex);
+                  tp->tc_proxy[node->key].requestData(tp->cache_local->thisIndex);
                 else tp->cache_manager[node->cm_index].requestNodes(std::make_pair(node->key, tp->cache_local->thisIndex));
               }
               std::vector<int>& list = tp->resumer.ckLocalBranch()->waiting[node->key];

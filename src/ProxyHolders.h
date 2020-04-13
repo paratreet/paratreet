@@ -8,11 +8,11 @@ class CProxy_TreePiece;
 
 template <typename Data>
 struct TPHolder {
-  CProxy_TreePiece<Data> tp_proxy;
-  TPHolder(CProxy_TreePiece<Data> tp_proxy_) : tp_proxy(tp_proxy_) {}
+  CProxy_TreePiece<Data> proxy;
+  TPHolder(CProxy_TreePiece<Data> proxy_) : proxy(proxy_) {}
   TPHolder() {}
   void pup(PUP::er& p) {
-    p | tp_proxy;
+    p | proxy;
   }
 };
 
@@ -21,11 +21,11 @@ class CProxy_TreeCanopy;
 
 template <typename Data>
 struct TCHolder {
-  CProxy_TreeCanopy<Data> tc_proxy;
-  TCHolder(CProxy_TreeCanopy<Data> tc_proxy_) : tc_proxy(tc_proxy_) {}
+  CProxy_TreeCanopy<Data> proxy;
+  TCHolder(CProxy_TreeCanopy<Data> proxy_) : proxy(proxy_) {}
   TCHolder() {}
   void pup(PUP::er& p) {
-    p | tc_proxy;
+    p | proxy;
   }
 };
 
@@ -34,11 +34,11 @@ class CProxy_Driver;
 
 template <typename Data>
 struct DPHolder {
-  CProxy_Driver<Data> d_proxy;
-  DPHolder(CProxy_Driver<Data> d_proxy_) : d_proxy(d_proxy_) {}
+  CProxy_Driver<Data> proxy;
+  DPHolder(CProxy_Driver<Data> proxy_) : proxy(proxy_) {}
   DPHolder() {}
   void pup(PUP::er& p) {
-    p | d_proxy;
+    p | proxy;
   }
 };
 

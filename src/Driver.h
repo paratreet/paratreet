@@ -65,7 +65,7 @@ public:
     smallest_particle_key = Utility::removeLeadingZeros(Key(1));
     largest_particle_key = (~Key(0));
 
-    CkPrintf("\n* Initialization\n");
+    CkPrintf("* Initialization\n");
     decompose(0);
     cb.send();
   }
@@ -317,7 +317,7 @@ public:
   }
 
   template <typename Visitor>
-  void prefetch(Data nodewide_data, int cm_index, TCHolder<Data> tc_holder, CkCallback cb) {
+  void prefetch(Data nodewide_data, int cm_index, CkCallback cb) {
     // do traversal on the root, send everything
     if (!storage_sorted) sortStorage();
     std::queue<int> node_indices; // better for cache. plus no requirement here on order
@@ -349,7 +349,7 @@ public:
     cache_manager[cm_index].recvStarterPack(to_send.data(), to_send.size(), cb);
   }
 
-  void request(Key* request_list, int list_size, int cm_index, TCHolder<Data> tc_holder, CkCallback cb) {
+  void request(Key* request_list, int list_size, int cm_index, CkCallback cb) {
     if (!storage_sorted) sortStorage();
     Comparator<Data> comp;
     typename std::vector<std::pair<Key, Data> >::iterator it;
