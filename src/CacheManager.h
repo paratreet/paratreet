@@ -20,7 +20,7 @@ public:
   std::unordered_map<Key, Node<Data>*> local_tps;
   std::set<Key> open_list;
   std::vector<std::vector<Node<Data>*>> delete_at_end;
-  CProxy_Resumer<Data> resumer;
+  CProxy_Resumer<Data> r_proxy;
   Data nodewide_data;
 
   CacheManager() { // : root(nullptr), curr_waiting (std::map<Key, std::vector<int> >()) {}
@@ -122,7 +122,7 @@ void CacheManager<Data>::addCache(MultiData<Data> multidata) {
 
 template <typename Data>
 Node<Data>* CacheManager<Data>::addCacheHelper(Particle* particles, int n_particles, Node<Data>* nodes, int n_nodes) {
-  Node<Data>* first_node_placeholder = resumer.ckLocalBranch()->fastNodeFind(nodes[0].key, true);
+  Node<Data>* first_node_placeholder = r_proxy.ckLocalBranch()->fastNodeFind(nodes[0].key, true);
 #if DEBUG
   CkPrintf("adding cache for node %d on cm %d\n", nodes[0].key, this->thisIndex);
 #endif
@@ -284,9 +284,9 @@ void CacheManager<Data>::insertNode(Node<Data>* node, bool above_tp, bool should
 
 template <typename Data>
 void CacheManager<Data>::process(Key key) {
-  if (!this->isNodeGroup()) resumer[this->thisIndex].process (key);
+  if (!this->isNodeGroup()) r_proxy[this->thisIndex].process (key);
   else for (int i = 0; i < CkNodeSize(0); i++) {
-    resumer[this->thisIndex * CkNodeSize(0) + i].process(key);
+    r_proxy[this->thisIndex * CkNodeSize(0) + i].process(key);
   }
 }
 

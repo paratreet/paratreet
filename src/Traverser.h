@@ -65,12 +65,12 @@ public:
   void interact() {this->template interactBase<Visitor> (tp);}
   virtual void traverse(Key new_key) {
     Visitor v;
-    if (new_key == 1) tp->root = tp->cache_local->root;
+    if (new_key == 1) tp->root = tp->cm_local->root;
     auto& now_ready = curr_nodes[new_key];
     std::vector<std::pair<Key, int>> curr_nodes_insertions;
     Node<Data>* start_node = tp->root;
     if (new_key > 1) {
-      Node<Data>* result = tp->resumer.ckLocalBranch()->fastNodeFind(new_key);
+      Node<Data>* result = tp->r_proxy.ckLocalBranch()->fastNodeFind(new_key);
       if (!result) CkPrintf("not good!\n");
       start_node = result;
     }
@@ -119,13 +119,13 @@ public:
               bool prev = node->requested.exchange(true);
               if (!prev) {
                 if (node->type == Node<Data>::Boundary || node->type == Node<Data>::RemoteAboveTPKey) {
-                  tp->tc_proxy[node->key].requestData(tp->cache_local->thisIndex);
+                  tp->tc_proxy[node->key].requestData(tp->cm_local->thisIndex);
                 }
                 else {
-                  tp->cache_manager[node->cm_index].requestNodes(std::make_pair(node->key, tp->cache_local->thisIndex));
+                  tp->cm_proxy[node->cm_index].requestNodes(std::make_pair(node->key, tp->cm_local->thisIndex));
                 }
               }
-              std::vector<int>& list = tp->resumer.ckLocalBranch()->waiting[node->key];
+              std::vector<int>& list = tp->r_proxy.ckLocalBranch()->waiting[node->key];
               if (!list.size() || list.back() != tp->thisIndex) list.push_back(tp->thisIndex);
               break;
             }
@@ -165,8 +165,8 @@ public:
     auto& now_ready = curr_nodes[new_key];
     std::vector<std::pair<Key, int>> curr_nodes_insertions;
     Node<Data>* start_node;
-    if (new_key == 1) start_node = tp->cache_local->root;
-    else start_node = tp->resumer.ckLocalBranch()->fastNodeFind(new_key);
+    if (new_key == 1) start_node = tp->cm_local->root;
+    else start_node = tp->r_proxy.ckLocalBranch()->fastNodeFind(new_key);
     if (!start_node) CkPrintf("not good!\n");
 #if DEBUG
     CkPrintf("going down on key %d while its type is %d, pe is %d\n", new_key, start_node->type, CkMyPe());
@@ -209,10 +209,10 @@ public:
               bool prev = node->requested.exchange(true);
               if (!prev) {
                 if (node->type == Node<Data>::Boundary || node->type == Node<Data>::RemoteAboveTPKey)
-                  tp->tc_proxy[node->key].requestData(tp->cache_local->thisIndex);
-                else tp->cache_manager[node->cm_index].requestNodes(std::make_pair(node->key, tp->cache_local->thisIndex));
+                  tp->tc_proxy[node->key].requestData(tp->cm_local->thisIndex);
+                else tp->cm_proxy[node->cm_index].requestNodes(std::make_pair(node->key, tp->cm_local->thisIndex));
               }
-              std::vector<int>& list = tp->resumer.ckLocalBranch()->waiting[node->key];
+              std::vector<int>& list = tp->r_proxy.ckLocalBranch()->waiting[node->key];
               if (!list.size() || list.back() != tp->thisIndex) list.push_back(tp->thisIndex);
               break;
             }
@@ -264,12 +264,12 @@ public:
   void interact() {this->template interactBase<Visitor>(tp);}
   virtual void traverse(Key new_key) {
     Visitor v;
-    if (new_key == 1) tp->root = tp->cache_local->root;
+    if (new_key == 1) tp->root = tp->cm_local->root;
     auto& now_ready = curr_nodes[new_key];
     std::vector<std::pair<Key, Node<Data>*>> curr_nodes_insertions;
     Node<Data>* start_node = tp->root;
     if (new_key > 1) {
-      Node<Data>* result = tp->resumer.ckLocalBranch()->fastNodeFind(new_key);
+      Node<Data>* result = tp->r_local->fastNodeFind(new_key);
       if (!result) CkPrintf("not good!\n");
       start_node = result;
     }
@@ -321,10 +321,10 @@ public:
               bool prev = node->requested.exchange(true);
               if (!prev) {
                 if (node->type == Node<Data>::Boundary || node->type == Node<Data>::RemoteAboveTPKey)
-                  tp->tc_proxy[node->key].requestData(tp->cache_local->thisIndex);
-                else tp->cache_manager[node->cm_index].requestNodes(std::make_pair(node->key, tp->cache_local->thisIndex));
+                  tp->tc_proxy[node->key].requestData(tp->cm_local->thisIndex);
+                else tp->cm_proxy[node->cm_index].requestNodes(std::make_pair(node->key, tp->cm_local->thisIndex));
               }
-              std::vector<int>& list = tp->resumer.ckLocalBranch()->waiting[node->key];
+              std::vector<int>& list = tp->r_local->waiting[node->key];
               if (!list.size() || list.back() != tp->thisIndex) list.push_back(tp->thisIndex);
               break;
             }

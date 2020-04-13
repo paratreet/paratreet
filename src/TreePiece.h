@@ -30,19 +30,25 @@ public:
   std::vector<Particle> particles, incoming_particles;
   std::vector<Node<Data>*> leaves;
   std::vector<Node<Data>*> empty_leaves;
+
   int n_total_particles;
   int n_treepieces;
   int particle_index;
   int n_expected;
+
   Key tp_key; // Should be a prefix of all particle keys underneath this node
   Node<Data>* root;
   Node<Data>* root_from_tp_key;
+
   Traverser<Data>* traverser;
   std::vector<std::pair<Node<Data>*, int>> local_travs;
+
   CProxy_TreeCanopy<Data> tc_proxy;
-  CProxy_CacheManager<Data> cache_manager;
-  CacheManager<Data>* cache_local;
-  CProxy_Resumer<Data> resumer;
+  CProxy_CacheManager<Data> cm_proxy;
+  CacheManager<Data>* cm_local;
+  CProxy_Resumer<Data> r_proxy;
+  Resumer<Data>* r_local;
+
   std::vector<std::vector<Node<Data>*>> interactions;
   bool cache_init;
   std::vector<Particle> flushed_particles; // For debugging
@@ -87,18 +93,21 @@ public:
 
 template <typename Data>
 TreePiece<Data>::TreePiece(const CkCallback& cb, int n_total_particles_,
-    int n_treepieces_, TCHolder<Data> tc_holder, CProxy_Resumer<Data> resumer_,
-    CProxy_CacheManager<Data> cache_manager_, DPHolder<Data> dp_holder) {
+    int n_treepieces_, TCHolder<Data> tc_holder, CProxy_Resumer<Data> r_proxy_,
+    CProxy_CacheManager<Data> cm_proxy_, DPHolder<Data> dp_holder) {
   n_total_particles = n_total_particles_;
   n_treepieces = n_treepieces_;
   particle_index = 0;
+
   tc_proxy = tc_holder.proxy;
-  resumer = resumer_;
-  resumer.ckLocalBranch()->tp_proxy = this->thisProxy;
-  cache_manager = cache_manager_;
-  cache_local = cache_manager.ckLocalBranch();
-  resumer.ckLocalBranch()->cache_local = cache_local;
-  cache_local->resumer = resumer;
+  r_proxy = r_proxy_;
+  r_local = r_proxy.ckLocalBranch();
+  r_local->tp_proxy = this->thisProxy;
+  cm_proxy = cm_proxy_;
+  cm_local = cm_proxy.ckLocalBranch();
+  r_local->cm_local = cm_local;
+  cm_local->r_proxy = r_proxy;
+
   cache_init = false;
 
   if (decomp_type == OCT_DECOMP) {
@@ -113,14 +122,18 @@ TreePiece<Data>::TreePiece(const CkCallback& cb, int n_total_particles_,
     // TODO tp_key needs to be found in local tree build
   }
 
-  tc_proxy[tp_key].recvProxies(TPHolder<Data>(this->thisProxy), this->thisIndex, cache_manager, dp_holder);
-  Key temp = tp_key;
-  while (temp > 0 && temp % BRANCH_FACTOR == 0) {
-    temp /= BRANCH_FACTOR;
-    tc_proxy[temp].recvProxies(TPHolder<Data>(this->thisProxy), -1, cache_manager, dp_holder);
+  // Create TreeCanopies and send proxies
+  tc_proxy[tp_key].recvProxies(TPHolder<Data>(this->thisProxy), this->thisIndex, cm_proxy, dp_holder);
+  Key temp_key = tp_key;
+  while (temp_key > 0 && temp_key % BRANCH_FACTOR == 0) {
+    temp_key /= BRANCH_FACTOR;
+    tc_proxy[temp_key].recvProxies(TPHolder<Data>(this->thisProxy), -1, cm_proxy, dp_holder);
  }
-  this->contribute(cb);
+
+  root = nullptr;
   root_from_tp_key = nullptr;
+
+  this->contribute(cb);
 }
 
 template <typename Data>
@@ -138,9 +151,10 @@ void TreePiece<Data>::receive(ParticleMsg* msg) {
 template <typename Data>
 void TreePiece<Data>::check(const CkCallback& cb) {
   if (n_expected != incoming_particles.size()) {
-    CkPrintf("[TP %d] ERROR! Only %zu particles out of %d received\n", this->thisIndex, particles.size(), n_expected);
-    CkAbort("Failure on receiving particles");
+    CkAbort("[TP %d] ERROR! Only %zu particles out of %d received",
+        this->thisIndex, particles.size(), n_expected);
   }
+
   this->contribute(cb);
 }
 
@@ -181,7 +195,6 @@ void TreePiece<Data>::buildTree() {
   populateTree();
 
   // Initialize cache
-  cache_init = false;
   initCache();
 }
 
@@ -202,8 +215,6 @@ bool TreePiece<Data>::recursiveBuild(Node<Data>* node, bool saw_tp_key) {
 
   bool is_light = (node->n_particles <= ceil(BUCKET_TOLERANCE * max_particles_per_leaf));
   bool is_prefix = Utility::isPrefix(node->key, tp_key);
-  /*
-  */
 
   if (saw_tp_key) {
     // If we are under the TP key, we can stop going deeper if node is light
@@ -379,7 +390,7 @@ void TreePiece<Data>::populateTree() {
 template <typename Data>
 void TreePiece<Data>::initCache() {
   if (!cache_init) {
-    cache_local->connect(root_from_tp_key, false);
+    cm_local->connect(root_from_tp_key, false);
     root_from_tp_key->parent->children[tp_key % BRANCH_FACTOR].store(nullptr);
     root->triggerFree();
     cache_init = true;
@@ -414,7 +425,7 @@ template <typename Data>
 void TreePiece<Data>::requestNodes(Key key, int cm_index) {
   Node<Data>* node = root_from_tp_key->findNode(key);
   if (!node) CkPrintf("null found for key %lu on tp %d\n", key, this->thisIndex);
-  cache_local->serviceRequest(node, cm_index);
+  cm_local->serviceRequest(node, cm_index);
 }
 
 template <typename Data>

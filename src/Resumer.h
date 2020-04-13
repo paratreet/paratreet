@@ -12,7 +12,7 @@ template <typename Data>
 class Resumer : public CBase_Resumer<Data> {
 public:
   CProxy_TreePiece<Data> tp_proxy;
-  CacheManager<Data>* cache_local;
+  CacheManager<Data>* cm_local;
   int n_part_ints, n_node_ints;
   std::unordered_map<Key, Node<Data>*> nodehash;
   std::queue<Key> LRU_counter;
@@ -61,7 +61,7 @@ public:
       result = nodehash[key];
     }
     if (result == nullptr) {
-      result = cache_local->root->findNode(key);
+      result = cm_local->root->findNode(key);
     }
     if (!lf_placeholder) insertNode(result);
     return result;
