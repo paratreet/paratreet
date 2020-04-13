@@ -294,7 +294,7 @@ public:
     CkPrintf("%d node-part interactions, %d part-part interactions\n", intrn_counts[0], intrn_counts[1] / 2);
   }
 
-  void recvTE(std::pair<Key, Data> param) {
+  void recvTC(std::pair<Key, Data> param) {
     storage.emplace_back(param);
   }
 

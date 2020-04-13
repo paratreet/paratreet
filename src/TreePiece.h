@@ -364,7 +364,7 @@ void TreePiece<Data>::populateTree() {
     if (node->key == tp_key) {
       // We are at the root of the TreePiece, send accumulated data to
       // parent TreeCanopy
-      tc_proxy[tp_key >> LOG_BRANCH_FACTOR].recvData(node->data, true);
+      tc_proxy[tp_key >> LOG_BRANCH_FACTOR].recvData(node->data);
     } else {
       // Add this node's data to the parent, and add parent to the queue
       // if all children have contributed

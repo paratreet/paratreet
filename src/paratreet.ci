@@ -107,11 +107,10 @@ mainmodule paratreet {
   template <typename Data>
   array [1d] TreeCanopy {
     entry TreeCanopy();
-    entry [createhere] void recvProxies (TPHolder<Data>, int, CProxy_CacheManager<Data>, DPHolder<Data>);
-    entry void recvData (Data, bool);
-    entry void requestData (int);
-    entry void print();
     entry void reset();
+    entry [createhere] void recvProxies(TPHolder<Data>, int, CProxy_CacheManager<Data>, DPHolder<Data>);
+    entry void recvData(Data);
+    entry void requestData (int);
   };
   array [1d] TreeCanopy<CentroidData>;
 
@@ -121,7 +120,7 @@ mainmodule paratreet {
     entry [threaded] void init(CkCallback cb);
     entry [threaded] void run(CkCallback cb);
     entry [reductiontarget] void countInts(int intrn_counts [2]);
-    entry void recvTE(std::pair<Key, Data>);
+    entry void recvTC(std::pair<Key, Data>);
     entry void loadCache(CkCallback);
     template <typename Visitor>
     entry void prefetch(Data, int, CkCallback);
