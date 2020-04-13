@@ -65,10 +65,10 @@ public:
   void interact() {this->template interactBase<Visitor> (tp);}
   virtual void traverse(Key new_key) {
     Visitor v;
-    if (new_key == 1) tp->root = tp->cm_local->root;
+    if (new_key == 1) tp->global_root = tp->cm_local->root;
     auto& now_ready = curr_nodes[new_key];
     std::vector<std::pair<Key, int>> curr_nodes_insertions;
-    Node<Data>* start_node = tp->root;
+    Node<Data>* start_node = tp->global_root;
     if (new_key > 1) {
       Node<Data>* result = tp->r_proxy.ckLocalBranch()->fastNodeFind(new_key);
       if (!result) CkPrintf("not good!\n");
@@ -257,17 +257,17 @@ public:
   DualTraverser(TreePiece<Data>* tpi, std::vector<Key> keys) : tp(tpi)
   {
     for (auto leaf : tp->leaves) curr_nodes[1].push_back(leaf);
-    tp->root_from_tp_key = tp->root->findNode(tp->tp_key);
-    for (auto key : keys) curr_nodes[key].push_back(tp->root_from_tp_key);
+    tp->local_root = tp->global_root->findNode(tp->tp_key);
+    for (auto key : keys) curr_nodes[key].push_back(tp->local_root);
   }
   void processLocal () {}
   void interact() {this->template interactBase<Visitor>(tp);}
   virtual void traverse(Key new_key) {
     Visitor v;
-    if (new_key == 1) tp->root = tp->cm_local->root;
+    if (new_key == 1) tp->global_root = tp->cm_local->root;
     auto& now_ready = curr_nodes[new_key];
     std::vector<std::pair<Key, Node<Data>*>> curr_nodes_insertions;
-    Node<Data>* start_node = tp->root;
+    Node<Data>* start_node = tp->global_root;
     if (new_key > 1) {
       Node<Data>* result = tp->r_local->fastNodeFind(new_key);
       if (!result) CkPrintf("not good!\n");

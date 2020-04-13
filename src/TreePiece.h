@@ -37,8 +37,8 @@ public:
   int n_expected;
 
   Key tp_key; // Should be a prefix of all particle keys underneath this node
-  Node<Data>* root;
-  Node<Data>* root_from_tp_key;
+  Node<Data>* global_root; // Root of the global tree structure
+  Node<Data>* local_root; // Root node of this TreePiece, TreeCanopies sit above this node
 
   Traverser<Data>* traverser;
   std::vector<std::pair<Node<Data>*, int>> local_travs;
@@ -130,8 +130,8 @@ TreePiece<Data>::TreePiece(const CkCallback& cb, int n_total_particles_,
     tc_proxy[temp_key].recvProxies(TPHolder<Data>(this->thisProxy), -1, cm_proxy, dp_holder);
  }
 
-  root = nullptr;
-  root_from_tp_key = nullptr;
+  global_root = nullptr;
+  local_root = nullptr;
 
   this->contribute(cb);
 }
@@ -185,8 +185,8 @@ void TreePiece<Data>::buildTree() {
 #if DEBUG
   CkPrintf("[TP %d] key: 0x%" PRIx64 " particles: %d\n", this->thisIndex, tp_key, particles.size());
 #endif
-  root = new Node<Data>(1, 0, particles.size(), &particles[0], 0, n_treepieces - 1, nullptr);
-  recursiveBuild(root, false);
+  global_root = new Node<Data>(1, 0, particles.size(), &particles[0], 0, n_treepieces - 1, nullptr);
+  recursiveBuild(global_root, false);
 
   // Initialize interactions vector: filled in during traversal
   interactions = std::vector<std::vector<Node<Data>*>>(leaves.size());
@@ -210,7 +210,7 @@ bool TreePiece<Data>::recursiveBuild(Node<Data>* node, bool saw_tp_key) {
   // Check if we are inside the subtree rooted at the treepiece's key
   if (!saw_tp_key) {
     saw_tp_key = (node->key == tp_key);
-    if (saw_tp_key) root_from_tp_key = node;
+    if (saw_tp_key) local_root = node;
   }
 
   bool is_light = (node->n_particles <= ceil(BUCKET_TOLERANCE * max_particles_per_leaf));
@@ -366,7 +366,7 @@ void TreePiece<Data>::populateTree() {
     going_up.push(leaf);
   }
 
-  if (!leaves.size()) going_up.push(root_from_tp_key);
+  if (!leaves.size()) going_up.push(local_root);
   else for (auto empty_leaf : empty_leaves) going_up.push(empty_leaf);
 
   while (going_up.size()) {
@@ -390,9 +390,9 @@ void TreePiece<Data>::populateTree() {
 template <typename Data>
 void TreePiece<Data>::initCache() {
   if (!cache_init) {
-    cm_local->connect(root_from_tp_key, false);
-    root_from_tp_key->parent->children[tp_key % BRANCH_FACTOR].store(nullptr);
-    root->triggerFree();
+    cm_local->connect(local_root, false);
+    local_root->parent->children[tp_key % BRANCH_FACTOR].store(nullptr);
+    global_root->triggerFree();
     cache_init = true;
   }
 }
@@ -423,7 +423,7 @@ void TreePiece<Data>::startDual(Key* keys_ptr, int n) {
 
 template <typename Data>
 void TreePiece<Data>::requestNodes(Key key, int cm_index) {
-  Node<Data>* node = root_from_tp_key->findNode(key);
+  Node<Data>* node = local_root->findNode(key);
   if (!node) CkPrintf("null found for key %lu on tp %d\n", key, this->thisIndex);
   cm_local->serviceRequest(node, cm_index);
 }
@@ -488,9 +488,9 @@ void TreePiece<Data>::perturb (Real timestep, bool if_flush) {
       Vector3D<Real> old_position = particle.position;
       particle.perturb(timestep, leaf->sum_forces[i], readers.ckLocalBranch()->universe.box);
       //CkPrintf("magitude of displacement = %lf\n", (old_position - leaf->particles[i].position).length());
-      //CkPrintf("total centroid is (%lf, %lf, %lf)\n", root->data.getCentroid().x, root->data.getCentroid().y, root->data.getCentroid().z);
+      //CkPrintf("total centroid is (%lf, %lf, %lf)\n", global_root->data.getCentroid().x, global_root->data.getCentroid().y, global_root->data.getCentroid().z);
       OrientedBox<Real> curr_box = tp_box;
-      Node<Data>* node = root_from_tp_key;
+      Node<Data>* node = local_root;
       int remainders_index = 0;
       while (!curr_box.contains(particle.position)) {
         //CkPrintf("not under umbrella of node %d with volume %lf\n", node->key, curr_box.volume());
@@ -526,7 +526,7 @@ void TreePiece<Data>::perturb (Real timestep, bool if_flush) {
         if (!node) CkPrintf("node not legit\n");
       }
 
-      if (node == root_from_tp_key) in_particles.push_back(particle);
+      if (node == local_root) in_particles.push_back(particle);
       else {
         std::vector<Particle>& particle_vec = out_particles[node->tp_index];
         particle_vec.push_back(particle);
@@ -553,13 +553,13 @@ void TreePiece<Data>::flush(CProxy_Reader readers) {
 }
 
 template <typename Data>
-void TreePiece<Data>::print(Node<Data>* root) {
+void TreePiece<Data>::print(Node<Data>* node) {
   ostringstream oss;
   oss << "tree." << this->thisIndex << ".dot";
   ofstream out(oss.str().c_str());
   CkAssert(out.is_open());
   out << "digraph tree" << this->thisIndex << "{" << endl;
-  root->dot(out);
+  node->dot(out);
   out << "}" << endl;
   out.close();
 }
