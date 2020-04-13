@@ -5,11 +5,12 @@
 #include "common.h"
 #include "MultiMsg.h"
 #include "Utility.h"
+#include "templates.h"
+#include "MultiData.h"
+
 #include <map>
 #include <unordered_map>
 #include <vector>
-#include "templates.h"
-#include "MultiData.h"
 #include <mutex>
 
 template <typename Data>
@@ -23,23 +24,44 @@ public:
   CProxy_Resumer<Data> r_proxy;
   Data nodewide_data;
 
-  CacheManager() { // : root(nullptr), curr_waiting (std::map<Key, std::vector<int> >()) {}
+  CacheManager() {
     initialize();
   }
+
   void initialize() {
-    Node<Data>* node = new Node<Data>(1, 0, 0, nullptr, 0, 0, nullptr);
-    node->type = Node<Data>::Boundary;
-    root = node;
+    root = new Node<Data>(1, 0, 0, nullptr, 0, 0, nullptr);
+    root->type = Node<Data>::Boundary;
     delete_at_end.resize(CkNodeSize(0));
   }
 
   ~CacheManager() {
     destroy(false);
   }
-  void prepPrefetch(Node<Data>*);
+
+  void destroy(bool restore) {
+    local_tps.clear();
+    open_list.clear();
+
+    for (auto& dae : delete_at_end) {
+      for (auto to_delete : dae) {
+        delete to_delete;
+      }
+      dae.resize(0);
+    }
+
+    if (root != nullptr) {
+      root->triggerFree();
+      delete root;
+      root = nullptr;
+    }
+
+    if (restore) initialize();
+  }
+
   template <typename Visitor>
   void startPrefetch(DPHolder<Data>, CkCallback);
   void startParentPrefetch(DPHolder<Data>, CkCallback);
+  void prepPrefetch(Node<Data>*);
   void connect(Node<Data>*, bool);
   void requestNodes(std::pair<Key, int>);
   void serviceRequest(Node<Data>*, int);
@@ -52,22 +74,6 @@ public:
   void insertNode(Node<Data>*, bool, bool);
   void swapIn(Node<Data>*);
   void process(Key);
-  void destroy(bool restore) {
-    local_tps.clear();
-    open_list.clear();
-    for (auto& dae : delete_at_end) {
-        for (auto to_delete : dae) {
-          delete to_delete;
-        }
-        dae.resize(0);
-    }
-    if (root != nullptr) {
-      root->triggerFree();
-      delete root;
-      root = nullptr;
-   }
-   if (restore) initialize();
-  }
 };
 
 template <typename Data>
