@@ -19,7 +19,7 @@ public:
   std::mutex local_tps_lock;
   Node<Data>* root;
   std::unordered_map<Key, Node<Data>*> local_tps;
-  std::set<Key> open_list;
+  std::set<Key> prefetch_set;
   std::vector<std::vector<Node<Data>*>> delete_at_end;
   CProxy_Resumer<Data> r_proxy;
   Data nodewide_data;
@@ -40,7 +40,7 @@ public:
 
   void destroy(bool restore) {
     local_tps.clear();
-    open_list.clear();
+    prefetch_set.clear();
 
     for (auto& dae : delete_at_end) {
       for (auto to_delete : dae) {
@@ -85,7 +85,7 @@ void CacheManager<Data>::startPrefetch(DPHolder<Data> dp_holder, CkCallback cb) 
 template <typename Data>
 void CacheManager<Data>::startParentPrefetch(DPHolder<Data> dp_holder, CkCallback cb) {
   std::set<Key> request_list;
-  for (Key k : open_list) {
+  for (Key k : prefetch_set) {
     for (int i = 0; i < BRANCH_FACTOR; i++) {
       request_list.insert(k * BRANCH_FACTOR + i);
     }
@@ -94,6 +94,44 @@ void CacheManager<Data>::startParentPrefetch(DPHolder<Data> dp_holder, CkCallbac
   std::vector<Key> flat_rl (request_list.size());
   std::copy(request_list.begin(), request_list.end(), flat_rl.begin());
   dp_holder.proxy.request(flat_rl.data(), flat_rl.size(), this->thisIndex, cb);
+}
+
+template <typename Data>
+void CacheManager<Data>::prepPrefetch(Node<Data>* node) {
+  // THIS IS IN LOCK
+  nodewide_data += node->data;
+  Key curr_key = node->key;
+  while (curr_key > 1) {
+    curr_key /= BRANCH_FACTOR;
+    prefetch_set.insert(curr_key);
+  }
+}
+
+// Invoked by TreePieces after the tree is built
+template <typename Data>
+void CacheManager<Data>::connect(Node<Data>* node, bool should_process) {
+#if DEBUG
+  CkPrintf("connecting node %d of type %d\n", node->key, node->type);
+#endif
+  if (node->type == Node<Data>::CachedBoundary) {
+    //node->parent = (node->key == 1) ? nullptr : root->findNode(node->key / BRANCH_FACTOR);
+    swapIn(node);
+    if (should_process) process(node->key);
+  } else {
+    if (this->isNodeGroup()) local_tps_lock.lock();
+
+    // Store/connect the incoming TreePiece
+    local_tps.insert(std::make_pair(node->key, node));
+    prepPrefetch(node);
+
+    if (this->isNodeGroup()) local_tps_lock.unlock();
+
+    if (node->type == Node<Data>::CachedBoundary) {
+      CkAbort("local_tps used for a non TP node!");
+    }
+  }
+
+  // XXX: May need to call process() for dual tree walk
 }
 
 template <typename Data>
@@ -223,40 +261,6 @@ void CacheManager<Data>::swapIn(Node<Data>* to_swap) {
     std::swap(root, to_swap);
   }
   delete_at_end[CkMyRank()].push_back(to_swap);
-}
-
-template <typename Data>
-void CacheManager<Data>::prepPrefetch(Node<Data>* node) {
-  // THIS IS IN LOCK
-  nodewide_data += node->data;
-  Key curr_key = node->key;
-  while (curr_key > 1) {
-    curr_key /= BRANCH_FACTOR;
-    open_list.insert(curr_key);
-  }
-}
-
-template <typename Data>
-void CacheManager<Data>::connect(Node<Data>* node, bool should_process) {
-#if DEBUG
-  CkPrintf("connecting node %d of type %d\n", node->key, node->type);
-#endif
-  if (node->type == Node<Data>::CachedBoundary) {
-    //node->parent = (node->key == 1) ? nullptr : root->findNode(node->key / BRANCH_FACTOR);
-    swapIn(node);
-    if (should_process) process(node->key);
-  }
-  else {
-    if (this->isNodeGroup()) local_tps_lock.lock();
-    local_tps.insert(std::make_pair(node->key, node));
-    prepPrefetch(node);
-    if (this->isNodeGroup()) local_tps_lock.unlock();
-    if (node->type == Node<Data>::CachedBoundary) {
-      CkPrintf("local_tps used for a non TP node!\n");
-    }
-  }
-  // perhaps call process?
-  // yes if were doing a dual tree walk
 }
 
 template <typename Data>

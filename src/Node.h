@@ -105,8 +105,7 @@ struct Node {
         delete node;
         children[i].store(nullptr);
       }
-    }
-    if (type == CachedRemoteLeaf && n_particles) {
+    } else if (type == CachedRemoteLeaf && n_particles) {
       delete[] particles;
     }
   }
