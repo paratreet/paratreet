@@ -299,19 +299,20 @@ public:
 
   void loadCache(CkCallback cb) {
     CkPrintf("Broadcasting top %d levels to caches\n", num_share_levels);
-    Comparator<Data> comp;
-    std::sort(storage.begin(), storage.end(), comp);
+
+    // Sort data received from TreeCanopies (by their indices)
+    if (!storage_sorted) sortStorage();
+
     int send_size = storage.size();
     if (num_share_levels >= 0) {
       std::pair<Key, Data> to_search (1 << (LOG_BRANCH_FACTOR * num_share_levels), Data());
-      send_size = std::lower_bound(storage.begin(), storage.end(), to_search, comp) - storage.begin();
+      send_size = std::lower_bound(storage.begin(), storage.end(), to_search, Comparator<Data>()) - storage.begin();
     }
     cache_manager.recvStarterPack(storage.data(), send_size, cb);
   }
 
   void sortStorage() {
-    Comparator<Data> comp;
-    std::sort(storage.begin(), storage.end(), comp);
+    std::sort(storage.begin(), storage.end(), Comparator<Data>());
     storage_sorted = true;
   }
 
@@ -323,7 +324,6 @@ public:
     node_indices.push(0);
     std::vector<std::pair<Key, Data>> to_send;
     Visitor v;
-    Comparator<Data> comp;
     typename std::vector<std::pair<Key, Data> >::iterator it;
 
     while (node_indices.size()) {
@@ -338,7 +338,7 @@ public:
 
         for (int i = 0; i < BRANCH_FACTOR; i++) {
           Key key = node.first * BRANCH_FACTOR + i;
-          it = std::lower_bound(storage.begin(), storage.end(), std::make_pair(key, Data()), comp);
+          it = std::lower_bound(storage.begin(), storage.end(), std::make_pair(key, Data()), Comparator<Data>());
           if (it != storage.end() && it->first == key) {
             node_indices.push(it - storage.begin());
           }
@@ -350,12 +350,11 @@ public:
 
   void request(Key* request_list, int list_size, int cm_index, CkCallback cb) {
     if (!storage_sorted) sortStorage();
-    Comparator<Data> comp;
     typename std::vector<std::pair<Key, Data> >::iterator it;
     std::vector<std::pair<Key, Data>> to_send;
     for (int i = 0; i < list_size; i++) {
       Key key = request_list[i];
-      it = std::lower_bound(storage.begin(), storage.end(), std::make_pair(key, Data()), comp);
+      it = std::lower_bound(storage.begin(), storage.end(), std::make_pair(key, Data()), Comparator<Data>());
       if (it != storage.end() && it->first == key) {
         to_send.push_back(*it);
       }
