@@ -107,20 +107,22 @@ void CacheManager<Data>::prepPrefetch(Node<Data>* node) {
   }
 }
 
-// Invoked by TreePieces after the tree is built
+// Invoked to restore a node in the cached tree structure
+// or to store the local roots of TreePieces after the tree is built
 template <typename Data>
 void CacheManager<Data>::connect(Node<Data>* node, bool should_process) {
 #if DEBUG
   CkPrintf("connecting node %d of type %d\n", node->key, node->type);
 #endif
   if (node->type == Node<Data>::CachedBoundary) {
-    //node->parent = (node->key == 1) ? nullptr : root->findNode(node->key / BRANCH_FACTOR);
+    // Invoked internally to update a cached node
     swapIn(node);
     if (should_process) process(node->key);
   } else {
+    // Invoked by TreePiece
     if (this->isNodeGroup()) local_tps_lock.lock();
 
-    // Store/connect the incoming TreePiece
+    // Store/connect the incoming TreePiece's local root
     local_tps.insert(std::make_pair(node->key, node));
     prepPrefetch(node);
 
@@ -137,14 +139,19 @@ void CacheManager<Data>::connect(Node<Data>* node, bool should_process) {
 template <typename Data>
 void CacheManager<Data>::recvStarterPack(std::pair<Key, Data>* pack, int n, CkCallback cb) {
   CkPrintf("[CacheManager %d] receiving starter pack, size = %d\n", this->thisIndex, n);
+
   for (int i = 0; i < n; i++) {
 #if DEBUG
     CkPrintf("[CM %d] receiving node %d in starter pack\n", this->thisIndex, pack[i].first);
 #endif
+    // Restore received data as a tree node in the cache
+    // XXX: Can the key ever be equal to a local TP?
+    //      If not, the conditional is unnecessary
     if (!local_tps.count(pack[i].first)) {
       restoreDataHelper(pack[i], false);
     }
   }
+
   this->contribute(cb);
 }
 

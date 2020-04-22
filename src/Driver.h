@@ -58,7 +58,7 @@ public:
   Driver(CProxy_CacheManager<Data> cache_manager_) :
     cache_manager(cache_manager_), storage_sorted(false) {}
 
-  // Initializes the Driver by creating a new global tree
+  // Performs initial decomposition
   void init(CkCallback cb) {
     // Useful particle keys
     smallest_particle_key = Utility::removeLeadingZeros(Key(1));
@@ -298,16 +298,20 @@ public:
   }
 
   void loadCache(CkCallback cb) {
+    CkPrintf("Received data from %d TreeCanopies\n", storage.size());
     CkPrintf("Broadcasting top %d levels to caches\n", num_share_levels);
 
     // Sort data received from TreeCanopies (by their indices)
     if (!storage_sorted) sortStorage();
 
+    // Find how many should be sent to the caches
     int send_size = storage.size();
     if (num_share_levels >= 0) {
-      std::pair<Key, Data> to_search (1 << (LOG_BRANCH_FACTOR * num_share_levels), Data());
+      std::pair<Key, Data> to_search(1 << (LOG_BRANCH_FACTOR * num_share_levels), Data());
       send_size = std::lower_bound(storage.begin(), storage.end(), to_search, Comparator<Data>()) - storage.begin();
     }
+
+    // Send data to caches
     cache_manager.recvStarterPack(storage.data(), send_size, cb);
   }
 
