@@ -7,6 +7,7 @@
 #include "BoundingBox.h"
 #include "Splitter.h"
 #include "Utility.h"
+#include "Modularization.h"
 
 extern CProxy_Main mainProxy;
 extern int n_readers;
@@ -64,58 +65,11 @@ void Reader::request(CProxy_TreePiece<Data> tp_proxy, int index, int num_to_give
 
 template <typename Data>
 void Reader::flush(int n_total_particles, int n_treepieces, CProxy_TreePiece<Data> treepieces) {
-  int flush_count = 0;
-
+  int flush_count;
   if (decomp_type == OCT_DECOMP) {
-    // OCT decomposition
-    int start = 0;
-    int finish = particles.size();
-
-    // Find particles that belong to each splitter range and flush them
-    for (int i = 0; i < splitters.size(); i++) {
-      int begin = Utility::binarySearchGE(splitters[i].from, &particles[0], start, finish);
-      int end = Utility::binarySearchGE(splitters[i].to, &particles[0], begin, finish);
-
-      int n_particles = end - begin;
-
-      if (n_particles > 0) {
-        ParticleMsg* msg = new (n_particles) ParticleMsg(&particles[begin], n_particles);
-        treepieces[i].receive(msg);
-        flush_count += n_particles;
-      }
-
-      start = end;
-    }
-
-    // Free splitter memory
-    splitters.clear();
+    flush_count = OctDecomposition::flush(n_total_particles, n_treepieces, treepieces, particles, splitters);
   } else if (decomp_type == SFC_DECOMP) {
-    // TODO SFC decomposition
-    // Probably need to use prefix sum
-    int n_particles_left = particles.size();
-    for (int i = 0; i < n_treepieces; i++) {
-      int n_need = n_total_particles / n_treepieces;
-      if (i < (n_total_particles % n_treepieces))
-        n_need++;
-
-      if (n_particles_left > n_need) {
-        ParticleMsg* msg = new (n_need) ParticleMsg(&particles[flush_count], n_need);
-        treepieces[i].receive(msg);
-        flush_count += n_need;
-        n_particles_left -= n_need;
-      }
-      else {
-        if (n_particles_left > 0) {
-          ParticleMsg* msg = new (n_particles_left) ParticleMsg(&particles[flush_count], n_particles_left);
-          treepieces[i].receive(msg);
-          flush_count += n_particles_left;
-          n_particles_left = 0;
-        }
-      }
-
-      if (n_particles_left == 0)
-        break;
-    }
+    flush_count = SfcDecomposition::flush(n_total_particles, n_treepieces, treepieces, particles, splitters);
   }
 
   if (flush_count != particles.size()) {

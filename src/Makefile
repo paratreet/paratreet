@@ -4,7 +4,7 @@ OPTS = -g -I$(STRUCTURE_PATH) -DGROUPCACHE=0 -DDELAYLOCAL=0 -DCOUNT_INTRNS=0 -DD
 CHARMC = $(CHARM_HOME)/bin/charmc $(OPTS)
 LD_LIBS = -L$(STRUCTURE_PATH) -lTipsy
 
-BINARY = paratreet
+BINARY=paratreet
 OBJS = Main.o Reader.o Particle.o BoundingBox.o
 
 all: $(BINARY)

@@ -1,6 +1,7 @@
 #include "TipsyFile.h"
 #include "Reader.h"
 #include "Utility.h"
+#include "Modularization.h"
 #include <iostream>
 #include <cstring>
 #include <algorithm>
@@ -113,17 +114,11 @@ void Reader::computeUniverseBoundingBox(const CkCallback& cb) {
 void Reader::assignKeys(BoundingBox universe_, const CkCallback& cb) {
   // Generate particle keys
   universe = universe_;
-  for (unsigned int i = 0; i < particles.size(); i++) {
-    particles[i].key = SFC::generateKey(particles[i].position, universe.box);
 
-    // Add placeholder bit
-    particles[i].key |= (Key)1 << (KEY_BITS-1);
-  }
-
-  // Sort particles for decomposition
-  // No need for SFC, as particles will be sorted globally
   if (decomp_type == OCT_DECOMP) {
-    std::sort(particles.begin(), particles.end());
+    OctDecomposition::assignKeys(universe, particles);
+  } else if (decomp_type == SFC_DECOMP) {
+    SfcDecomposition::assignKeys(universe, particles);
   }
 
   // Back to callee

@@ -112,23 +112,24 @@ TreePiece<Data>::TreePiece(const CkCallback& cb, int n_total_particles_,
 
   if (decomp_type == OCT_DECOMP) {
     // OCT decomposition
-    n_expected = readers.ckLocalBranch()->splitters[this->thisIndex].n_particles;
+    n_expected = OctDecomposition::getNumExpectedParticles(n_total_particles, n_treepieces,
+        this->thisIndex, readers.ckLocalBranch()->splitters);
     tp_key = readers.ckLocalBranch()->splitters[this->thisIndex].tp_key;
   } else if (decomp_type == SFC_DECOMP) {
     // SFC decomposition
-    n_expected = n_total_particles / n_treepieces;
-    if (this->thisIndex < (n_total_particles % n_treepieces))
-      n_expected++;
+    n_expected = SfcDecomposition::getNumExpectedParticles(n_total_particles, n_treepieces,
+        this->thisIndex, readers.ckLocalBranch()->splitters);
     // TODO tp_key needs to be found in local tree build
   }
 
   // Create TreeCanopies and send proxies
-  tc_proxy[tp_key].recvProxies(TPHolder<Data>(this->thisProxy), this->thisIndex, cm_proxy, dp_holder);
-  Key temp_key = tp_key;
-  while (temp_key > 0 && temp_key % BRANCH_FACTOR == 0) {
-    temp_key /= BRANCH_FACTOR;
-    tc_proxy[temp_key].recvProxies(TPHolder<Data>(this->thisProxy), -1, cm_proxy, dp_holder);
- }
+  auto sendProxy = [&](int dest, int tp_index) {
+    tc_proxy[dest].recvProxies(TPHolder<Data>(this->thisProxy), tp_index, cm_proxy, dp_holder);
+  };
+
+  if (tree_type == OCT_TREE) {
+    OctTree::buildCanopy(readers.ckLocalBranch()->splitters, this->thisIndex, sendProxy);
+  }
 
   global_root = nullptr;
   local_root = nullptr;
