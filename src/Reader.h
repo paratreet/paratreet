@@ -66,10 +66,15 @@ void Reader::request(CProxy_TreePiece<Data> tp_proxy, int index, int num_to_give
 template <typename Data>
 void Reader::flush(int n_total_particles, int n_treepieces, CProxy_TreePiece<Data> treepieces) {
   int flush_count;
+  auto sendParticles = [&](int dest, int n_particles, Particle* particles) {
+    ParticleMsg* msg = new (n_particles) ParticleMsg(particles, n_particles);
+    treepieces[dest].receive(msg);
+  };
+
   if (decomp_type == OCT_DECOMP) {
-    flush_count = OctDecomposition::flush(n_total_particles, n_treepieces, treepieces, particles, splitters);
+    flush_count = OctDecomposition::flush(n_total_particles, n_treepieces, sendParticles, particles, splitters);
   } else if (decomp_type == SFC_DECOMP) {
-    flush_count = SfcDecomposition::flush(n_total_particles, n_treepieces, treepieces, particles, splitters);
+    flush_count = SfcDecomposition::flush(n_total_particles, n_treepieces, sendParticles, particles, splitters);
   }
 
   if (flush_count != particles.size()) {

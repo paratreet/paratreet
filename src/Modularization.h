@@ -12,11 +12,13 @@
 
 extern int max_particles_per_tp; // for OCT decomposition
 
+using SendProxyFn = std::function<void(int,int)>;
+using SendParticlesFn = std::function<void(int,int,Particle*)>;
+
 class SfcDecomposition {
 public:
-  
-  template <typename Data>
-  static int flush(int n_total_particles, int n_treepieces, CProxy_TreePiece<Data> &treepieces,
+
+  static int flush(int n_total_particles, int n_treepieces, const SendParticlesFn &fn,
       std::vector<Particle> &particles, std::vector<Splitter> &splitters) {
     // TODO SFC decomposition
     // Probably need to use prefix sum
@@ -28,15 +30,13 @@ public:
         n_need++;
 
       if (n_particles_left > n_need) {
-        ParticleMsg* msg = new (n_need) ParticleMsg(&particles[flush_count], n_need);
-        treepieces[i].receive(msg);
+        fn(i, n_need, &particles[flush_count]);
         flush_count += n_need;
         n_particles_left -= n_need;
       }
       else {
         if (n_particles_left > 0) {
-          ParticleMsg* msg = new (n_particles_left) ParticleMsg(&particles[flush_count], n_particles_left);
-          treepieces[i].receive(msg);
+          fn(i, n_particles_left, &particles[flush_count]);
           flush_count += n_particles_left;
           n_particles_left = 0;
         }
@@ -70,8 +70,7 @@ public:
     return splitters[tp_index].n_particles;
   }
 
-  template <typename Data>
-  static int flush(int n_total_particles, int n_treepieces, CProxy_TreePiece<Data> &treepieces,
+  static int flush(int n_total_particles, int n_treepieces, const SendParticlesFn &fn,
       std::vector<Particle> &particles, std::vector<Splitter> &splitters) {
     // OCT decomposition
     int flush_count = 0;
@@ -86,8 +85,7 @@ public:
       int n_particles = end - begin;
 
       if (n_particles > 0) {
-        ParticleMsg* msg = new (n_particles) ParticleMsg(&particles[begin], n_particles);
-        treepieces[i].receive(msg);
+        fn(i, n_particles, &particles[begin]);
         flush_count += n_particles;
       }
 
@@ -190,7 +188,6 @@ public:
 
 class OctTree {
 public:
-  using SendProxyFn = std::function<void(int,int)>;
 
   static void buildCanopy(const std::vector<Splitter> &splitters, int tp_index, const SendProxyFn &fn) {
     Key tp_key = splitters[tp_index].tp_key;
