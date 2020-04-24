@@ -21,6 +21,7 @@
 extern CProxy_Reader readers;
 extern int max_particles_per_leaf;
 extern int decomp_type;
+extern Decomposition* decomposition;
 extern int tree_type;
 extern CProxy_Main mainProxy;
 
@@ -110,15 +111,14 @@ TreePiece<Data>::TreePiece(const CkCallback& cb, int n_total_particles_,
 
   cache_init = false;
 
+  n_expected = getDecomposition()->getNumExpectedParticles(n_total_particles, n_treepieces,
+      this->thisIndex, readers.ckLocalBranch()->splitters);
+
   if (decomp_type == OCT_DECOMP) {
     // OCT decomposition
-    n_expected = OctDecomposition::getNumExpectedParticles(n_total_particles, n_treepieces,
-        this->thisIndex, readers.ckLocalBranch()->splitters);
     tp_key = readers.ckLocalBranch()->splitters[this->thisIndex].tp_key;
   } else if (decomp_type == SFC_DECOMP) {
     // SFC decomposition
-    n_expected = SfcDecomposition::getNumExpectedParticles(n_total_particles, n_treepieces,
-        this->thisIndex, readers.ckLocalBranch()->splitters);
     // TODO tp_key needs to be found in local tree build
   }
 

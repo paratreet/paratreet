@@ -100,11 +100,7 @@ public:
     // Set up splitters for decomposition
     // TODO: Support decompositions other than OCT
     start_time = CkWallTimer();
-    if (decomp_type == OCT_DECOMP) {
-      n_treepieces = OctDecomposition::findSplitters(universe, readers, splitters);
-    } else {
-      CkAbort("Only OCT decomposition is currently supported");
-    }
+    n_treepieces = getDecomposition()->findSplitters(universe, readers, splitters);
     std::sort(splitters.begin(), splitters.end());
     readers.setSplitters(splitters, CkCallbackResumeThread());
     CkPrintf("Setting up splitters for decomposition: %.3lf ms\n",

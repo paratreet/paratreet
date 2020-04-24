@@ -115,11 +115,7 @@ void Reader::assignKeys(BoundingBox universe_, const CkCallback& cb) {
   // Generate particle keys
   universe = universe_;
 
-  if (decomp_type == OCT_DECOMP) {
-    OctDecomposition::assignKeys(universe, particles);
-  } else if (decomp_type == SFC_DECOMP) {
-    SfcDecomposition::assignKeys(universe, particles);
-  }
+  getDecomposition()->assignKeys(universe, particles);
 
   // Back to callee
   contribute(cb);
