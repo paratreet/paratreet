@@ -1,3 +1,5 @@
+#include <memory>
+
 #include "common.h"
 #include "Decomposition.h"
 #include "BufferedVec.h"
@@ -180,15 +182,15 @@ public:
 };
 
 Decomposition* getDecomposition() {
-    thread_local static Decomposition* decomposition = nullptr;
+    thread_local static std::unique_ptr<Decomposition> decomposition(nullptr);
 
-    if (decomposition == nullptr) {
+    if (!decomposition) {
         if (decomp_type == OCT_DECOMP) {
-            decomposition = new OctDecomposition();
+            decomposition.reset(new OctDecomposition());
         } else if (decomp_type == SFC_DECOMP) {
-            decomposition = new SfcDecomposition();
+            decomposition.reset(new SfcDecomposition());
         }
     }
 
-    return decomposition;
+    return decomposition.get();
 }
