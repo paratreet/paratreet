@@ -2,12 +2,17 @@
 #define PARATREET_MODULARIZATION_H_
 
 #include "Decomposition.h"
+#include "common.h"
+
+extern int decomp_type;
 
 class OctTree {
 public:
 
-  static void buildCanopy(const std::vector<Splitter> &splitters, int tp_index, const SendProxyFn &fn) {
-    Key tp_key = splitters[tp_index].tp_key;
+  static void buildCanopy(int tp_index, const SendProxyFn &fn) {
+    // TODO get tp_key from decomposition
+    CkAssert(decomp_type == OCT_DECOMP || decomp_type == SFC_DECOMP);
+    Key tp_key = ((SfcDecomposition*)getDecomposition())->getTpKey(tp_index);
     Key temp_key = tp_key;
     fn(tp_key, tp_index);
     while (temp_key > 0 && temp_key % BRANCH_FACTOR == 0) {

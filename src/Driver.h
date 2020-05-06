@@ -51,7 +51,6 @@ public:
   BoundingBox universe;
   Key smallest_particle_key;
   Key largest_particle_key;
-  std::vector<Splitter> splitters;
   CProxy_TreePiece<CentroidData> treepieces; // Cannot be a global readonly variable
   int n_treepieces;
   double start_time;
@@ -68,6 +67,17 @@ public:
     CkPrintf("* Initialization\n");
     decompose(0);
     cb.send();
+  }
+
+  void broadcastDecomposition(const CkCallback& cb) {
+    PUP::sizer sizer;
+    getDecomposition()->pup(sizer);
+    sizer | const_cast<CkCallback&>(cb);
+    CkMarshallMsg *msg = CkAllocateMarshallMsg(sizer.size(), NULL);
+    PUP::toMem pupper((void *)msg->msgBuf);
+    getDecomposition()->pup(pupper);
+    pupper | const_cast<CkCallback&>(cb);
+    readers.receiveDecomposition(msg);
   }
 
   // Performs decomposition by distributing particles among TreePieces,
@@ -98,11 +108,9 @@ public:
         (CkWallTimer() - start_time) * 1000);
 
     // Set up splitters for decomposition
-    // TODO: Support decompositions other than OCT
     start_time = CkWallTimer();
-    n_treepieces = getDecomposition()->findSplitters(universe, readers, splitters);
-    std::sort(splitters.begin(), splitters.end());
-    readers.setSplitters(splitters, CkCallbackResumeThread());
+    n_treepieces = getDecomposition()->findSplitters(universe, readers);
+    broadcastDecomposition(CkCallbackResumeThread());
     CkPrintf("Setting up splitters for decomposition: %.3lf ms\n",
         (CkWallTimer() - start_time) * 1000);
 
@@ -125,9 +133,6 @@ public:
     // Check if all treepieces have received the right number of particles
     treepieces.check(CkCallbackResumeThread());
 #endif
-
-    // Free splitter memory
-    splitters.clear();
   }
 
   // Core iterative loop of the simulation

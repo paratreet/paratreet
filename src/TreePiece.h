@@ -111,15 +111,11 @@ TreePiece<Data>::TreePiece(const CkCallback& cb, int n_total_particles_,
 
   cache_init = false;
 
-  n_expected = getDecomposition()->getNumExpectedParticles(n_total_particles, n_treepieces,
-      this->thisIndex, readers.ckLocalBranch()->splitters);
+  n_expected = getDecomposition()->
+      getNumExpectedParticles(n_total_particles, n_treepieces, this->thisIndex);
 
-  if (decomp_type == OCT_DECOMP) {
-    // OCT decomposition
-    tp_key = readers.ckLocalBranch()->splitters[this->thisIndex].tp_key;
-  } else if (decomp_type == SFC_DECOMP) {
-    // SFC decomposition
-    // TODO tp_key needs to be found in local tree build
+  if (decomp_type == OCT_DECOMP || decomp_type == SFC_DECOMP) {
+    tp_key = ((SfcDecomposition*)getDecomposition())->getTpKey(this->thisIndex);
   }
 
   // Create TreeCanopies and send proxies
@@ -128,7 +124,7 @@ TreePiece<Data>::TreePiece(const CkCallback& cb, int n_total_particles_,
   };
 
   if (tree_type == OCT_TREE) {
-    OctTree::buildCanopy(readers.ckLocalBranch()->splitters, this->thisIndex, sendProxy);
+    OctTree::buildCanopy(this->thisIndex, sendProxy);
   }
 
   global_root = nullptr;

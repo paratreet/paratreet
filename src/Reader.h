@@ -21,8 +21,8 @@ class Reader : public CBase_Reader {
 
   public:
     BoundingBox universe;
-    std::vector<Splitter> splitters;
-    std::vector<Key> SFCsplitters;
+    // std::vector<Splitter> splitters;
+    // std::vector<Key> SFCsplitters;
     Reader();
 
     // Loading particles and assigning keys
@@ -32,7 +32,8 @@ class Reader : public CBase_Reader {
 
     // OCT decomposition
     void countOct(std::vector<Key>, const CkCallback&);
-    void setSplitters(const std::vector<Splitter>&, const CkCallback&);
+    // void setSplitters(const std::vector<Splitter>&, const CkCallback&);
+    void receiveDecomposition(CkMarshallMsg*);
 
     // SFC decomposition
     //void countSfc(const std::vector<Key>&, const CkCallback&);
@@ -59,7 +60,7 @@ void Reader::request(CProxy_TreePiece<Data> tp_proxy, int index, int num_to_give
   } // maybe a function can just do this for me?
   particles.resize(n_particles - num_to_give);
   n_particles -= num_to_give;
-  if (n_particles) SFCsplitters.push_back(particles[0].key);
+  // if (n_particles) SFCsplitters.push_back(particles[0].key);
   tp_proxy[index].receive(msg);
 }
 
@@ -71,7 +72,7 @@ void Reader::flush(int n_total_particles, int n_treepieces, CProxy_TreePiece<Dat
   };
 
   int flush_count =
-      getDecomposition()->flush(n_total_particles, n_treepieces, sendParticles, particles, splitters);
+      getDecomposition()->flush(n_total_particles, n_treepieces, sendParticles, particles);
   if (flush_count != particles.size()) {
     CkAbort("Reader %d failure: flushed %d out of %zu particles\n", thisIndex,
         flush_count, particles.size());

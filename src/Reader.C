@@ -254,7 +254,7 @@ void Reader::receive(ParticleMsg* msg) {
   std::memcpy(&particles[particle_index], msg->particles, msg->n_particles * sizeof(Particle));
   particle_index += msg->n_particles;
   delete msg;
-  SFCsplitters.push_back(Key(0)); // Maybe use something different than splitters variable?
+  // SFCsplitters.push_back(Key(0)); // Maybe use something different than splitters variable?
 }
 
 void Reader::localSort(const CkCallback& cb) {
@@ -300,7 +300,11 @@ void Reader::checkSort(const Key last, const CkCallback& cb) {
   }
 }
 
-void Reader::setSplitters(const std::vector<Splitter>& splitters, const CkCallback& cb) {
-  this->splitters = splitters;
-  contribute(cb);
+void Reader::receiveDecomposition(CkMarshallMsg* msg) {
+  char *buffer = msg->msgBuf;
+  PUP::fromMem pupper(buffer);
+  PUP::detail::TemporaryObjectHolder<CkCallback> cb;
+  getDecomposition()->pup(pupper);
+  pupper | cb;
+  contribute(cb.t);
 }

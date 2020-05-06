@@ -144,7 +144,7 @@ mainmodule paratreet {
     entry void receive(ParticleMsg*);
     entry void localSort(const CkCallback&);
     entry void checkSort(const Key, const CkCallback&);
-    entry void setSplitters(const std::vector<Splitter>&, const CkCallback&);
+    entry void receiveDecomposition(CkMarshallMsg*);
     template <typename Data>
     entry void flush(int, int, CProxy_TreePiece<Data>);
   };

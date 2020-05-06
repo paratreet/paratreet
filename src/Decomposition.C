@@ -8,65 +8,72 @@
 extern int decomp_type;
 extern int max_particles_per_tp; // for OCT decomposition
 
-class SfcDecomposition: public Decomposition {
-public:
-  int flush(int n_total_particles, int n_treepieces, const SendParticlesFn &fn,
-      std::vector<Particle> &particles, std::vector<Splitter> &splitters) override {
-    // TODO SFC decomposition
-    // Probably need to use prefix sum
-    int flush_count;
-    int n_particles_left = particles.size();
-    for (int i = 0; i < n_treepieces; i++) {
-      int n_need = n_total_particles / n_treepieces;
-      if (i < (n_total_particles % n_treepieces))
-        n_need++;
+int SfcDecomposition::flush(int n_total_particles, int n_treepieces, const SendParticlesFn &fn,
+    std::vector<Particle> &particles) {
+  // TODO SFC decomposition
+  // Probably need to use prefix sum
+  int flush_count;
+  int n_particles_left = particles.size();
+  for (int i = 0; i < n_treepieces; i++) {
+    int n_need = n_total_particles / n_treepieces;
+    if (i < (n_total_particles % n_treepieces))
+      n_need++;
 
-      if (n_particles_left > n_need) {
-        fn(i, n_need, &particles[flush_count]);
-        flush_count += n_need;
-        n_particles_left -= n_need;
-      }
-      else {
-        if (n_particles_left > 0) {
-          fn(i, n_particles_left, &particles[flush_count]);
-          flush_count += n_particles_left;
-          n_particles_left = 0;
-        }
-      }
-
-      if (n_particles_left == 0) break;
+    if (n_particles_left > n_need) {
+      fn(i, n_need, &particles[flush_count]);
+      flush_count += n_need;
+      n_particles_left -= n_need;
     }
-  }
-
-  void assignKeys(BoundingBox &universe, std::vector<Particle> &particles) override {
-    for (unsigned int i = 0; i < particles.size(); i++) {
-      particles[i].key = SFC::generateKey(particles[i].position, universe.box);
-      // Add placeholder bit
-      particles[i].key |= (Key)1 << (KEY_BITS-1);
+    else {
+      if (n_particles_left > 0) {
+        fn(i, n_particles_left, &particles[flush_count]);
+        flush_count += n_particles_left;
+        n_particles_left = 0;
+      }
     }
+
+    if (n_particles_left == 0) break;
   }
 
-  int getNumExpectedParticles(int n_total_particles, int n_treepieces,
-      int tp_index, const std::vector<Splitter> &splitters) override {
-    int n_expected = n_total_particles / n_treepieces;
-    if (tp_index < (n_total_particles % n_treepieces)) n_expected++;
-    return n_expected;
-  }
+  return flush_count;
+}
 
-  int findSplitters(BoundingBox &universe, CProxy_Reader &readers, std::vector<Splitter> &splitters) override {
-    CkAbort("Find splitters not yet implemented for SFC Decomposition");
+void SfcDecomposition::assignKeys(BoundingBox &universe, std::vector<Particle> &particles) {
+  for (unsigned int i = 0; i < particles.size(); i++) {
+    particles[i].key = SFC::generateKey(particles[i].position, universe.box);
+    // Add placeholder bit
+    particles[i].key |= (Key)1 << (KEY_BITS-1);
   }
-};
+}
+
+int SfcDecomposition::getNumExpectedParticles(int n_total_particles, int n_treepieces,
+    int tp_index) {
+  int n_expected = n_total_particles / n_treepieces;
+  if (tp_index < (n_total_particles % n_treepieces)) n_expected++;
+  return n_expected;
+}
+
+int SfcDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &readers) {
+  CkAbort("Find splitters not yet implemented for SFC Decomposition");
+}
+
+void SfcDecomposition::pup(PUP::er& p) {
+  p | splitters;
+}
+
+int SfcDecomposition::getTpKey(int idx) {
+  return splitters[idx].tp_key;
+}
 
 class OctDecomposition : public SfcDecomposition {
 public:
   int getNumExpectedParticles(int n_total_particles, int n_treepieces,
-      int tp_index, const std::vector<Splitter> &splitters) override {
+      int tp_index) override {
     return splitters[tp_index].n_particles;
   }
 
   int flush(int n_total_particles, int n_treepieces, const SendParticlesFn &fn,
-      std::vector<Particle> &particles, std::vector<Splitter> &splitters) override {
+      std::vector<Particle> &particles) override {
     // OCT decomposition
     int flush_count = 0;
     int start = 0;
@@ -99,7 +106,7 @@ public:
     std::sort(particles.begin(), particles.end());
   }
 
-  int findSplitters(BoundingBox &universe, CProxy_Reader &readers, std::vector<Splitter> &splitters) override {
+  int findSplitters(BoundingBox &universe, CProxy_Reader &readers) override {
     BufferedVec<Key> keys;
 
     // Initial splitter keys (first and last)
@@ -175,6 +182,9 @@ public:
       CkAbort("Decomposition failure: only %d particles out of %d decomposed",
           decomp_particle_sum, universe.n_particles);
     }
+
+    // Sort our splitters
+    std::sort(splitters.begin(), splitters.end());
 
     // Return the number of TreePieces
     return splitters.size();
