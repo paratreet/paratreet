@@ -32,8 +32,6 @@ class Reader : public CBase_Reader {
 
     // OCT decomposition
     void countOct(std::vector<Key>, const CkCallback&);
-    // void setSplitters(const std::vector<Splitter>&, const CkCallback&);
-    void receiveDecomposition(CkMarshallMsg*);
 
     // SFC decomposition
     //void countSfc(const std::vector<Key>&, const CkCallback&);
@@ -72,7 +70,7 @@ void Reader::flush(int n_total_particles, int n_treepieces, CProxy_TreePiece<Dat
   };
 
   int flush_count =
-      getDecomposition()->flush(n_total_particles, n_treepieces, sendParticles, particles);
+      treespec.ckLocalBranch()->getDecomposition()->flush(n_total_particles, n_treepieces, sendParticles, particles);
   if (flush_count != particles.size()) {
     CkAbort("Reader %d failure: flushed %d out of %zu particles\n", thisIndex,
         flush_count, particles.size());

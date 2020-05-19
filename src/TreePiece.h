@@ -18,6 +18,7 @@
 #include <vector>
 #include <fstream>
 
+extern CProxy_TreeSpec treespec;
 extern CProxy_Reader readers;
 extern int max_particles_per_leaf;
 extern int decomp_type;
@@ -111,11 +112,11 @@ TreePiece<Data>::TreePiece(const CkCallback& cb, int n_total_particles_,
 
   cache_init = false;
 
-  n_expected = getDecomposition()->
+  n_expected = treespec.ckLocalBranch()->getDecomposition()->
       getNumExpectedParticles(n_total_particles, n_treepieces, this->thisIndex);
 
   if (decomp_type == OCT_DECOMP || decomp_type == SFC_DECOMP) {
-    tp_key = ((SfcDecomposition*)getDecomposition())->getTpKey(this->thisIndex);
+    tp_key = ((SfcDecomposition*)treespec.ckLocalBranch()->getDecomposition())->getTpKey(this->thisIndex);
   }
 
   // Create TreeCanopies and send proxies

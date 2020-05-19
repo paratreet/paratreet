@@ -11,6 +11,7 @@
 #include "Splitter.h"
 #include "TreePiece.h"
 #include "TreeCanopy.h"
+#include "TreeSpec.h"
 #include "BoundingBox.h"
 #include "BufferedVec.h"
 #include "Utility.h"
@@ -24,6 +25,7 @@
 #include "Modularization.h"
 
 extern CProxy_Reader readers;
+extern CProxy_TreeSpec treespec;
 extern int n_readers;
 extern double decomp_tolerance;
 extern int max_particles_per_tp; // for OCT decomposition
@@ -71,13 +73,13 @@ public:
 
   void broadcastDecomposition(const CkCallback& cb) {
     PUP::sizer sizer;
-    getDecomposition()->pup(sizer);
+    treespec.ckLocalBranch()->getDecomposition()->pup(sizer);
     sizer | const_cast<CkCallback&>(cb);
     CkMarshallMsg *msg = CkAllocateMarshallMsg(sizer.size(), NULL);
     PUP::toMem pupper((void *)msg->msgBuf);
-    getDecomposition()->pup(pupper);
+    treespec.ckLocalBranch()->getDecomposition()->pup(pupper);
     pupper | const_cast<CkCallback&>(cb);
-    readers.receiveDecomposition(msg);
+    treespec.receiveDecomposition(msg);
   }
 
   // Performs decomposition by distributing particles among TreePieces,
@@ -109,7 +111,7 @@ public:
 
     // Set up splitters for decomposition
     start_time = CkWallTimer();
-    n_treepieces = getDecomposition()->findSplitters(universe, readers);
+    n_treepieces = treespec.ckLocalBranch()->getDecomposition()->findSplitters(universe, readers);
     broadcastDecomposition(CkCallbackResumeThread());
     CkPrintf("Setting up splitters for decomposition: %.3lf ms\n",
         (CkWallTimer() - start_time) * 1000);

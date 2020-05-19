@@ -21,6 +21,7 @@
 
 /* readonly */ CProxy_Main mainProxy;
 /* readonly */ CProxy_Reader readers;
+/* readonly */ CProxy_TreeSpec treespec;
 /* readonly */ std::string input_file;
 /* readonly */ int n_readers;
 /* readonly */ double decomp_tolerance;
@@ -146,6 +147,7 @@ class Main : public CBase_Main {
     // Create Readers
     n_readers = CkNumPes();
     readers = CProxy_Reader::ckNew();
+    treespec = CProxy_TreeSpec::ckNew(tree_type, decomp_type);
 
     // Create centroid data related chares
     centroid_calculator = CProxy_TreeCanopy<CentroidData>::ckNew();

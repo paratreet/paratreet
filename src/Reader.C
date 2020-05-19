@@ -115,7 +115,7 @@ void Reader::assignKeys(BoundingBox universe_, const CkCallback& cb) {
   // Generate particle keys
   universe = universe_;
 
-  getDecomposition()->assignKeys(universe, particles);
+  treespec.ckLocalBranch()->getDecomposition()->assignKeys(universe, particles);
 
   // Back to callee
   contribute(cb);
@@ -298,13 +298,4 @@ void Reader::checkSort(const Key last, const CkCallback& cb) {
   else {
     contribute(cb);
   }
-}
-
-void Reader::receiveDecomposition(CkMarshallMsg* msg) {
-  char *buffer = msg->msgBuf;
-  PUP::fromMem pupper(buffer);
-  PUP::detail::TemporaryObjectHolder<CkCallback> cb;
-  getDecomposition()->pup(pupper);
-  pupper | cb;
-  contribute(cb.t);
 }

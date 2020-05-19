@@ -37,6 +37,12 @@ protected:
   std::vector<Splitter> splitters;
 };
 
-Decomposition* getDecomposition();
+struct OctDecomposition : public SfcDecomposition {
+  int flush(int n_total_particles, int n_treepieces,
+      const SendParticlesFn &fn, std::vector<Particle> &particles) override;
+  void assignKeys(BoundingBox &universe, std::vector<Particle> &particles) override;
+  int getNumExpectedParticles(int n_total_particles, int n_treepieces, int tp_index) override;
+  int findSplitters(BoundingBox &universe, CProxy_Reader &readers) override;
+};
 
 #endif
