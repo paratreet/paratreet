@@ -59,6 +59,7 @@ private:
 public:
   DownTraverser(TreePiece<Data>* tpi) : tp(tpi)
   {
+    // Initialize with global root key and leaves
     for (int i = 0; i < tp->leaves.size(); i++) curr_nodes[1].push_back(i);
   }
   void processLocal() {this->template processLocalBase<Visitor> (tp);}
@@ -90,6 +91,7 @@ public:
           case Node<Data>::Leaf:
           case Node<Data>::CachedRemoteLeaf:
             {
+              // Store local and remote cached leaves for interactions
               tp->interactions[bucket].push_back(node);
               break;
             }
@@ -103,6 +105,8 @@ public:
           case Node<Data>::CachedBoundary:
           case Node<Data>::CachedRemote:
             {
+              // Check if the 'node' condition is fulfilled
+              // If so, need to go down deeper
               if (v.node(SourceNode<Data>(node), TargetNode<Data>(tp->leaves[bucket]))) {
                 for (int i = 0; i < node->children.size(); i++) {
                   nodes.push(node->children[i].load());
@@ -116,15 +120,28 @@ public:
           case Node<Data>::RemoteLeaf:
             {
               curr_nodes_insertions.push_back(std::make_pair(node->key, bucket));
+
+              // Submit a request if the node wasn't requested before
               bool prev = node->requested.exchange(true);
               if (!prev) {
                 if (node->type == Node<Data>::Boundary || node->type == Node<Data>::RemoteAboveTPKey) {
+                  // Ask TreeCanopy for data
+                  // If the canopy is at the same level as a TP, it asks the TP
+                  // which eventually calls CacheManager::serviceRequest
+                  // If the canopy is above TPs, it directly calls
+                  // CacheManager::restoreData which fills in the cache
                   tp->tc_proxy[node->key].requestData(tp->cm_local->thisIndex);
                 }
                 else {
+                  // The node is entirely remote, ask CacheManager for data
                   tp->cm_proxy[node->cm_index].requestNodes(std::make_pair(node->key, tp->cm_local->thisIndex));
                 }
               }
+
+
+              // Add the TreePiece that initiated the traversal to the waiting list
+              // maintained in Resumer
+              // XXX: Why does it only check the list size and the back of the list?
               std::vector<int>& list = tp->r_proxy.ckLocalBranch()->waiting[node->key];
               if (!list.size() || list.back() != tp->thisIndex) list.push_back(tp->thisIndex);
               break;
@@ -136,7 +153,11 @@ public:
         }
       }
     }
+
+    // Erase traversed node
     curr_nodes.erase(new_key);
+
+    // Store nodes to be traversed
     for (auto cn : curr_nodes_insertions) curr_nodes[cn.first].push_back(cn.second);
   }
 };

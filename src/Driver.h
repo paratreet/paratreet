@@ -161,7 +161,7 @@ public:
       CkPrintf("TreeCanopy cache loading: %.3lf ms\n",
           (CkWallTimer() - start_time) * 1000);
 
-      // Perform downward and upward traversals (Barnes-Hut)
+      // Perform traversals
       start_time = CkWallTimer();
       //treepieces.template startUpAndDown<DensityVisitor>();
       treepieces.template startDown<GravityVisitor>();
