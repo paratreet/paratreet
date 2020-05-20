@@ -11,6 +11,7 @@
 #include "Splitter.h"
 #include "TreePiece.h"
 #include "TreeCanopy.h"
+#include "TreeSpec.h"
 #include "BoundingBox.h"
 #include "BufferedVec.h"
 #include "Utility.h"
@@ -21,8 +22,10 @@
 #include "CacheManager.h"
 #include "CountManager.h"
 #include "Resumer.h"
+#include "Modularization.h"
 
 extern CProxy_Reader readers;
+extern CProxy_TreeSpec treespec;
 extern int n_readers;
 extern double decomp_tolerance;
 extern int max_particles_per_tp; // for OCT decomposition
@@ -50,7 +53,6 @@ public:
   BoundingBox universe;
   Key smallest_particle_key;
   Key largest_particle_key;
-  std::vector<Splitter> splitters;
   CProxy_TreePiece<CentroidData> treepieces; // Cannot be a global readonly variable
   int n_treepieces;
   double start_time;
@@ -67,6 +69,17 @@ public:
     CkPrintf("* Initialization\n");
     decompose(0);
     cb.send();
+  }
+
+  void broadcastDecomposition(const CkCallback& cb) {
+    PUP::sizer sizer;
+    treespec.ckLocalBranch()->getDecomposition()->pup(sizer);
+    sizer | const_cast<CkCallback&>(cb);
+    CkMarshallMsg *msg = CkAllocateMarshallMsg(sizer.size(), NULL);
+    PUP::toMem pupper((void *)msg->msgBuf);
+    treespec.ckLocalBranch()->getDecomposition()->pup(pupper);
+    pupper | const_cast<CkCallback&>(cb);
+    treespec.receiveDecomposition(msg);
   }
 
   // Performs decomposition by distributing particles among TreePieces,
@@ -97,15 +110,9 @@ public:
         (CkWallTimer() - start_time) * 1000);
 
     // Set up splitters for decomposition
-    // TODO: Support decompositions other than OCT
     start_time = CkWallTimer();
-    if (decomp_type == OCT_DECOMP) {
-      findOctSplitters();
-    } else {
-      CkAbort("Only OCT decomposition is currently supported");
-    }
-    std::sort(splitters.begin(), splitters.end());
-    readers.setSplitters(splitters, CkCallbackResumeThread());
+    n_treepieces = treespec.ckLocalBranch()->getDecomposition()->findSplitters(universe, readers);
+    broadcastDecomposition(CkCallbackResumeThread());
     CkPrintf("Setting up splitters for decomposition: %.3lf ms\n",
         (CkWallTimer() - start_time) * 1000);
 
@@ -128,9 +135,6 @@ public:
     // Check if all treepieces have received the right number of particles
     treepieces.check(CkCallbackResumeThread());
 #endif
-
-    // Free splitter memory
-    splitters.clear();
   }
 
   // Core iterative loop of the simulation
@@ -206,88 +210,6 @@ public:
   // -------------------
   // Auxiliary functions
   // -------------------
-
-  void findOctSplitters() {
-    BufferedVec<Key> keys;
-
-    // Initial splitter keys (first and last)
-    keys.add(Key(1)); // 0000...1
-    keys.add(~Key(0)); // 1111...1
-    keys.buffer();
-
-    int decomp_particle_sum = 0; // Used to check if all particles are decomposed
-
-    // Main decomposition loop
-    while (keys.size() != 0) {
-      // Send splitters to Readers for histogramming
-      CkReductionMsg *msg;
-      readers.countOct(keys.get(), CkCallbackResumeThread((void*&)msg));
-      int* counts = (int*)msg->getData();
-      int n_counts = msg->getSize() / sizeof(int);
-
-      // Check counts and create splitters if necessary
-      Real threshold = (DECOMP_TOLERANCE * Real(max_particles_per_tp));
-      for (int i = 0; i < n_counts; i++) {
-        Key from = keys.get(2*i);
-        Key to = keys.get(2*i+1);
-
-        int n_particles = counts[i];
-        if ((Real)n_particles > threshold) {
-          // Create 8 more splitter key pairs to go one level deeper.
-          // Leading zeros will be removed in Reader::count() to enable
-          // comparison of splitter key and particle key
-          keys.add(from << 3);
-          keys.add((from << 3) + 1);
-
-          keys.add((from << 3) + 1);
-          keys.add((from << 3) + 2);
-
-          keys.add((from << 3) + 2);
-          keys.add((from << 3) + 3);
-
-          keys.add((from << 3) + 3);
-          keys.add((from << 3) + 4);
-
-          keys.add((from << 3) + 4);
-          keys.add((from << 3) + 5);
-
-          keys.add((from << 3) + 5);
-          keys.add((from << 3) + 6);
-
-          keys.add((from << 3) + 6);
-          keys.add((from << 3) + 7);
-
-          keys.add((from << 3) + 7);
-          if (to == (~Key(0)))
-            keys.add(~Key(0));
-          else
-            keys.add(to << 3);
-        }
-        else {
-          // Create and store splitter
-          Splitter sp(Utility::removeLeadingZeros(from),
-              Utility::removeLeadingZeros(to), from, n_particles);
-          splitters.push_back(sp);
-
-          // Add up number of particles to check if all are flushed
-          decomp_particle_sum += n_particles;
-        }
-      }
-
-      keys.buffer();
-      delete msg;
-    }
-
-    // Check if decomposition is correct
-    if (decomp_particle_sum != universe.n_particles) {
-      CkAbort("Decomposition failure: only %d particles out of %d decomposed",
-          decomp_particle_sum, universe.n_particles);
-    }
-
-    // Determine number of TreePieces
-    // Override input from user if there was one
-    n_treepieces = splitters.size();
-  }
 
   void countInts(int* intrn_counts) {
     CkPrintf("%d node-part interactions, %d part-part interactions\n", intrn_counts[0], intrn_counts[1] / 2);

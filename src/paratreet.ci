@@ -5,10 +5,13 @@ mainmodule paratreet {
   include "Node.h";
   include "ProxyHolders.h";
   class CProxy_Reader;
+  class CProxy_TreeSpec;
   include "MultiData.h";
+  include "Decomposition.h";
 
   readonly CProxy_Main mainProxy;
   readonly CProxy_Reader readers;
+  readonly CProxy_TreeSpec treespec;
   readonly std::string input_file;
   readonly int n_readers;
   readonly double decomp_tolerance;
@@ -144,10 +147,15 @@ mainmodule paratreet {
     entry void receive(ParticleMsg*);
     entry void localSort(const CkCallback&);
     entry void checkSort(const Key, const CkCallback&);
-    entry void setSplitters(const std::vector<Splitter>&, const CkCallback&);
     template <typename Data>
     entry void flush(int, int, CProxy_TreePiece<Data>);
   };
+
+  group TreeSpec {
+    entry TreeSpec(int tree_type, int decomp_type);
+    entry void receiveDecomposition(CkMarshallMsg*);
+    entry [local] Decomposition* getDecomposition();
+  }
 
   extern entry void Reader request<CentroidData>(CProxy_TreePiece<CentroidData>, int, int);
   extern entry void Reader flush<CentroidData>(int, int, CProxy_TreePiece<CentroidData>);

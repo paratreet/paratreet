@@ -7,6 +7,7 @@
 #include "BoundingBox.h"
 #include "Splitter.h"
 #include "Utility.h"
+#include "Modularization.h"
 
 extern CProxy_Main mainProxy;
 extern int n_readers;
@@ -20,8 +21,8 @@ class Reader : public CBase_Reader {
 
   public:
     BoundingBox universe;
-    std::vector<Splitter> splitters;
-    std::vector<Key> SFCsplitters;
+    // std::vector<Splitter> splitters;
+    // std::vector<Key> SFCsplitters;
     Reader();
 
     // Loading particles and assigning keys
@@ -31,7 +32,6 @@ class Reader : public CBase_Reader {
 
     // OCT decomposition
     void countOct(std::vector<Key>, const CkCallback&);
-    void setSplitters(const std::vector<Splitter>&, const CkCallback&);
 
     // SFC decomposition
     //void countSfc(const std::vector<Key>&, const CkCallback&);
@@ -58,66 +58,19 @@ void Reader::request(CProxy_TreePiece<Data> tp_proxy, int index, int num_to_give
   } // maybe a function can just do this for me?
   particles.resize(n_particles - num_to_give);
   n_particles -= num_to_give;
-  if (n_particles) SFCsplitters.push_back(particles[0].key);
+  // if (n_particles) SFCsplitters.push_back(particles[0].key);
   tp_proxy[index].receive(msg);
 }
 
 template <typename Data>
 void Reader::flush(int n_total_particles, int n_treepieces, CProxy_TreePiece<Data> treepieces) {
-  int flush_count = 0;
+  auto sendParticles = [&](int dest, int n_particles, Particle* particles) {
+    ParticleMsg* msg = new (n_particles) ParticleMsg(particles, n_particles);
+    treepieces[dest].receive(msg);
+  };
 
-  if (decomp_type == OCT_DECOMP) {
-    // OCT decomposition
-    int start = 0;
-    int finish = particles.size();
-
-    // Find particles that belong to each splitter range and flush them
-    for (int i = 0; i < splitters.size(); i++) {
-      int begin = Utility::binarySearchGE(splitters[i].from, &particles[0], start, finish);
-      int end = Utility::binarySearchGE(splitters[i].to, &particles[0], begin, finish);
-
-      int n_particles = end - begin;
-
-      if (n_particles > 0) {
-        ParticleMsg* msg = new (n_particles) ParticleMsg(&particles[begin], n_particles);
-        treepieces[i].receive(msg);
-        flush_count += n_particles;
-      }
-
-      start = end;
-    }
-
-    // Free splitter memory
-    splitters.clear();
-  } else if (decomp_type == SFC_DECOMP) {
-    // TODO SFC decomposition
-    // Probably need to use prefix sum
-    int n_particles_left = particles.size();
-    for (int i = 0; i < n_treepieces; i++) {
-      int n_need = n_total_particles / n_treepieces;
-      if (i < (n_total_particles % n_treepieces))
-        n_need++;
-
-      if (n_particles_left > n_need) {
-        ParticleMsg* msg = new (n_need) ParticleMsg(&particles[flush_count], n_need);
-        treepieces[i].receive(msg);
-        flush_count += n_need;
-        n_particles_left -= n_need;
-      }
-      else {
-        if (n_particles_left > 0) {
-          ParticleMsg* msg = new (n_particles_left) ParticleMsg(&particles[flush_count], n_particles_left);
-          treepieces[i].receive(msg);
-          flush_count += n_particles_left;
-          n_particles_left = 0;
-        }
-      }
-
-      if (n_particles_left == 0)
-        break;
-    }
-  }
-
+  int flush_count =
+      treespec.ckLocalBranch()->getDecomposition()->flush(n_total_particles, n_treepieces, sendParticles, particles);
   if (flush_count != particles.size()) {
     CkAbort("Reader %d failure: flushed %d out of %zu particles\n", thisIndex,
         flush_count, particles.size());

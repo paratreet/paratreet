@@ -1,6 +1,7 @@
 #include "TipsyFile.h"
 #include "Reader.h"
 #include "Utility.h"
+#include "Modularization.h"
 #include <iostream>
 #include <cstring>
 #include <algorithm>
@@ -113,18 +114,8 @@ void Reader::computeUniverseBoundingBox(const CkCallback& cb) {
 void Reader::assignKeys(BoundingBox universe_, const CkCallback& cb) {
   // Generate particle keys
   universe = universe_;
-  for (unsigned int i = 0; i < particles.size(); i++) {
-    particles[i].key = SFC::generateKey(particles[i].position, universe.box);
 
-    // Add placeholder bit
-    particles[i].key |= (Key)1 << (KEY_BITS-1);
-  }
-
-  // Sort particles for decomposition
-  // No need for SFC, as particles will be sorted globally
-  if (decomp_type == OCT_DECOMP) {
-    std::sort(particles.begin(), particles.end());
-  }
+  treespec.ckLocalBranch()->getDecomposition()->assignKeys(universe, particles);
 
   // Back to callee
   contribute(cb);
@@ -263,7 +254,7 @@ void Reader::receive(ParticleMsg* msg) {
   std::memcpy(&particles[particle_index], msg->particles, msg->n_particles * sizeof(Particle));
   particle_index += msg->n_particles;
   delete msg;
-  SFCsplitters.push_back(Key(0)); // Maybe use something different than splitters variable?
+  // SFCsplitters.push_back(Key(0)); // Maybe use something different than splitters variable?
 }
 
 void Reader::localSort(const CkCallback& cb) {
@@ -307,9 +298,4 @@ void Reader::checkSort(const Key last, const CkCallback& cb) {
   else {
     contribute(cb);
   }
-}
-
-void Reader::setSplitters(const std::vector<Splitter>& splitters, const CkCallback& cb) {
-  this->splitters = splitters;
-  contribute(cb);
 }
