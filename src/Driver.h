@@ -175,13 +175,11 @@ public:
 #endif
       CkPrintf("Tree traversal: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
 
-      // TODO: Perform interactions
-      /*
+      // Perform interactions
       start_time = CkWallTimer();
       treepieces.interact(CkCallbackResumeThread());
       CkPrintf("Interactions: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
-      count_manager.sum(CkCallback(CkReductionTarget(Main, terminate), this->thisProxy));
-      */
+      //count_manager.sum(CkCallback(CkReductionTarget(Main, terminate), this->thisProxy));
 
       // Move the particles in TreePieces
       start_time = CkWallTimer();
