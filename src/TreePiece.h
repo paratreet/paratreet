@@ -445,6 +445,8 @@ void TreePiece<Data>::interact(const CkCallback& cb) {
 
 template <typename Data>
 void TreePiece<Data>::perturb (Real timestep, bool if_flush) {
+  // If tree will be entirely rebuilt, just update particle positions
+  // based on the forces calculated from interactions
   if (if_flush) {
     for (auto leaf : leaves) {
       for (int i = 0; i < leaf->n_particles; i++) {
@@ -455,14 +457,10 @@ void TreePiece<Data>::perturb (Real timestep, bool if_flush) {
     return;
   }
 
-  for (int i = 0; i < leaves.size(); i++) {
-    for (int j = 0; j < leaves[i]->n_particles; j++) {
-//      CkPrintf("sum forces y %lf\n", leaves[i]->sum_forces[j].y);
-    }
-  }
-
-  // SUM FORCES IS NAN
-
+  // Perturb particles for incremental tree building
+  // TODO: Fails with input files with randomly generated particles,
+  //       as the initial velocities are too large and particles shoot out
+  //       of the universe
   std::vector<Particle> in_particles;
   std::map<int, std::vector<Particle>> out_particles;
   std::vector<int> remainders;

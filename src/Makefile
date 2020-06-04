@@ -16,7 +16,7 @@ proj: $(OBJS)
 	$(CHARMC) -language charm++ -tracemode projections -o $(BINARY) $(OBJS) $(LD_LIBS)
 
 $(BINARY).decl.h: $(BINARY).ci
-	$(CHARMC) $(BINARY).ci
+	$(CHARMC) $<
 
 common.h: $(STRUCTURE_PATH)/Vector3D.h $(STRUCTURE_PATH)/SFC.h Utility.h
 
@@ -25,7 +25,7 @@ Main.o: Main.C $(BINARY).decl.h common.h Reader.h TreePiece.h TreeSpec.h Boundin
 
 CacheManager.h: $(BINARY).decl.h
 
-%.o: %.C %.h
+%.o: %.C %.h $(BINARY).decl.h
 	$(CHARMC) -c $<
 
 test: all
