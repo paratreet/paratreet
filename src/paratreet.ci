@@ -54,7 +54,6 @@ mainmodule paratreet {
     entry CacheManager();
     entry void requestNodes(std::pair<Key, int>);
     entry void recvStarterPack(std::pair<Key, Data> pack [n], int n, CkCallback);
-    entry void addCache(MultiMsg<Data>*);
     entry void addCache(MultiData<Data>);
     entry void restoreData(std::pair<Key, Data>);
     template <typename Visitor>

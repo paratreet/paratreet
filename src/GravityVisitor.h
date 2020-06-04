@@ -28,9 +28,9 @@ private:
   }
   void addGravityNode(SourceNode<CentroidData> source, TargetNode<CentroidData> target) {
     for (int i = 0; i < target.n_particles; i++) {
-      Vector3D<Real> diff = source.data->getCentroid() - target.particles[i].position;
+      Vector3D<Real> diff = source.data.getCentroid() - target.particles[i].position;
       Real rsq = diff.lengthSquared();
-      target.applyForce(i, diff * (gconst * source.data->sum_mass * target.particles[i].mass / (rsq * sqrt(rsq))));
+      target.applyForce(i, diff * (gconst * source.data.sum_mass * target.particles[i].mass / (rsq * sqrt(rsq))));
     }
 #if COUNT_INTRNS
     centroid_resumer.ckLocalBranch()->countInts(-target.n_particles);
@@ -42,12 +42,12 @@ private:
     addGravityLeaf(source, target);
   }
   bool node(SourceNode<CentroidData> source, TargetNode<CentroidData> target) {
-    Vector3D<Real> dr = source.data->getCentroid() - target.data->getCentroid();
+    Vector3D<Real> dr = source.data.getCentroid() - target.data->getCentroid();
     Real dsq = dr.lengthSquared();
-    if (theta * dsq < source.data->rsq) {
+    if (theta * dsq < source.data.rsq) {
       return true;
     }
-    if (source.data->sum_mass > 0) addGravityNode(source, target);
+    if (source.data.sum_mass > 0) addGravityNode(source, target);
     return false;
   }
   bool cell(SourceNode<CentroidData> source, TargetNode<CentroidData> target) {
@@ -57,7 +57,7 @@ private:
     // else return false
 
     const OrientedBox<Real> box = target.data->box;
-    if (box.contains(source.data->getCentroid())) return true;
+    if (box.contains(source.data.getCentroid())) return true;
 
     for (int i = 0; i < 2; i++) {
       for (int j = 0; j < 2; j++) {
@@ -66,9 +66,9 @@ private:
           corner.x = (i) ? box.greater_corner.x : box.lesser_corner.x;
           corner.y = (j) ? box.greater_corner.y : box.lesser_corner.y;
           corner.z = (k) ? box.greater_corner.z : box.lesser_corner.z;
-	  Vector3D<Real> dr = source.data->getCentroid() - corner;
+	  Vector3D<Real> dr = source.data.getCentroid() - corner;
 	  Real dsq = dr.lengthSquared();
-	  if (theta * dsq < source.data->rsq) {
+	  if (theta * dsq < source.data.rsq) {
 	    return true;
           } 
         }

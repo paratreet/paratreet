@@ -12,7 +12,7 @@ private:
 
 public:
   bool node(SourceNode<CentroidData> source, TargetNode<CentroidData> target) {
-    Real rsq = (source.data->getCentroid() - target.data->getCentroid()).lengthSquared();
+    Real rsq = (source.data.getCentroid() - target.data->getCentroid()).lengthSquared();
     return (rsq < radius * radius);
     // this just looks at the centroids when it should look at the whole boxes
     // need to use intersect(), maybe use Sphere<> ?

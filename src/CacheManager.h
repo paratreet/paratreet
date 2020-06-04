@@ -66,9 +66,9 @@ public:
   void requestNodes(std::pair<Key, int>);
   void serviceRequest(Node<Data>*, int);
   void recvStarterPack(std::pair<Key, Data>* pack, int n, CkCallback);
-  void addCache(MultiMsg<Data>*);
+  // void addCache(MultiMsg<Data>*);
   void addCache(MultiData<Data>);
-  Node<Data>* addCacheHelper(Particle*, int, Node<Data>*, int);
+  Node<Data>* addCacheHelper(Particle*, int, SourceNode<Data>*, int);
   void restoreData(std::pair<Key, Data>);
   void restoreDataHelper(std::pair<Key, Data>&, bool);
   void insertNode(Node<Data>*, bool, bool);
@@ -156,13 +156,6 @@ void CacheManager<Data>::recvStarterPack(std::pair<Key, Data>* pack, int n, CkCa
 }
 
 template <typename Data>
-void CacheManager<Data>::addCache(MultiMsg<Data>* multimsg) {
-  Node<Data>* top_node = addCacheHelper(multimsg->particles, multimsg->n_particles, multimsg->nodes, multimsg->n_nodes);
-  delete multimsg;
-  process(top_node->key);
-}
-
-template <typename Data>
 void CacheManager<Data>::addCache(MultiData<Data> multidata) {
 #if DEBUG
   CkPrintf("adding cache for node %d\n", multidata.nodes[0].key);
@@ -172,7 +165,7 @@ void CacheManager<Data>::addCache(MultiData<Data> multidata) {
 }
 
 template <typename Data>
-Node<Data>* CacheManager<Data>::addCacheHelper(Particle* particles, int n_particles, Node<Data>* nodes, int n_nodes) {
+Node<Data>* CacheManager<Data>::addCacheHelper(Particle* particles, int n_particles, SourceNode<Data>* nodes, int n_nodes) {
   Node<Data>* first_node_placeholder = r_proxy.ckLocalBranch()->fastNodeFind(nodes[0].key, true);
 #if DEBUG
   CkPrintf("adding cache for node %d on cm %d\n", nodes[0].key, this->thisIndex);
