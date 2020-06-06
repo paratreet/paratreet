@@ -149,8 +149,11 @@ void TreePiece<Data>::receive(ParticleMsg* msg) {
 template <typename Data>
 void TreePiece<Data>::check(const CkCallback& cb) {
   if (n_expected != incoming_particles.size()) {
-    CkAbort("[TP %d] ERROR! Only %zu particles out of %d received",
-        this->thisIndex, particles.size(), n_expected);
+    std::stringstream ss;
+    ss << "[TP " << this->thisIndex << "] ERROR! Only " << particles.size();
+    ss << " particles out of " << n_expected << " received\n";
+    auto outStr = ss.str();
+    CkAbort(outStr.c_str());
   }
 
   this->contribute(cb);

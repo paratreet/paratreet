@@ -72,8 +72,11 @@ void Reader::flush(int n_total_particles, int n_treepieces, CProxy_TreePiece<Dat
   int flush_count =
       treespec.ckLocalBranch()->getDecomposition()->flush(n_total_particles, n_treepieces, sendParticles, particles);
   if (flush_count != particles.size()) {
-    CkAbort("Reader %d failure: flushed %d out of %zu particles\n", thisIndex,
-        flush_count, particles.size());
+    std::stringstream ss;
+    ss << "Reader " << thisIndex << " failure: flushed " << flush_count;
+    ss << " out of " << particles.size() << " particles\n";
+    auto outStr = ss.str();
+    CkAbort(outStr.c_str());
   }
 
   // Clean up
