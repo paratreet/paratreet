@@ -177,8 +177,11 @@ int OctDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &reader
 
   // Check if decomposition is correct
   if (decomp_particle_sum != universe.n_particles) {
-    CkAbort("Decomposition failure: only %d particles out of %d decomposed",
-        decomp_particle_sum, universe.n_particles);
+    std::stringstream ss;
+    ss << "Decomposition failure: only " << decomp_particle_sum;
+    ss << " out of " << universe.n_particles << " decomposed\n";
+    auto outStr = ss.str();
+    CkAbort(outStr.c_str());
   }
 
   // Sort our splitters
