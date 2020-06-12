@@ -181,7 +181,7 @@ int OctDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &reader
     ss << "Decomposition failure: only " << decomp_particle_sum;
     ss << " out of " << universe.n_particles << " decomposed\n";
     auto outStr = ss.str();
-    CkAbort(outStr.c_str());
+    CkAbort("%s", outStr.c_str());
   }
 
   // Sort our splitters

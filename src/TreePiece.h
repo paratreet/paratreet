@@ -153,7 +153,7 @@ void TreePiece<Data>::check(const CkCallback& cb) {
     ss << "[TP " << this->thisIndex << "] ERROR! Only " << particles.size();
     ss << " particles out of " << n_expected << " received\n";
     auto outStr = ss.str();
-    CkAbort(outStr.c_str());
+    CkAbort("%s", outStr.c_str());
   }
 
   this->contribute(cb);

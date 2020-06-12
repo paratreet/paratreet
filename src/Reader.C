@@ -20,7 +20,7 @@ void Reader::load(std::string input_file, const CkCallback& cb) {
     ss << "Reader " << thisIndex << " failed to open tipsy file ";
     ss << input_file << std::endl;
     auto outStr = ss.str();
-    CkAbort(outStr.c_str());
+    CkAbort("%s", outStr.c_str());
   }
 
   // Read header and count particles

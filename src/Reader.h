@@ -76,7 +76,7 @@ void Reader::flush(int n_total_particles, int n_treepieces, CProxy_TreePiece<Dat
     ss << "Reader " << thisIndex << " failure: flushed " << flush_count;
     ss << " out of " << particles.size() << " particles\n";
     auto outStr = ss.str();
-    CkAbort(outStr.c_str());
+    CkAbort("%s", outStr.c_str());
   }
 
   // Clean up
