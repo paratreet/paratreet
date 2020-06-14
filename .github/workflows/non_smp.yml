@@ -44,5 +44,5 @@ jobs:
       run: |
         export CHARM_HOME=$GITHUB_WORKSPACE/charm
         cd src
-        make -j4
+        make -j4 -DGROUP_CACHE
         ./charmrun +p4 ./paratreet -f ../inputgen/1k.tipsy -p 100 ++local
