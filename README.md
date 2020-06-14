@@ -1,5 +1,7 @@
 # ParaTreeT: Parallel Tree Toolkit
 
+![CI](https://github.com/paratreet/paratreet/workflows/CI/badge.svg?branch=master)
+
 ## Installation
 
 ### 1. Build Charm++
