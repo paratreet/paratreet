@@ -45,4 +45,4 @@ jobs:
         export CHARM_HOME=$GITHUB_WORKSPACE/charm
         cd src
         make -j4
-        ./charmrun +p3 ./paratreet -f ../inputgen/1k.tipsy -p 100 ++ppn 3 +pemap 1-3 +commap 0 ++local
+        ./charmrun +p3 ./paratreet -f ../inputgen/1k.tipsy -p 100 ++ppn 3 +setcpuaffinity 0 ++local
