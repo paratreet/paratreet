@@ -567,7 +567,7 @@ template <typename Data>
 void TreePiece<Data>::output(std::string output_file, const CkCallback& cb) {
   FILE* fp;
   // Print total number of particles
-  if (this->thisIndex == 0) {
+  if (this->thisIndex == 0 && dim_cnt == 0) {
     fp = CmiFopen(output_file.c_str(), "w");
     CkAssert(fp);
     fprintf(fp, "%d\n", n_total_particles);
@@ -577,7 +577,7 @@ void TreePiece<Data>::output(std::string output_file, const CkCallback& cb) {
   // Print particle accelerations to output file
   fp = CmiFopen(output_file.c_str(), "a");
   CkAssert(fp);
-  for (Particle& particle : particles) {
+  for (Particle& particle : incoming_particles) {
     Real outval;
     if (dim_cnt == 0) outval = particle.acceleration.x;
     else if (dim_cnt == 1) outval = particle.acceleration.y;
