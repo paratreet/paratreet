@@ -14,21 +14,21 @@ private:
   void addGravityLeaf(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
     int curr_counter = 0;
     for (int i = 0; i < target.n_particles; i++) {
+      Vector3D<Real> sum_force;
       for (int j = 0; j < source.n_particles; j++) {
         if (target.particles[i].key == source.particles[j].key) continue;
         curr_counter++;
         Vector3D<Real> diff = source.particles[j].position - target.particles[i].position;
         Real rsq = diff.lengthSquared();
-        Real scalar = gconst * source.particles[j].mass * target.particles[i].mass / (rsq * sqrt(rsq));
-        target.applyForce(i, diff * scalar);
+        sum_force += diff * (source.particles[j].mass / (rsq * sqrt(rsq)));
       }
+      target.applyForce(i, gconst * target.particles[i].mass * sum_force);
     }
 #if COUNT_INTRNS
     centroid_resumer.ckLocalBranch()->countInts(curr_counter);
 #endif
   }
   void addGravityNode(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
-    
     for (int i = 0; i < target.n_particles; i++) {
       Vector3D<Real> diff = source.data.centroid - target.particles[i].position;
       Real rsq = diff.lengthSquared();
