@@ -16,10 +16,11 @@ private:
     for (int i = 0; i < target.n_particles; i++) {
       for (int j = 0; j < source.n_particles; j++) {
         if (target.particles[i].key == source.particles[j].key) continue;
-	curr_counter++;
-	Vector3D<Real> diff = source.particles[j].position - target.particles[i].position;
+        curr_counter++;
+        Vector3D<Real> diff = source.particles[j].position - target.particles[i].position;
         Real rsq = diff.lengthSquared();
-        target.applyForce(i, diff * (gconst * source.particles[j].mass * target.particles[i].mass / (rsq * sqrt(rsq))));
+        Real scalar = gconst * source.particles[j].mass * target.particles[i].mass / (rsq * sqrt(rsq));
+        target.applyForce(i, diff * scalar);
       }
     }
 #if COUNT_INTRNS
@@ -27,10 +28,12 @@ private:
 #endif
   }
   void addGravityNode(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
+    
     for (int i = 0; i < target.n_particles; i++) {
-      Vector3D<Real> diff = source.data.getCentroid() - target.particles[i].position;
+      Vector3D<Real> diff = source.data.centroid - target.particles[i].position;
       Real rsq = diff.lengthSquared();
-      target.applyForce(i, diff * (gconst * source.data.sum_mass * target.particles[i].mass / (rsq * sqrt(rsq))));
+      Real scalar = (gconst * source.data.sum_mass * target.particles[i].mass / (rsq * sqrt(rsq)));
+      target.applyForce(i, diff * scalar);
     }
 #if COUNT_INTRNS
     centroid_resumer.ckLocalBranch()->countInts(-target.n_particles);
@@ -42,7 +45,7 @@ private:
     addGravityLeaf(source, target);
   }
   bool node(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
-    Vector3D<Real> dr = source.data.getCentroid() - target.data.getCentroid();
+    Vector3D<Real> dr = source.data.centroid - target.data.centroid;
     Real dsq = dr.lengthSquared();
     if (theta * dsq < source.data.rsq) {
       return true;
@@ -57,7 +60,7 @@ private:
     // else return false
 
     const OrientedBox<Real> box = target.data.box;
-    if (box.contains(source.data.getCentroid())) return true;
+    if (box.contains(source.data.centroid)) return true;
 
     for (int i = 0; i < 2; i++) {
       for (int j = 0; j < 2; j++) {
@@ -66,10 +69,10 @@ private:
           corner.x = (i) ? box.greater_corner.x : box.lesser_corner.x;
           corner.y = (j) ? box.greater_corner.y : box.lesser_corner.y;
           corner.z = (k) ? box.greater_corner.z : box.lesser_corner.z;
-	  Vector3D<Real> dr = source.data.getCentroid() - corner;
-	  Real dsq = dr.lengthSquared();
-	  if (theta * dsq < source.data.rsq) {
-	    return true;
+          Vector3D<Real> dr = source.data.centroid - corner;
+          Real dsq = dr.lengthSquared();
+          if (theta * dsq < source.data.rsq) {
+            return true;
           } 
         }
       }

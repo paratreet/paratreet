@@ -11,6 +11,7 @@
 struct CentroidData {
   Vector3D<Real> moment;
   Real sum_mass;
+  Vector3D<Real> centroid; // too slow to compute this on the fly
   std::vector< std::priority_queue<Particle, std::vector<Particle>, particle_comp> > neighbors; // used for sph
   OrientedBox<Real> box;
   int count;
@@ -25,15 +26,17 @@ struct CentroidData {
       sum_mass += particles[i].mass;
       box.grow(particles[i].position);
     }
+    centroid = moment / sum_mass;
     count += n_particles;
   }
 
   const CentroidData& operator+=(const CentroidData& cd) { // needed for upward traversal
     moment += cd.moment;
     sum_mass += cd.sum_mass;
+    centroid = moment / sum_mass;
     box.grow(cd.box);
-    Vector3D<Real> delta1 = getCentroid() - box.lesser_corner;
-    Vector3D<Real> delta2 = box.greater_corner - getCentroid();
+    Vector3D<Real> delta1 = centroid - box.lesser_corner;
+    Vector3D<Real> delta2 = box.greater_corner - centroid;
     delta1.x = (delta1.x > delta2.x ? delta1.x : delta2.x);
     delta1.y = (delta1.y > delta2.y ? delta1.y : delta2.y);
     delta1.z = (delta1.z > delta2.z ? delta1.z : delta2.z);
@@ -46,6 +49,7 @@ struct CentroidData {
   const CentroidData& operator= (const CentroidData& cd) {
     moment = cd.moment;
     sum_mass = cd.sum_mass;
+    centroid = cd.centroid;
     box = cd.box;
     count = cd.count;
     rsq = cd.rsq;
@@ -55,14 +59,12 @@ struct CentroidData {
   void pup(PUP::er& p) {
     p | moment;
     p | sum_mass;
+    p | centroid;
     p | box;
     p | count;
     p | rsq;
   }
 
-  Vector3D<Real> getCentroid() const {
-    return moment / sum_mass;
-  }
 };
 
 #endif // PARATREET_CENTROID_H_

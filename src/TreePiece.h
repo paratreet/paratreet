@@ -487,7 +487,7 @@ void TreePiece<Data>::perturb (Real timestep, bool if_flush) {
       Vector3D<Real> old_position = particle.position;
       particle.perturb(timestep, leaf->getForce(i), readers.ckLocalBranch()->universe.box);
       //CkPrintf("magitude of displacement = %lf\n", (old_position - leaf->particles[i].position).length());
-      //CkPrintf("total centroid is (%lf, %lf, %lf)\n", global_root->data.getCentroid().x, global_root->data.getCentroid().y, global_root->data.getCentroid().z);
+      //CkPrintf("total centroid is (%lf, %lf, %lf)\n", global_root->data.centroid.x, global_root->data.centroid.y, global_root->data.centroid.z);
       OrientedBox<Real> curr_box = tp_box;
       Node<Data>* node = local_root;
       int remainders_index = 0;
