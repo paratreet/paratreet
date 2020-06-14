@@ -54,6 +54,7 @@ public:
   std::vector<std::vector<Node<Data>*>> interactions;
   bool cache_init;
   std::vector<Particle> flushed_particles; // For debugging
+  int dim_cnt;
 
   TreePiece(const CkCallback&, int, int, TCHolder<Data>,
     CProxy_Resumer<Data>, CProxy_CacheManager<Data>, DPHolder<Data>);
@@ -74,6 +75,7 @@ public:
   void print(Node<Data>*);
   void perturb (Real timestep, bool);
   void flush(CProxy_Reader);
+  void output(std::string, const CkCallback&);
 
   // For debugging
   void checkParticlesChanged(const CkCallback& cb) {
@@ -111,6 +113,7 @@ TreePiece<Data>::TreePiece(const CkCallback& cb, int n_total_particles_,
   cm_local->r_proxy = r_proxy;
 
   cache_init = false;
+  dim_cnt = 0;
 
   n_expected = treespec.ckLocalBranch()->getDecomposition()->
       getNumExpectedParticles(n_total_particles, n_treepieces, this->thisIndex);
@@ -558,6 +561,46 @@ void TreePiece<Data>::print(Node<Data>* node) {
   node->dot(out);
   out << "}" << endl;
   out.close();
+}
+
+template <typename Data>
+void TreePiece<Data>::output(std::string output_file, const CkCallback& cb) {
+  FILE* fp;
+  // Print total number of particles
+  if (this->thisIndex == 0) {
+    fp = CmiFopen(output_file.c_str(), "w");
+    CkAssert(fp);
+    fprintf(fp, "%d\n", n_total_particles);
+    CmiFclose(fp);
+  }
+
+  // Print particle accelerations to output file
+  fp = CmiFopen(output_file.c_str(), "a");
+  CkAssert(fp);
+  for (Particle& particle : particles) {
+    Real outval;
+    if (dim_cnt == 0) outval = particle.acceleration.x;
+    else if (dim_cnt == 1) outval = particle.acceleration.y;
+    else if (dim_cnt == 2) outval = particle.acceleration.z;
+    fprintf(fp, "%.14g\n", outval);
+  }
+
+  if (++dim_cnt == 3) dim_cnt = 0;
+
+  int result = CmiFclose(fp);
+  CkAssert(result == 0);
+
+  if (this->thisIndex != n_treepieces - 1) {
+    this->thisProxy[this->thisIndex+1].output(output_file, cb);
+  } else {
+    if (dim_cnt == 0) {
+      // Printed all dimensions
+      cb.send();
+    } else {
+      // Print next dimension
+      this->thisProxy[0].output(output_file, cb);
+    }
+  }
 }
 
 #endif // PARATREET_TREEPIECE_H_

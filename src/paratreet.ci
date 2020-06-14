@@ -99,6 +99,7 @@ mainmodule paratreet {
     entry void flush(CProxy_Reader);
 
     entry void checkParticlesChanged(const CkCallback&);
+    entry void output(std::string, const CkCallback&);
   };
   array [1d] TreePiece<CentroidData>;
 

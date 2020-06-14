@@ -26,6 +26,7 @@
 
 extern CProxy_Reader readers;
 extern CProxy_TreeSpec treespec;
+extern std::string input_file;
 extern int n_readers;
 extern double decomp_tolerance;
 extern int max_particles_per_tp; // for OCT decomposition
@@ -200,6 +201,14 @@ public:
       storage.clear();
       storage_sorted = false;
       CkWaitQD();
+    }
+
+    // Output particle accelerations for verification
+    // TODO: initial force interactions similar to ChaNGa
+    if (num_iterations == 0) {
+      std::string output_file = input_file + ".out";
+      treepieces[0].output(output_file, CkCallbackResumeThread());
+      CkPrintf("Outputting particle accelerations for verification...\n");
     }
 
     cb.send();
