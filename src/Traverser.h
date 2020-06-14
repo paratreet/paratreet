@@ -7,7 +7,6 @@
 #include <stack>
 #include <unordered_map>
 #include <vector>
-#include "UserNode.h"
 
 template <typename Data>
 class Traverser {
@@ -25,10 +24,10 @@ public:
       while (nodes.size()) {
         Node<Data>* node = nodes.top();
         nodes.pop();
-        if (node->type == Node<Data>::Internal) {
-          if (v.node(SourceNode<Data>(node), TargetNode<Data>(tp->leaves[local_trav.second]))) {
+        if (node->type == Node<Data>::Type::Internal) {
+          if (v.node(*node, *(tp->leaves[local_trav.second]))) {
             for (int j = 0; j < node->n_children; j++) {
-              nodes.push(node->children[j].load());
+              nodes.push(node->getChild(j));
             }
           }
         }
@@ -44,7 +43,7 @@ public:
     Visitor v;
     for (int i = 0; i < tp->interactions.size(); i++) {
       for (Node<Data>* source : tp->interactions[i]) {
-        v.leaf(SourceNode<Data>(source), TargetNode<Data>(tp->leaves[i]));
+        v.leaf(*source, *(tp->leaves[i]));
       }
     }
   }
@@ -88,43 +87,43 @@ public:
         CkPrintf("tp %d, key = %d, type = %d, pe %d\n", tp->thisIndex, node->key, node->type, CkMyPe());
 #endif
         switch (node->type) {
-          case Node<Data>::Leaf:
-          case Node<Data>::CachedRemoteLeaf:
+          case Node<Data>::Type::Leaf:
+          case Node<Data>::Type::CachedRemoteLeaf:
             {
               // Store local and remote cached leaves for interactions
               tp->interactions[bucket].push_back(node);
               break;
             }
-          case Node<Data>::Internal:
+          case Node<Data>::Type::Internal:
             {
 #if DELAYLOCAL
               tp->local_travs.push_back(std::make_pair(node, bucket));
               break;
 #endif
             }
-          case Node<Data>::CachedBoundary:
-          case Node<Data>::CachedRemote:
+          case Node<Data>::Type::CachedBoundary:
+          case Node<Data>::Type::CachedRemote:
             {
               // Check if the 'node' condition is fulfilled
               // If so, need to go down deeper
-              if (v.node(SourceNode<Data>(node), TargetNode<Data>(tp->leaves[bucket]))) {
-                for (int i = 0; i < node->children.size(); i++) {
-                  nodes.push(node->children[i].load());
+              if (v.node(*node, *tp->leaves[bucket])) {
+                for (int i = 0; i < node->n_children; i++) {
+                  nodes.push(node->getChild(i));
                 }
               }
               break;
             }
-          case Node<Data>::Boundary:
-          case Node<Data>::RemoteAboveTPKey:
-          case Node<Data>::Remote:
-          case Node<Data>::RemoteLeaf:
+          case Node<Data>::Type::Boundary:
+          case Node<Data>::Type::RemoteAboveTPKey:
+          case Node<Data>::Type::Remote:
+          case Node<Data>::Type::RemoteLeaf:
             {
               curr_nodes_insertions.push_back(std::make_pair(node->key, bucket));
 
               // Submit a request if the node wasn't requested before
               bool prev = node->requested.exchange(true);
               if (!prev) {
-                if (node->type == Node<Data>::Boundary || node->type == Node<Data>::RemoteAboveTPKey) {
+                if (node->type == Node<Data>::Type::Boundary || node->type == Node<Data>::Type::RemoteAboveTPKey) {
                   // Ask TreeCanopy for data
                   // If the canopy is at the same level as a TP, it asks the TP
                   // which eventually calls CacheManager::serviceRequest
@@ -203,33 +202,33 @@ public:
         CkPrintf("tp %d, key = %d, type = %d, pe %d\n", tp->thisIndex, node->key, node->type, CkMyPe());
 #endif
         switch (node->type) {
-          case Node<Data>::Leaf:
-          case Node<Data>::CachedRemoteLeaf:
+          case Node<Data>::Type::Leaf:
+          case Node<Data>::Type::CachedRemoteLeaf:
             {
-              v.leaf(SourceNode<Data>(node), TargetNode<Data>(tp->leaves[bucket]));
+              v.leaf(*node, *(tp->leaves[bucket]));
               break;
             }
-          case Node<Data>::Internal:
-          case Node<Data>::CachedBoundary:
-          case Node<Data>::CachedRemote:
+          case Node<Data>::Type::Internal:
+          case Node<Data>::Type::CachedBoundary:
+          case Node<Data>::Type::CachedRemote:
             {
-              if (v.node(SourceNode<Data>(node), TargetNode<Data>(tp->leaves[bucket]))) {
-                for (int i = 0; i < node->children.size(); i++) {
-                  nodes.push(node->children[i].load());
+              if (v.node(*node, *(tp->leaves[bucket]))) {
+                for (int i = 0; i < node->n_children; i++) {
+                  nodes.push(node->getChild(i));
                 }
               }
               break;
             }
-          case Node<Data>::Boundary:
-          case Node<Data>::RemoteAboveTPKey:
-          case Node<Data>::Remote:
-          case Node<Data>::RemoteLeaf:
+          case Node<Data>::Type::Boundary:
+          case Node<Data>::Type::RemoteAboveTPKey:
+          case Node<Data>::Type::Remote:
+          case Node<Data>::Type::RemoteLeaf:
             {
               curr_nodes_insertions.push_back(std::make_pair(node->key, bucket));
               num_waiting[bucket]++;
               bool prev = node->requested.exchange(true);
               if (!prev) {
-                if (node->type == Node<Data>::Boundary || node->type == Node<Data>::RemoteAboveTPKey)
+                if (node->type == Node<Data>::Type::Boundary || node->type == Node<Data>::Type::RemoteAboveTPKey)
                   tp->tc_proxy[node->key].requestData(tp->cm_local->thisIndex);
                 else tp->cm_proxy[node->cm_index].requestNodes(std::make_pair(node->key, tp->cm_local->thisIndex));
               }
@@ -245,14 +244,14 @@ public:
       }
       if (num_waiting[bucket] == 0) {
         if (trav_tops[bucket]->parent) {
-          for (int j = 0; j < BRANCH_FACTOR; j++) {
-            Node<Data>* child = trav_tops[bucket]->parent->children[j].load();
+          for (int j = 0; j < trav_tops[bucket]->n_children; j++) {
+            Node<Data>* child = trav_tops[bucket]->parent->getChild(j);
             if (child == nullptr) {
               CkPrintf("child of key %lu and parent type %d is nullptr\n", trav_tops[bucket]->parent->key * 8 + j, trav_tops[bucket]->parent->type);
             }
             if (child != trav_tops[bucket]) {
-               if (trav_tops[bucket]->parent->type == Node<Data>::Boundary) {
-                 child->type = Node<Data>::RemoteAboveTPKey;
+               if (trav_tops[bucket]->parent->type == Node<Data>::Type::Boundary) {
+                 child->type = Node<Data>::Type::RemoteAboveTPKey;
                }
                curr_nodes_insertions.push_back(std::make_pair(child->key, bucket));
                num_waiting[bucket]++;
@@ -278,12 +277,13 @@ public:
   DualTraverser(TreePiece<Data>* tpi, std::vector<Key> keys) : tp(tpi)
   {
     for (auto leaf : tp->leaves) curr_nodes[1].push_back(leaf);
-    tp->local_root = tp->global_root->findNode(tp->tp_key);
+    tp->local_root = tp->global_root->getDescendant(tp->tp_key);
     for (auto key : keys) curr_nodes[key].push_back(tp->local_root);
   }
   void processLocal () {}
   void interact() {this->template interactBase<Visitor>(tp);}
   virtual void traverse(Key new_key) {
+/*
     Visitor v;
     if (new_key == 1) tp->global_root = tp->cm_local->root;
     auto& now_ready = curr_nodes[new_key];
@@ -298,7 +298,7 @@ public:
     if (!start_node) {// only possible in early dual tree
       dummy_node.key = new_key;
       dummy_node.requested.store(true);
-      dummy_node.type = Node<Data>::Remote; // doesn't matter which of the 4
+      dummy_node.type = Node<Data>::Type::Remote; // doesn't matter which of the 4
       start_node = &dummy_node;
     }
     for (auto payload : now_ready) {
@@ -309,8 +309,8 @@ public:
         nodes.pop();
         //CkPrintf("tp %d, key = %d, type = %d, pe %d\n", tp->thisIndex, node->key, node->type, CkMyPe());
         switch (node->type) {
-          case Node<Data>::Leaf:
-          case Node<Data>::CachedRemoteLeaf:
+          case Node<Data>::Type::Leaf:
+          case Node<Data>::Type::CachedRemoteLeaf:
             {
               for (int i = 0; i < tp->leaves.size(); i++) {
                 if (tp->leaves[i] == currpl) {
@@ -320,11 +320,11 @@ public:
               }
               break;
             }
-          case Node<Data>::Internal:
-          case Node<Data>::CachedBoundary:
-          case Node<Data>::CachedRemote:
+          case Node<Data>::Type::Internal:
+          case Node<Data>::Type::CachedBoundary:
+          case Node<Data>::Type::CachedRemote:
             {
-              if (v.node(SourceNode<Data>(node), TargetNode<Data>(payload))) {
+              if (v.node(*node, *payload)) {
                 for (int i = 0; i < node->children.size(); i++) {
                   for (int j = 0; j < payload->children.size(); j++) {
                     nodes.push(std::make_pair(node->children[i].load(), payload->children[j].load()));
@@ -333,15 +333,15 @@ public:
               }
               break;
             }
-          case Node<Data>::Boundary:
-          case Node<Data>::RemoteAboveTPKey:
-          case Node<Data>::Remote:
-          case Node<Data>::RemoteLeaf:
+          case Node<Data>::Type::Boundary:
+          case Node<Data>::Type::RemoteAboveTPKey:
+          case Node<Data>::Type::Remote:
+          case Node<Data>::Type::RemoteLeaf:
             {
               curr_nodes_insertions.push_back(std::make_pair(node->key, payload));
               bool prev = node->requested.exchange(true);
               if (!prev) {
-                if (node->type == Node<Data>::Boundary || node->type == Node<Data>::RemoteAboveTPKey)
+                if (node->type == Node<Data>::Type::Boundary || node->type == Node<Data>::Type::RemoteAboveTPKey)
                   tp->tc_proxy[node->key].requestData(tp->cm_local->thisIndex);
                 else tp->cm_proxy[node->cm_index].requestNodes(std::make_pair(node->key, tp->cm_local->thisIndex));
               }
@@ -358,6 +358,7 @@ public:
     }
     curr_nodes.erase(new_key);
     for (auto cn : curr_nodes_insertions) curr_nodes[cn.first].push_back(cn.second);
+*/
   }
 };
 

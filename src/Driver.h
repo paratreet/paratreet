@@ -40,12 +40,10 @@ extern CProxy_Resumer<CentroidData> centroid_resumer;
 extern CProxy_CountManager count_manager;
 
 template <typename Data>
-struct Comparator {
-  bool operator() (const std::pair<Key, Data>& a, const std::pair<Key, Data>& b) {return a.first < b.first;}
-};
-
-template <typename Data>
 class Driver : public CBase_Driver<Data> {
+private:
+  static constexpr size_t LOG_BRANCH_FACTOR = 8;
+
 public:
   CProxy_CacheManager<Data> cache_manager;
   std::vector<std::pair<Key, Data>> storage;
@@ -218,7 +216,7 @@ public:
   }
 
   void loadCache(CkCallback cb) {
-    CkPrintf("Received data from %zu TreeCanopies\n", storage.size());
+    CkPrintf("Received data from %d TreeCanopies\n", storage.size());
     CkPrintf("Broadcasting top %d levels to caches\n", num_share_levels);
 
     // Sort data received from TreeCanopies (by their indices)
@@ -227,8 +225,10 @@ public:
     // Find how many should be sent to the caches
     int send_size = storage.size();
     if (num_share_levels >= 0) {
-      std::pair<Key, Data> to_search(1 << (LOG_BRANCH_FACTOR * num_share_levels), Data());
-      send_size = std::lower_bound(storage.begin(), storage.end(), to_search, Comparator<Data>()) - storage.begin();
+      Key search_key {1ull << (LOG_BRANCH_FACTOR * num_share_levels)};
+      auto comp = [] (const std::pair<Key, Data>& a, const Key & b) {return a.first < b;};
+      auto it = std::lower_bound(storage.begin(), storage.end(), search_key, comp);
+      send_size = std::distance(storage.begin(), it);
     }
 
     // Send data to caches
@@ -236,14 +236,16 @@ public:
   }
 
   void sortStorage() {
-    std::sort(storage.begin(), storage.end(), Comparator<Data>());
+    auto comp = [] (const std::pair<Key, Data>& a, const std::pair<Key, Data>& b) {return a.first < b.first;};
+    std::sort(storage.begin(), storage.end(), comp);
     storage_sorted = true;
   }
 
   template <typename Visitor>
-  void prefetch(Data nodewide_data, int cm_index, CkCallback cb) {
+  void prefetch(Data nodewide_data, int cm_index, CkCallback cb) { // TODO
+    assert(false);
     // do traversal on the root, send everything
-    if (!storage_sorted) sortStorage();
+    /*if (!storage_sorted) sortStorage();
     std::queue<int> node_indices; // better for cache. plus no requirement here on order
     node_indices.push(0);
     std::vector<std::pair<Key, Data>> to_send;
@@ -258,18 +260,20 @@ public:
       Node<Data> dummy_node1, dummy_node2;
       dummy_node1.data = node.second;
       dummy_node2.data = nodewide_data;
-      if (v.cell(SourceNode<Data>(&dummy_node1), TargetNode<Data>(&dummy_node2))) {
+      if (v.cell(*dummy_node1, *dummy_node2)) {
 
         for (int i = 0; i < BRANCH_FACTOR; i++) {
           Key key = node.first * BRANCH_FACTOR + i;
-          it = std::lower_bound(storage.begin(), storage.end(), std::make_pair(key, Data()), Comparator<Data>());
+          auto comp = [] (auto && a, auto && b) {return a.first < b.first;};
+          it = std::lower_bound(storage.begin(), storage.end(), std::make_pair(key, Data()), comp);
           if (it != storage.end() && it->first == key) {
-            node_indices.push(it - storage.begin());
+            node_indices.push(std::distance(storage.begin(), it));
           }
         }
       }
     }
     cache_manager[cm_index].recvStarterPack(to_send.data(), to_send.size(), cb);
+    */
   }
 
   void request(Key* request_list, int list_size, int cm_index, CkCallback cb) {
@@ -278,7 +282,8 @@ public:
     std::vector<std::pair<Key, Data>> to_send;
     for (int i = 0; i < list_size; i++) {
       Key key = request_list[i];
-      it = std::lower_bound(storage.begin(), storage.end(), std::make_pair(key, Data()), Comparator<Data>());
+      auto comp = [] (const std::pair<Key, Data>& a, const Key & b) {return a.first < b;}; 
+      it = std::lower_bound(storage.begin(), storage.end(), key, comp);
       if (it != storage.end() && it->first == key) {
         to_send.push_back(*it);
       }

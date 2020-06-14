@@ -11,7 +11,7 @@ class GravityVisitor {
 private:
   const Real gconst = 0.000000000066742;
   const Real theta = 0.5;
-  void addGravityLeaf(SourceNode<CentroidData> source, TargetNode<CentroidData> target) {
+  void addGravityLeaf(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
     int curr_counter = 0;
     for (int i = 0; i < target.n_particles; i++) {
       for (int j = 0; j < source.n_particles; j++) {
@@ -26,7 +26,7 @@ private:
     centroid_resumer.ckLocalBranch()->countInts(curr_counter);
 #endif
   }
-  void addGravityNode(SourceNode<CentroidData> source, TargetNode<CentroidData> target) {
+  void addGravityNode(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
     for (int i = 0; i < target.n_particles; i++) {
       Vector3D<Real> diff = source.data.getCentroid() - target.particles[i].position;
       Real rsq = diff.lengthSquared();
@@ -38,11 +38,11 @@ private:
   }
   public:
   GravityVisitor() {}
-  void leaf(SourceNode<CentroidData> source, TargetNode<CentroidData> target) { // we're calculating force from node source on node target
+  void leaf(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
     addGravityLeaf(source, target);
   }
-  bool node(SourceNode<CentroidData> source, TargetNode<CentroidData> target) {
-    Vector3D<Real> dr = source.data.getCentroid() - target.data->getCentroid();
+  bool node(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
+    Vector3D<Real> dr = source.data.getCentroid() - target.data.getCentroid();
     Real dsq = dr.lengthSquared();
     if (theta * dsq < source.data.rsq) {
       return true;
@@ -50,13 +50,13 @@ private:
     if (source.data.sum_mass > 0) addGravityNode(source, target);
     return false;
   }
-  bool cell(SourceNode<CentroidData> source, TargetNode<CentroidData> target) {
+  bool cell(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
     // find the closest particle in target to source's center
     // check all eight corners of bounding box
     // return true if one corner is within total_volume of node
     // else return false
 
-    const OrientedBox<Real> box = target.data->box;
+    const OrientedBox<Real> box = target.data.box;
     if (box.contains(source.data.getCentroid())) return true;
 
     for (int i = 0; i < 2; i++) {
