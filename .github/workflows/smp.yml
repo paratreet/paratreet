@@ -1,6 +1,6 @@
 # This is a basic workflow to help you get started with Actions
 
-name: CI
+name: SMP
 
 # Controls when the action will run. Triggers the workflow on push or pull request
 # events but only for the master branch
@@ -28,7 +28,7 @@ jobs:
         git clone https://github.com/UIUC-PPL/charm.git
         cd charm
         git checkout v6.10.1
-        ./build charm++ netlrts-linux-x86_64 -g -j4 --with-production
+        ./build charm++ netlrts-linux-x86_64 smp -g -j4 --with-production
 
     # Prepare ParaTreeT build
     - name: prep-paratreet
