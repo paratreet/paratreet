@@ -78,7 +78,7 @@ public:
     CkPrintf("going down on key %d while its type is %d\n", new_key, start_node->type);
 #endif
     for (auto bucket : now_ready) {
-      std::stack<Node<Data>*> nodes;
+      std::stack<Node<Data>*, std::vector<Node<Data>*>> nodes;
       nodes.push(start_node);
       while (nodes.size()) {
         Node<Data>* node = nodes.top();
