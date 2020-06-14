@@ -227,7 +227,7 @@ public:
   }
 
   void loadCache(CkCallback cb) {
-    CkPrintf("Received data from %d TreeCanopies\n", storage.size());
+    CkPrintf("Received data from %zu TreeCanopies\n", storage.size());
     CkPrintf("Broadcasting top %d levels to caches\n", num_share_levels);
 
     // Sort data received from TreeCanopies (by their indices)

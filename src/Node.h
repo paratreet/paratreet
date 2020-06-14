@@ -7,6 +7,9 @@
 #include <atomic>
 
 template <typename Data>
+class SourceNode;
+
+template <typename Data>
 struct Node {
   enum Type { Invalid = 0, Leaf, EmptyLeaf, RemoteLeaf, RemoteEmptyLeaf, Remote, Internal, Boundary, RemoteAboveTPKey, CachedRemote, CachedRemoteLeaf, CachedBoundary };
 
@@ -71,6 +74,9 @@ struct Node {
     for (int i = 0; i < BRANCH_FACTOR; i++) this->children[i].store(nullptr);
     this->requested.store(false);
   }
+
+  Node (const SourceNode<Data>& n)
+  : key(n.key), depth(n.depth), n_particles(n.n_particles), particles(n.particles), data(n.data) { }
 
   Node (const Node& n) {
     *this = n;
@@ -166,5 +172,7 @@ struct Node {
     return node;
   }
 };
+
+#include "UserNode.h"
 
 #endif // PARATREET_NODE_H_

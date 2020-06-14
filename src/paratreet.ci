@@ -46,7 +46,7 @@ mainmodule paratreet {
   message MultiMsg<CentroidData>;
 
   template <typename Data>
-#if GROUPCACHE
+#ifdef GROUP_CACHE
   group CacheManager {
 #else
   nodegroup CacheManager {
@@ -54,7 +54,6 @@ mainmodule paratreet {
     entry CacheManager();
     entry void requestNodes(std::pair<Key, int>);
     entry void recvStarterPack(std::pair<Key, Data> pack [n], int n, CkCallback);
-    entry void addCache(MultiMsg<Data>*);
     entry void addCache(MultiData<Data>);
     entry void restoreData(std::pair<Key, Data>);
     template <typename Visitor>
@@ -62,7 +61,7 @@ mainmodule paratreet {
     entry void startParentPrefetch(DPHolder<Data>, CkCallback);
     entry void destroy(bool);
   };
-#if GROUPCACHE
+#ifdef GROUP_CACHE
   group CacheManager<CentroidData>;
 #else
   nodegroup CacheManager<CentroidData>;

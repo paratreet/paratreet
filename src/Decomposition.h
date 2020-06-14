@@ -13,6 +13,7 @@ using SendProxyFn = std::function<void(int,int)>;
 using SendParticlesFn = std::function<void(int,int,Particle*)>;
 
 struct Decomposition {
+  virtual ~Decomposition() = default;
   virtual int flush(int n_total_particles, int n_treepieces,
       const SendParticlesFn &fn, std::vector<Particle> &particles) = 0;
 
@@ -32,7 +33,7 @@ struct SfcDecomposition : public Decomposition {
   void assignKeys(BoundingBox &universe, std::vector<Particle> &particles) override;
   int getNumExpectedParticles(int n_total_particles, int n_treepieces, int tp_index) override;
   int findSplitters(BoundingBox &universe, CProxy_Reader &readers) override;
-  void pup(PUP::er& p);
+  void pup(PUP::er& p) override;
 protected:
   std::vector<Splitter> splitters;
 };
