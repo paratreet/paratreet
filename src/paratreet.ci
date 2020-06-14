@@ -39,7 +39,7 @@ mainmodule paratreet {
   };
 
   template <typename Data>
-#if GROUPCACHE
+#ifdef GROUP_CACHE
   group CacheManager {
 #else
   nodegroup CacheManager {
@@ -54,7 +54,7 @@ mainmodule paratreet {
     entry void startParentPrefetch(DPHolder<Data>, CkCallback);
     entry void destroy(bool);
   };
-#if GROUPCACHE
+#ifdef GROUP_CACHE
   group CacheManager<CentroidData>;
 #else
   nodegroup CacheManager<CentroidData>;

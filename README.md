@@ -1,5 +1,8 @@
 # ParaTreeT: Parallel Tree Toolkit
 
+![SMP](https://github.com/paratreet/paratreet/workflows/SMP/badge.svg?branch=master)
+![Non-SMP](https://github.com/paratreet/paratreet/workflows/Non-SMP/badge.svg?branch=master)
+
 ## Installation
 
 ### 1. Build Charm++
