@@ -226,11 +226,11 @@ public:
   virtual ~FullNode() = default;
  
   virtual Node<Data>* getChild(int child_idx) const override {
-    assert(child_idx < this->n_children);
+    CkAssert(child_idx < this->n_children);
     return children[child_idx].load();
   }
   virtual Node<Data>* exchangeChild(int child_idx, Node<Data>* child) override {
-    assert(child_idx < this->n_children);
+    CkAssert(child_idx < this->n_children);
     return children[child_idx].exchange(child);
   }
   virtual size_t getBranchFactor() const override {

@@ -243,7 +243,7 @@ public:
 
   template <typename Visitor>
   void prefetch(Data nodewide_data, int cm_index, CkCallback cb) { // TODO
-    assert(false);
+    CkAssert(false);
     // do traversal on the root, send everything
     /*if (!storage_sorted) sortStorage();
     std::queue<int> node_indices; // better for cache. plus no requirement here on order
