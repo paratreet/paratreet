@@ -101,6 +101,11 @@ public:
     std::cout << "Universal bounding box: " << universe << " with volume "
       << universe.box.volume() << std::endl;
 
+    if (universe.n_particles <= max_particles_per_tp) {
+      CkPrintf("WARNING: Consider using -p to lower max_particles_per_tp, only %d particles.\n",
+        universe.n_particles);
+    }
+
     // Assign keys and sort particles locally
     start_time = CkWallTimer();
     readers.assignKeys(universe, CkCallbackResumeThread());
