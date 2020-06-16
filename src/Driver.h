@@ -42,7 +42,7 @@ extern CProxy_CountManager count_manager;
 template <typename Data>
 class Driver : public CBase_Driver<Data> {
 private:
-  static constexpr size_t LOG_BRANCH_FACTOR = 8;
+  static constexpr size_t LOG_BRANCH_FACTOR = 3; // TODO get rid of the need for this
 
 public:
   CProxy_CacheManager<Data> cache_manager;
