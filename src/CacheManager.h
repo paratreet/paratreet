@@ -156,7 +156,7 @@ void CacheManager<Data>::addCache(MultiData<Data> multidata) {
 #if DEBUG
   CkPrintf("adding cache for node %d\n", multidata.nodes[0].key);
 #endif
-  Node<Data>* top_node = addCacheHelper(multidata.particles, multidata.n_particles, multidata.nodes, multidata.n_nodes);
+  Node<Data>* top_node = addCacheHelper(multidata.particles.data(), multidata.n_particles, multidata.nodes.data(), multidata.n_nodes);
   process(top_node->key);
 }
 
