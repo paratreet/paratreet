@@ -94,7 +94,7 @@ void CacheManager<Data>::prepPrefetch(Node<Data>* node) {
   nodewide_data += node->data;
   Key curr_key = node->key;
   auto branch_factor = node->getBranchFactor();
-  while (curr_key >= 1) {
+  while (curr_key > 1) {
     curr_key /= branch_factor;
     prefetch_set.insert(curr_key);
     for (int i = 0; i < branch_factor; i++) {
