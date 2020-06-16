@@ -68,7 +68,7 @@ public:
   void serviceRequest(Node<Data>*, int);
   void recvStarterPack(std::pair<Key, Data>* pack, int n, CkCallback);
   void addCache(MultiData<Data>);
-  Node<Data>* addCacheHelper(Particle*, int, std::pair<Key, SpatialNode<Data>>*, int);
+  Node<Data>* addCacheHelper(Particle*, int, std::pair<Key, SpatialNode<Data>>*, int, int);
   void restoreData(std::pair<Key, Data>);
   void restoreDataHelper(std::pair<Key, Data>&, bool);
   void insertNode(Node<Data>*, bool, bool);
@@ -156,12 +156,12 @@ void CacheManager<Data>::addCache(MultiData<Data> multidata) {
 #if DEBUG
   CkPrintf("adding cache for node %d\n", multidata.nodes[0].key);
 #endif
-  Node<Data>* top_node = addCacheHelper(multidata.particles.data(), multidata.n_particles, multidata.nodes.data(), multidata.n_nodes);
+  Node<Data>* top_node = addCacheHelper(multidata.particles.data(), multidata.n_particles, multidata.nodes.data(), multidata.n_nodes, multidata.cm_index);
   process(top_node->key);
 }
 
 template <typename Data>
-Node<Data>* CacheManager<Data>::addCacheHelper(Particle* particles, int n_particles, std::pair<Key, SpatialNode<Data>>* nodes, int n_nodes) {
+Node<Data>* CacheManager<Data>::addCacheHelper(Particle* particles, int n_particles, std::pair<Key, SpatialNode<Data>>* nodes, int n_nodes, int cm_index) {
 #if DEBUG
   CkPrintf("adding cache for node %d on cm %d\n", nodes[0].key, this->thisIndex);
 #endif
@@ -175,6 +175,7 @@ Node<Data>* CacheManager<Data>::addCacheHelper(Particle* particles, int n_partic
 
   int p_index = 0;
   auto first_node = treespec.ckLocalBranch()->template makeCachedNode<Data>(nodes[0].first, nodes[0].second, first_node_placeholder->parent, particles);
+  first_node->cm_index = cm_index;
   insertNode(first_node, false, false);
   auto branch_factor = first_node->getBranchFactor();
   for (int j = 1; j < n_nodes; j++) {
@@ -183,6 +184,7 @@ Node<Data>* CacheManager<Data>::addCacheHelper(Particle* particles, int n_partic
     auto curr_parent = first_node->getDescendant(new_key / branch_factor);
     auto type = spatial_node.is_leaf ? Node<Data>::Type::CachedRemoteLeaf : Node<Data>::Type::CachedRemote;
     auto node = treespec.ckLocalBranch()->template makeCachedNode<Data>(new_key, spatial_node, curr_parent, &particles[p_index]);
+    node->cm_index = cm_index;
     if (node->is_leaf) p_index += n_particles;
     insertNode(node, false, true);
   }
@@ -222,7 +224,7 @@ void CacheManager<Data>::serviceRequest(Node<Data>* node, int cm_index) {
       makeMsgPerNode(child->getChild(j));
     }
   }
-  MultiData<Data> multidata (sending_particles.data(), sending_particles.size(), sending_nodes.data(), sending_nodes.size());
+  MultiData<Data> multidata (sending_particles.data(), sending_particles.size(), sending_nodes.data(), sending_nodes.size(), this->thisIndex);
   this->thisProxy[cm_index].addCache(multidata);
 }
 
