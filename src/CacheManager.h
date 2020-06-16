@@ -185,7 +185,7 @@ Node<Data>* CacheManager<Data>::addCacheHelper(Particle* particles, int n_partic
     auto type = spatial_node.is_leaf ? Node<Data>::Type::CachedRemoteLeaf : Node<Data>::Type::CachedRemote;
     auto node = treespec.ckLocalBranch()->template makeCachedNode<Data>(new_key, spatial_node, curr_parent, &particles[p_index]);
     node->cm_index = cm_index;
-    if (node->is_leaf) p_index += n_particles;
+    if (node->is_leaf) p_index += spatial_node.n_particles;
     insertNode(node, false, true);
   }
   swapIn(first_node);
@@ -213,7 +213,7 @@ void CacheManager<Data>::serviceRequest(Node<Data>* node, int cm_index) {
   auto makeMsgPerNode = [&sending_nodes, &sending_particles] (Node<Data>* to_process) {
     sending_nodes.push_back(to_process);
     if (to_process->type == Node<Data>::Type::Leaf) {
-      sending_particles.insert(sending_particles.end(), to_process->particles, to_process->particles + to_process->n_particles);
+      std::copy(to_process->particles, to_process->particles + to_process->n_particles, std::back_inserter(sending_particles));
     }
   };
   makeMsgPerNode(node);
