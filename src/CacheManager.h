@@ -176,10 +176,11 @@ Node<Data>* CacheManager<Data>::addCacheHelper(Particle* particles, int n_partic
   int p_index = 0;
   auto first_node = treespec.ckLocalBranch()->template makeCachedNode<Data>(nodes[0].first, nodes[0].second, first_node_placeholder->parent, particles);
   insertNode(first_node, false, false);
+  auto branch_factor = first_node->getBranchFactor();
   for (int j = 1; j < n_nodes; j++) {
     auto && new_key = nodes[j].first;
     auto && spatial_node = nodes[j].second;
-    auto curr_parent = first_node->getDescendant(new_key);
+    auto curr_parent = first_node->getDescendant(new_key / branch_factor);
     auto type = spatial_node.is_leaf ? Node<Data>::Type::CachedRemoteLeaf : Node<Data>::Type::CachedRemote;
     auto node = treespec.ckLocalBranch()->template makeCachedNode<Data>(new_key, spatial_node, curr_parent, &particles[p_index]);
     if (node->is_leaf) p_index += n_particles;
