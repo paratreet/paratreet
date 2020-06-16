@@ -32,7 +32,7 @@ public:
   void initialize() {
     root = treespec.ckLocalBranch()->template makeCachedCanopy<Data>(
         Key(1), Node<Data>::Type::Boundary, Data(), nullptr);
-    delete_at_end.resize(CkNodeSize(0));
+    delete_at_end.resize(CkNumPes());
   }
 
   ~CacheManager() {
