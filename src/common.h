@@ -25,10 +25,6 @@ typedef double Real;
 // Tree types
 #define OCT_TREE 20
 
-// Branching factor
-#define BRANCH_FACTOR 8
-#define LOG_BRANCH_FACTOR 3
-
 // Hyperparameters
 #define MAX_PARTICLES_PER_LEAF 10
 #define LOCAL_CACHE_SIZE 5000

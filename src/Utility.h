@@ -68,12 +68,12 @@ class Utility {
     return lo;
   }
 
-  static Key getParticleLevelKey(Key k, int depth){
-    return (k<<(KEY_BITS-(LOG_BRANCH_FACTOR*depth+1)));
+  static Key getParticleLevelKey(Key k, int depth, size_t log_branch_factor) {
+    return (k<<(KEY_BITS-(log_branch_factor*depth+1)));
   }
 
-  static Key getLastParticleLevelKey(Key k, int depth){
-    int nshift = KEY_BITS-(LOG_BRANCH_FACTOR*depth+1);
+  static Key getLastParticleLevelKey(Key k, int depth, size_t log_branch_factor){
+    int nshift = KEY_BITS-(log_branch_factor*depth+1);
     k <<= nshift;
     Key mask = (Key(1) << nshift);
     mask--;
@@ -82,32 +82,33 @@ class Utility {
   }
 
   // Find depth of node from position of prepended '1' bit in node
-  static int getDepthFromKey(Key k){
+  static int getDepthFromKey(Key k, size_t log_branch_factor){
     int nUsedBits = mssb64_pos(k);
-    return (nUsedBits/LOG_BRANCH_FACTOR);
+    return (nUsedBits/log_branch_factor);
   }
 
-  static int completeTreeSize(int levels){
-    return numLeaves(levels+1)-1;
+  static int completeTreeSize(int levels, size_t log_branch_factor){
+    return numLeaves(levels+1, log_branch_factor)-1;
   }
 
-  static int numLeaves(int levels){
-    return (1<<(LOG_BRANCH_FACTOR*levels));
+  static int numLeaves(int levels, size_t log_branch_factor){
+    return (1<<(log_branch_factor*levels));
   }
 
   // is k1 a prefix of k2?
-  static bool isPrefix(Key k1, Key k2){
-    int d1 = getDepthFromKey(k1);
-    int d2 = getDepthFromKey(k2);
+  static bool isPrefix(Key k1, Key k2, size_t log_branch_factor){
+    int d1 = getDepthFromKey(k1, log_branch_factor);
+    int d2 = getDepthFromKey(k2, log_branch_factor);
     if(d1 > d2) return false;
-    k2 = (k2 >> ((d2 - d1) * LOG_BRANCH_FACTOR));
+    k2 = (k2 >> ((d2 - d1) * log_branch_factor));
     return k1 == k2;
   }
 
   static Key removeLeadingZeros(Key k) {
-    int depth = getDepthFromKey(k);
-    return getParticleLevelKey(k, depth);
+    int depth = getDepthFromKey(k, 3); // doesn't matter what LBF is
+    return getParticleLevelKey(k, depth, 3);
   }
+
 };
 
 #endif // PARATREET_UTILITY_H_

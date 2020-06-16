@@ -45,9 +45,9 @@ public:
       LRU_counter.pop();
     }
   }
-
   Node<Data>* fastNodeFind(Key key, bool lf_placeholder = false) {
     Node<Data>* result = nullptr;
+    /* // TODO
     if (lf_placeholder) {
       if (result == nullptr && nodehash.count(key / BRANCH_FACTOR)) {
         result = nodehash[key / BRANCH_FACTOR]->findNode(key);
@@ -60,8 +60,9 @@ public:
     else if (nodehash.count(key)) {
       result = nodehash[key];
     }
+    */
     if (result == nullptr) {
-      result = cm_local->root->findNode(key);
+      result = cm_local->root->getDescendant(key);
     }
     if (!lf_placeholder) insertNode(result);
     return result;

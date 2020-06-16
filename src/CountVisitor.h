@@ -30,23 +30,23 @@ private:
   }
 
 public:
-  bool node(SourceNode<CentroidData> from, TargetNode<CentroidData> on) {
-    if (from.data.count == 0 || on.data->count == 0) {
+  bool node(const SpatialNode<CentroidData>& from, SpatialNode<CentroidData>& on) {
+    if (from.data.count == 0 || on.data.count == 0) {
       return false;
     }
     CountManager* countManager = count_manager.ckLocalBranch();
-    int idx = findBin(from.data, *(on.data));
+    int idx = findBin(from.data, on.data);
     if (idx < 0) {
       return idx == -1;
     } else {
-      countManager->bins[idx] += from.data.count * on.data->count;
+      countManager->bins[idx] += from.data.count * on.data.count;
       return false;
     }
   }
 
-  void leaf(SourceNode<CentroidData> from, TargetNode<CentroidData> on) {
+  void leaf(const SpatialNode<CentroidData>& from, SpatialNode<CentroidData>& on) {
     CountManager* countManager = count_manager.ckLocalBranch();
-    int idx = findBin(from.data, *(on.data));
+    int idx = findBin(from.data, on.data);
     if (idx < 0) {
       for (int i = 0; i < from.n_particles; i++) {
         for (int j = 0; j < on.n_particles; j++) {

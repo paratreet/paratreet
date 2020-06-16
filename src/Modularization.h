@@ -22,6 +22,9 @@ public:
       fn(temp_key, -1);
     }
   }
+
+private:
+  static constexpr size_t BRANCH_FACTOR = 8;
 };
 
 #endif

@@ -1,131 +1,171 @@
 #ifndef PARATREET_NODE_H_
-#define PARATREET_NODE_H_
-
+#define PARATREET_NODE_H_ 
 #include "common.h"
 #include "Particle.h"
 #include <array>
 #include <atomic>
 
 template <typename Data>
-class SourceNode;
+class SpatialNode
+{
+public:
+  SpatialNode() = default;
+  SpatialNode(const Data& _data, int _n_particles, bool _is_leaf, Particle* _particles, int _depth)
+    : data(_data), n_particles(_n_particles), is_leaf(_is_leaf), particles(_particles), depth(_depth)
+  {
+    sum_forces.resize(n_particles);
+  }
+  SpatialNode(const SpatialNode<Data>& other)
+    : data(other.data), n_particles(other.n_particles), is_leaf(other.is_leaf), particles(other.particles), depth(other.depth)
+  {
+    sum_forces.resize(n_particles);
+  }
+  virtual ~SpatialNode() = default;
 
-template <typename Data>
-struct Node {
-  enum Type { Invalid = 0, Leaf, EmptyLeaf, RemoteLeaf, RemoteEmptyLeaf, Remote, Internal, Boundary, RemoteAboveTPKey, CachedRemote, CachedRemoteLeaf, CachedBoundary };
-
-  Type type;
-  Key key;
-  int depth;
-  Data data;
-  int n_particles;
-  Particle* particles;
-  int owner_tp_start;
-  int owner_tp_end;
-  Node* parent;
-  std::array<std::atomic<Node*>, BRANCH_FACTOR> children;
-  int n_children;
-  int wait_count;
-  int tp_index;
-  int cm_index;
-  std::atomic<bool> requested;
-  std::vector<Vector3D<Real> > sum_forces;
-
+  void applyForce(int index, Vector3D<Real> force) {
+    if (index < n_particles) {
+      sum_forces[index] += force;
+    }
+  }
+  Vector3D<Real> getForce(int index) const {
+    return sum_forces[index];
+  }
+  void freeParticles() {
+    if (n_particles > 0) {
+      delete[] particles;
+    }
+  }
   void pup (PUP::er& p) {
-    pup_bytes(&p, (void *)&type, sizeof(Type));
-    p | key;
     p | depth;
     p | data;
     p | n_particles;
-    p | n_children;
-    p | owner_tp_start;
-    p | owner_tp_end;
-    p | wait_count;
-    p | tp_index;
-    p | cm_index;
+    p | is_leaf;
     if (p.isUnpacking()) {
       particles = nullptr;
     }
+  } 
+
+public:
+  Data      data;
+  int       n_particles = 0;
+  bool      is_leaf     = false;
+  Particle* particles   = nullptr;
+  int       depth       = 0;
+
+private:
+  std::vector<Vector3D<Real> > sum_forces;
+
+};
+
+template <typename Data>
+class Node : public SpatialNode<Data>
+{
+public:
+  virtual Node* getChild(int child_idx) const = 0;
+  virtual Node* exchangeChild(int child_idx, Node* child) = 0;
+  virtual size_t getBranchFactor() const = 0;
+
+  enum class Type {
+    Invalid = 0,
+    Leaf,
+    EmptyLeaf,
+    RemoteLeaf,
+    RemoteEmptyLeaf,
+    Remote,
+    Internal,
+    Boundary,
+    RemoteAboveTPKey,
+    CachedRemote,
+    CachedRemoteLeaf,
+    CachedBoundary
+  };
+
+  Node(const Data& data, int _n_particles, Particle* _particles, int _depth,
+        int _n_children, Node* _parent, Type _type, Key _key,
+        int _owner_tp_start, int _owner_tp_end, int _tp_index, int _cm_index)
+    : SpatialNode<Data>(data, _n_particles, _n_children == 0, _particles, _depth),
+      n_children(_n_children),
+      parent(_parent),
+      type(_type),
+      key(_key),
+      owner_tp_start(_owner_tp_start),
+      owner_tp_end(_owner_tp_end),
+      wait_count(_n_children),
+      tp_index(_tp_index),
+      cm_index(_cm_index)
+  {
   }
 
-  Node() : Node(-1, -1, 0, nullptr, -1, -1, nullptr) {}
-
-  Node(Key key, Type type, Data data, int n_children, Node* parent) :
-    Node(key, parent ? parent->depth + 1 : 0, 0, nullptr, 0, 0, parent) {
-    this->type = type;
-    this->data = data;
-    this->n_children = n_children;
+  Node(Key _key, typename Node<Data>::Type _type, int _n_children, const SpatialNode<Data>& _spatial_node, Node<Data>* _parent)
+    : SpatialNode<Data>(_spatial_node),
+      n_children(_n_children),
+      parent(_parent),
+      type(_type),
+      key(_key)
+  {
   }
 
-  Node(Key key, int depth, int n_particles, Particle* particles, int owner_tp_start, int owner_tp_end, Node* parent, int tp_indexi = -1) {
-    this->type = Invalid;
-    this->key = key;
-    this->depth = depth;
-    this->n_particles = n_particles;
-    this->sum_forces.resize(this->n_particles, Vector3D<Real>(0,0,0));
-    this->particles = particles;
-    this->data = Data();
-    this->owner_tp_start = owner_tp_start;
-    this->owner_tp_end = owner_tp_end;
-    this->parent = parent;
-    this->n_children = 0;
-    this->wait_count = 8;
-    this->tp_index = tp_indexi;
-    this->cm_index = -1;
-    for (int i = 0; i < BRANCH_FACTOR; i++) this->children[i].store(nullptr);
-    this->requested.store(false);
+  virtual ~Node() = default;
+
+public:
+  int n_children; // TreePiece's recursiveBuild prevents the constness
+  Node* parent;   // CacheManager's insertNode  prevents the constness
+  Type type;      // TreePiece's recursiveBuild prevents the constness
+  const Key key;
+
+  // this stuff gets edited:
+  int owner_tp_start = -1;
+  int owner_tp_end   = -1;
+  int wait_count     = -1;
+  int tp_index       = -1;
+  int cm_index       = -1;
+  std::atomic<bool> requested = ATOMIC_VAR_INIT(false);
+
+public:
+  Node<Data>* getDescendant(Key to_find) {
+    std::vector<int> remainders;
+    Key temp = to_find;
+    auto branch_factor = getBranchFactor();
+    while (temp >= branch_factor * this->key) {
+      remainders.push_back(temp % branch_factor);
+      temp /= branch_factor;
+    }
+    Node<Data>* node = this;
+    for (int i = remainders.size()-1; i >= 0; i--) {
+      if (node && remainders[i] < node->n_children) node = node->getChild(remainders[i]);
+      else return nullptr;
+    }
+    return node;
   }
-
-  Node (const SourceNode<Data>& n)
-  : key(n.key), depth(n.depth), n_particles(n.n_particles), particles(n.particles), data(n.data) { }
-
-  Node (const Node& n) {
-    *this = n;
-  }
-
-  Node& operator= (const Node& n) {
-    type = n.type;
-    key = n.key;
-    depth = n.depth;
-    data = n.data;
-    n_particles = n.n_particles;
-    particles = n.particles;
-    sum_forces = n.sum_forces;
-    owner_tp_start = n.owner_tp_start;
-    owner_tp_end = n.owner_tp_end;
-    parent = n.parent;
-    n_children = n.n_children;
-    wait_count = n.wait_count;
-    tp_index = n.tp_index;
-    cm_index = n.cm_index;
-    for (int i = 0; i < BRANCH_FACTOR; i++) this->children[i].store(nullptr);
-
-    return *this;
-  }
+ 
 
   void triggerFree() {
-    if (type == Internal || type == Boundary || type == CachedRemote || type == CachedBoundary) {
-      for (int i = 0; i < children.size(); i++) {
-        Node* node = children[i].load();
-        if (node == nullptr) continue;
-        node->triggerFree();
-        delete node;
-        children[i].store(nullptr);
+    if (type == Type::Internal || type == Type::Boundary ||
+        type == Type::CachedRemote || type == Type::CachedBoundary)
+    {
+      for (int i = 0; i < n_children; i++) {
+        auto child = getChild(i);
+        if (child == nullptr) continue;
+        child->triggerFree();
+        delete child;
+	    exchangeChild(i, nullptr);
       }
-    } else if (type == CachedRemoteLeaf && n_particles) {
-      delete[] particles;
+    }
+    else if (type == Type::CachedRemoteLeaf) {
+      this->freeParticles();
     }
   }
 
   static std::string TypeDotColor(Type type){
     switch(type){
-      case Invalid:                     return "firebrick1";
-      case Internal:                    return "darkolivegreen1";
-      case Leaf:                        return "darkolivegreen3";
-      case EmptyLeaf:                   return "darksalmon";
-      case Boundary:                    return "darkkhaki";
-      case Remote:                      return "deepskyblue1";
-      case RemoteLeaf:                  return "dodgerblue4";
-      case RemoteEmptyLeaf:             return "deeppink";
+      case Type::Invalid:               return "firebrick1";
+      case Type::Internal:              return "darkolivegreen1";
+      case Type::Leaf:                  return "darkolivegreen3";
+      case Type::EmptyLeaf:             return "darksalmon";
+      case Type::Boundary:              return "darkkhaki";
+      case Type::Remote:                return "deepskyblue1";
+      case Type::RemoteLeaf:            return "dodgerblue4";
+      case Type::RemoteEmptyLeaf:       return "deeppink";
       default:                          return "black";
     }
   }
@@ -135,7 +175,7 @@ struct Node {
 
     out << "label=\"";
     out << key << ", ";
-    out << n_particles << ", ";
+    out << this->n_particles << ", ";
     out << "[" << owner_tp_start << ", " << owner_tp_end << "]";
     //out << "\\n" << payload_;
     //out << "\\n" << tp_;
@@ -146,33 +186,59 @@ struct Node {
 
     out << "];" << std::endl;
 
-    if (type == Leaf || type == EmptyLeaf || type == Internal)
+    if (type == Type::Leaf || type == Type::EmptyLeaf || type == Type::Internal)
       return;
 
-    if (n_children == 0) return;
-
     for (int i = 0; i < n_children; i++) {
-      Node* child = children[i].load();
+      auto child = getChild(i);
       out << key << " -> " << child->key << ";" << std::endl;
       child->dot(out);
     }
   }
-  Node* findNode(Key to_find) {
-    std::vector<int> remainders;
-    Key temp = to_find;
-    while (temp >= 8 * key) {
-      remainders.push_back(temp % 8);
-      temp /= 8;
-    }
-    Node<Data>* node = this;
-    for (int i = remainders.size()-1; i >= 0; i--) {
-      if (node && remainders[i] < node->children.size()) node = node->children[remainders[i]].load();
-      else return nullptr;
-    }
-    return node;
-  }
 };
 
-#include "UserNode.h"
+template <class Data, size_t BRANCH_FACTOR>
+class FullNode : public Node<Data>
+{
+public:
+  FullNode() = default;
+  FullNode(Key _key, typename Node<Data>::Type _type, const Data& data, Node<Data>* _parent) // for cached boundary nodes (represent canopies)
+  : Node<Data>(data, 0, nullptr, (_parent ? _parent->depth + 1 : 0), BRANCH_FACTOR, _parent, _type, _key, -1, -1, -1, -1)
+  {
+    initChildren();
+  }
+
+  FullNode(Key _key, typename Node<Data>::Type _type, bool _is_leaf, const SpatialNode<Data>& _spatial_node, Node<Data>* _parent) // for cached non boundary nodes
+  : Node<Data>(_key, _type, _is_leaf ? 0 : BRANCH_FACTOR, _spatial_node, _parent)
+  {
+    initChildren();
+  }
+
+  FullNode(Key _key, int _depth, int _n_particles, Particle* _particles, int _owner_tp_start, int _owner_tp_end, bool _is_leaf, Node<Data>* _parent, int _tp_index)
+    : Node<Data>(Data(), _n_particles, _particles, _depth, _is_leaf ? 0 : BRANCH_FACTOR, _parent, Node<Data>::Type::Invalid, _key, _owner_tp_start, _owner_tp_end, _tp_index, -1)
+  {
+    initChildren();
+  }
+
+  void initChildren() {
+    for (auto && child : children) child.store(nullptr);
+  }
+  virtual ~FullNode() = default;
+ 
+  virtual Node<Data>* getChild(int child_idx) const override {
+    CkAssert(child_idx < this->n_children);
+    return children[child_idx].load();
+  }
+  virtual Node<Data>* exchangeChild(int child_idx, Node<Data>* child) override {
+    CkAssert(child_idx < this->n_children);
+    return children[child_idx].exchange(child);
+  }
+  virtual size_t getBranchFactor() const override {
+    return BRANCH_FACTOR;
+  }
+
+private:
+  std::array<std::atomic<Node<Data>*>, BRANCH_FACTOR> children; 
+};
 
 #endif // PARATREET_NODE_H_
