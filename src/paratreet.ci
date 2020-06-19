@@ -38,13 +38,6 @@ mainmodule paratreet {
     Particle particles[];
   };
 
-  template <class Data>
-  message MultiMsg {
-    Particle particles [];
-    Node<Data> nodes [];
-  };
-  message MultiMsg<CentroidData>;
-
   template <typename Data>
 #ifdef GROUP_CACHE
   group CacheManager {

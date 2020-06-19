@@ -3,36 +3,37 @@
 
 #include "Particle.h"
 #include "Node.h"
-#include "UserNode.h"
 #include "common.h"
 #include "paratreet.decl.h"
 
-#include <algorithm>
+#include <vector>
+#include <iterator>
 
 template <typename Data>
 struct MultiData {
-  int n_particles;
-  int n_nodes;
-  Particle particles [BRANCH_FACTOR * BRANCH_FACTOR * MAX_PARTICLES_PER_LEAF];
-  SourceNode<Data> nodes [1 + BRANCH_FACTOR + BRANCH_FACTOR * BRANCH_FACTOR];
+  int n_particles = 0;
+  int n_nodes = 0;
+  std::vector<Particle> particles;
+  std::vector<std::pair<Key, SpatialNode<Data>>> nodes;
+  int cm_index = -1;
+
   MultiData();
-  MultiData(Particle*, int, Node<Data>*, int);
+  MultiData(Particle*, int, Node<Data>**, int, int);
   void pup(PUP::er& p);
 };
 
 template <typename Data>
-inline MultiData<Data>::MultiData() {
-  n_particles = 0;
-  n_nodes = 0;
-}
+MultiData<Data>::MultiData() {}
 
 template <typename Data>
-inline MultiData<Data>::MultiData(Particle* particlesi, int n_particlesi, Node<Data>* nodesi, int n_nodesi) {
-  n_particles = n_particlesi;
-  n_nodes = n_nodesi;
-  std::copy(particlesi, particlesi + n_particles, particles);
-  std::transform(nodesi, nodesi + n_nodes, nodes, [](Node<Data> node) {
-    return SourceNode<Data>(&node);
+inline MultiData<Data>::MultiData(Particle* particlesi, int n_particlesi, Node<Data>** nodesi, int n_nodesi, int cm_indexi) {
+  n_particles   = n_particlesi;
+  n_nodes       = n_nodesi;
+  cm_index      = cm_indexi;
+  std::copy(particlesi, particlesi + n_particles, std::back_inserter(particles));
+  std::transform(nodesi, nodesi + n_nodes, std::back_inserter(nodes), [] (Node<Data>* node) {
+    SpatialNode<Data> copy = *node;
+    return std::make_pair(node->key, copy);
   });
 }
 
@@ -40,8 +41,9 @@ template <typename Data>
 void MultiData<Data>::pup(PUP::er& p) {
   p | n_particles;
   p | n_nodes;
-  PUParray(p, particles, BRANCH_FACTOR * BRANCH_FACTOR * MAX_PARTICLES_PER_LEAF);
-  PUParray(p, nodes, 1 + BRANCH_FACTOR + BRANCH_FACTOR * BRANCH_FACTOR);
+  p | particles;
+  p | nodes;
+  p | cm_index;
 }
 
 

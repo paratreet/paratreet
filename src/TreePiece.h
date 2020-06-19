@@ -62,7 +62,7 @@ public:
   void check(const CkCallback&);
   void triggerRequest();
   void buildTree();
-  bool recursiveBuild(Node<Data>*, bool);
+  bool recursiveBuild(Node<Data>*, bool, size_t);
   void populateTree();
   inline void initCache();
   void requestNodes(Key, int);
@@ -152,11 +152,9 @@ void TreePiece<Data>::receive(ParticleMsg* msg) {
 template <typename Data>
 void TreePiece<Data>::check(const CkCallback& cb) {
   if (n_expected != incoming_particles.size()) {
-    std::stringstream ss;
-    ss << "[TP " << this->thisIndex << "] ERROR! Only " << particles.size();
-    ss << " particles out of " << n_expected << " received\n";
-    auto outStr = ss.str();
-    CkAbort("%s", outStr.c_str());
+    CkPrintf("[TP %d] ERROR! Only %zu particles out of %d received",
+        this->thisIndex, particles.size(), n_expected);
+    CkAbort("TreePiece particle receipt failure -- see stdout");
   }
 
   this->contribute(cb);
@@ -189,8 +187,8 @@ void TreePiece<Data>::buildTree() {
 #if DEBUG
   CkPrintf("[TP %d] key: 0x%" PRIx64 " particles: %d\n", this->thisIndex, tp_key, particles.size());
 #endif
-  global_root = new Node<Data>(1, 0, particles.size(), &particles[0], 0, n_treepieces - 1, nullptr);
-  recursiveBuild(global_root, false);
+  global_root = treespec.ckLocalBranch()->template makeNode<Data>(1, 0, particles.size(), &particles[0], 0, n_treepieces - 1, false, nullptr, this->thisIndex);
+  recursiveBuild(global_root, false, log2(global_root->getBranchFactor()));
 
   // Initialize interactions vector: filled in during traversal
   interactions = std::vector<std::vector<Node<Data>*>>(leaves.size());
@@ -203,7 +201,7 @@ void TreePiece<Data>::buildTree() {
 }
 
 template <typename Data>
-bool TreePiece<Data>::recursiveBuild(Node<Data>* node, bool saw_tp_key) {
+bool TreePiece<Data>::recursiveBuild(Node<Data>* node, bool saw_tp_key, size_t log_branch_factor) {
 #if DEBUG
   //CkPrintf("[Level %d] created node 0x%" PRIx64 " with %d particles\n",
     //  node->depth, node->key, node->n_particles);
@@ -218,17 +216,17 @@ bool TreePiece<Data>::recursiveBuild(Node<Data>* node, bool saw_tp_key) {
   }
 
   bool is_light = (node->n_particles <= ceil(BUCKET_TOLERANCE * max_particles_per_leaf));
-  bool is_prefix = Utility::isPrefix(node->key, tp_key);
+  bool is_prefix = Utility::isPrefix(node->key, tp_key, log_branch_factor);
 
   if (saw_tp_key) {
     // If we are under the TP key, we can stop going deeper if node is light
     if (is_light) {
       if (node->n_particles == 0) {
-        node->type = Node<Data>::EmptyLeaf;
+        node->type = Node<Data>::Type::EmptyLeaf;
         empty_leaves.push_back(node);
       }
       else {
-        node->type = Node<Data>::Leaf;
+        node->type = Node<Data>::Type::Leaf;
         leaves.push_back(node);
       }
       return true;
@@ -236,7 +234,7 @@ bool TreePiece<Data>::recursiveBuild(Node<Data>* node, bool saw_tp_key) {
   } else { // Still on the way to TP, or we could have diverged
     if (!is_prefix) {
       // Diverged, should be marked as are mote node
-      node->type = Node<Data>::Remote;
+      node->type = Node<Data>::Type::Remote;
 
       return false;
     }
@@ -293,8 +291,9 @@ bool TreePiece<Data>::recursiveBuild(Node<Data>* node, bool saw_tp_key) {
   */
 
   // Create children
-  node->n_children = BRANCH_FACTOR;
-  Key child_key = node->key << LOG_BRANCH_FACTOR;
+  node->n_children = node->wait_count = node->getBranchFactor();
+  node->is_leaf = false;
+  Key child_key = node->key * node->getBranchFactor();
   int start = 0;
   int finish = start + node->n_particles;
   int non_local_children = 0;
@@ -331,16 +330,16 @@ bool TreePiece<Data>::recursiveBuild(Node<Data>* node, bool saw_tp_key) {
     */
 
     // Create child and store in vector
-    Node<Data>* child = new Node<Data>(child_key, node->depth + 1, n_particles,
-        node->particles + start, 0, n_treepieces - 1, node, this->thisIndex);
+    Node<Data>* child = treespec.ckLocalBranch()->template makeNode<Data>(child_key, node->depth + 1,
+        n_particles, node->particles + start, 0, n_treepieces - 1, true, node, this->thisIndex);
     /*
     Node<Data>* child = new Node<Data>(child_key, node->depth + 1, node->particles + start,
         n_particles, child_owner_start, child_owner_end, node);
     */
-    node->children[i].store(child);
+    node->exchangeChild(i, child);;
 
     // Recursive tree build
-    bool local = recursiveBuild(child, saw_tp_key);
+    bool local = recursiveBuild(child, saw_tp_key, log_branch_factor);
     if (!local) non_local_children++;
 
     start = first_ge_idx;
@@ -349,11 +348,11 @@ bool TreePiece<Data>::recursiveBuild(Node<Data>* node, bool saw_tp_key) {
 
   if (non_local_children == 0) {
     // All children are local, this is an internal node
-    node->type = Node<Data>::Internal;
+    node->type = Node<Data>::Type::Internal;
   }
   else {
     // Some or all children are remote, this is a boundary node
-    node->type = Node<Data>::Boundary;
+    node->type = Node<Data>::Type::Boundary;
     node->tp_index = -1;
   }
 
@@ -379,7 +378,7 @@ void TreePiece<Data>::populateTree() {
     if (node->key == tp_key) {
       // We are at the root of the TreePiece, send accumulated data to
       // parent TreeCanopy
-      tc_proxy[tp_key >> LOG_BRANCH_FACTOR].recvData(node->data);
+      tc_proxy[tp_key / node->getBranchFactor()].recvData(node->data);
     } else {
       // Add this node's data to the parent, and add parent to the queue
       // if all children have contributed
@@ -395,7 +394,7 @@ template <typename Data>
 void TreePiece<Data>::initCache() {
   if (!cache_init) {
     cm_local->connect(local_root, false);
-    local_root->parent->children[tp_key % BRANCH_FACTOR].store(nullptr);
+    local_root->parent->exchangeChild(tp_key % local_root->getBranchFactor(),nullptr);
     global_root->triggerFree();
     cache_init = true;
   }
@@ -427,7 +426,7 @@ void TreePiece<Data>::startDual(Key* keys_ptr, int n) {
 
 template <typename Data>
 void TreePiece<Data>::requestNodes(Key key, int cm_index) {
-  Node<Data>* node = local_root->findNode(key);
+  Node<Data>* node = local_root->getDescendant(key);
   if (!node) CkPrintf("null found for key %lu on tp %d\n", key, this->thisIndex);
   cm_local->serviceRequest(node, cm_index);
 }
@@ -451,12 +450,13 @@ void TreePiece<Data>::interact(const CkCallback& cb) {
 
 template <typename Data>
 void TreePiece<Data>::perturb (Real timestep, bool if_flush) {
+  if (leaves.empty()) return;
   // If tree will be entirely rebuilt, just update particle positions
   // based on the forces calculated from interactions
   if (if_flush) {
     for (auto leaf : leaves) {
       for (int i = 0; i < leaf->n_particles; i++) {
-        leaf->particles[i].perturb(timestep, leaf->sum_forces[i], readers.ckLocalBranch()->universe.box);
+        leaf->particles[i].perturb(timestep, leaf->getForce(i), readers.ckLocalBranch()->universe.box);
       }
     }
     flush(readers);
@@ -471,10 +471,10 @@ void TreePiece<Data>::perturb (Real timestep, bool if_flush) {
   std::map<int, std::vector<Particle>> out_particles;
   std::vector<int> remainders;
   Key temp = tp_key;
-  while (temp >= BRANCH_FACTOR) {
-    remainders.push_back(temp % BRANCH_FACTOR);
-    temp /= BRANCH_FACTOR;
-  }
+  const size_t branch_factor = leaves[0]->getBranchFactor();
+  while (temp >= branch_factor) {
+    remainders.push_back(temp % branch_factor);
+    temp /= branch_factor; }
   OrientedBox<Real> tp_box = readers.ckLocalBranch()->universe.box;
   for (int i = remainders.size()-1; i >= 0; i--) {
     for (int dim = 0; dim < 3; dim++) {
@@ -488,19 +488,19 @@ void TreePiece<Data>::perturb (Real timestep, bool if_flush) {
     for (int i = 0; i < leaf->n_particles; i++) {
       Particle& particle = leaf->particles[i];
       Vector3D<Real> old_position = particle.position;
-      particle.perturb(timestep, leaf->sum_forces[i], readers.ckLocalBranch()->universe.box);
+      particle.perturb(timestep, leaf->getForce(i), readers.ckLocalBranch()->universe.box);
       //CkPrintf("magitude of displacement = %lf\n", (old_position - leaf->particles[i].position).length());
-      //CkPrintf("total centroid is (%lf, %lf, %lf)\n", global_root->data.getCentroid().x, global_root->data.getCentroid().y, global_root->data.getCentroid().z);
+      //CkPrintf("total centroid is (%lf, %lf, %lf)\n", global_root->data.centroid.x, global_root->data.centroid.y, global_root->data.centroid.z);
       OrientedBox<Real> curr_box = tp_box;
       Node<Data>* node = local_root;
       int remainders_index = 0;
       while (!curr_box.contains(particle.position)) {
         //CkPrintf("not under umbrella of node %d with volume %lf\n", node->key, curr_box.volume());
-        if (node->parent == nullptr) CkPrintf("point (%lf, %lf, %lf) has force (%lf, %lf, %lf) and old position (%lf, %lf, %lf)\n",
+/*        if (node->parent == nullptr) CkPrintf("point (%lf, %lf, %lf) has force (%lf, %lf, %lf) and old position (%lf, %lf, %lf)\n",
                 particle.position.x, particle.position.y, particle.position.z,
-		leaf->sum_forces[i].x / .001, leaf->sum_forces[i].y / .001, leaf->sum_forces[i].z / .001,
-		old_position.x, old_position.y, old_position.z);
-	Vector3D<Real> new_point = 2 * curr_box.greater_corner - curr_box.lesser_corner;
+		leaf->getForce(i).x / .001, leaf->getForce(i).y / .001, leaf->getForce(i).z / .001,
+		old_position.x, old_position.y, old_position.z);*/
+        Vector3D<Real> new_point = 2 * curr_box.greater_corner - curr_box.lesser_corner;
         if (remainders[remainders_index] & 4) new_point.x = 2 * curr_box.lesser_corner.x - curr_box.greater_corner.x;
         if (remainders[remainders_index] & 2) new_point.y = 2 * curr_box.lesser_corner.y - curr_box.greater_corner.y;
         if (remainders[remainders_index] & 1) new_point.z = 2 * curr_box.lesser_corner.z - curr_box.greater_corner.z;
@@ -519,13 +519,10 @@ void TreePiece<Data>::perturb (Real timestep, bool if_flush) {
           }
           else curr_box.greater_corner[dim] = mean[dim];
         }
-        if (node->type == Node<Data>::RemoteAboveTPKey || node->type == Node<Data>::Remote) {
+        if (node->type == Node<Data>::Type::RemoteAboveTPKey || node->type == Node<Data>::Type::Remote) {
           CkAbort("flush period too large for initial particle velocities");
         }
-        Node<Data>* the_child = node->children[child].load();
-        if (the_child == nullptr) std::cout << "node has type " << node->type << std::endl;
-        node = node->children[child].load();
-        if (!node) CkPrintf("node not legit\n");
+        node = node->getChild(child); // move down the tree :)
       }
 
       if (node == local_root) in_particles.push_back(particle);

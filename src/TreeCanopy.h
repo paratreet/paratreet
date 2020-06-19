@@ -58,7 +58,7 @@ void TreeCanopy<Data>::recvData(Data data_) {
     d_proxy.recvTC(std::make_pair(this->thisIndex, data));
 
     if (this->thisIndex == 1) {
-      //CkPrintf("Total COM: %f %f %f\n", data.getCentroid().x, data.getCentroid().y, data.getCentroid().z);
+      //CkPrintf("Total COM: %f %f %f\n", data.centroid.x, data.centroid.y, data.centroid.z);
       //cm_proxy.restoreData(std::make_pair(1, data));
     } else {
       this->thisProxy[this->thisIndex >> 3].recvData(data);

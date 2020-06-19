@@ -1,6 +1,6 @@
 CHARM_HOME ?= $(HOME)/charm-paratreet
 STRUCTURE_PATH = ../utility/structures
-OPTS = -g -I$(STRUCTURE_PATH) -DDELAYLOCAL=0 -DCOUNT_INTRNS=0 -DDEBUG=0
+OPTS = -g -I$(STRUCTURE_PATH) -DDELAYLOCAL=0 -DCOUNT_INTRNS=0 -DDEBUG=0 $(MAKE_OPTS)
 CHARMC = $(CHARM_HOME)/bin/charmc $(OPTS)
 LD_LIBS = -L$(STRUCTURE_PATH) -lTipsy
 
@@ -20,7 +20,7 @@ $(BINARY).decl.h: $(BINARY).ci
 
 common.h: $(STRUCTURE_PATH)/Vector3D.h $(STRUCTURE_PATH)/SFC.h Utility.h
 
-Main.o: Main.C $(BINARY).decl.h common.h Reader.h TreePiece.h TreeSpec.h BoundingBox.h BufferedVec.h TreeCanopy.h CacheManager.h Node.h Resumer.h Traverser.h Driver.h UserNode.h GravityVisitor.h DensityVisitor.h PressureVisitor.h CountVisitor.h
+Main.o: Main.C $(BINARY).decl.h common.h Reader.h TreePiece.h TreeSpec.h BoundingBox.h BufferedVec.h TreeCanopy.h CacheManager.h Node.h Resumer.h Traverser.h Driver.h GravityVisitor.h DensityVisitor.h PressureVisitor.h CountVisitor.h
 	$(CHARMC) -c $<
 
 CacheManager.h: $(BINARY).decl.h
