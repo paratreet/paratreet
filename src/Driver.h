@@ -185,6 +185,14 @@ public:
       CkPrintf("Interactions: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
       //count_manager.sum(CkCallback(CkReductionTarget(Main, terminate), this->thisProxy));
 
+      // Output particle accelerations for verification
+      // TODO: Initial force interactions similar to ChaNGa
+      if (iter == 0 && verify) {
+        std::string output_file = input_file + ".out";
+        treepieces[0].output(output_file, CkCallbackResumeThread());
+        CkPrintf("Outputting particle accelerations for verification...\n");
+      }
+
       // Move the particles in TreePieces
       start_time = CkWallTimer();
       bool complete_rebuild = (iter % flush_period == flush_period-1);
@@ -204,14 +212,6 @@ public:
       storage.clear();
       storage_sorted = false;
       CkWaitQD();
-    }
-
-    // Output particle accelerations for verification
-    // TODO: initial force interactions similar to ChaNGa
-    if (num_iterations == 0) {
-      std::string output_file = input_file + ".out";
-      treepieces[0].output(output_file, CkCallbackResumeThread());
-      CkPrintf("Outputting particle accelerations for verification...\n");
     }
 
     cb.send();

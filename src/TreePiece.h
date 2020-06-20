@@ -577,7 +577,7 @@ void TreePiece<Data>::output(std::string output_file, const CkCallback& cb) {
   // Print particle accelerations to output file
   fp = CmiFopen(output_file.c_str(), "a");
   CkAssert(fp);
-  for (Particle& particle : incoming_particles) {
+  for (Particle& particle : particles) {
     Real outval;
     if (dim_cnt == 0) outval = particle.acceleration.x;
     else if (dim_cnt == 1) outval = particle.acceleration.y;

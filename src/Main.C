@@ -32,6 +32,7 @@
 /* readonly */ int num_iterations;
 /* readonly */ int num_share_levels;
 /* readonly */ int flush_period;
+/* readonly */ bool verify;
 /* readonly */ CProxy_TreeCanopy<CentroidData> centroid_calculator;
 /* readonly */ CProxy_CacheManager<CentroidData> centroid_cache;
 /* readonly */ CProxy_Resumer<CentroidData> centroid_resumer;
@@ -62,6 +63,7 @@ class Main : public CBase_Main {
     num_iterations = 3;
     num_share_levels = 3;
     flush_period = 1;
+    verify = false;
 
     // Initialize member variables
     n_treepieces = 0;
@@ -70,7 +72,7 @@ class Main : public CBase_Main {
     // Process command line arguments
     int c;
     std::string input_str;
-    while ((c = getopt(m->argc, m->argv, "f:n:p:l:d:t:i:s:u:")) != -1) {
+    while ((c = getopt(m->argc, m->argv, "f:n:p:l:d:t:i:s:u:v")) != -1) {
       switch (c) {
         case 'f':
           input_file = optarg;
@@ -107,6 +109,9 @@ class Main : public CBase_Main {
           break;
         case 'u':
           flush_period = atoi(optarg);
+          break;
+        case 'v':
+          verify = true;
           break;
         default:
           CkPrintf("Usage: %s\n", m->argv[0]);
