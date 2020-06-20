@@ -104,7 +104,7 @@ mainmodule paratreet {
     entry TreeCanopy();
     entry void reset();
     entry [createhere] void recvProxies(TPHolder<Data>, int, CProxy_CacheManager<Data>, DPHolder<Data>);
-    entry void recvData(Data);
+    entry void recvData(Data, int);
     entry void requestData (int);
   };
   array [1d] TreeCanopy<CentroidData>;

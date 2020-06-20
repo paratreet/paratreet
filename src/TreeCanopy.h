@@ -16,26 +16,23 @@ template <typename Data>
 class TreeCanopy : public CBase_TreeCanopy<Data> {
 private:
   Data data;
-  int wait_count;
+  int recv_count = 0;
   int tp_index; // If -1, sits above TreePieces
   CProxy_TreePiece<Data> tp_proxy;
   CProxy_CacheManager<Data> cm_proxy;
   CProxy_Driver<Data> d_proxy;
 public:
-  TreeCanopy();
+  TreeCanopy() = default;
   void reset();
   void recvProxies(TPHolder<Data>, int, CProxy_CacheManager<Data>, DPHolder<Data>);
-  void recvData(Data);
+  void recvData(Data, int);
   void requestData(int);
 };
 
 template <typename Data>
-TreeCanopy<Data>::TreeCanopy() : data(Data()), wait_count(8) {}
-
-template <typename Data>
 void TreeCanopy<Data>::reset() {
   data = Data();
-  wait_count = 8;
+  recv_count = 0;
 }
 
 template <typename Data>
@@ -48,20 +45,20 @@ void TreeCanopy<Data>::recvProxies(TPHolder<Data> tp_holder, int tp_index_,
 }
 
 template <typename Data>
-void TreeCanopy<Data>::recvData(Data data_) {
+void TreeCanopy<Data>::recvData(Data data_, int branch_factor) {
   // Accumulate data received from TreePiece or children TreeCanopies
   data += data_;
 
   // If data from all children has been received, send the accumulated data
   // to Driver and to the parent TreeCanopy
-  if (--wait_count == 0) {
+  if (++recv_count == branch_factor) {
     d_proxy.recvTC(std::make_pair(this->thisIndex, data));
 
     if (this->thisIndex == 1) {
       //CkPrintf("Total COM: %f %f %f\n", data.centroid.x, data.centroid.y, data.centroid.z);
       //cm_proxy.restoreData(std::make_pair(1, data));
     } else {
-      this->thisProxy[this->thisIndex >> 3].recvData(data);
+      this->thisProxy[this->thisIndex / branch_factor].recvData(data, branch_factor);
     }
 
     reset();
