@@ -15,26 +15,32 @@ public:
   virtual void processLocal() = 0;
   virtual void interact() = 0;
   template <typename Visitor>
-  void processLocalBase(TreePiece<Data>* tp)
+  void runSimpleTraversal(TreePiece<Data>* tp, Node<Data>* source_node, int leaf_index)
   {
     Visitor v;
-    for (auto local_trav : tp->local_travs) {
-      std::stack<Node<Data>*> nodes;
-      nodes.push(local_trav.first);
-      while (nodes.size()) {
-        Node<Data>* node = nodes.top();
-        nodes.pop();
-        if (node->type == Node<Data>::Type::Internal) {
-          if (v.node(*node, *(tp->leaves[local_trav.second]))) {
-            for (int j = 0; j < node->n_children; j++) {
-              nodes.push(node->getChild(j));
-            }
+    std::stack<Node<Data>*> nodes;
+    nodes.push(source_node);
+    while (!nodes.empty()) {
+      Node<Data>* node = nodes.top();
+      nodes.pop();
+      if (node->type == Node<Data>::Type::Leaf || node->type == Node<Data>::Type::CachedRemoteLeaf) {
+        tp->interactions[leaf_index].push_back(node);
+      }
+      else {
+        if (v.node(*node, *(tp->leaves[leaf_index]))) {
+          for (int j = 0; j < node->n_children; j++) {
+            nodes.push(node->getChild(j));
           }
         }
-        else {
-          tp->interactions[local_trav.second].push_back(node);
-        }
       }
+    }
+  }
+
+  template <typename Visitor>
+  void processLocalBase(TreePiece<Data>* tp)
+  {
+    for (auto local_trav : tp->local_travs) {
+      runSimpleTraversal<Visitor>(tp, local_trav.first, local_trav.second);
     }
   }
   template <typename Visitor>
@@ -58,6 +64,7 @@ private:
 public:
   DownTraverser(TreePiece<Data>* tpi) : tp(tpi)
   {
+    tp->global_root = tp->cm_local->root;
     // Initialize with global root key and leaves
     for (int i = 0; i < tp->leaves.size(); i++) curr_nodes[1].push_back(i);
   }
@@ -65,7 +72,6 @@ public:
   void interact() {this->template interactBase<Visitor> (tp);}
   virtual void traverse(Key new_key) {
     Visitor v;
-    if (new_key == 1) tp->global_root = tp->cm_local->root;
     auto& now_ready = curr_nodes[new_key];
     std::vector<std::pair<Key, int>> curr_nodes_insertions;
     auto start_node = tp->global_root;
@@ -274,64 +280,98 @@ public:
 
 template <typename Data, typename Visitor>
 class DualTraverser : public Traverser<Data> {
+// NOTE: dual traversals dont have leaves they have payloads
+// we start by assigning one payload to each treepiece
 private:
   TreePiece<Data>* tp;
-  std::unordered_map<Key, std::vector<Node<Data>*>> curr_nodes;
+  std::unordered_map<Key, std::vector<Node<Data>*>> curr_nodes; // source nodes to target nodes
 public:
   DualTraverser(TreePiece<Data>* tpi, std::vector<Key> keys) : tp(tpi)
   {
-    for (auto leaf : tp->leaves) curr_nodes[1].push_back(leaf);
+    tp->global_root = tp->cm_local->root; // these are source nodes
     tp->local_root = tp->global_root->getDescendant(tp->tp_key);
     for (auto key : keys) curr_nodes[key].push_back(tp->local_root);
   }
   void processLocal () {}
   void interact() {this->template interactBase<Visitor>(tp);}
-  virtual void traverse(Key new_key) {
-/*
+
+  void runInvertedTraversal(Node<Data>* source_leaf, Node<Data>* target_node)
+  {
     Visitor v;
-    if (new_key == 1) tp->global_root = tp->cm_local->root;
+    std::stack<Node<Data>*> nodes;
+    nodes.push(target_node);
+    while (!nodes.empty()) {
+      Node<Data>* node = nodes.top();
+      nodes.pop();
+      if (node->type == Node<Data>::Type::Leaf || node->type == Node<Data>::Type::CachedRemoteLeaf) {
+        v.leaf(*source_leaf, *node);
+      }
+      else {
+        if (v.node(*node, *source_leaf)) {
+          for (int j = 0; j < node->n_children; j++) {
+            nodes.push(node->getChild(j));
+          }
+        }
+      }
+    }
+  }
+
+  virtual void traverse(Key new_key) {
+    Visitor v;
     auto& now_ready = curr_nodes[new_key];
     std::vector<std::pair<Key, Node<Data>*>> curr_nodes_insertions;
-    Node<Data>* start_node = tp->global_root;
-    if (new_key > 1) {
-      Node<Data>* result = tp->r_local->fastNodeFind(new_key);
-      if (!result) CkPrintf("not good!\n");
-      start_node = result;
+    Node<Data>* start_node = nullptr;
+    auto && resume_nodes = tp->r_local->resume_nodes_per_tp[tp->thisIndex];
+    if (!resume_nodes.empty()) {
+      start_node = resume_nodes.front();
+      CkAssert(start_node->key == new_key);
+      resume_nodes.pop();
     }
-    Node<Data> dummy_node;
-    if (!start_node) {// only possible in early dual tree
-      dummy_node.key = new_key;
-      dummy_node.requested.store(true);
-      dummy_node.type = Node<Data>::Type::Remote; // doesn't matter which of the 4
-      start_node = &dummy_node;
+    else {
+      start_node = tp->global_root->getDescendant(new_key);
+      CkAssert(start_node != nullptr); // need to loadCache with num_share_levels very large or unset
     }
-    for (auto payload : now_ready) {
+    for (auto new_payload : now_ready) {
       std::stack<std::pair<Node<Data>*, Node<Data>*>> nodes;
-      nodes.push(std::make_pair(start_node, payload));
+      nodes.push(std::make_pair(start_node, new_payload));
       while (nodes.size()) {
-        Node<Data>* node = nodes.top().first, *currpl = nodes.top().second;
+        Node<Data>* node = nodes.top().first, *curr_payload = nodes.top().second;
+        // node is target, payload is source
         nodes.pop();
-        //CkPrintf("tp %d, key = %d, type = %d, pe %d\n", tp->thisIndex, node->key, node->type, CkMyPe());
+#if DEBUG
+        CkPrintf("tp %d, key = %d, type = %d, pe %d\n", tp->thisIndex, node->key, node->type, CkMyPe());
+#endif
+        if (curr_payload->type == Node<Data>::Type::EmptyLeaf) {
+          continue;
+        }
+        else if (curr_payload->type == Node<Data>::Type::Leaf) {
+          int leaf_index = -1;
+          for (int i = 0; i < tp->leaves.size(); i++) {
+            if (tp->leaves[i] == curr_payload) {
+              leaf_index = i;
+              break;
+            }
+          }
+          CkAssert(leaf_index != -1);
+          this->template runSimpleTraversal<Visitor>(tp, node, leaf_index);
+          continue;
+        }
+        CkAssert(curr_payload->type == Node<Data>::Type::Internal);
         switch (node->type) {
           case Node<Data>::Type::Leaf:
           case Node<Data>::Type::CachedRemoteLeaf:
             {
-              for (int i = 0; i < tp->leaves.size(); i++) {
-                if (tp->leaves[i] == currpl) {
-                  tp->interactions[i].push_back(node); // needs change
-                  break;
-                }
-              }
+              runInvertedTraversal(node, curr_payload);
               break;
             }
           case Node<Data>::Type::Internal:
           case Node<Data>::Type::CachedBoundary:
           case Node<Data>::Type::CachedRemote:
             {
-              if (v.node(*node, *payload)) {
-                for (int i = 0; i < node->children.size(); i++) {
-                  for (int j = 0; j < payload->children.size(); j++) {
-                    nodes.push(std::make_pair(node->children[i].load(), payload->children[j].load()));
+              if (v.cell(*node, *curr_payload)) {
+                for (int i = 0; i < node->n_children; i++) {
+                  for (int j = 0; j < curr_payload->n_children; j++) {
+                    nodes.push(std::make_pair(node->getChild(i), curr_payload->getChild(j)));
                   }
                 }
               }
@@ -342,7 +382,7 @@ public:
           case Node<Data>::Type::Remote:
           case Node<Data>::Type::RemoteLeaf:
             {
-              curr_nodes_insertions.push_back(std::make_pair(node->key, payload));
+              curr_nodes_insertions.push_back(std::make_pair(node->key, curr_payload));
               bool prev = node->requested.exchange(true);
               if (!prev) {
                 if (node->type == Node<Data>::Type::Boundary || node->type == Node<Data>::Type::RemoteAboveTPKey)
@@ -362,7 +402,6 @@ public:
     }
     curr_nodes.erase(new_key);
     for (auto cn : curr_nodes_insertions) curr_nodes[cn.first].push_back(cn.second);
-*/
   }
 };
 

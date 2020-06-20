@@ -222,20 +222,21 @@ public:
 
   void loadCache(CkCallback cb) {
     CkPrintf("Received data from %d TreeCanopies\n", storage.size());
-    CkPrintf("Broadcasting top %d levels to caches\n", num_share_levels);
-
     // Sort data received from TreeCanopies (by their indices)
     if (!storage_sorted) sortStorage();
 
     // Find how many should be sent to the caches
     int send_size = storage.size();
-    if (num_share_levels >= 0) {
+    if (num_share_levels > 0) {
+      CkPrintf("Broadcasting top %d levels to caches\n", num_share_levels);
       Key search_key {1ull << (LOG_BRANCH_FACTOR * num_share_levels)};
       auto comp = [] (const std::pair<Key, Data>& a, const Key & b) {return a.first < b;};
       auto it = std::lower_bound(storage.begin(), storage.end(), search_key, comp);
       send_size = std::distance(storage.begin(), it);
     }
-
+    else {
+      CkPrintf("Broadcasting every tree canopy because num_share_levels is unset\n");
+    }
     // Send data to caches
     cache_manager.recvStarterPack(storage.data(), send_size, cb);
   }
