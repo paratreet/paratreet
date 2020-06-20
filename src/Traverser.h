@@ -290,6 +290,7 @@ public:
   {
     tp->global_root = tp->cm_local->root; // these are source nodes
     tp->local_root = tp->global_root->getDescendant(tp->tp_key);
+    if (tp->local_root == nullptr) CkAbort("If doing dual traversal you need to set num_share_levels = 0");
     for (auto key : keys) curr_nodes[key].push_back(tp->local_root);
   }
   void processLocal () {}
@@ -329,7 +330,7 @@ public:
     }
     else {
       start_node = tp->global_root->getDescendant(new_key);
-      CkAssert(start_node != nullptr); // need to loadCache with num_share_levels very large or unset
+      if (start_node == nullptr) CkAbort("If doing dual traversal you need to set num_share_levels = 0");
     }
     for (auto new_payload : now_ready) {
       std::stack<std::pair<Node<Data>*, Node<Data>*>> nodes;
