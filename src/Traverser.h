@@ -68,11 +68,12 @@ public:
     if (new_key == 1) tp->global_root = tp->cm_local->root;
     auto& now_ready = curr_nodes[new_key];
     std::vector<std::pair<Key, int>> curr_nodes_insertions;
-    Node<Data>* start_node = tp->global_root;
-    if (new_key > 1) {
-      Node<Data>* result = tp->r_proxy.ckLocalBranch()->fastNodeFind(new_key);
-      if (!result) CkPrintf("not good!\n");
-      start_node = result;
+    auto start_node = tp->global_root;
+    auto && resume_nodes = tp->r_local->resume_nodes_per_tp[tp->thisIndex];
+    CkAssert(!resume_nodes.empty() || new_key == 1); // nothing to resume on?
+    if (!resume_nodes.empty()) {
+      start_node = resume_nodes.front();
+      resume_nodes.pop();
     }
 #if DEBUG
     CkPrintf("going down on key %d while its type is %d\n", new_key, start_node->type);
@@ -141,7 +142,7 @@ public:
               // Add the TreePiece that initiated the traversal to the waiting list
               // maintained in Resumer
               // XXX: Why does it only check the list size and the back of the list?
-              std::vector<int>& list = tp->r_proxy.ckLocalBranch()->waiting[node->key];
+              std::vector<int>& list = tp->r_local->waiting[node->key];
               if (!list.size() || list.back() != tp->thisIndex) list.push_back(tp->thisIndex);
               break;
             }
@@ -184,15 +185,18 @@ public:
     Visitor v;
     auto& now_ready = curr_nodes[new_key];
     std::vector<std::pair<Key, int>> curr_nodes_insertions;
-    Node<Data>* start_node;
-    if (new_key == 1) start_node = tp->cm_local->root;
-    else start_node = tp->r_proxy.ckLocalBranch()->fastNodeFind(new_key);
-    if (!start_node) CkPrintf("not good!\n");
+    auto && resume_nodes = tp->r_local->resume_nodes_per_tp[tp->thisIndex];
+    Node<Data>* resume_node = nullptr;
+    if (!resume_nodes.empty()) {
+      resume_node = resume_nodes.front();
+      resume_nodes.pop();
+    }
 #if DEBUG
     CkPrintf("going down on key %d while its type is %d, pe is %d\n", new_key, start_node->type, CkMyPe());
 #endif
     for (auto bucket : now_ready) {
       num_waiting[bucket]--;
+      auto start_node = resume_node ? resume_node : trav_tops[bucket];
       std::stack<Node<Data>*> nodes;
       nodes.push(start_node);
       while (nodes.size()) {
@@ -232,7 +236,7 @@ public:
                   tp->tc_proxy[node->key].requestData(tp->cm_local->thisIndex);
                 else tp->cm_proxy[node->cm_index].requestNodes(std::make_pair(node->key, tp->cm_local->thisIndex));
               }
-              std::vector<int>& list = tp->r_proxy.ckLocalBranch()->waiting[node->key];
+              std::vector<int>& list = tp->r_local->waiting[node->key];
               if (!list.size() || list.back() != tp->thisIndex) list.push_back(tp->thisIndex);
               break;
             }

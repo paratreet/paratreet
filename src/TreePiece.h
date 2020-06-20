@@ -105,6 +105,7 @@ TreePiece<Data>::TreePiece(const CkCallback& cb, int n_total_particles_,
   r_proxy = r_proxy_;
   r_local = r_proxy.ckLocalBranch();
   r_local->tp_proxy = this->thisProxy;
+  r_local->resume_nodes_per_tp.resize(n_treepieces);
   cm_proxy = cm_proxy_;
   cm_local = cm_proxy.ckLocalBranch();
   r_local->cm_local = cm_local;

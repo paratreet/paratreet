@@ -166,7 +166,7 @@ Node<Data>* CacheManager<Data>::addCacheHelper(Particle* particles, int n_partic
   CkPrintf("adding cache for node %d on cm %d\n", nodes[0].key, this->thisIndex);
 #endif
 
-  auto first_node_placeholder = r_proxy.ckLocalBranch()->fastNodeFind(nodes[0].first, true);
+  auto first_node_placeholder = root->getDescendant(nodes[0].first);
   if (first_node_placeholder->type == Node<Data>::Type::CachedRemote
       || first_node_placeholder->type == Node<Data>::Type::CachedRemoteLeaf)
   {
