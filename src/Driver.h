@@ -185,6 +185,13 @@ public:
       CkPrintf("Interactions: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
       //count_manager.sum(CkCallback(CkReductionTarget(Main, terminate), this->thisProxy));
 
+      // Move the particles in TreePieces
+      start_time = CkWallTimer();
+      bool complete_rebuild = (iter % flush_period == flush_period-1);
+      treepieces.perturb(0.1, complete_rebuild); // 0.1s for example
+      CkWaitQD();
+      CkPrintf("Perturbations: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
+
       // Output particle accelerations for verification
       // TODO: Initial force interactions similar to ChaNGa
       if (iter == 0 && verify) {
@@ -192,13 +199,6 @@ public:
         treepieces[0].output(output_file, CkCallbackResumeThread());
         CkPrintf("Outputting particle accelerations for verification...\n");
       }
-
-      // Move the particles in TreePieces
-      start_time = CkWallTimer();
-      bool complete_rebuild = (iter % flush_period == flush_period-1);
-      treepieces.perturb(0.1, complete_rebuild); // 0.1s for example
-      CkWaitQD();
-      CkPrintf("Perturbations: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
 
       // Destroy treepices and perform decomposition from scratch
       if (complete_rebuild) {

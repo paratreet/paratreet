@@ -582,12 +582,15 @@ void TreePiece<Data>::output(std::string output_file, const CkCallback& cb) {
   // Print particle accelerations to output file
   fp = CmiFopen(output_file.c_str(), "a");
   CkAssert(fp);
-  for (Particle& particle : particles) {
-    Real outval;
-    if (dim_cnt == 0) outval = particle.acceleration.x;
-    else if (dim_cnt == 1) outval = particle.acceleration.y;
-    else if (dim_cnt == 2) outval = particle.acceleration.z;
-    fprintf(fp, "%.14g\n", outval);
+  for (auto leaf : leaves) {
+    for (int i = 0; i < leaf->n_particles; i++) {
+      Particle& particle = leaf->particles[i];
+      Real outval;
+      if (dim_cnt == 0) outval = particle.acceleration.x;
+      else if (dim_cnt == 1) outval = particle.acceleration.y;
+      else if (dim_cnt == 2) outval = particle.acceleration.z;
+      fprintf(fp, "%.14g\n", outval);
+    }
   }
 
   if (++dim_cnt == 3) dim_cnt = 0;
