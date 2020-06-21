@@ -28,6 +28,13 @@ struct Decomposition {
 
 struct SfcDecomposition : public Decomposition {
   int getTpKey(int idx);
+  std::vector<Key> getAllTpKeys(int n_treepieces) {
+    std::vector<Key> tp_keys (n_treepieces);
+    for (int i = 0; i < n_treepieces; i++) {
+      tp_keys[i] = getTpKey(i);
+    }
+    return tp_keys;
+  }
   int flush(int n_total_particles, int n_treepieces,
       const SendParticlesFn &fn, std::vector<Particle> &particles) override;
   void assignKeys(BoundingBox &universe, std::vector<Particle> &particles) override;

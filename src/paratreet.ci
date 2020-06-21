@@ -83,7 +83,7 @@ mainmodule paratreet {
     entry void triggerRequest();
     template<typename Visitor> entry void startDown();
     template<typename Visitor> entry void startUpAndDown();
-    template<typename Visitor> entry void startDual(Key keys_ptr[n], int n);
+    template<typename Visitor> entry void startDual();
     entry void processLocal(const CkCallback&);
     entry void interact(const CkCallback&);
     entry void goDown(Key);
@@ -96,9 +96,10 @@ mainmodule paratreet {
   array [1d] TreePiece<CentroidData>;
 
   extern entry void TreePiece<CentroidData> startDown<GravityVisitor> ();
+  extern entry void TreePiece<CentroidData> startDual<GravityVisitor> ();
   extern entry void TreePiece<CentroidData> startUpAndDown<DensityVisitor> ();
   extern entry void TreePiece<CentroidData> startDown<PressureVisitor> ();
-  extern entry void TreePiece<CentroidData> startDual<CountVisitor> (Key keys_ptr[n], int n);
+  extern entry void TreePiece<CentroidData> startDual<CountVisitor> ();
 
   template <typename Data>
   array [1d] TreeCanopy {
