@@ -22,6 +22,7 @@ mainmodule paratreet {
   readonly int num_iterations;
   readonly int flush_period;
   readonly int num_share_levels;
+  readonly int cache_share_depth;
   readonly bool verify;
   readonly CProxy_TreeCanopy<CentroidData> centroid_calculator;
   readonly CProxy_CacheManager<CentroidData> centroid_cache;
@@ -106,7 +107,7 @@ mainmodule paratreet {
     entry TreeCanopy();
     entry void reset();
     entry [createhere] void recvProxies(TPHolder<Data>, int, CProxy_CacheManager<Data>, DPHolder<Data>);
-    entry void recvData(Data);
+    entry void recvData(Data, int);
     entry void requestData (int);
   };
   array [1d] TreeCanopy<CentroidData>;

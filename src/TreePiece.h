@@ -378,7 +378,9 @@ void TreePiece<Data>::populateTree() {
     if (node->key == tp_key) {
       // We are at the root of the TreePiece, send accumulated data to
       // parent TreeCanopy
-      tc_proxy[tp_key / node->getBranchFactor()].recvData(node->data);
+      int branch_factor = node->getBranchFactor();
+      size_t tc_key = tp_key / branch_factor;
+      if (tc_key > 0) tc_proxy[tc_key].recvData(node->data, branch_factor);
     } else {
       // Add this node's data to the parent, and add parent to the queue
       // if all children have contributed
@@ -394,8 +396,11 @@ template <typename Data>
 void TreePiece<Data>::initCache() {
   if (!cache_init) {
     cm_local->connect(local_root, false);
-    local_root->parent->exchangeChild(tp_key % local_root->getBranchFactor(),nullptr);
-    global_root->triggerFree();
+    auto local_parent = local_root->parent;
+    if (local_parent) {
+      local_parent->exchangeChild(tp_key % local_root->getBranchFactor(),nullptr);
+      global_root->triggerFree();
+    }
     cache_init = true;
   }
 }

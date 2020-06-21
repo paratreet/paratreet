@@ -31,6 +31,7 @@
 /* readonly */ int tree_type;
 /* readonly */ int num_iterations;
 /* readonly */ int num_share_levels;
+/* readonly */ int cache_share_depth;
 /* readonly */ int flush_period;
 /* readonly */ bool verify;
 /* readonly */ CProxy_TreeCanopy<CentroidData> centroid_calculator;
@@ -62,6 +63,7 @@ class Main : public CBase_Main {
     tree_type = OCT_TREE;
     num_iterations = 3;
     num_share_levels = 3;
+    cache_share_depth= 3;
     flush_period = 1;
     verify = false;
 
