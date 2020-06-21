@@ -13,6 +13,7 @@
 #include <mutex>
 
 extern CProxy_TreeSpec treespec;
+extern int cache_share_depth;
 
 template <typename Data>
 class CacheManager : public CBase_CacheManager<Data> {
@@ -65,6 +66,7 @@ public:
   void prepPrefetch(Node<Data>*);
   void connect(Node<Data>*, bool);
   void requestNodes(std::pair<Key, int>);
+  void makeMsgPerNode(int, std::vector<Node<Data>*>&, std::vector<Particle>&, Node<Data>*);
   void serviceRequest(Node<Data>*, int);
   void recvStarterPack(std::pair<Key, Data>* pack, int n, CkCallback);
   void addCache(MultiData<Data>);
@@ -206,24 +208,27 @@ void CacheManager<Data>::requestNodes(std::pair<Key, int> param) {
 }
 
 template <typename Data>
+void CacheManager<Data>::makeMsgPerNode(int start_depth, std::vector<Node<Data>*>& sending_nodes, std::vector<Particle>& sending_particles, Node<Data>* to_process)
+{
+  sending_nodes.push_back(to_process);
+  if (to_process->type == Node<Data>::Type::Leaf) {
+    std::copy(to_process->particles, to_process->particles + to_process->n_particles, std::back_inserter(sending_particles));
+  }
+  if (to_process->depth + 1 < start_depth + cache_share_depth) {
+    for (int i = 0; i < to_process->n_children; i++) {
+      Node<Data>* child = to_process->getChild(i);
+      makeMsgPerNode(start_depth, sending_nodes, sending_particles, child);
+    }
+  }
+}
+
+template <typename Data>
 void CacheManager<Data>::serviceRequest(Node<Data>* node, int cm_index) {
   if (cm_index == this->thisIndex) return; // you'll get it later!
   std::vector<Node<Data>*> sending_nodes;
   std::vector<Particle> sending_particles;
-  auto makeMsgPerNode = [&sending_nodes, &sending_particles] (Node<Data>* to_process) {
-    sending_nodes.push_back(to_process);
-    if (to_process->type == Node<Data>::Type::Leaf) {
-      std::copy(to_process->particles, to_process->particles + to_process->n_particles, std::back_inserter(sending_particles));
-    }
-  };
-  makeMsgPerNode(node);
-  for (int i = 0; i < node->n_children; i++) {
-    Node<Data>* child = node->getChild(i);
-    makeMsgPerNode(child);
-    for (int j = 0; j < child->n_children; j++) {
-      makeMsgPerNode(child->getChild(j));
-    }
-  }
+  int start_depth = node->depth;
+  makeMsgPerNode(node->depth, sending_nodes, sending_particles, node);
   MultiData<Data> multidata (sending_particles.data(), sending_particles.size(), sending_nodes.data(), sending_nodes.size(), this->thisIndex);
   this->thisProxy[cm_index].addCache(multidata);
 }
