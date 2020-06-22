@@ -42,12 +42,9 @@ public:
     if (it == waiting.end()) return;
     for (auto tp_index : it->second) {
       auto && resume_nodes = resume_nodes_per_tp[tp_index];
+      bool should_resume = resume_nodes.empty();
       resume_nodes.push(node);
-      // batched resume logic would go here --
-      // if (resume_nodes > RESUME_BATCH_SIZE)
-      // but I am not sure how to tune it so that
-      // we actually complete on the last few reusmes
-      tp_proxy[tp_index].goDown(key);
+      if (should_resume) tp_proxy[tp_index].goDown(key);
     }
     waiting.erase(it);
   }

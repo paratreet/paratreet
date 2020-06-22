@@ -165,6 +165,7 @@ public:
 
     // Store nodes to be traversed
     for (auto cn : curr_nodes_insertions) curr_nodes[cn.first].push_back(cn.second);
+    if (!resume_nodes.empty()) traverse(resume_nodes.front()->key);
   }
 };
 
@@ -275,6 +276,7 @@ public:
     //else CkPrintf("tp %d leaf %d still waiting\n", tp->thisIndex, i);
     curr_nodes.erase(new_key);
     for (auto cn : curr_nodes_insertions) curr_nodes[cn.first].push_back(cn.second);
+    if (!resume_nodes.empty()) traverse(resume_nodes.front()->key); 
   }
 };
 
@@ -403,6 +405,7 @@ public:
     }
     curr_nodes.erase(new_key);
     for (auto cn : curr_nodes_insertions) curr_nodes[cn.first].push_back(cn.second);
+    if (!resume_nodes.empty()) traverse(resume_nodes.front()->key); 
   }
 };
 
