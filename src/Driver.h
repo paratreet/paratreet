@@ -195,7 +195,7 @@ public:
       // Output particle accelerations for verification
       // TODO: Initial force interactions similar to ChaNGa
       if (iter == 0 && verify) {
-        std::string output_file = input_file + ".out";
+        std::string output_file = input_file + ".acc";
         treepieces[0].output(output_file, CkCallbackResumeThread());
         CkPrintf("Outputting particle accelerations for verification...\n");
       }
