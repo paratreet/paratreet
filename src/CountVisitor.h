@@ -44,6 +44,10 @@ public:
     }
   }
 
+  bool cell(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
+    return node(source, target);
+  }
+
   void leaf(const SpatialNode<CentroidData>& from, SpatialNode<CentroidData>& on) {
     CountManager* countManager = count_manager.ckLocalBranch();
     int idx = findBin(from.data, on.data);
