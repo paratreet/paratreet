@@ -68,7 +68,7 @@ public:
   void requestNodes(Key, int);
   template<typename Visitor> void startDown();
   template<typename Visitor> void startUpAndDown();
-  template<typename Visitor> void startDual(Key*, int);
+  template<typename Visitor> void startDual();
   void goDown(Key);
   void processLocal(const CkCallback&);
   void interact(const CkCallback&);
@@ -107,6 +107,7 @@ TreePiece<Data>::TreePiece(const CkCallback& cb, int n_total_particles_,
   r_proxy = r_proxy_;
   r_local = r_proxy.ckLocalBranch();
   r_local->tp_proxy = this->thisProxy;
+  r_local->resume_nodes_per_tp.resize(n_treepieces);
   cm_proxy = cm_proxy_;
   cm_local = cm_proxy.ckLocalBranch();
   r_local->cm_local = cm_local;
@@ -422,8 +423,8 @@ void TreePiece<Data>::startUpAndDown() {
 
 template <typename Data>
 template <typename Visitor>
-void TreePiece<Data>::startDual(Key* keys_ptr, int n) {
-  std::vector<Key> keys (keys_ptr, keys_ptr + n);
+void TreePiece<Data>::startDual() {
+  auto && keys = ((SfcDecomposition*)treespec.ckLocalBranch()->getDecomposition())->getAllTpKeys(n_treepieces);
   traverser = new DualTraverser<Data, Visitor>(this, keys);
   for (auto key : keys) goDown(key);
   // root needs to be the root of the searched tree, not the searching tree
