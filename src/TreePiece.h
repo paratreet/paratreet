@@ -594,7 +594,7 @@ void TreePiece<Data>::output(std::string output_file, const CkCallback& cb) {
     }
   }
 
-  if (++dim_cnt == 3) dim_cnt = 0;
+  dim_cnt = (dim_cnt + 1) % 3;
 
   int result = CmiFclose(fp);
   CkAssert(result == 0);
