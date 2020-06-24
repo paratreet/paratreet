@@ -23,6 +23,7 @@ mainmodule paratreet {
   readonly int flush_period;
   readonly int num_share_levels;
   readonly int cache_share_depth;
+  readonly bool verify;
   readonly CProxy_TreeCanopy<CentroidData> centroid_calculator;
   readonly CProxy_CacheManager<CentroidData> centroid_cache;
   readonly CProxy_Resumer<CentroidData> centroid_resumer;
@@ -92,6 +93,7 @@ mainmodule paratreet {
     entry void flush(CProxy_Reader);
 
     entry void checkParticlesChanged(const CkCallback&);
+    entry void output(std::string, const CkCallback&);
   };
   array [1d] TreePiece<CentroidData>;
 

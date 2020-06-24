@@ -9,8 +9,8 @@ extern CProxy_Resumer<CentroidData> centroid_resumer;
 
 class GravityVisitor {
 private:
-  const Real gconst = 0.000000000066742;
-  const Real theta = 0.5;
+  const Real gconst = 1; // Per Tom's suggestion
+  const Real theta = 0.7;
   void addGravityLeaf(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
     int curr_counter = 0;
     for (int i = 0; i < target.n_particles; i++) {
