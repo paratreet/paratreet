@@ -9,7 +9,7 @@ extern int decomp_type;
 extern int max_particles_per_tp; // for OCT decomposition
 
 int SfcDecomposition::flush(int n_total_particles, int n_treepieces, const SendParticlesFn &fn,
-    std::vector<Particle> &particles) {
+                            std::vector<Particle> &particles) {
   // TODO SFC decomposition
   // Probably need to use prefix sum
   int flush_count;
@@ -47,14 +47,75 @@ void SfcDecomposition::assignKeys(BoundingBox &universe, std::vector<Particle> &
 }
 
 int SfcDecomposition::getNumExpectedParticles(int n_total_particles, int n_treepieces,
-    int tp_index) {
+                                              int tp_index) {
   int n_expected = n_total_particles / n_treepieces;
   if (tp_index < (n_total_particles % n_treepieces)) n_expected++;
   return n_expected;
 }
 
 int SfcDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &readers) {
-  CkAbort("Find splitters not yet implemented for SFC Decomposition");
+  BufferedVec<Key> keys;
+
+  // Initial splitter keys (first and last)
+  keys.add(Key(1)); // 0000...1
+  keys.add(~Key(0)); // 1111...1
+  keys.buffer();
+
+  int decomp_particle_sum = 0; // Used to check if all particles are decomposed
+
+  // count total particles
+  CkReductionMsg *msg;
+  readers.countOct(keys.get(), CkCallbackResumeThread((void*&)msg));
+  Real total = Real(*(int*)(msg->getData()));
+  delete msg;
+
+  // Each treepiece gets max_particles_per_tp particles
+  Real threshold = (DECOMP_TOLERANCE * Real(max_particles_per_tp));
+  for (int i = 0; i * threshold < total; ++i) {
+    Key from = keys[i * threshold];
+    Key to = keys[(i + 1) * threshold];
+    if ((i + 1) * threshold >= total) to = ~Key(0);
+
+    // count particles in this bin
+    BufferedVec<Key> bin;
+    bin.add(from); bin.add(to);
+    CkReductionMsg *msg;
+    readers.countOct(bin.get(), CkCallbackResumeThread((void*&)msg));
+    int n_particles = *(int *)(msg->getData());
+    delete msg;
+
+    Splitter sp(Utility::removeLeadingZeros(from),
+                Utility::removeLeadingZeros(to), from, n_particles);
+    splitters.push_back(sp);
+    decomp_particle_sum += n_particles;
+  }
+
+  // Check if decomposition is correct
+  if (decomp_particle_sum != universe.n_particles) {
+    CkPrintf("Decomposition failure: only %d particles out of %d decomposed",
+             decomp_particle_sum, universe.n_particles);
+    CkAbort("Decomposition failure -- see stdout");
+  }
+
+  // Sort our splitters
+  std::sort(splitters.begin(), splitters.end());
+
+  // Return the number of TreePieces
+  return splitters.size();
+}
+
+// Check if decomposition is correct
+if (decomp_particle_sum != universe.n_particles) {
+  CkPrintf("Decomposition failure: only %d particles out of %d decomposed",
+           decomp_particle_sum, universe.n_particles);
+  CkAbort("Decomposition failure -- see stdout");
+}
+
+// Sort our splitters
+std::sort(splitters.begin(), splitters.end());
+
+// Return the number of TreePieces
+return splitters.size();
 }
 
 void SfcDecomposition::pup(PUP::er& p) {
@@ -66,12 +127,12 @@ int SfcDecomposition::getTpKey(int idx) {
 }
 
 int OctDecomposition::getNumExpectedParticles(int n_total_particles, int n_treepieces,
-    int tp_index) {
+                                              int tp_index) {
   return splitters[tp_index].n_particles;
 }
 
 int OctDecomposition::flush(int n_total_particles, int n_treepieces, const SendParticlesFn &fn,
-    std::vector<Particle> &particles) {
+                            std::vector<Particle> &particles) {
   // OCT decomposition
   int flush_count = 0;
   int start = 0;
@@ -163,7 +224,7 @@ int OctDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &reader
       else {
         // Create and store splitter
         Splitter sp(Utility::removeLeadingZeros(from),
-            Utility::removeLeadingZeros(to), from, n_particles);
+                    Utility::removeLeadingZeros(to), from, n_particles);
         splitters.push_back(sp);
 
         // Add up number of particles to check if all are flushed
@@ -178,7 +239,7 @@ int OctDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &reader
   // Check if decomposition is correct
   if (decomp_particle_sum != universe.n_particles) {
     CkPrintf("Decomposition failure: only %d particles out of %d decomposed",
-        decomp_particle_sum, universe.n_particles);
+             decomp_particle_sum, universe.n_particles);
     CkAbort("Decomposition failure -- see stdout");
   }
 
