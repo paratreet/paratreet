@@ -200,9 +200,12 @@ public:
         CkPrintf("Outputting particle accelerations for verification...\n");
       }
 
-      // Destroy treepices and perform decomposition from scratch
+      // Destroy treepieces and perform decomposition from scratch
       if (complete_rebuild) {
-        treepieces.ckDestroy();
+        // XXX: Should TreeCanopies be destroyed here as well?
+        for (int i = 0; i < n_treepieces; i++) {
+          treepieces[i].ckDestroy();
+        }
         decompose(iter+1);
       }
 
