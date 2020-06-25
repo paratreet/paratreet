@@ -54,18 +54,16 @@ int SfcDecomposition::getNumExpectedParticles(int n_total_particles, int n_treep
 }
 
 int SfcDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &readers) {
-  BufferedVec<Key> keys;
-
   // Initial splitter keys (first and last)
-  keys.add(Key(1)); // 0000...1
-  keys.add(~Key(0)); // 1111...1
-  keys.buffer();
+  std::vector<Key> keys;
+  keys.push_back(Key(1)); // 0000...1
+  keys.push_back(~Key(0)); // 1111...1
 
   int decomp_particle_sum = 0; // Used to check if all particles are decomposed
 
   // count total particles
   CkReductionMsg *msg;
-  readers.countOct(keys.get(), CkCallbackResumeThread((void*&)msg));
+  readers.countOct(keys, CkCallbackResumeThread((void*&)msg));
   Real total = Real(*(int*)(msg->getData()));
   delete msg;
 
@@ -77,10 +75,10 @@ int SfcDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &reader
     if ((i + 1) * threshold >= total) to = ~Key(0);
 
     // count particles in this bin
-    BufferedVec<Key> bin;
-    bin.add(from); bin.add(to);
+    std::vector<Key> bin;
+    bin.push_back(from); bin.push_back(to);
     CkReductionMsg *msg;
-    readers.countOct(bin.get(), CkCallbackResumeThread((void*&)msg));
+    readers.countOct(bin, CkCallbackResumeThread((void*&)msg));
     int n_particles = *(int *)(msg->getData());
     delete msg;
 
@@ -102,20 +100,6 @@ int SfcDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &reader
 
   // Return the number of TreePieces
   return splitters.size();
-}
-
-// Check if decomposition is correct
-if (decomp_particle_sum != universe.n_particles) {
-  CkPrintf("Decomposition failure: only %d particles out of %d decomposed",
-           decomp_particle_sum, universe.n_particles);
-  CkAbort("Decomposition failure -- see stdout");
-}
-
-// Sort our splitters
-std::sort(splitters.begin(), splitters.end());
-
-// Return the number of TreePieces
-return splitters.size();
 }
 
 void SfcDecomposition::pup(PUP::er& p) {
