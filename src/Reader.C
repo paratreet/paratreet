@@ -166,7 +166,7 @@ void Reader::countSfc(const CkCallback& cb)
 }
 
 /*
-  void Reader::countSfc(const std::vector<Key>& splitter_keys, const CkCallback& cb) {
+void Reader::countSfc(const std::vector<Key>& splitter_keys, const CkCallback& cb) {
   std::vector<int> counts;
   counts.resize(splitters.size()-1); // size equal to number of TreePieces
 
@@ -177,25 +177,25 @@ void Reader::countSfc(const CkCallback& cb)
   int finish = particles.size();
   Key from, to;
   if (particles.size() > 0) {
-  for (int i = 0; i < counts.size(); i++) {
-  from = splitter_keys[i];
-  to = splitter_keys[i+1];
+    for (int i = 0; i < counts.size(); i++) {
+      from = splitter_keys[i];
+      to = splitter_keys[i+1];
 
-  int begin = Utility::binarySearchGE(from, &particles[0], start, finish); // hmm how does this work for OCT
-  int end = Utility::binarySearchGE(to, &particles[0], begin, finish);
-  counts[i] = end - begin;
+      int begin = Utility::binarySearchGE(from, &particles[0], start, finish); // hmm how does this work for OCT
+      int end = Utility::binarySearchGE(to, &particles[0], begin, finish);
+      counts[i] = end - begin;
 
-  start = end;
-  }
+      start = end;
+    }
   }
   else { // no particles
-  for (int i = 0; i < counts.size(); i++){
-  counts[i] = 0;
-  }
+    for (int i = 0; i < counts.size(); i++){
+      counts[i] = 0;
+    }
   }
 
-  contribute(sizeof(int) * counts.size(), &counts[0], CkReduction::sum_int, cb);
-  }
+    contribute(sizeof(int) * counts.size(), &counts[0], CkReduction::sum_int, cb);
+}
 */
 
 void Reader::pickSamples(const int oversampling_ratio, const CkCallback& cb) {
@@ -251,7 +251,7 @@ void Reader::redistribute() {
     if (particle_messages[bucket] != NULL) {
 #if DEBUG
       CkPrintf("[Reader %d] Sending %d particles to Reader %d\n", thisIndex,
-               particle_messages[bucket]->n_particles, bucket);
+          particle_messages[bucket]->n_particles, bucket);
 #endif
       thisProxy[bucket].receive(particle_messages[bucket]);
     }
