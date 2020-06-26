@@ -54,8 +54,8 @@ public:
     if (idx < 0) {
       for (int i = 0; i < from.n_particles; i++) {
         for (int j = 0; j < on.n_particles; j++) {
-          const Vector3D<Real>& p1 = from.particles[i].position;
-          const Vector3D<Real>& p2 = on.particles[j].position;
+          const Vector3D<Real>& p1 = from.particles()[i].position;
+          const Vector3D<Real>& p2 = on.particles()[j].position;
           countManager->count(dist(p1, p2));
         }
       }

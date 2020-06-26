@@ -23,13 +23,14 @@ public:
       return new FullNode<Data, 8> (key, depth, n_particles, particles, owner_tp_start, owner_tp_end, is_leaf, parent, tp_index);
     }
     template <typename Data>
-    Node<Data>* makeCachedNode(Key key, SpatialNode<Data> spatial_node, Node<Data>* parent, Particle* particlesToCopy) {
+    Node<Data>* makeCachedNode(Key key, SpatialNode<Data> spatial_node, Node<Data>* parent, const Particle* particlesToCopy) {
+      Particle* particles = nullptr;
       if (spatial_node.is_leaf && spatial_node.n_particles > 0) {
-        spatial_node.particles = new Particle [spatial_node.n_particles];
-        std::copy(particlesToCopy, particlesToCopy + spatial_node.n_particles, spatial_node.particles);
+        particles = new Particle [spatial_node.n_particles];
+        std::copy(particlesToCopy, particlesToCopy + spatial_node.n_particles, particles);
       }
       auto type = spatial_node.is_leaf ? Node<Data>::Type::CachedRemoteLeaf : Node<Data>::Type::CachedRemote;
-      return new FullNode<Data, 8> (key, type, spatial_node.is_leaf, spatial_node, parent); 
+      return new FullNode<Data, 8> (key, type, spatial_node.is_leaf, spatial_node, particles, parent);
     }
 
 protected:
