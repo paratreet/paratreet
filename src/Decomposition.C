@@ -1,4 +1,5 @@
 #include <memory>
+#include <algorithm>
 
 #include "common.h"
 #include "Decomposition.h"
@@ -54,37 +55,36 @@ int SfcDecomposition::getNumExpectedParticles(int n_total_particles, int n_treep
 }
 
 int SfcDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &readers) {
-  // Initial splitter keys (first and last)
-  std::vector<Key> keys;
-  keys.push_back(Key(1)); // 0000...1
-  keys.push_back(~Key(0)); // 1111...1
-
-  int decomp_particle_sum = 0; // Used to check if all particles are decomposed
-
-  // count total particles
+  // countSfc finds the keys of all particles
   CkReductionMsg *msg;
-  readers.countOct(keys, CkCallbackResumeThread((void*&)msg));
-  Real total = Real(*(int*)(msg->getData()));
-  delete msg;
+  readers.countSfc(CkCallbackResumeThread((void*&)msg));
+  std::vector<Key> keys;
+  CkReduction::setElement *elem = (CkReduction::setElement *)msg->getData();
+  while (elem != NULL) {
+    Key *elemKeys = (Key *)&elem->data;
+    int n_keys = elem->dataSize / sizeof(Key);
+    keys.insert(keys.end(), elemKeys, elemKeys + n_keys);
+    elem = elem->next();
+  }
 
-  // Each treepiece gets max_particles_per_tp particles
+  std::sort(keys.begin(), keys.end());
+
+  int decomp_particle_sum = 0;
+
   Real threshold = (DECOMP_TOLERANCE * Real(max_particles_per_tp));
-  for (int i = 0; i * threshold < total; ++i) {
-    Key from = keys[i * threshold];
-    Key to = keys[(i + 1) * threshold];
-    if ((i + 1) * threshold >= total) to = ~Key(0);
-
-    // count particles in this bin
-    std::vector<Key> bin;
-    bin.push_back(from); bin.push_back(to);
-    CkReductionMsg *msg;
-    readers.countOct(bin, CkCallbackResumeThread((void*&)msg));
-    int n_particles = *(int *)(msg->getData());
-    delete msg;
+  for (int i = 0; i * threshold < keys.size(); ++i) {
+    Key from = keys[(int)(i * threshold)];
+    Key to;
+    int n_particles = (int)threshold;
+    if (i * threshold >= keys.size()) {
+      to = ~Key(0);
+      n_particles = keys.size() - (int)(i * threshold);
+    } else to = (int)((i + 1) * threshold);
 
     Splitter sp(Utility::removeLeadingZeros(from),
                 Utility::removeLeadingZeros(to), from, n_particles);
     splitters.push_back(sp);
+
     decomp_particle_sum += n_particles;
   }
 
