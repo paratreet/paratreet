@@ -225,7 +225,7 @@ public:
   // -------------------
 
   void countInts(int* intrn_counts) {
-    CkPrintf("%d node-part interactions, %d part-part interactions\n", intrn_counts[0], intrn_counts[1] / 2);
+    CkPrintf("%d node-particle interactions, %d bucket-particle interactions\n", intrn_counts[0], intrn_counts[1] / 2);
   }
 
   void recvTC(std::pair<Key, Data> param) {

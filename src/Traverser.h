@@ -49,7 +49,7 @@ public:
     Visitor v;
     for (int i = 0; i < tp->interactions.size(); i++) {
       for (Node<Data>* source : tp->interactions[i]) {
-        v.leaf(*source, *(tp->leaves[i]));
+        if (source->key != tp->leaves[i]->key) v.leaf(*source, *(tp->leaves[i]));
       }
     }
   }

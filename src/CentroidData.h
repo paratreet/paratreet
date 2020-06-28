@@ -20,7 +20,7 @@ struct CentroidData {
   CentroidData() :
   moment(Vector3D<Real> (0,0,0)), sum_mass(0), count(0), rsq(0.) {}
 
-  CentroidData(Particle* particles, int n_particles) : CentroidData() {
+  CentroidData(const Particle* particles, int n_particles) : CentroidData() {
     for (int i = 0; i < n_particles; i++) {
       moment += particles[i].mass * particles[i].position;
       sum_mass += particles[i].mass;

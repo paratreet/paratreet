@@ -17,11 +17,10 @@ void Particle::pup(PUP::er &p) {
 }
 
 void Particle::reset() {
-  density = 0.0;
-  pressure = 0.0;
-  potential = 0.0;
-  acceleration = 0.0;
-  // TODO velocity?
+  density       = 0.0;
+  pressure      = 0.0;
+  potential     = 0.0;
+  acceleration  = Vector3D<Real> (0.0, 0.0, 0.0);
 }
 
 bool Particle::operator==(const Particle& other) const {

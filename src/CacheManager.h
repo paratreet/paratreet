@@ -212,7 +212,7 @@ void CacheManager<Data>::makeMsgPerNode(int start_depth, std::vector<Node<Data>*
 {
   sending_nodes.push_back(to_process);
   if (to_process->type == Node<Data>::Type::Leaf) {
-    std::copy(to_process->particles, to_process->particles + to_process->n_particles, std::back_inserter(sending_particles));
+    std::copy(to_process->particles(), to_process->particles() + to_process->n_particles, std::back_inserter(sending_particles));
   }
   if (to_process->depth + 1 < start_depth + cache_share_depth) {
     for (int i = 0; i < to_process->n_children; i++) {

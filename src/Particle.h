@@ -22,8 +22,7 @@ struct Particle {
 
   void reset();
 
-  void perturb (Real timestep, Vector3D<Real> force, OrientedBox<Real> universe) {
-    acceleration = force / mass;
+  void perturb (Real timestep, OrientedBox<Real> universe) {
     position += (velocity * timestep);
     position += (acceleration * timestep * timestep / 2);
     for (int dim = 0; dim < 3; dim++) {
