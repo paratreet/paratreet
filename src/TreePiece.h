@@ -381,7 +381,7 @@ void TreePiece<Data>::populateTree() {
       // parent TreeCanopy
       int branch_factor = node->getBranchFactor();
       size_t tc_key = tp_key / branch_factor;
-      if (tc_key > 0) tc_proxy[tc_key].recvData(node->data, branch_factor);
+      if (tc_key > 0) tc_proxy[tc_key].recvData(*node, branch_factor);
     } else {
       // Add this node's data to the parent, and add parent to the queue
       // if all children have contributed

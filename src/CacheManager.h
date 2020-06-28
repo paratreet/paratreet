@@ -31,8 +31,10 @@ public:
   }
 
   void initialize() {
-    root = treespec.ckLocalBranch()->template makeCachedCanopy<Data>(
-        Key(1), Node<Data>::Type::Boundary, Data(), nullptr);
+    Data empty_data;
+    SpatialNode<Data> empty_sn (empty_data, 0, false, nullptr, 0);
+    root = treespec.ckLocalBranch()->template makeCachedNode<Data>(
+        Key(1), Node<Data>::Type::Boundary, empty_sn, nullptr, nullptr); // placeholder
     delete_at_end.resize(CkNumPes());
   }
 
@@ -68,11 +70,11 @@ public:
   void requestNodes(std::pair<Key, int>);
   void makeMsgPerNode(int, std::vector<Node<Data>*>&, std::vector<Particle>&, Node<Data>*);
   void serviceRequest(Node<Data>*, int);
-  void recvStarterPack(std::pair<Key, Data>* pack, int n, CkCallback);
+  void recvStarterPack(std::pair<Key, SpatialNode<Data>>* pack, int n, CkCallback);
   void addCache(MultiData<Data>);
   Node<Data>* addCacheHelper(Particle*, int, std::pair<Key, SpatialNode<Data>>*, int, int);
-  void restoreData(std::pair<Key, Data>);
-  void restoreDataHelper(std::pair<Key, Data>&, bool);
+  void restoreData(std::pair<Key, SpatialNode<Data>>);
+  void restoreDataHelper(std::pair<Key, SpatialNode<Data>>&, bool);
   void insertNode(Node<Data>*, bool, bool);
   void swapIn(Node<Data>*);
   void process(Key);
@@ -135,7 +137,7 @@ void CacheManager<Data>::connect(Node<Data>* node, bool should_process) {
 }
 
 template <typename Data>
-void CacheManager<Data>::recvStarterPack(std::pair<Key, Data>* pack, int n, CkCallback cb) {
+void CacheManager<Data>::recvStarterPack(std::pair<Key, SpatialNode<Data>>* pack, int n, CkCallback cb) {
   CkPrintf("[CacheManager %d] receiving starter pack, size = %d\n", this->thisIndex, n);
 
   for (int i = 0; i < n; i++) {
@@ -176,7 +178,8 @@ Node<Data>* CacheManager<Data>::addCacheHelper(Particle* particles, int n_partic
   }
 
   int p_index = 0;
-  auto first_node = treespec.ckLocalBranch()->template makeCachedNode<Data>(nodes[0].first, nodes[0].second, first_node_placeholder->parent, particles);
+  auto top_type = nodes[0].second.is_leaf ? Node<Data>::Type::CachedRemoteLeaf : Node<Data>::Type::CachedRemote;
+  auto first_node = treespec.ckLocalBranch()->template makeCachedNode<Data>(nodes[0].first, top_type, nodes[0].second, first_node_placeholder->parent, particles);
   first_node->cm_index = cm_index;
   insertNode(first_node, false, false);
   auto branch_factor = first_node->getBranchFactor();
@@ -185,7 +188,7 @@ Node<Data>* CacheManager<Data>::addCacheHelper(Particle* particles, int n_partic
     auto && spatial_node = nodes[j].second;
     auto curr_parent = first_node->getDescendant(new_key / branch_factor);
     auto type = spatial_node.is_leaf ? Node<Data>::Type::CachedRemoteLeaf : Node<Data>::Type::CachedRemote;
-    auto node = treespec.ckLocalBranch()->template makeCachedNode<Data>(new_key, spatial_node, curr_parent, &particles[p_index]);
+    auto node = treespec.ckLocalBranch()->template makeCachedNode<Data>(new_key, type, spatial_node, curr_parent, &particles[p_index]);
     node->cm_index = cm_index;
     if (node->is_leaf) p_index += spatial_node.n_particles;
     insertNode(node, false, true);
@@ -234,20 +237,20 @@ void CacheManager<Data>::serviceRequest(Node<Data>* node, int cm_index) {
 }
 
 template <typename Data>
-void CacheManager<Data>::restoreData(std::pair<Key, Data> param) {
+void CacheManager<Data>::restoreData(std::pair<Key, SpatialNode<Data>> param) {
   restoreDataHelper(param, true);
 }
 
 template <typename Data>
-void CacheManager<Data>::restoreDataHelper(std::pair<Key, Data>& param, bool should_process) {
+void CacheManager<Data>::restoreDataHelper(std::pair<Key, SpatialNode<Data>>& param, bool should_process) {
 #if DEBUG
   if (!should_process) CkPrintf("restoring data for node %d\n", param.first);
 #endif
   Key key = param.first;
   auto branch_factor = root->getBranchFactor();
   Node<Data>* parent = (key > 1) ? root->getDescendant(key / branch_factor) : nullptr;
-  auto node = treespec.ckLocalBranch()->template makeCachedCanopy<Data>(key,
-      Node<Data>::Type::CachedBoundary, param.second, parent);
+  auto node = treespec.ckLocalBranch()->template makeCachedNode<Data>(key,
+      Node<Data>::Type::CachedBoundary, param.second, parent, nullptr);
   insertNode(node, true, false);
   connect(node, should_process);
 }
@@ -285,8 +288,9 @@ void CacheManager<Data>::insertNode(Node<Data>* node, bool above_tp, bool should
     }
     if (!above_tp || add_placeholder) {
       auto type = (above_tp) ? Node<Data>::Type::RemoteAboveTPKey : Node<Data>::Type::Remote;
-      Data empty;
-      new_child = treespec.ckLocalBranch()->makeCachedCanopy(child_key, type, empty, node); // placeholder
+      Data empty_data;
+      SpatialNode<Data> empty_sn (empty_data, 0, false, nullptr, 0);
+      new_child = treespec.ckLocalBranch()->makeCachedNode(child_key, type, empty_sn, node, nullptr); // placeholder
       if (!above_tp) new_child->cm_index = node->cm_index;
     }
     node->exchangeChild(i, new_child);

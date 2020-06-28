@@ -48,9 +48,9 @@ mainmodule paratreet {
 #endif
     entry CacheManager();
     entry void requestNodes(std::pair<Key, int>);
-    entry void recvStarterPack(std::pair<Key, Data> pack [n], int n, CkCallback);
+    entry void recvStarterPack(std::pair<Key, SpatialNode<Data>> pack [n], int n, CkCallback);
     entry void addCache(MultiData<Data>);
-    entry void restoreData(std::pair<Key, Data>);
+    entry void restoreData(std::pair<Key, SpatialNode<Data>>);
     template <typename Visitor>
     entry void startPrefetch(DPHolder<Data>, CkCallback);
     entry void startParentPrefetch(DPHolder<Data>, CkCallback);
@@ -62,7 +62,7 @@ mainmodule paratreet {
   nodegroup CacheManager<CentroidData>;
 #endif
 
-  extern entry [aggregate] void CacheManager<CentroidData> restoreData(std::pair<Key, CentroidData>);
+  extern entry [aggregate] void CacheManager<CentroidData> restoreData(std::pair<Key, SpatialNode<CentroidData>>);
   extern entry [aggregate] void CacheManager<CentroidData> addCache(MultiData<CentroidData>);
   extern entry [aggregate] void CacheManager<CentroidData> requestNodes(std::pair<Key, int>);
   extern entry void CacheManager<CentroidData> startPrefetch<GravityVisitor>(DPHolder<CentroidData>, CkCallback); 
@@ -108,7 +108,7 @@ mainmodule paratreet {
     entry TreeCanopy();
     entry void reset();
     entry [createhere] void recvProxies(TPHolder<Data>, int, CProxy_CacheManager<Data>, DPHolder<Data>);
-    entry void recvData(Data, int);
+    entry void recvData(SpatialNode<Data>, int);
     entry void requestData (int);
   };
   array [1d] TreeCanopy<CentroidData>;
@@ -119,7 +119,7 @@ mainmodule paratreet {
     entry [threaded] void init(CkCallback cb);
     entry [threaded] void run(CkCallback cb);
     entry [reductiontarget] void countInts(int intrn_counts [2]);
-    entry void recvTC(std::pair<Key, Data>);
+    entry void recvTC(std::pair<Key, SpatialNode<Data>>);
     entry void loadCache(CkCallback);
     template <typename Visitor>
     entry void prefetch(Data, int, CkCallback);
