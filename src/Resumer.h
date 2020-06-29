@@ -19,7 +19,7 @@ public:
   std::unordered_map<Key, std::vector<int>> waiting;
 
   void destroy() {
-#if COUNT_INTRNS
+#if COUNT_INTERACTIONS
     int intrn_counts [2] = {n_node_ints, n_part_ints};
     CkCallback cb (CkReductionTarget(Driver<CentroidData>, countInts), centroid_driver);
     this->contribute(2 * sizeof(int), &intrn_counts, CkReduction::sum_int, cb);

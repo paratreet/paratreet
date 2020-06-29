@@ -11,28 +11,21 @@ class SpatialNode
 public:
   SpatialNode() = default;
   SpatialNode(const Data& _data, int _n_particles, bool _is_leaf, Particle* _particles, int _depth)
-    : data(_data), n_particles(_n_particles), is_leaf(_is_leaf), particles(_particles), depth(_depth)
+    : data(_data), n_particles(_n_particles), is_leaf(_is_leaf), particles_(_particles), depth(_depth)
   {
-    sum_forces.resize(n_particles);
   }
-  SpatialNode(const SpatialNode<Data>& other)
-    : data(other.data), n_particles(other.n_particles), is_leaf(other.is_leaf), particles(other.particles), depth(other.depth)
+  SpatialNode(const SpatialNode<Data>& other, Particle* _particles)
+    : data(other.data), n_particles(other.n_particles), is_leaf(other.is_leaf), particles_(_particles), depth(other.depth)
   {
-    sum_forces.resize(n_particles);
   }
   virtual ~SpatialNode() = default;
 
-  void applyForce(int index, Vector3D<Real> force) {
-    if (index < n_particles) {
-      sum_forces[index] += force;
-    }
-  }
-  Vector3D<Real> getForce(int index) const {
-    return sum_forces[index];
+  void applyAcceleration(int index, Vector3D<Real> accel) {
+    particles_[index].acceleration += accel;
   }
   void freeParticles() {
     if (n_particles > 0) {
-      delete[] particles;
+      delete[] particles_;
     }
   }
   void pup (PUP::er& p) {
@@ -41,7 +34,7 @@ public:
     p | n_particles;
     p | is_leaf;
     if (p.isUnpacking()) {
-      particles = nullptr;
+      particles_ = nullptr;
     }
   } 
 
@@ -49,11 +42,11 @@ public:
   Data      data;
   int       n_particles = 0;
   bool      is_leaf     = false;
-  Particle* particles   = nullptr;
   int       depth       = 0;
+  inline const Particle* particles() const {return particles_;}
 
 private:
-  std::vector<Vector3D<Real> > sum_forces;
+    Particle* particles_ = nullptr;
 
 };
 
@@ -96,8 +89,8 @@ public:
   {
   }
 
-  Node(Key _key, typename Node<Data>::Type _type, int _n_children, const SpatialNode<Data>& _spatial_node, Node<Data>* _parent)
-    : SpatialNode<Data>(_spatial_node),
+  Node(Key _key, typename Node<Data>::Type _type, int _n_children, const SpatialNode<Data>& _spatial_node, Particle* _particles, Node<Data>* _parent)
+    : SpatialNode<Data>(_spatial_node, _particles),
       n_children(_n_children),
       parent(_parent),
       type(_type),
@@ -202,14 +195,9 @@ class FullNode : public Node<Data>
 {
 public:
   FullNode() = default;
-  FullNode(Key _key, typename Node<Data>::Type _type, const Data& data, Node<Data>* _parent) // for cached boundary nodes (represent canopies)
-  : Node<Data>(data, 0, nullptr, (_parent ? _parent->depth + 1 : 0), BRANCH_FACTOR, _parent, _type, _key, -1, -1, -1, -1)
-  {
-    initChildren();
-  }
 
-  FullNode(Key _key, typename Node<Data>::Type _type, bool _is_leaf, const SpatialNode<Data>& _spatial_node, Node<Data>* _parent) // for cached non boundary nodes
-  : Node<Data>(_key, _type, _is_leaf ? 0 : BRANCH_FACTOR, _spatial_node, _parent)
+  FullNode(Key _key, typename Node<Data>::Type _type, bool _is_leaf, const SpatialNode<Data>& _spatial_node, Particle* _particles, Node<Data>* _parent) // for cached non boundary nodes
+  : Node<Data>(_key, _type, _is_leaf ? 0 : BRANCH_FACTOR, _spatial_node, _particles, _parent)
   {
     initChildren();
   }

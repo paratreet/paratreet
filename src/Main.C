@@ -58,9 +58,10 @@ class Main : public CBase_Main {
     input_file = "";
     decomp_tolerance = 0.1;
     max_particles_per_tp = 1000;
-    max_particles_per_leaf = MAX_PARTICLES_PER_LEAF;
     //decomp_type = OCT_DECOMP;
     decomp_type = SFC_DECOMP;
+    max_particles_per_leaf = 10;
+    decomp_type = OCT_DECOMP;
     tree_type = OCT_TREE;
     num_iterations = 3;
     num_share_levels = 3;
@@ -131,10 +132,6 @@ class Main : public CBase_Main {
       }
     }
     delete m;
-
-    // FIXME: Check if runtime values match compile time values
-    if (max_particles_per_leaf != MAX_PARTICLES_PER_LEAF)
-      CkAbort("max_particles_per_leaf runtime value doesn't match compile time value!\n");
 
     // Print configuration
     CkPrintf("\n[PARATREET]\n");

@@ -21,7 +21,7 @@ public:
   void leaf(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
     for (int i = 0; i < target.n_particles; i++) {
       for (int j = 0; j < source.n_particles; j++) {
-        if ((target.particles[i].position - source.particles[j].position).lengthSquared() < radius * radius) {
+        if ((target.particles()[i].position - source.particles()[j].position).lengthSquared() < radius * radius) {
           //import kernel math here
         }
       }

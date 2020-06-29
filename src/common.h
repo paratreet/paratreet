@@ -26,7 +26,6 @@ typedef double Real;
 #define OCT_TREE 20
 
 // Hyperparameters
-#define MAX_PARTICLES_PER_LEAF 10
 #define LOCAL_CACHE_SIZE 5000
 #define DECOMP_TOLERANCE 1.0
 #define BUCKET_TOLERANCE 1.0
