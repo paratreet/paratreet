@@ -195,11 +195,6 @@ class FullNode : public Node<Data>
 {
 public:
   FullNode() = default;
-  FullNode(Key _key, typename Node<Data>::Type _type, const Data& data, Node<Data>* _parent) // for cached boundary nodes (represent canopies)
-  : Node<Data>(data, 0, nullptr, (_parent ? _parent->depth + 1 : 0), BRANCH_FACTOR, _parent, _type, _key, -1, -1, -1, -1)
-  {
-    initChildren();
-  }
 
   FullNode(Key _key, typename Node<Data>::Type _type, bool _is_leaf, const SpatialNode<Data>& _spatial_node, Particle* _particles, Node<Data>* _parent) // for cached non boundary nodes
   : Node<Data>(_key, _type, _is_leaf ? 0 : BRANCH_FACTOR, _spatial_node, _particles, _parent)

@@ -23,6 +23,7 @@
 #include "CountManager.h"
 #include "Resumer.h"
 #include "Modularization.h"
+#include "Node.h"
 
 extern CProxy_Reader readers;
 extern CProxy_TreeSpec treespec;
@@ -47,7 +48,7 @@ private:
 
 public:
   CProxy_CacheManager<Data> cache_manager;
-  std::vector<std::pair<Key, Data>> storage;
+  std::vector<std::pair<Key, SpatialNode<Data>>> storage;
   bool storage_sorted;
   BoundingBox universe;
   Key smallest_particle_key;
@@ -228,7 +229,7 @@ public:
     CkPrintf("%d node-particle interactions, %d bucket-particle interactions\n", intrn_counts[0], intrn_counts[1] / 2);
   }
 
-  void recvTC(std::pair<Key, Data> param) {
+  void recvTC(std::pair<Key, SpatialNode<Data>> param) {
     storage.emplace_back(param);
   }
 
@@ -242,7 +243,7 @@ public:
     if (num_share_levels > 0) {
       CkPrintf("Broadcasting top %d levels to caches\n", num_share_levels);
       Key search_key {1ull << (LOG_BRANCH_FACTOR * num_share_levels)};
-      auto comp = [] (const std::pair<Key, Data>& a, const Key & b) {return a.first < b;};
+      auto comp = [] (const std::pair<Key, SpatialNode<Data>>& a, const Key & b) {return a.first < b;};
       auto it = std::lower_bound(storage.begin(), storage.end(), search_key, comp);
       send_size = std::distance(storage.begin(), it);
     }
@@ -254,7 +255,7 @@ public:
   }
 
   void sortStorage() {
-    auto comp = [] (const std::pair<Key, Data>& a, const std::pair<Key, Data>& b) {return a.first < b.first;};
+    auto comp = [] (const std::pair<Key, SpatialNode<Data>>& a, const std::pair<Key, SpatialNode<Data>>& b) {return a.first < b.first;};
     std::sort(storage.begin(), storage.end(), comp);
     storage_sorted = true;
   }
@@ -296,12 +297,11 @@ public:
 
   void request(Key* request_list, int list_size, int cm_index, CkCallback cb) {
     if (!storage_sorted) sortStorage();
-    typename std::vector<std::pair<Key, Data> >::iterator it;
-    std::vector<std::pair<Key, Data>> to_send;
+    std::vector<std::pair<Key, SpatialNode<Data>>> to_send;
     for (int i = 0; i < list_size; i++) {
       Key key = request_list[i];
-      auto comp = [] (const std::pair<Key, Data>& a, const Key & b) {return a.first < b;}; 
-      it = std::lower_bound(storage.begin(), storage.end(), key, comp);
+      auto comp = [] (const std::pair<Key, SpatialNode<Data>>& a, const Key & b) {return a.first < b;};
+      auto it = std::lower_bound(storage.begin(), storage.end(), key, comp);
       if (it != storage.end() && it->first == key) {
         to_send.push_back(*it);
       }

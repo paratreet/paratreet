@@ -13,7 +13,6 @@ private:
   static constexpr Real theta = 0.7;
   static constexpr int  nMinParticleNode = 6;
   void addGravity(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
-    int curr_counter = 0;
     for (int i = 0; i < target.n_particles; i++) {
       Vector3D<Real> diff = source.data.centroid - target.particles()[i].position;
       Real rsq = diff.lengthSquared();
@@ -27,7 +26,7 @@ private:
   GravityVisitor() {}
   void leaf(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
     addGravity(source, target);
-#if COUNT_INTRNS
+#if COUNT_INTERACTIONS
     centroid_resumer.ckLocalBranch()->countInts(target.n_particles);
 #endif
   }
@@ -40,7 +39,7 @@ private:
     }
     if (source.data.sum_mass > 0) {
       addGravity(source, target);
-#if COUNT_INTRNS
+#if COUNT_INTERACTIONS
       centroid_resumer.ckLocalBranch()->countInts(-target.n_particles);
 #endif
     }
