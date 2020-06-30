@@ -24,10 +24,9 @@ struct Decomposition {
   virtual int findSplitters(BoundingBox &universe, CProxy_Reader &readers) = 0;
 
   virtual void pup(PUP::er& p) = 0;
-};
 
-struct SfcDecomposition : public Decomposition {
-  int getTpKey(int idx);
+  virtual int getTpKey(int idx) = 0;
+
   std::vector<Key> getAllTpKeys(int n_treepieces) {
     std::vector<Key> tp_keys (n_treepieces);
     for (int i = 0; i < n_treepieces; i++) {
@@ -35,6 +34,10 @@ struct SfcDecomposition : public Decomposition {
     }
     return tp_keys;
   }
+};
+
+struct SfcDecomposition : public Decomposition {
+  int getTpKey(int idx) override;
   int flush(int n_total_particles, int n_treepieces,
       const SendParticlesFn &fn, std::vector<Particle> &particles) override;
   void assignKeys(BoundingBox &universe, std::vector<Particle> &particles) override;
