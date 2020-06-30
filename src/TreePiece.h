@@ -75,7 +75,7 @@ public:
   void print(Node<Data>*);
   void perturb (Real timestep, bool);
   void flush(CProxy_Reader);
-  void output(std::string, const CkCallback&);
+  void output(CProxy_Writer w, CkCallback cb);
 
   // For debugging
   void checkParticlesChanged(const CkCallback& cb) {
@@ -565,45 +565,18 @@ void TreePiece<Data>::print(Node<Data>* node) {
 }
 
 template <typename Data>
-void TreePiece<Data>::output(std::string output_file, const CkCallback& cb) {
-  FILE* fp;
-  // Print total number of particles
-  if (this->thisIndex == 0 && dim_cnt == 0) {
-    fp = CmiFopen(output_file.c_str(), "w");
-    CkAssert(fp);
-    fprintf(fp, "%d\n", n_total_particles);
-    CmiFclose(fp);
+void TreePiece<Data>::output(CProxy_Writer w, CkCallback cb) {
+  std::vector<Particle> particles;
+
+  for (const auto& leaf : leaves) {
+    particles.insert(particles.end(),
+                     leaf->particles(), leaf->particles() + leaf->n_particles);
   }
 
-  // Print particle accelerations to output file
-  fp = CmiFopen(output_file.c_str(), "a");
-  CkAssert(fp);
-  for (auto leaf : leaves) {
-    for (int i = 0; i < leaf->n_particles; i++) {
-      const Particle& particle = leaf->particles()[i];
-      Real outval;
-      if (dim_cnt == 0) outval = particle.acceleration.x;
-      else if (dim_cnt == 1) outval = particle.acceleration.y;
-      else if (dim_cnt == 2) outval = particle.acceleration.z;
-      fprintf(fp, "%.14g\n", outval);
-    }
-  }
-
-  dim_cnt = (dim_cnt + 1) % 3;
-
-  int result = CmiFclose(fp);
-  CkAssert(result == 0);
+  w.receive(particles, cb);
 
   if (this->thisIndex != n_treepieces - 1) {
-    this->thisProxy[this->thisIndex+1].output(output_file, cb);
-  } else {
-    if (dim_cnt == 0) {
-      // Printed all dimensions
-      cb.send();
-    } else {
-      // Print next dimension
-      this->thisProxy[0].output(output_file, cb);
-    }
+    this->thisProxy[this->thisIndex + 1].output(w, cb);
   }
 }
 

@@ -75,6 +75,11 @@ mainmodule paratreet {
   };
   group Resumer<CentroidData>;
 
+  chare Writer {
+    entry Writer(int n_treepieces, std::string of);
+    entry void receive(std::vector<Particle> particles, CkCallback cb);
+  }
+
   template <typename Data>
   array [1d] TreePiece {
     entry TreePiece(const CkCallback&, int, int, TCHolder<Data>, CProxy_Resumer<Data>, CProxy_CacheManager<Data>, DPHolder<Data>);
@@ -93,7 +98,7 @@ mainmodule paratreet {
     entry void flush(CProxy_Reader);
 
     entry void checkParticlesChanged(const CkCallback&);
-    entry void output(std::string, const CkCallback&);
+    entry void output(CProxy_Writer w, CkCallback cb);
   };
   array [1d] TreePiece<CentroidData>;
 

@@ -24,6 +24,7 @@
 #include "Resumer.h"
 #include "Modularization.h"
 #include "Node.h"
+#include "Writer.h"
 
 extern CProxy_Reader readers;
 extern CProxy_TreeSpec treespec;
@@ -197,7 +198,8 @@ public:
       // TODO: Initial force interactions similar to ChaNGa
       if (iter == 0 && verify) {
         std::string output_file = input_file + ".acc";
-        treepieces[0].output(output_file, CkCallbackResumeThread());
+        CProxy_Writer w = CProxy_Writer::ckNew(n_treepieces, output_file);
+        treepieces[0].output(w, CkCallbackResumeThread());
         CkPrintf("Outputting particle accelerations for verification...\n");
       }
 
