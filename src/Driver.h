@@ -205,10 +205,7 @@ public:
 
       // Destroy treepieces and perform decomposition from scratch
       if (complete_rebuild) {
-        // XXX: Should TreeCanopies be destroyed here as well?
-        for (int i = 0; i < n_treepieces; i++) {
-          treepieces[i].ckDestroy();
-        }
+        treepieces.destroy();
         decompose(iter+1);
       }
 

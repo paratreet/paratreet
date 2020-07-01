@@ -75,6 +75,7 @@ public:
   void print(Node<Data>*);
   void perturb (Real timestep, bool);
   void flush(CProxy_Reader);
+  void destroy();
   void output(CProxy_Writer w, CkCallback cb);
 
   // For debugging
@@ -550,6 +551,11 @@ void TreePiece<Data>::flush(CProxy_Reader readers) {
   readers[CkMyPe()].receive(msg);
   particles.resize(0);
   particle_index = 0;
+}
+
+template <typename Data>
+void TreePiece<Data>::destroy() {
+  this->thisProxy[this->thisIndex].ckDestroy();
 }
 
 template <typename Data>

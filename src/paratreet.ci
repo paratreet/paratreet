@@ -96,6 +96,7 @@ mainmodule paratreet {
     entry void requestNodes(Key, int);
     entry void perturb(Real timestep, bool);
     entry void flush(CProxy_Reader);
+    entry void destroy();
 
     entry void checkParticlesChanged(const CkCallback&);
     entry void output(CProxy_Writer w, CkCallback cb);
