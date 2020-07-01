@@ -21,15 +21,18 @@ Writer::Writer(int n_treepieces, std::string of)
 
 void Writer::receive(std::vector<Particle> ps, CkCallback cb)
 {
-  --num_treepieces;
+  // Accumulate received particles
   particles.insert(particles.end(), ps.begin(), ps.end());
-  if (num_treepieces != 0) return;
 
+  if (--num_treepieces > 0) return;
+
+  // Received from all treepieces, sort the particles
   std::sort(particles.begin(), particles.end(),
             [](const Particle& left, const Particle& right) {
               return left.order < right.order;
             });
 
+  // Write particle accelerations to output file
   FILE *fp = CmiFopen(output_file.c_str(), "w");
   CkAssert(fp);
   fprintf(fp, "%lu\n", particles.size());
