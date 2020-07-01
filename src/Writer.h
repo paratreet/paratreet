@@ -6,36 +6,72 @@
 #include <vector>
 
 struct Writer : public CBase_Writer {
-  Writer(int n_treepieces, std::string of);
+  Writer(std::string of, int n_particles);
   void receive(std::vector<Particle> particles, CkCallback cb);
+  void write(CkCallback cb);
 
 private:
   std::vector<Particle> particles;
-  int num_treepieces;
   std::string output_file;
+  int total_particles = 0;
+  int expected_particles = 0;
+  bool can_write = false;
+  bool prev_written = false;
+
+  void do_write();
 };
 
-Writer::Writer(int n_treepieces, std::string of)
-  : num_treepieces(n_treepieces), output_file(of)
-{}
+Writer::Writer(std::string of, int n_particles)
+  : output_file(of), total_particles(n_particles)
+{
+  expected_particles = n_particles / CkNumPes();
+  if (expected_particles * CkNumPes() != n_particles) {
+    ++expected_particles;
+    if (thisIndex == CkNumPes() - 1)
+      expected_particles = n_particles - thisIndex * expected_particles;
+  }
+}
 
 void Writer::receive(std::vector<Particle> ps, CkCallback cb)
 {
   // Accumulate received particles
   particles.insert(particles.end(), ps.begin(), ps.end());
 
-  if (--num_treepieces > 0) return;
+  if (particles.size() != expected_particles) return;
 
-  // Received from all treepieces, sort the particles
+  // Received expected number of particles, sort the particles
   std::sort(particles.begin(), particles.end(),
             [](const Particle& left, const Particle& right) {
               return left.order < right.order;
             });
 
+  can_write = true;
+
+  if (prev_written || thisIndex == 0) {
+    do_write();
+    if (thisIndex != CkNumPes() - 1) thisProxy[thisIndex + 1].write(cb);
+    else cb.send();
+  }
+}
+
+void Writer::write(CkCallback cb)
+{
+  prev_written = true;
+  if (can_write) {
+    do_write();
+    if (thisIndex != CkNumPes() - 1) thisProxy[thisIndex + 1].write(cb);
+    else cb.send();
+  }
+}
+
+void Writer::do_write()
+{
   // Write particle accelerations to output file
-  FILE *fp = CmiFopen(output_file.c_str(), "w");
+  FILE *fp;
+  if (thisIndex == 0) fp = CmiFopen(output_file.c_str(), "w");
+  else fp = CmiFopen(output_file.c_str(), "a");
   CkAssert(fp);
-  fprintf(fp, "%lu\n", particles.size());
+  if (thisIndex == 0) fprintf(fp, "%d\n", total_particles);
 
   for (int dim = 0; dim < 3; ++dim) {
     for (const auto& particle : particles) {
@@ -49,8 +85,6 @@ void Writer::receive(std::vector<Particle> ps, CkCallback cb)
 
   int result = CmiFclose(fp);
   CkAssert(result == 0);
-
-  cb.send();
 }
 
 #endif /* _WRITER_H_ */
