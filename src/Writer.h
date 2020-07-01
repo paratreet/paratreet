@@ -17,6 +17,7 @@ private:
   int expected_particles = 0;
   bool can_write = false;
   bool prev_written = false;
+  int cur_dim = 0;
 
   void do_write();
 };
@@ -47,11 +48,8 @@ void Writer::receive(std::vector<Particle> ps, CkCallback cb)
 
   can_write = true;
 
-  if (prev_written || thisIndex == 0) {
-    do_write();
-    if (thisIndex != CkNumPes() - 1) thisProxy[thisIndex + 1].write(cb);
-    else cb.send();
-  }
+  if (prev_written || thisIndex == 0)
+    write(cb);
 }
 
 void Writer::write(CkCallback cb)
@@ -59,8 +57,10 @@ void Writer::write(CkCallback cb)
   prev_written = true;
   if (can_write) {
     do_write();
+    cur_dim = (cur_dim + 1) % 3;
     if (thisIndex != CkNumPes() - 1) thisProxy[thisIndex + 1].write(cb);
-    else cb.send();
+    else if (cur_dim == 0) cb.send();
+    else thisProxy[0].write(cb);
   }
 }
 
@@ -68,19 +68,18 @@ void Writer::do_write()
 {
   // Write particle accelerations to output file
   FILE *fp;
-  if (thisIndex == 0) fp = CmiFopen(output_file.c_str(), "w");
-  else fp = CmiFopen(output_file.c_str(), "a");
+  if (thisIndex == 0 && cur_dim == 0) {
+    fp = CmiFopen(output_file.c_str(), "w");
+    fprintf(fp, "%d\n", total_particles);
+  } else fp = CmiFopen(output_file.c_str(), "a");
   CkAssert(fp);
-  if (thisIndex == 0) fprintf(fp, "%d\n", total_particles);
 
-  for (int dim = 0; dim < 3; ++dim) {
-    for (const auto& particle : particles) {
-      Real outval;
-      if (dim == 0) outval = particle.acceleration.x;
-      else if (dim == 1) outval = particle.acceleration.y;
-      else if (dim == 2) outval = particle.acceleration.z;
-      fprintf(fp, "%.14g\n", outval);
-    }
+  for (const auto& particle : particles) {
+    Real outval;
+    if (cur_dim == 0) outval = particle.acceleration.x;
+    else if (cur_dim == 1) outval = particle.acceleration.y;
+    else if (cur_dim == 2) outval = particle.acceleration.z;
+    fprintf(fp, "%.14g\n", outval);
   }
 
   int result = CmiFclose(fp);
