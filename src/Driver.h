@@ -160,12 +160,9 @@ public:
 
       // Prefetch into cache
       start_time = CkWallTimer();
-      /*
-      centroid_cache.startParentPrefetch(this->thisProxy, centroid_calculator,
-          CkCallback::ignore);
-      centroid_cache.template startPrefetch<GravityVisitor>(this->thisProxy,
-          centroid_calculator, CkCallback::ignore);
-      */
+      // use exactly one of these three commands to load the software cache
+      //centroid_cache.startParentPrefetch(this->thisProxy, CkCallback::ignore); // MUST USE FOR UPND TRAVS
+      //centroid_cache.template startPrefetch<GravityVisitor>(this->thisProxy, CkCallback::ignore);
       this->thisProxy.loadCache(CkCallbackResumeThread());
       CkWaitQD();
       CkPrintf("TreeCanopy cache loading: %.3lf ms\n",
