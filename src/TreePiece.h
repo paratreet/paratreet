@@ -120,9 +120,8 @@ TreePiece<Data>::TreePiece(const CkCallback& cb, int n_total_particles_,
   n_expected = treespec.ckLocalBranch()->getDecomposition()->
       getNumExpectedParticles(n_total_particles, n_treepieces, this->thisIndex);
 
-  if (decomp_type == OCT_DECOMP || decomp_type == SFC_DECOMP) {
-    tp_key = ((SfcDecomposition*)treespec.ckLocalBranch()->getDecomposition())->getTpKey(this->thisIndex);
-  }
+  tp_key = treespec.ckLocalBranch()->getDecomposition()->
+      getTpKey(this->thisIndex);
 
   // Create TreeCanopies and send proxies
   auto sendProxy = [&](int dest, int tp_index) {
