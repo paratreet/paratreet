@@ -151,15 +151,13 @@ void CacheManager<Data>::recvStarterPack(std::pair<Key, SpatialNode<Data>>* pack
       restoreDataHelper(pack[i], false);
     }
   }
+  if (n == 0) root = local_tps[1];
 
   this->contribute(cb);
 }
 
 template <typename Data>
 void CacheManager<Data>::addCache(MultiData<Data> multidata) {
-#if DEBUG
-  CkPrintf("adding cache for node %d\n", multidata.nodes[0].key);
-#endif
   Node<Data>* top_node = addCacheHelper(multidata.particles.data(), multidata.n_particles, multidata.nodes.data(), multidata.n_nodes, multidata.cm_index);
   process(top_node->key);
 }
@@ -167,7 +165,7 @@ void CacheManager<Data>::addCache(MultiData<Data> multidata) {
 template <typename Data>
 Node<Data>* CacheManager<Data>::addCacheHelper(Particle* particles, int n_particles, std::pair<Key, SpatialNode<Data>>* nodes, int n_nodes, int cm_index) {
 #if DEBUG
-  CkPrintf("adding cache for node %d on cm %d\n", nodes[0].key, this->thisIndex);
+  CkPrintf("adding cache for top node %d on cm %d\n", nodes[0].first, this->thisIndex);
 #endif
 
   auto first_node_placeholder = root->getDescendant(nodes[0].first);
