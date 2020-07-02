@@ -81,8 +81,9 @@ int SfcDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &reader
       n_particles = keys.size() - (int)(i * threshold);
     } else to = (int)((i + 1) * threshold);
 
+    Key prefix = from & (to - 1);
     Splitter sp(Utility::removeLeadingZeros(from << 3),
-                Utility::removeLeadingZeros(to << 3), from << 3, n_particles);
+                Utility::removeLeadingZeros(to << 3), prefix << 3, n_particles);
     splitters.push_back(sp);
 
     decomp_particle_sum += n_particles;
