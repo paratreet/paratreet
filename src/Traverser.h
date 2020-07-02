@@ -177,6 +177,7 @@ private:
   std::vector<Node<Data>*> trav_tops;
 public:
   UpnDTraverser(TreePiece<Data>* tpi) : tp(tpi) {
+    tp->global_root = tp->cm_local->root;
     trav_tops.resize(tp->leaves.size());
     for (int i = 0; i < tp->leaves.size(); i++) {
       curr_nodes[tp->leaves[i]->key].push_back(i);
@@ -184,8 +185,8 @@ public:
     }
     num_waiting = std::vector<int> (tp->leaves.size(), 1);
   }
-  void processLocal() {CkPrintf("no need to process local traversals\n");}
-  void interact() {CkPrintf("no need to perform interactions\n");}
+  void processLocal() {if (tp->thisIndex == 0) CkPrintf("no need to process local traversals\n");}
+  void interact() {if (tp->thisIndex == 0) CkPrintf("no need to perform interactions\n");}
 
   virtual void traverse(Key new_key) {
     Visitor v;
@@ -197,8 +198,12 @@ public:
       resume_node = resume_nodes.front();
       resume_nodes.pop();
     }
+    else {
+      resume_node = tp->global_root->getDescendant(new_key);
+      CkAssert(resume_node != nullptr);
+    }
 #if DEBUG
-    CkPrintf("going down on key %d while its type is %d, pe is %d\n", new_key, start_node->type, CkMyPe());
+    CkPrintf("going down on key %d while its type is %d, pe is %d\n", new_key, resume_node->type, CkMyPe());
 #endif
     for (auto bucket : now_ready) {
       num_waiting[bucket]--;
@@ -253,14 +258,15 @@ public:
         }
       }
       if (num_waiting[bucket] == 0) {
-        if (trav_tops[bucket]->parent) {
-          for (int j = 0; j < trav_tops[bucket]->n_children; j++) {
-            Node<Data>* child = trav_tops[bucket]->parent->getChild(j);
+        auto trav_top_parent = trav_tops[bucket]->parent;
+        if (trav_top_parent) {
+          for (int j = 0; j < trav_top_parent->n_children; j++) {
+            Node<Data>* child = trav_top_parent->getChild(j);
             if (child == nullptr) {
-              CkPrintf("child of key %lu and parent type %d is nullptr\n", trav_tops[bucket]->parent->key * 8 + j, trav_tops[bucket]->parent->type);
+              CkPrintf("child of key %lu and parent type %d is nullptr\n", trav_top_parent->key * 8 + j, trav_top_parent->type);
             }
             if (child != trav_tops[bucket]) {
-               if (trav_tops[bucket]->parent->type == Node<Data>::Type::Boundary) {
+               if (trav_top_parent->type == Node<Data>::Type::Boundary) {
                  child->type = Node<Data>::Type::RemoteAboveTPKey;
                }
                curr_nodes_insertions.push_back(std::make_pair(child->key, bucket));

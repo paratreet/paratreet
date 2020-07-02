@@ -417,7 +417,6 @@ void TreePiece<Data>::startDown() {
 template <typename Data>
 template <typename Visitor>
 void TreePiece<Data>::startUpAndDown() {
-  if (!leaves.size()) return;
   traverser = new UpnDTraverser<Data, Visitor>(this);
   for (auto leaf : leaves) goDown(leaf->key);
 }
