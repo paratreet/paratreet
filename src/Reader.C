@@ -156,12 +156,50 @@ void Reader::countOct(std::vector<Key> splitter_keys, const CkCallback& cb) {
   contribute(sizeof(int) * counts.size(), &counts[0], CkReduction::sum_int, cb);
 }
 
-void Reader::countSfc(const CkCallback& cb)
+void Reader::countSfc(Key last_key, size_t last_count, const CkCallback& cb)
 {
+  auto n_particles = last_count + particles.size();
+  auto n_chunks = n_particles / max_particles_per_tp;
+  auto n_remain = n_particles % max_particles_per_tp;
+  decltype(last_count) last_element = 0;
   std::vector<Key> keys;
-  for (const auto& p : particles)
-    keys.push_back(p.key);
-
+  keys.resize(n_chunks);
+#if DEBUG
+  CkPrintf("[RDR%d] Incoming with %lx with %lu remaining elements!\n", this->thisIndex, last_key, last_count);
+#endif
+  // for each of the chunks that we can make
+  for (int i = 0; i < n_chunks; i++) {
+    if (i == 0 && last_count > 0) {
+      // number of particles necessary to complete chunk
+      auto difference = ((decltype(last_count))max_particles_per_tp) - last_count;
+      // assert that we can make up the difference
+      // (otherwise we wouldn't be here)
+      CkAssert(n_particles > difference);
+      // adjust key of the boundary element
+      last_element = difference;
+    } else {
+      // move forward a chunk
+      last_element += max_particles_per_tp;
+    }
+    // store key of the previous boundary element
+    keys[i] = last_key;
+    // adjust boundary element for next iteration
+    CkAssert(last_element < particles.size());
+    last_key = this->particles[last_element].key;
+  }
+#if DEBUG
+  CkPrintf("[RDR%d] Last key is %lx with %lu remaining elements!\n", this->thisIndex, last_key, n_remain);
+#endif
+  // if we are not the last reader
+  if ((this->thisIndex + 1) < n_readers) {
+    // send our remaining elements and last boundary to the next one
+    this->thisProxy[this->thisIndex + 1].countSfc(last_key, n_remain, cb);
+  } else if (n_remain) {
+    // otherwise, if we are the last element and particles remain
+    // contribute our key anyway
+    keys.push_back(last_key);
+  }
+  // then contribute our keys
   contribute(keys.size() * sizeof(Key), &keys[0], CkReduction::set, cb);
 }
 

@@ -136,7 +136,7 @@ mainmodule paratreet {
     template <typename Data>
     entry void request(CProxy_TreePiece<Data>, int, int);
     entry void countOct(std::vector<Key>, const CkCallback&);
-    entry void countSfc(const CkCallback&);
+    entry void countSfc(Key, size_t, const CkCallback&);
     //entry void countSfc(const std::vector<Key>&, const CkCallback&);
     entry void pickSamples(const int, const CkCallback&);
     entry void prepMessages(const std::vector<Key>&, const CkCallback&);

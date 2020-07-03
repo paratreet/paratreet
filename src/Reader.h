@@ -12,6 +12,7 @@
 extern CProxy_Main mainProxy;
 extern int n_readers;
 extern int decomp_type;
+extern int max_particles_per_tp; // for OCT decomposition
 
 class Reader : public CBase_Reader {
   BoundingBox box;
@@ -34,7 +35,7 @@ class Reader : public CBase_Reader {
     void countOct(std::vector<Key>, const CkCallback&);
 
     // SFC decomposition
-    void countSfc(const CkCallback& cb);
+    void countSfc(Key last_key, size_t last_count, const CkCallback& cb);
     //void countSfc(const std::vector<Key>&, const CkCallback&);
     void pickSamples(const int, const CkCallback&);
     void prepMessages(const std::vector<Key>&, const CkCallback&);

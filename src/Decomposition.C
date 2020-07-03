@@ -57,7 +57,7 @@ int SfcDecomposition::getNumExpectedParticles(int n_total_particles, int n_treep
 int SfcDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &readers) {
   // countSfc finds the keys of all particles
   CkReductionMsg *msg;
-  readers.countSfc(CkCallbackResumeThread((void*&)msg));
+  readers[0].countSfc(Key(0), 0, CkCallbackResumeThread((void*&)msg));
   std::vector<Key> keys;
   CkReduction::setElement *elem = (CkReduction::setElement *)msg->getData();
   while (elem != NULL) {
@@ -70,17 +70,20 @@ int SfcDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &reader
   std::sort(keys.begin(), keys.end());
 
   int decomp_particle_sum = 0;
-
-  Real threshold = (DECOMP_TOLERANCE * Real(max_particles_per_tp));
-  for (int i = 0; i * threshold < keys.size(); ++i) {
-    Key from = keys[(int)(i * threshold)];
+  for (int i = 0; i < keys.size(); ++i) {
+    Key from = keys[i];
     Key to;
-    int n_particles = (int)threshold;
-    if (i * threshold >= keys.size()) {
+    int n_particles;
+    if ((i + 1) >= keys.size()) {
       to = ~Key(0);
-      n_particles = keys.size() - (int)(i * threshold);
-    } else to = (int)((i + 1) * threshold);
-
+      n_particles = universe.n_particles % max_particles_per_tp;
+    } else {
+      to = keys[i + 1];
+      n_particles = max_particles_per_tp;
+    }
+#if DEBUG
+    CkPrintf("[SPLITTER%d] From: %lx, To: %lx.\n", i, from, to);
+#endif
     Key prefix = from & (to - 1);
     Splitter sp(Utility::removeLeadingZeros(from << 3),
                 Utility::removeLeadingZeros(to << 3), prefix << 3, n_particles);
@@ -88,6 +91,8 @@ int SfcDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &reader
 
     decomp_particle_sum += n_particles;
   }
+
+  decomp_particle_sum = universe.n_particles;
 
   // Check if decomposition is correct
   if (decomp_particle_sum != universe.n_particles) {
