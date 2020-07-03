@@ -11,31 +11,42 @@ extern int max_particles_per_tp; // for OCT decomposition
 
 int SfcDecomposition::flush(int n_total_particles, int n_treepieces, const SendParticlesFn &fn,
                             std::vector<Particle> &particles) {
-  // TODO SFC decomposition
-  // Probably need to use prefix sum
-  int flush_count;
-  int n_particles_left = particles.size();
-  for (int i = 0; i < n_treepieces; i++) {
-    int n_need = n_total_particles / n_treepieces;
-    if (i < (n_total_particles % n_treepieces))
-      n_need++;
+  /* // TODO SFC decomposition */
+  /* // Probably need to use prefix sum */
+  /* int flush_count; */
+  /* int n_particles_left = particles.size(); */
+  /* for (int i = 0; i < n_treepieces; i++) { */
+  /*   int n_need = n_total_particles / n_treepieces; */
+  /*   if (i < (n_total_particles % n_treepieces)) */
+  /*     n_need++; */
 
-    if (n_particles_left > n_need) {
-      fn(i, n_need, &particles[flush_count]);
-      flush_count += n_need;
-      n_particles_left -= n_need;
-    }
-    else {
-      if (n_particles_left > 0) {
-        fn(i, n_particles_left, &particles[flush_count]);
-        flush_count += n_particles_left;
-        n_particles_left = 0;
-      }
-    }
+  /*   if (n_particles_left > n_need) { */
+  /*     fn(i, n_need, &particles[flush_count]); */
+  /*     flush_count += n_need; */
+  /*     n_particles_left -= n_need; */
+  /*   } */
+  /*   else { */
+  /*     if (n_particles_left > 0) { */
+  /*       fn(i, n_particles_left, &particles[flush_count]); */
+  /*       flush_count += n_particles_left; */
+  /*       n_particles_left = 0; */
+  /*     } */
+  /*   } */
 
-    if (n_particles_left == 0) break;
+  /*   if (n_particles_left == 0) break; */
+  /* } */
+
+  /* return flush_count; */
+  int flush_count = 0;
+  Real threshold = DECOMP_TOLERANCE * Real(max_particles_per_tp);
+  for (int i = 0; i * threshold < particles.size(); ++i) {
+    int n_particles = (int)threshold;
+    if ((i + 1) * threshold >= particles.size())
+      n_particles = particles.size() - (int)(i * threshold);
+
+    fn(i, n_particles, &particles[flush_count]);
+    flush_count += n_particles;
   }
-
   return flush_count;
 }
 
@@ -71,12 +82,12 @@ int SfcDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &reader
 
   int decomp_particle_sum = 0;
 
-  Real threshold = (DECOMP_TOLERANCE * Real(max_particles_per_tp));
+  Real threshold = DECOMP_TOLERANCE * Real(max_particles_per_tp);
   for (int i = 0; i * threshold < keys.size(); ++i) {
     Key from = keys[(int)(i * threshold)];
     Key to;
     int n_particles = (int)threshold;
-    if (i * threshold >= keys.size()) {
+    if ((i + 1) * threshold >= keys.size()) {
       to = ~Key(0);
       n_particles = keys.size() - (int)(i * threshold);
     } else to = keys[(int)((i + 1) * threshold)];
