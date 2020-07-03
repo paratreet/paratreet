@@ -151,6 +151,7 @@ void CacheManager<Data>::recvStarterPack(std::pair<Key, SpatialNode<Data>>* pack
       restoreDataHelper(pack[i], false);
     }
   }
+  if (n == 0) root = local_tps[1];
 
   this->contribute(cb);
 }

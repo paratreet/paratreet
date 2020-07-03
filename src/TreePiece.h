@@ -120,9 +120,8 @@ TreePiece<Data>::TreePiece(const CkCallback& cb, int n_total_particles_,
   n_expected = treespec.ckLocalBranch()->getDecomposition()->
       getNumExpectedParticles(n_total_particles, n_treepieces, this->thisIndex);
 
-  if (decomp_type == OCT_DECOMP || decomp_type == SFC_DECOMP) {
-    tp_key = ((SfcDecomposition*)treespec.ckLocalBranch()->getDecomposition())->getTpKey(this->thisIndex);
-  }
+  tp_key = treespec.ckLocalBranch()->getDecomposition()->
+      getTpKey(this->thisIndex);
 
   // Create TreeCanopies and send proxies
   auto sendProxy = [&](int dest, int tp_index) {
@@ -578,7 +577,31 @@ void TreePiece<Data>::output(CProxy_Writer w, CkCallback cb) {
                      leaf->particles(), leaf->particles() + leaf->n_particles);
   }
 
-  w.receive(particles, cb);
+  std::sort(particles.begin(), particles.end(),
+            [](const Particle& left, const Particle& right) {
+              return left.order < right.order;
+            });
+
+  int particles_per_writer = n_total_particles / CkNumPes();
+  if (particles_per_writer * CkNumPes() != n_total_particles)
+    ++particles_per_writer;
+
+  int particle_idx = 0;
+  while (particle_idx < particles.size()) {
+    int writer_idx = particles[particle_idx].order / particles_per_writer;
+    int first_particle = writer_idx * particles_per_writer;
+    std::vector<Particle> writer_particles;
+
+    while (
+      particles[particle_idx].order < first_particle + particles_per_writer
+      && particle_idx < particles.size()
+      ) {
+      writer_particles.push_back(particles[particle_idx]);
+      ++particle_idx;
+    }
+
+    w[writer_idx].receive(writer_particles, cb);
+  }
 
   if (this->thisIndex != n_treepieces - 1) {
     this->thisProxy[this->thisIndex + 1].output(w, cb);
