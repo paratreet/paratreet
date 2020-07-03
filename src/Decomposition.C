@@ -81,7 +81,11 @@ int SfcDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &reader
       n_particles = keys.size() - (int)(i * threshold);
     } else to = (int)((i + 1) * threshold);
 
-    Key prefix = Utility::removeTrailingBits(from & (to - 1));
+    // Inverse bitwise-xor is used as a bitwise equality test, in conjunction with
+    // `removeTrailingBits` forms a mask that zeroes off all bits after the first
+    // differing bit between `from` and `to`
+    Key prefixMask = Utility::removeTrailingBits(~(from ^ (to - 1)));
+    Key prefix = prefixMask & from;
     Splitter sp(Utility::removeLeadingZeros(from << 3),
                 Utility::removeLeadingZeros(to << 3), prefix << 3, n_particles);
     splitters.push_back(sp);
