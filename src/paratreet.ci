@@ -75,9 +75,10 @@ mainmodule paratreet {
   };
   group Resumer<CentroidData>;
 
-  chare Writer {
-    entry Writer(int n_treepieces, std::string of);
+  group Writer {
+    entry Writer(std::string of, int n_particles);
     entry void receive(std::vector<Particle> particles, CkCallback cb);
+    entry void write(CkCallback cb);
   }
 
   template <typename Data>
