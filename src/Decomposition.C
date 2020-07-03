@@ -79,7 +79,7 @@ int SfcDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &reader
     if (i * threshold >= keys.size()) {
       to = ~Key(0);
       n_particles = keys.size() - (int)(i * threshold);
-    } else to = (int)((i + 1) * threshold);
+    } else to = keys[(int)((i + 1) * threshold)];
 
     // Inverse bitwise-xor is used as a bitwise equality test, in conjunction with
     // `removeTrailingBits` forms a mask that zeroes off all bits after the first
