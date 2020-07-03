@@ -109,6 +109,21 @@ class Utility {
     return getParticleLevelKey(k, depth, 3);
   }
 
+  // Zeroes all bits after the first zero (in most-significant order)
+  // 0xffffff81 --> 0xffffff80
+  template <typename T>
+  static T removeTrailingBits(T t) {
+    T mask = T(1) << (sizeof(T) * 8 - 1);
+    T cumulativeMask = 0;
+    // until the first bit that is zero (most-significant order)
+    while (mask & t) {
+      // build a mask including all of the previous bits
+      cumulativeMask |= mask;
+      // move to the next bit
+      mask >>= 1;
+    }
+    return t & cumulativeMask;
+  }
 };
 
 #endif // PARATREET_UTILITY_H_
