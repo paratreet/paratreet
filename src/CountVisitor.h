@@ -30,7 +30,7 @@ private:
   }
 
 public:
-  bool node(const SpatialNode<CentroidData>& from, SpatialNode<CentroidData>& on) {
+  bool open(const SpatialNode<CentroidData>& from, SpatialNode<CentroidData>& on) {
     if (from.data.count == 0 || on.data.count == 0) {
       return false;
     }
@@ -44,8 +44,10 @@ public:
     }
   }
 
+  void node(const SpatialNode<CentroidData>& from, SpatialNode<CentroidData>& on) {}
+
   bool cell(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
-    return node(source, target);
+    return open(source, target);
   }
 
   void leaf(const SpatialNode<CentroidData>& from, SpatialNode<CentroidData>& on) {
