@@ -71,10 +71,87 @@ public:
   }
   void processLocal() {this->template processLocalBase<Visitor> (tp);}
   void interact() {this->template interactBase<Visitor> (tp);}
-  virtual void traverse(Key new_key) {
+  void recurse(Node<Data>* node, std::vector<int>& active_buckets) {
     Visitor v;
+    std::vector<int> new_active_buckets;
+#if DEBUG
+    CkPrintf("tp %d, key = %d, type = %d, pe %d\n", tp->thisIndex, node->key, node->type, CkMyPe());
+#endif
+    switch (node->type) {
+      case Node<Data>::Type::Leaf:
+      case Node<Data>::Type::CachedRemoteLeaf:
+        {
+          // Store local and remote cached leaves for interactions
+          for (auto bucket : active_buckets) {
+            tp->interactions[bucket].push_back(node);
+          }
+          break;
+        }
+      case Node<Data>::Type::Internal:
+        {
+#if DELAYLOCAL
+          tp->local_travs.push_back(node, active_buckets);
+          break;
+#endif
+        }
+      case Node<Data>::Type::CachedBoundary:
+      case Node<Data>::Type::CachedRemote:
+        {
+          // Check if the opening condition is fulfilled
+          // If so, need to go down deeper
+          for (auto bucket : active_buckets) {
+            if (v.open(*node, *tp->leaves[bucket])) {
+              new_active_buckets.push_back(bucket);
+            } else {
+              // maybe delay as an interaction
+              v.node(*node, *tp->leaves[bucket]);
+            }
+          }
+          break;
+        }
+      case Node<Data>::Type::Boundary:
+      case Node<Data>::Type::RemoteAboveTPKey:
+      case Node<Data>::Type::Remote:
+      case Node<Data>::Type::RemoteLeaf:
+        {
+          curr_nodes[node->key] = active_buckets;
+
+          // Submit a request if the node wasn't requested before
+          bool prev = node->requested.exchange(true);
+          if (!prev) {
+            if (node->type == Node<Data>::Type::Boundary || node->type == Node<Data>::Type::RemoteAboveTPKey) {
+              // Ask TreeCanopy for data
+              // If the canopy is at the same level as a TP, it asks the TP
+              // which eventually calls CacheManager::serviceRequest
+              // If the canopy is above TPs, it directly calls
+              // CacheManager::restoreData which fills in the cache
+              tp->tc_proxy[node->key].requestData(tp->cm_local->thisIndex);
+            }
+            else {
+              // The node is entirely remote, ask CacheManager for data
+              tp->cm_proxy[node->cm_index].requestNodes(std::make_pair(node->key, tp->cm_local->thisIndex));
+            }
+          }
+
+
+          // Add the TreePiece that initiated the traversal to the waiting list
+          // maintained in Resumer
+          tp->r_local->waiting[node->key].push_back(tp->thisIndex);
+          break;
+        }
+      default:
+        {
+          break;
+        }
+      }
+      if (!new_active_buckets.empty()) {
+        for (int idx = 0; idx < node->n_children; idx++) {
+          recurse(node->getChild(idx), new_active_buckets);
+        }
+      }
+    }
+  virtual void traverse(Key new_key) {
     auto& now_ready = curr_nodes[new_key];
-    std::vector<std::pair<Key, int>> curr_nodes_insertions;
     auto start_node = tp->global_root;
     auto && resume_nodes = tp->r_local->resume_nodes_per_tp[tp->thisIndex];
     CkAssert(!resume_nodes.empty() || new_key == 1); // nothing to resume on?
@@ -85,89 +162,8 @@ public:
 #if DEBUG
     CkPrintf("going down on key %d while its type is %d\n", new_key, start_node->type);
 #endif
-    for (auto bucket : now_ready) {
-      std::stack<Node<Data>*, std::vector<Node<Data>*>> nodes;
-      nodes.push(start_node);
-      while (nodes.size()) {
-        Node<Data>* node = nodes.top();
-        nodes.pop();
-#if DEBUG
-        CkPrintf("tp %d, key = %d, type = %d, pe %d\n", tp->thisIndex, node->key, node->type, CkMyPe());
-#endif
-        switch (node->type) {
-          case Node<Data>::Type::Leaf:
-          case Node<Data>::Type::CachedRemoteLeaf:
-            {
-              // Store local and remote cached leaves for interactions
-              tp->interactions[bucket].push_back(node);
-              break;
-            }
-          case Node<Data>::Type::Internal:
-            {
-#if DELAYLOCAL
-              tp->local_travs.push_back(std::make_pair(node, bucket));
-              break;
-#endif
-            }
-          case Node<Data>::Type::CachedBoundary:
-          case Node<Data>::Type::CachedRemote:
-            {
-              // Check if the opening condition is fulfilled
-              // If so, need to go down deeper
-              if (v.open(*node, *tp->leaves[bucket])) {
-                for (int i = 0; i < node->n_children; i++) {
-                  nodes.push(node->getChild(i));
-                }
-              } else {
-                v.node(*node, *tp->leaves[bucket]);
-              }
-              break;
-            }
-          case Node<Data>::Type::Boundary:
-          case Node<Data>::Type::RemoteAboveTPKey:
-          case Node<Data>::Type::Remote:
-          case Node<Data>::Type::RemoteLeaf:
-            {
-              curr_nodes_insertions.push_back(std::make_pair(node->key, bucket));
-
-              // Submit a request if the node wasn't requested before
-              bool prev = node->requested.exchange(true);
-              if (!prev) {
-                if (node->type == Node<Data>::Type::Boundary || node->type == Node<Data>::Type::RemoteAboveTPKey) {
-                  // Ask TreeCanopy for data
-                  // If the canopy is at the same level as a TP, it asks the TP
-                  // which eventually calls CacheManager::serviceRequest
-                  // If the canopy is above TPs, it directly calls
-                  // CacheManager::restoreData which fills in the cache
-                  tp->tc_proxy[node->key].requestData(tp->cm_local->thisIndex);
-                }
-                else {
-                  // The node is entirely remote, ask CacheManager for data
-                  tp->cm_proxy[node->cm_index].requestNodes(std::make_pair(node->key, tp->cm_local->thisIndex));
-                }
-              }
-
-
-              // Add the TreePiece that initiated the traversal to the waiting list
-              // maintained in Resumer
-              // XXX: Why does it only check the list size and the back of the list?
-              std::vector<int>& list = tp->r_local->waiting[node->key];
-              if (!list.size() || list.back() != tp->thisIndex) list.push_back(tp->thisIndex);
-              break;
-            }
-          default:
-            {
-              break;
-            }
-        }
-      }
-    }
-
-    // Erase traversed node
+    recurse(start_node, now_ready);
     curr_nodes.erase(new_key);
-
-    // Store nodes to be traversed
-    for (auto cn : curr_nodes_insertions) curr_nodes[cn.first].push_back(cn.second);
   }
 };
 
