@@ -91,7 +91,6 @@ mainmodule paratreet {
     template<typename Visitor> entry void startDown();
     template<typename Visitor> entry void startUpAndDown();
     template<typename Visitor> entry void startDual();
-    entry void processLocal(const CkCallback&);
     entry void interact(const CkCallback&);
     entry void goDown(Key);
     entry void requestNodes(Key, int);

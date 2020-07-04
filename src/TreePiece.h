@@ -43,7 +43,6 @@ public:
   Node<Data>* local_root; // Root node of this TreePiece, TreeCanopies sit above this node
 
   Traverser<Data>* traverser;
-  std::vector<std::pair<Node<Data>*, int>> local_travs;
 
   CProxy_TreeCanopy<Data> tc_proxy;
   CProxy_CacheManager<Data> cm_proxy;
@@ -70,7 +69,6 @@ public:
   template<typename Visitor> void startUpAndDown();
   template<typename Visitor> void startDual();
   void goDown(Key);
-  void processLocal(const CkCallback&);
   void interact(const CkCallback&);
   void print(Node<Data>*);
   void perturb (Real timestep, bool);
@@ -182,7 +180,6 @@ void TreePiece<Data>::buildTree() {
   // Clear existing data
   leaves.clear();
   empty_leaves.clear();
-  local_travs.clear();
 
   // Create global root and build local tree recursively
 #if DEBUG
@@ -439,12 +436,6 @@ void TreePiece<Data>::requestNodes(Key key, int cm_index) {
 template <typename Data>
 void TreePiece<Data>::goDown(Key new_key) {
   traverser->traverse(new_key);
-}
-
-template <typename Data>
-void TreePiece<Data>::processLocal(const CkCallback& cb) {
-  traverser->processLocal();
-  this->contribute(cb);
 }
 
 template <typename Data>

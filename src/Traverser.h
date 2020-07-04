@@ -12,7 +12,6 @@ template <typename Data>
 class Traverser {
 public:
   virtual void traverse(Key) = 0;
-  virtual void processLocal() = 0;
   virtual void interact() = 0;
   template <typename Visitor>
   void runSimpleTraversal(TreePiece<Data>* tp, Node<Data>* source_node, int leaf_index)
@@ -38,13 +37,6 @@ public:
   }
 
   template <typename Visitor>
-  void processLocalBase(TreePiece<Data>* tp)
-  {
-    for (auto local_trav : tp->local_travs) {
-      runSimpleTraversal<Visitor>(tp, local_trav.first, local_trav.second);
-    }
-  }
-  template <typename Visitor>
   void interactBase(TreePiece<Data>* tp)
   {
     Visitor v;
@@ -69,7 +61,6 @@ public:
     // Initialize with global root key and leaves
     for (int i = 0; i < tp->leaves.size(); i++) curr_nodes[1].push_back(i);
   }
-  void processLocal() {this->template processLocalBase<Visitor> (tp);}
   void interact() {this->template interactBase<Visitor> (tp);}
   void recurse(Node<Data>* node, std::vector<int>& active_buckets) {
     Visitor v;
@@ -88,12 +79,6 @@ public:
           break;
         }
       case Node<Data>::Type::Internal:
-        {
-#if DELAYLOCAL
-          tp->local_travs.push_back(node, active_buckets);
-          break;
-#endif
-        }
       case Node<Data>::Type::CachedBoundary:
       case Node<Data>::Type::CachedRemote:
         {
@@ -184,7 +169,6 @@ public:
     }
     num_waiting = std::vector<int> (tp->leaves.size(), 1);
   }
-  void processLocal() {if (tp->thisIndex == 0) CkPrintf("no need to process local traversals\n");}
   void interact() {if (tp->thisIndex == 0) CkPrintf("no need to perform interactions\n");}
 
   virtual void traverse(Key new_key) {
@@ -300,7 +284,6 @@ public:
     if (tp->local_root == nullptr) CkAbort("If doing dual traversal you need to set num_share_levels = 0");
     for (auto key : keys) curr_nodes[key].push_back(tp->local_root);
   }
-  void processLocal () {}
   void interact() {this->template interactBase<Visitor>(tp);}
 
   void runInvertedTraversal(Node<Data>* source_leaf, Node<Data>* target_node)
