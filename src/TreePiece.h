@@ -406,14 +406,14 @@ void TreePiece<Data>::initCache() {
 template <typename Data>
 template <typename Visitor>
 void TreePiece<Data>::startDown() {
-  traverser = new DownTraverser<Data, Visitor>(this);
+  traverser = new DownTraverser<Data, Visitor>(*this);
   goDown(1);
 }
 
 template <typename Data>
 template <typename Visitor>
 void TreePiece<Data>::startUpAndDown() {
-  traverser = new UpnDTraverser<Data, Visitor>(this);
+  traverser = new UpnDTraverser<Data, Visitor>(*this);
   for (auto leaf : leaves) goDown(leaf->key);
 }
 
@@ -421,7 +421,7 @@ template <typename Data>
 template <typename Visitor>
 void TreePiece<Data>::startDual() {
   auto && keys = ((SfcDecomposition*)treespec.ckLocalBranch()->getDecomposition())->getAllTpKeys(n_treepieces);
-  traverser = new DualTraverser<Data, Visitor>(this, keys);
+  traverser = new DualTraverser<Data, Visitor>(*this, keys);
   for (auto key : keys) goDown(key);
   // root needs to be the root of the searched tree, not the searching tree
 }
