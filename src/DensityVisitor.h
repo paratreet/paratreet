@@ -21,7 +21,7 @@ private:
   }
 
 public:
-  bool node(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
+  bool open(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
     if (target.data.neighbors[0].size() < k) return true; // they all fill first k at the same time
     Real dsq = (source.data.centroid - target.data.centroid).lengthSquared();
     Real rsq = (target.data.neighbors[0].top().position - source.data.centroid).lengthSquared();
@@ -29,6 +29,8 @@ public:
 
     return (dsq < rsq);
   }
+
+  void node(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {}
 
   void leaf(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
     if (!target.data.neighbors.size()) prepNeighbors(target);
