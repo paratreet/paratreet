@@ -62,9 +62,6 @@ mainmodule paratreet {
   nodegroup CacheManager<CentroidData>;
 #endif
 
-  extern entry [aggregate] void CacheManager<CentroidData> restoreData(std::pair<Key, SpatialNode<CentroidData>>);
-  extern entry [aggregate] void CacheManager<CentroidData> addCache(MultiData<CentroidData>);
-  extern entry [aggregate] void CacheManager<CentroidData> requestNodes(std::pair<Key, int>);
   extern entry void CacheManager<CentroidData> startPrefetch<GravityVisitor>(DPHolder<CentroidData>, CkCallback); 
 
   template <typename Data>
