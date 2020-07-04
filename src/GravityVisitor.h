@@ -12,6 +12,7 @@ private:
   // note gconst = 1
   static constexpr Real theta = 0.7;
   static constexpr int  nMinParticleNode = 6;
+
   void addGravity(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
     for (int i = 0; i < target.n_particles; i++) {
       Vector3D<Real> diff = source.data.centroid - target.particles()[i].position;
@@ -22,29 +23,36 @@ private:
       }
     }
   }
+
   public:
   GravityVisitor() {}
+
   void leaf(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
     addGravity(source, target);
 #if COUNT_INTERACTIONS
     centroid_resumer.ckLocalBranch()->countInts(target.n_particles);
 #endif
   }
-  bool node(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
+
+  bool open(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
     if (source.n_particles <= nMinParticleNode) return true;
     Vector3D<Real> dr = source.data.centroid - target.data.centroid;
     Real dsq = dr.lengthSquared();
     if (theta * dsq < source.data.rsq) {
       return true;
     }
+    return false;
+  }
+
+  void node(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
     if (source.data.sum_mass > 0) {
       addGravity(source, target);
 #if COUNT_INTERACTIONS
       centroid_resumer.ckLocalBranch()->countInts(-target.n_particles);
 #endif
     }
-    return false;
   }
+
   bool cell(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
     // find the closest particle in target to source's center
     // check all eight corners of bounding box

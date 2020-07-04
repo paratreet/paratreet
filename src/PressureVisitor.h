@@ -11,12 +11,14 @@ private:
   const Real radius = .01;
 
 public:
-  bool node(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
+  bool open(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
     Real rsq = (source.data.centroid - target.data.centroid).lengthSquared();
     return (rsq < radius * radius);
     // this just looks at the centroids when it should look at the whole boxes
     // need to use intersect(), maybe use Sphere<> ?
   }
+
+  void node(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {}
 
   void leaf(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
     for (int i = 0; i < target.n_particles; i++) {

@@ -25,12 +25,13 @@ public:
       nodes.pop();
       if (node->type == Node<Data>::Type::Leaf || node->type == Node<Data>::Type::CachedRemoteLeaf) {
         tp->interactions[leaf_index].push_back(node);
-      }
-      else {
-        if (v.node(*node, *(tp->leaves[leaf_index]))) {
+      } else {
+        if (v.open(*node, *(tp->leaves[leaf_index]))) {
           for (int j = 0; j < node->n_children; j++) {
             nodes.push(node->getChild(j));
           }
+        } else {
+          v.node(*node, *(tp->leaves[leaf_index]));
         }
       }
     }
@@ -111,12 +112,14 @@ public:
           case Node<Data>::Type::CachedBoundary:
           case Node<Data>::Type::CachedRemote:
             {
-              // Check if the 'node' condition is fulfilled
+              // Check if the opening condition is fulfilled
               // If so, need to go down deeper
-              if (v.node(*node, *tp->leaves[bucket])) {
+              if (v.open(*node, *tp->leaves[bucket])) {
                 for (int i = 0; i < node->n_children; i++) {
                   nodes.push(node->getChild(i));
                 }
+              } else {
+                v.node(*node, *tp->leaves[bucket]);
               }
               break;
             }
@@ -227,10 +230,12 @@ public:
           case Node<Data>::Type::CachedBoundary:
           case Node<Data>::Type::CachedRemote:
             {
-              if (v.node(*node, *(tp->leaves[bucket]))) {
+              if (v.open(*node, *(tp->leaves[bucket]))) {
                 for (int i = 0; i < node->n_children; i++) {
                   nodes.push(node->getChild(i));
                 }
+              } else {
+                v.node(*node, *(tp->leaves[bucket]));
               }
               break;
             }
@@ -312,12 +317,13 @@ public:
       nodes.pop();
       if (node->type == Node<Data>::Type::Leaf || node->type == Node<Data>::Type::CachedRemoteLeaf) {
         v.leaf(*source_leaf, *node);
-      }
-      else {
-        if (v.node(*node, *source_leaf)) {
+      } else {
+        if (v.open(*node, *source_leaf)) {
           for (int j = 0; j < node->n_children; j++) {
             nodes.push(node->getChild(j));
           }
+        } else {
+          v.node(*node, *source_leaf);
         }
       }
     }
