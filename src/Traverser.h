@@ -63,14 +63,13 @@ public:
 
 protected:
   void startTrav(Node<Data>* new_payload) {
-    if (tp.thisIndex == 0) std::cout << "start Trav called for key " << new_payload->key << std::endl;
     std::vector<int> all_leaves;
     for (int i = 0; i < tp.leaves.size(); i++) all_leaves.push_back(i);
     recurse(new_payload, all_leaves);
   }
 
 public:
-  DownTraverser(TreePiece<Data>& tpi, bool delay_leafi = false)
+  DownTraverser(TreePiece<Data>& tpi, bool delay_leafi = true)
     : tp(tpi), delay_leaf(delay_leafi)
   { }
   virtual void start() override {
