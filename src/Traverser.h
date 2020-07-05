@@ -11,8 +11,11 @@
 template <typename Data>
 class Traverser {
 public:
-  virtual void traverse(Key) = 0;
+  virtual void resumeTrav(Key) = 0;
   virtual void interact() = 0;
+  virtual void start() = 0;
+
+protected:
   template <typename Visitor>
   void runSimpleTraversal(TreePiece<Data>& tp, Node<Data>* source_node, int leaf_index)
   {
@@ -53,15 +56,28 @@ class DownTraverser : public Traverser<Data> {
 private:
   TreePiece<Data>& tp;
   std::unordered_map<Key, std::vector<int>> curr_nodes;
+  const bool delay_leaf;
 
 public:
-  DownTraverser(TreePiece<Data>& tpi) : tp(tpi)
-  {
-    tp.global_root = tp.cm_local->root;
-    // Initialize with global root key and leaves
-    for (int i = 0; i < tp.leaves.size(); i++) curr_nodes[1].push_back(i);
+  bool isFinished() {return curr_nodes.empty();}
+
+protected:
+  void startTrav(Node<Data>* new_payload) {
+    if (tp.thisIndex == 0) std::cout << "start Trav called for key " << new_payload->key << std::endl;
+    std::vector<int> all_leaves;
+    for (int i = 0; i < tp.leaves.size(); i++) all_leaves.push_back(i);
+    recurse(new_payload, all_leaves);
   }
-  void interact() {this->template interactBase<Visitor> (tp);}
+
+public:
+  DownTraverser(TreePiece<Data>& tpi, bool delay_leafi = false)
+    : tp(tpi), delay_leaf(delay_leafi)
+  { }
+  virtual void start() override {
+    // Initialize with global root key and leaves
+    startTrav(tp.cm_local->root);
+  }
+  virtual void interact() override {this->template interactBase<Visitor> (tp);}
   void recurse(Node<Data>* node, std::vector<int>& active_buckets) {
     Visitor v;
     std::vector<int> new_active_buckets;
@@ -74,7 +90,8 @@ public:
         {
           // Store local and remote cached leaves for interactions
           for (auto bucket : active_buckets) {
-            tp.interactions[bucket].push_back(node);
+            if (delay_leaf) tp.interactions[bucket].push_back(node);
+            else v.leaf(*node, *tp.leaves[bucket]);
           }
           break;
         }
@@ -117,8 +134,6 @@ public:
               tp.cm_proxy[node->cm_index].requestNodes(std::make_pair(node->key, tp.cm_local->thisIndex));
             }
           }
-
-
           // Add the TreePiece that initiated the traversal to the waiting list
           // maintained in Resumer
           tp.r_local->waiting[node->key].push_back(tp.thisIndex);
@@ -128,144 +143,99 @@ public:
         {
           break;
         }
-      }
-      if (!new_active_buckets.empty()) {
-        for (int idx = 0; idx < node->n_children; idx++) {
-          recurse(node->getChild(idx), new_active_buckets);
-        }
+    }
+    if (!new_active_buckets.empty()) {
+      for (int idx = 0; idx < node->n_children; idx++) {
+        recurse(node->getChild(idx), new_active_buckets);
       }
     }
-  virtual void traverse(Key new_key) {
-    auto& now_ready = curr_nodes[new_key];
-    auto start_node = tp.global_root;
+  }
+  virtual void resumeTrav(Key new_key) override {
     auto && resume_nodes = tp.r_local->resume_nodes_per_tp[tp.thisIndex];
-    CkAssert(!resume_nodes.empty() || new_key == 1); // nothing to resume on?
-    if (!resume_nodes.empty()) {
-      start_node = resume_nodes.front();
-      resume_nodes.pop();
-    }
+    CkAssert(!resume_nodes.empty()); // nothing to resume on?
+    auto start_node = resume_nodes.front();
+    resume_nodes.pop();
 #if DEBUG
     CkPrintf("going down on key %d while its type is %d\n", new_key, start_node->type);
 #endif
+    auto& now_ready = curr_nodes[new_key];
     recurse(start_node, now_ready);
     curr_nodes.erase(new_key);
   }
 };
 
 template <typename Data, typename Visitor>
-class UpnDTraverser : public Traverser<Data> {
+class UpnDTraverser : public DownTraverser<Data, Visitor>
+{
 private:
   TreePiece<Data>& tp;
-  std::unordered_map<Key, std::vector<int>> curr_nodes;
-  std::vector<int> num_waiting;
-  std::vector<Node<Data>*> trav_tops;
+  Node<Data>* trav_top = nullptr;
 public:
-  UpnDTraverser(TreePiece<Data>& tpi) : tp(tpi) {
-    tp.global_root = tp.cm_local->root;
-    trav_tops.resize(tp.leaves.size());
-    for (int i = 0; i < tp.leaves.size(); i++) {
-      curr_nodes[tp.leaves[i]->key].push_back(i);
-      trav_tops[i] = tp.leaves[i];
-    }
-    num_waiting = std::vector<int> (tp.leaves.size(), 1);
+  UpnDTraverser(TreePiece<Data>& tpi)
+    : tp(tpi), DownTraverser<Data, Visitor>(tpi, false) {
   }
-  void interact() {if (tp.thisIndex == 0) CkPrintf("no need to perform interactions\n");}
+  virtual void interact() override {
+    if (tp.thisIndex == 0) CkPrintf("no need to call interact()\n");
+  }
 
-  virtual void traverse(Key new_key) {
+  void start() override {
+    if (tp.leaves.empty()) return;
     Visitor v;
-    auto& now_ready = curr_nodes[new_key];
-    std::vector<std::pair<Key, int>> curr_nodes_insertions;
-    auto && resume_nodes = tp.r_local->resume_nodes_per_tp[tp.thisIndex];
-    Node<Data>* resume_node = nullptr;
-    if (!resume_nodes.empty()) {
-      resume_node = resume_nodes.front();
-      resume_nodes.pop();
-    }
-    else {
-      resume_node = tp.global_root->getDescendant(new_key);
-      CkAssert(resume_node != nullptr);
-    }
-#if DEBUG
-    CkPrintf("going down on key %d while its type is %d, pe is %d\n", new_key, resume_node->type, CkMyPe());
-#endif
-    for (auto bucket : now_ready) {
-      num_waiting[bucket]--;
-      auto start_node = resume_node ? resume_node : trav_tops[bucket];
+    for (auto leaf : tp.leaves) {
       std::stack<Node<Data>*> nodes;
-      nodes.push(start_node);
-      while (nodes.size()) {
-        Node<Data>* node = nodes.top();
-        nodes.pop();
-#if DEBUG
-        CkPrintf("tp %d, key = %d, type = %d, pe %d\n", tp.thisIndex, node->key, node->type, CkMyPe());
-#endif
-        switch (node->type) {
-          case Node<Data>::Type::Leaf:
-          case Node<Data>::Type::CachedRemoteLeaf:
-            {
-              v.leaf(*node, *(tp.leaves[bucket]));
-              break;
-            }
-          case Node<Data>::Type::Internal:
-          case Node<Data>::Type::CachedBoundary:
-          case Node<Data>::Type::CachedRemote:
-            {
-              if (v.open(*node, *(tp.leaves[bucket]))) {
-                for (int i = 0; i < node->n_children; i++) {
-                  nodes.push(node->getChild(i));
-                }
-              } else {
-                v.node(*node, *(tp.leaves[bucket]));
+      nodes.push(leaf);
+      trav_top = leaf;
+      while (1) {
+        while (!nodes.empty()) {
+          Node<Data>* node = nodes.top();
+          nodes.pop();
+          if (node->type == Node<Data>::Type::Internal) {
+            if (v.open(*node, *leaf)) {
+              for (int i = 0; i < node->n_children; i++) {
+                nodes.push(node->getChild(i));
               }
-              break;
             }
-          case Node<Data>::Type::Boundary:
-          case Node<Data>::Type::RemoteAboveTPKey:
-          case Node<Data>::Type::Remote:
-          case Node<Data>::Type::RemoteLeaf:
-            {
-              curr_nodes_insertions.push_back(std::make_pair(node->key, bucket));
-              num_waiting[bucket]++;
-              bool prev = node->requested.exchange(true);
-              if (!prev) {
-                if (node->type == Node<Data>::Type::Boundary || node->type == Node<Data>::Type::RemoteAboveTPKey)
-                  tp.tc_proxy[node->key].requestData(tp.cm_local->thisIndex);
-                else tp.cm_proxy[node->cm_index].requestNodes(std::make_pair(node->key, tp.cm_local->thisIndex));
-              }
-              std::vector<int>& list = tp.r_local->waiting[node->key];
-              if (!list.size() || list.back() != tp.thisIndex) list.push_back(tp.thisIndex);
-              break;
-            }
-          default:
-            {
-              break;
-            }
-        }
-      }
-      if (num_waiting[bucket] == 0) {
-        auto trav_top_parent = trav_tops[bucket]->parent;
-        if (trav_top_parent) {
-          for (int j = 0; j < trav_top_parent->n_children; j++) {
-            Node<Data>* child = trav_top_parent->getChild(j);
-            if (child == nullptr) {
-              CkPrintf("child of key %lu and parent type %d is nullptr\n", trav_top_parent->key * 8 + j, trav_top_parent->type);
-            }
-            if (child != trav_tops[bucket]) {
-               if (trav_top_parent->type == Node<Data>::Type::Boundary) {
-                 child->type = Node<Data>::Type::RemoteAboveTPKey;
-               }
-               curr_nodes_insertions.push_back(std::make_pair(child->key, bucket));
-               num_waiting[bucket]++;
-               tp.thisProxy[tp.thisIndex].goDown(child->key);
-            }
+            else v.node(*node, *leaf);
           }
-          trav_tops[bucket] = trav_tops[bucket]->parent;
+          else if (node->type == Node<Data>::Type::Leaf) {  
+            v.leaf(*node, *leaf);
+          }
         }
+        if (trav_top == tp.local_root) break;
+        for (int j = 0; j < trav_top->parent->n_children; j++) {
+          auto child = trav_top->parent->getChild(j);
+          if (child != trav_top) nodes.push(child);
+        }
+        trav_top = trav_top->parent;
       }
     }
-    //else CkPrintf("tp %d leaf %d still waiting\n", tp->thisIndex, i);
-    curr_nodes.erase(new_key);
-    for (auto cn : curr_nodes_insertions) curr_nodes[cn.first].push_back(cn.second);
+    // initial traversal just within TP
+    // we dont need a permanent state for this phase
+    // of the traversal cause we do it all at once
+    adjustTop();
+  }
+
+  virtual void resumeTrav(Key new_key) override {
+    DownTraverser<Data, Visitor>::resumeTrav(new_key);
+    adjustTop();
+  }
+
+private:
+  void adjustTop() {
+    if (this->isFinished() && trav_top->parent) {
+      std::cout << "TP " << tp.tp_key << " finished traversal with top " << trav_top->key << std::endl;
+      for (int j = 0; j < trav_top->parent->n_children; j++) {
+        Node<Data>* child = trav_top->parent->getChild(j);
+        if (child == nullptr) {
+          CkAbort("Error: it's probably that you didn't use startParentPrefetch as your cache loading function\n");
+        }
+        if (child != trav_top) {
+          this->startTrav(child);
+        }
+      }
+      trav_top = trav_top->parent;
+      adjustTop();
+    }
   }
 };
 
@@ -276,15 +246,18 @@ class DualTraverser : public Traverser<Data> {
 private:
   TreePiece<Data>& tp;
   std::unordered_map<Key, std::vector<Node<Data>*>> curr_nodes; // source nodes to target nodes
+  std::vector<Key> keys;
 public:
-  DualTraverser(TreePiece<Data>& tpi, std::vector<Key> keys) : tp(tpi)
-  {
+  DualTraverser(TreePiece<Data>& tpi, std::vector<Key> keysi)
+     : tp(tpi), keys(keysi)
+  { }
+  void start() override {
     tp.global_root = tp.cm_local->root; // these are source nodes
     tp.local_root = tp.global_root->getDescendant(tp.tp_key);
     if (tp.local_root == nullptr) CkAbort("If doing dual traversal you need to set num_share_levels = 0");
     for (auto key : keys) curr_nodes[key].push_back(tp.local_root);
   }
-  void interact() {this->template interactBase<Visitor>(tp);}
+  virtual void interact() override {this->template interactBase<Visitor>(tp);}
 
   void runInvertedTraversal(Node<Data>* source_leaf, Node<Data>* target_node)
   {
@@ -308,7 +281,7 @@ public:
     }
   }
 
-  virtual void traverse(Key new_key) {
+  virtual void resumeTrav(Key new_key) override {
     Visitor v;
     auto& now_ready = curr_nodes[new_key];
     std::vector<std::pair<Key, Node<Data>*>> curr_nodes_insertions;
