@@ -88,7 +88,6 @@ mainmodule paratreet {
     template<typename Visitor> entry void startDown();
     template<typename Visitor> entry void startUpAndDown();
     template<typename Visitor> entry void startDual();
-    entry void processLocal(const CkCallback&);
     entry void interact(const CkCallback&);
     entry void goDown(Key);
     entry void requestNodes(Key, int);
@@ -122,7 +121,7 @@ mainmodule paratreet {
     entry Driver(CProxy_CacheManager<Data>);
     entry [threaded] void init(CkCallback cb);
     entry [threaded] void run(CkCallback cb);
-    entry [reductiontarget] void countInts(int intrn_counts [2]);
+    entry [reductiontarget] void countInts(unsigned long long intrn_counts [2]);
     entry void recvTC(std::pair<Key, SpatialNode<Data>>);
     entry void loadCache(CkCallback);
     template <typename Visitor>

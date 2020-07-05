@@ -221,8 +221,8 @@ public:
   // Auxiliary functions
   // -------------------
 
-  void countInts(int* intrn_counts) {
-    CkPrintf("%d node-particle interactions, %d bucket-particle interactions\n", intrn_counts[0], intrn_counts[1] / 2);
+  void countInts(unsigned long long* intrn_counts) {
+    CkPrintf("%llu node-particle interactions, %llu bucket-particle interactions\n", intrn_counts[0], intrn_counts[1]);
   }
 
   void recvTC(std::pair<Key, SpatialNode<Data>> param) {
