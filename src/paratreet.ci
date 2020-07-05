@@ -124,7 +124,7 @@ mainmodule paratreet {
     entry Driver(CProxy_CacheManager<Data>);
     entry [threaded] void init(CkCallback cb);
     entry [threaded] void run(CkCallback cb);
-    entry [reductiontarget] void countInts(int intrn_counts [2]);
+    entry [reductiontarget] void countInts(unsigned long long intrn_counts [2]);
     entry void recvTC(std::pair<Key, SpatialNode<Data>>);
     entry void loadCache(CkCallback);
     template <typename Visitor>
