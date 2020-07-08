@@ -5,7 +5,6 @@
 #include "common.h"
 #include "Reader.h"
 #include "Splitter.h"
-#include "TreePiece.h"
 #include "TreeCanopy.h"
 #include "BoundingBox.h"
 #include "BufferedVec.h"
@@ -18,6 +17,7 @@
 #include "CountManager.h"
 #include "Resumer.h"
 #include "Driver.h"
+#include "Subtree.h"
 
 /* readonly */ CProxy_Main mainProxy;
 /* readonly */ CProxy_Reader readers;

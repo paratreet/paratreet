@@ -9,7 +9,6 @@
 #include <numeric>
 #include "Reader.h"
 #include "Splitter.h"
-#include "TreePiece.h"
 #include "TreeCanopy.h"
 #include "TreeSpec.h"
 #include "BoundingBox.h"
@@ -25,6 +24,7 @@
 #include "Modularization.h"
 #include "Node.h"
 #include "Writer.h"
+#include "Subtree.h"
 
 extern CProxy_Reader readers;
 extern CProxy_TreeSpec treespec;
@@ -54,8 +54,10 @@ public:
   BoundingBox universe;
   Key smallest_particle_key;
   Key largest_particle_key;
-  CProxy_TreePiece<CentroidData> treepieces; // Cannot be a global readonly variable
-  int n_treepieces;
+  CProxy_Subtree<CentroidData> subtrees; // Cannot be a global readonly variable
+  CProxy_Partition<CentroidData> partitions;
+  int n_subtrees;
+  int n_partitions;
   double start_time;
 
   Driver(CProxy_CacheManager<Data> cache_manager_) :
@@ -83,7 +85,7 @@ public:
     treespec.receiveDecomposition(msg);
   }
 
-  // Performs decomposition by distributing particles among TreePieces,
+  // Performs decomposition by distributing particles among Subtrees,
   // by either loading particle information from input file or re-computing
   // the universal bounding box
   void decompose(int iter) {
@@ -117,29 +119,39 @@ public:
 
     // Set up splitters for decomposition
     start_time = CkWallTimer();
-    n_treepieces = treespec.ckLocalBranch()->getDecomposition()->findSplitters(universe, readers);
+    n_subtrees = treespec.ckLocalBranch()->getDecomposition()->findSplitters(universe, readers);
+    n_partitions = n_subtrees; // TODO partitions
     broadcastDecomposition(CkCallbackResumeThread());
     CkPrintf("Setting up splitters for decomposition: %.3lf ms\n",
         (CkWallTimer() - start_time) * 1000);
 
-    // Create TreePieces
+    // Create Subtrees
     start_time = CkWallTimer();
-    treepieces = CProxy_TreePiece<CentroidData>::ckNew(CkCallbackResumeThread(),
-        universe.n_particles, n_treepieces, centroid_calculator, centroid_resumer,
-        centroid_cache, this->thisProxy, n_treepieces);
-    CkPrintf("Created %d TreePieces: %.3lf ms\n", n_treepieces,
+    subtrees = CProxy_Subtree<CentroidData>::ckNew(CkCallbackResumeThread(),
+        universe.n_particles, n_subtrees, centroid_calculator, centroid_resumer,
+        centroid_cache, this->thisProxy, n_subtrees);
+    CkPrintf("Created %d Subtrees: %.3lf ms\n", n_subtrees,
         (CkWallTimer() - start_time) * 1000);
 
-    // Flush decomposed particles to home TreePieces
+    // Create Partitions
     start_time = CkWallTimer();
-    readers.flush(universe.n_particles, n_treepieces, treepieces);
+    partitions = CProxy_Partition<CentroidData>::ckNew(
+      n_partitions, centroid_cache, centroid_resumer,
+      centroid_calculator, n_partitions
+      );
+    CkPrintf("Created %d Partitions: %.3lf ms\n", n_subtrees,
+        (CkWallTimer() - start_time) * 1000);
+
+    // Flush decomposed particles to home Subtrees
+    start_time = CkWallTimer();
+    readers.flush(universe.n_particles, n_subtrees, subtrees);
     CkStartQD(CkCallbackResumeThread());
-    CkPrintf("Flushing particles to TreePieces: %.3lf ms\n",
+    CkPrintf("Flushing particles to Subtrees: %.3lf ms\n",
         (CkWallTimer() - start_time) * 1000);
 
 #if DEBUG
-    // Check if all treepieces have received the right number of particles
-    treepieces.check(CkCallbackResumeThread());
+    // Check if all subtrees have received the right number of particles
+    subtrees.check(CkCallbackResumeThread());
 #endif
   }
 
@@ -148,15 +160,21 @@ public:
     for (int iter = 0; iter < num_iterations; iter++) {
       CkPrintf("\n* Iteration %d\n", iter);
 
-      // Start tree build in TreePieces
+      // Start tree build in Subtrees
       start_time = CkWallTimer();
       if (tree_type == OCT_TREE) {
-        treepieces.buildTree();
+        subtrees.buildTree();
       } else {
         CkAbort("Only octree is currently supported");
       }
       CkWaitQD();
       CkPrintf("Tree build: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
+
+      // Send leaves to Partitions
+      start_time = CkWallTimer();
+      subtrees.send_leaves(partitions);
+      CkWaitQD();
+      CkPrintf("Sending leaves: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
 
       // Prefetch into cache
       start_time = CkWallTimer();
@@ -170,24 +188,24 @@ public:
 
       // Perform traversals
       start_time = CkWallTimer();
-      //treepieces.template startUpAndDown<DensityVisitor>();
-      treepieces.template startDown<GravityVisitor>();
+      //subtrees.template startUpAndDown<DensityVisitor>();
+      partitions.template startDown<GravityVisitor>();
       CkWaitQD();
 #if DELAYLOCAL
-      //treepieces.processLocal(CkCallbackResumeThread());
+      //subtrees.processLocal(CkCallbackResumeThread());
 #endif
       CkPrintf("Tree traversal: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
 
       // Perform interactions
       start_time = CkWallTimer();
-      treepieces.interact(CkCallbackResumeThread());
+      partitions.interact(CkCallbackResumeThread());
       CkPrintf("Interactions: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
       //count_manager.sum(CkCallback(CkReductionTarget(Main, terminate), this->thisProxy));
 
-      // Move the particles in TreePieces
+      // Move the particles in Subtrees
       start_time = CkWallTimer();
       bool complete_rebuild = (iter % flush_period == flush_period-1);
-      treepieces.perturb(0.1, complete_rebuild); // 0.1s for example
+      subtrees.perturb(0.1, complete_rebuild); // 0.1s for example
       CkWaitQD();
       CkPrintf("Perturbations: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
 
@@ -196,13 +214,13 @@ public:
       if (iter == 0 && verify) {
         std::string output_file = input_file + ".acc";
         CProxy_Writer w = CProxy_Writer::ckNew(output_file, universe.n_particles);
-        treepieces[0].output(w, CkCallbackResumeThread());
+        subtrees[0].output(w, CkCallbackResumeThread());
         CkPrintf("Outputting particle accelerations for verification...\n");
       }
 
-      // Destroy treepieces and perform decomposition from scratch
+      // Destroy subtrees and perform decomposition from scratch
       if (complete_rebuild) {
-        treepieces.destroy();
+        subtrees.destroy();
         decompose(iter+1);
       }
 

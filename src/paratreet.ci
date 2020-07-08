@@ -79,32 +79,41 @@ mainmodule paratreet {
   }
 
   template <typename Data>
-  array [1d] TreePiece {
-    entry TreePiece(const CkCallback&, int, int, TCHolder<Data>, CProxy_Resumer<Data>, CProxy_CacheManager<Data>, DPHolder<Data>);
-    entry void receive(ParticleMsg*);
-    entry void check(const CkCallback&);
-    entry void buildTree();
-    entry void triggerRequest();
-    template<typename Visitor> entry void startDown();
-    template<typename Visitor> entry void startUpAndDown();
-    template<typename Visitor> entry void startDual();
+  array [1d] Partition {
+    entry Partition(int, CProxy_CacheManager<Data>, CProxy_Resumer<Data>, TCHolder<Data>);
+    template <typename Visitor> entry void startDown();
     entry void interact(const CkCallback&);
     entry void goDown(Key);
+  }
+  array [1d] Partition<CentroidData>;
+
+  extern entry void Partition<CentroidData> startDown<GravityVisitor> ();
+  /* extern entry void Subtree<CentroidData> startDown<GravityVisitor> (); */
+  /* extern entry void Subtree<CentroidData> startDual<GravityVisitor> (); */
+  /* extern entry void Subtree<CentroidData> startUpAndDown<DensityVisitor> (); */
+  /* extern entry void Subtree<CentroidData> startDown<PressureVisitor> (); */
+  /* extern entry void Subtree<CentroidData> startDual<CountVisitor> (); */
+
+  template <typename Data>
+  array [1d] Subtree {
+    entry Subtree(const CkCallback&, int, int, TCHolder<Data>, CProxy_Resumer<Data>, CProxy_CacheManager<Data>, DPHolder<Data>);
+    entry void receive(ParticleMsg*);
+    entry void buildTree();
+    /* template<typename Visitor> entry void startDown(); */
+    /* template<typename Visitor> entry void startUpAndDown(); */
+    /* template<typename Visitor> entry void startDual(); */
+    /* entry void interact(const CkCallback&); */
+    /* entry void goDown(Key); */
     entry void requestNodes(Key, int);
     entry void perturb(Real timestep, bool);
     entry void flush(CProxy_Reader);
     entry void destroy();
 
+    entry void send_leaves(CProxy_Partition<Data>);
     entry void checkParticlesChanged(const CkCallback&);
     entry void output(CProxy_Writer w, CkCallback cb);
-  };
-  array [1d] TreePiece<CentroidData>;
-
-  extern entry void TreePiece<CentroidData> startDown<GravityVisitor> ();
-  extern entry void TreePiece<CentroidData> startDual<GravityVisitor> ();
-  extern entry void TreePiece<CentroidData> startUpAndDown<DensityVisitor> ();
-  extern entry void TreePiece<CentroidData> startDown<PressureVisitor> ();
-  extern entry void TreePiece<CentroidData> startDual<CountVisitor> ();
+  }
+  array [1d] Subtree<CentroidData>;
 
   template <typename Data>
   array [1d] TreeCanopy {
@@ -137,7 +146,7 @@ mainmodule paratreet {
     entry void computeUniverseBoundingBox(const CkCallback&);
     entry void assignKeys(BoundingBox, const CkCallback&);
     template <typename Data>
-    entry void request(CProxy_TreePiece<Data>, int, int);
+    entry void request(CProxy_Subtree<Data>, int, int);
     entry void countOct(std::vector<Key>, const CkCallback&);
     //entry void countSfc(const std::vector<Key>&, const CkCallback&);
     entry void pickSamples(const int, const CkCallback&);
@@ -147,7 +156,7 @@ mainmodule paratreet {
     entry void localSort(const CkCallback&);
     entry void checkSort(const Key, const CkCallback&);
     template <typename Data>
-    entry void flush(int, int, CProxy_TreePiece<Data>);
+    entry void flush(int, int, CProxy_Subtree<Data>);
   };
 
   group TreeSpec {
@@ -156,8 +165,8 @@ mainmodule paratreet {
     entry [local] Decomposition* getDecomposition();
   }
 
-  extern entry void Reader request<CentroidData>(CProxy_TreePiece<CentroidData>, int, int);
-  extern entry void Reader flush<CentroidData>(int, int, CProxy_TreePiece<CentroidData>);
+  extern entry void Reader request<CentroidData>(CProxy_Subtree<CentroidData>, int, int);
+  extern entry void Reader flush<CentroidData>(int, int, CProxy_Subtree<CentroidData>);
 
   group CountManager {
     entry CountManager(double min, double max, int nbins);

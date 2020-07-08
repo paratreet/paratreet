@@ -7,7 +7,7 @@
 #include "CacheManager.h"
 
 template<typename Data>
-class CProxy_TreePiece;
+class CProxy_Subtree;
 
 template<typename Data>
 class CProxy_CacheManager;
@@ -17,8 +17,8 @@ class TreeCanopy : public CBase_TreeCanopy<Data> {
 private:
   SpatialNode<Data> my_sn;
   int recv_count = 0;
-  int tp_index; // If -1, sits above TreePieces
-  CProxy_TreePiece<Data> tp_proxy;
+  int tp_index; // If -1, sits above Subtrees
+  CProxy_Subtree<Data> tp_proxy;
   CProxy_CacheManager<Data> cm_proxy;
   CProxy_Driver<Data> d_proxy;
 public:
@@ -38,7 +38,7 @@ void TreeCanopy<Data>::reset() {
 
 template <typename Data>
 void TreeCanopy<Data>::recvProxies(TPHolder<Data> tp_holder, int tp_index_,
-    CProxy_CacheManager<Data> cm_proxy_, DPHolder<Data> dp_holder) {
+                                   CProxy_CacheManager<Data> cm_proxy_, DPHolder<Data> dp_holder) {
   tp_proxy = tp_holder.proxy;
   tp_index = tp_index_;
   cm_proxy = cm_proxy_;
@@ -47,7 +47,7 @@ void TreeCanopy<Data>::recvProxies(TPHolder<Data> tp_holder, int tp_index_,
 
 template <typename Data>
 void TreeCanopy<Data>::recvData(SpatialNode<Data> child, int branch_factor) {
-  // Accumulate data received from TreePiece or children TreeCanopies
+  // Accumulate data received from Subtree or children TreeCanopies
   my_sn.data += child.data;
   my_sn.n_particles += child.n_particles;
   my_sn.depth = child.depth - 1;

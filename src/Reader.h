@@ -42,15 +42,15 @@ class Reader : public CBase_Reader {
     void localSort(const CkCallback&);
     void checkSort(const Key, const CkCallback&);
     template <typename Data>
-    void request(CProxy_TreePiece<Data>, int, int);
+    void request(CProxy_Subtree<Data>, int, int);
 
-    // Sending particles to home TreePieces
+    // Sending particles to home Subtrees
     template <typename Data>
-    void flush(int, int, CProxy_TreePiece<Data>);
+    void flush(int, int, CProxy_Subtree<Data>);
 };
 
 template <typename Data>
-void Reader::request(CProxy_TreePiece<Data> tp_proxy, int index, int num_to_give) {
+void Reader::request(CProxy_Subtree<Data> tp_proxy, int index, int num_to_give) {
   int n_particles = box.n_particles;
   ParticleMsg* msg = new (num_to_give) ParticleMsg(&particles[0], num_to_give);
   for (int i = 0; i < n_particles - num_to_give; i++) {
@@ -63,7 +63,7 @@ void Reader::request(CProxy_TreePiece<Data> tp_proxy, int index, int num_to_give
 }
 
 template <typename Data>
-void Reader::flush(int n_total_particles, int n_treepieces, CProxy_TreePiece<Data> treepieces) {
+void Reader::flush(int n_total_particles, int n_treepieces, CProxy_Subtree<Data> treepieces) {
   auto sendParticles = [&](int dest, int n_particles, Particle* particles) {
     ParticleMsg* msg = new (n_particles) ParticleMsg(particles, n_particles);
     treepieces[dest].receive(msg);
