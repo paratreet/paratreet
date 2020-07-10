@@ -11,7 +11,7 @@ int main(void)
 
 	fgets(ach, LINE_SIZE, stdin);
 	a = scanf("%lg",&da);
-	if (a != 1) return;
+	if (a != 1) return 1;
 	dmin = da;
 	while (1) {
 		a = scanf("%lg",&da);

@@ -36,7 +36,7 @@ public:
     if (p.isUnpacking()) {
       particles_ = nullptr;
     }
-  } 
+  }
 
 public:
   Data      data;

@@ -82,7 +82,7 @@ public:
     Visitor v;
     std::vector<int> new_active_buckets;
 #if DEBUG
-    CkPrintf("tp %d, key = %d, type = %d, pe %d\n", tp.thisIndex, node->key, node->type, CkMyPe());
+    CkPrintf("tp %d, key = %d, type = %d, pe %d\n", part.thisIndex, node->key, node->type, CkMyPe());
 #endif
     switch (node->type) {
       case Node<Data>::Type::Leaf:

@@ -1,7 +1,7 @@
 #
 #	Makefile for array and vector tools
 #
-CFLAGS = -O2 -g
+CFLAGS = -O2
 LDLIBS = -lm
 EXEDIR = .
 

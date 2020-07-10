@@ -6,10 +6,14 @@
 #include "Particle.h"
 #include "Traverser.h"
 #include "ParticleMsg.h"
+#include "NodeWrapper.h"
 #include "paratreet.decl.h"
+
+extern CProxy_TreeSpec treespec;
 
 template <typename Data>
 struct Partition : public CBase_Partition<Data> {
+  std::vector<Particle> particles;
   std::vector<Node<Data>*> leaves;
   Traverser<Data> *traverser;
 
@@ -27,6 +31,10 @@ struct Partition : public CBase_Partition<Data> {
   template<typename Visitor> void startDown();
   void goDown(Key);
   void interact(const CkCallback& cb);
+
+  void receive_leaves(std::vector<NodeWrapper<Data>>);
+  void receive(ParticleMsg*);
+  void reset();
 };
 
 template <typename Data>
@@ -51,6 +59,7 @@ template <typename Data>
 template <typename Visitor>
 void Partition<Data>::startDown()
 {
+  interactions.resize(leaves.size());
   traverser = new DownTraverser<Data, Visitor>(*this);
   traverser->start();
 }
@@ -66,6 +75,40 @@ void Partition<Data>::interact(const CkCallback& cb)
 {
   traverser->interact();
   this->contribute(cb);
+}
+
+template <typename Data>
+void Partition<Data>::receive_leaves(std::vector<NodeWrapper<Data>> data)
+{
+  int from = 0;
+  for (const NodeWrapper<Data>& leaf : data) {
+    Key k = Utility::removeLeadingZeros(leaf.key);
+    from = Utility::binarySearchGE(k, &particles[0], from, particles.size());
+    int to = Utility::binarySearchGE(k, &particles[0], from + 1, particles.size());
+    Node<Data> *node = treespec.ckLocalBranch()->template makeNode<Data>(
+      leaf.key, leaf.depth, leaf.n_particles, &particles[from],
+      this->thisIndex, this->thisIndex, leaf.is_leaf, nullptr, this->thisIndex
+      );
+    node->type = Node<Data>::Type::Leaf;
+    leaves.push_back(node);
+  }
+}
+
+template <typename Data>
+void Partition<Data>::receive(ParticleMsg *msg)
+{
+  particles.clear();
+  particles.insert(particles.end(),
+                   msg->particles, msg->particles + msg->n_particles);
+  delete msg;
+  std::sort(particles.begin(), particles.end());
+}
+
+template <typename Data>
+void Partition<Data>::reset()
+{
+  leaves.clear();
+  interactions.clear();
 }
 
 #endif /* _PARTITION_H_ */

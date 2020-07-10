@@ -5,6 +5,7 @@
 #include "common.h"
 #include "templates.h"
 #include "ParticleMsg.h"
+#include "NodeWrapper.h"
 #include "Node.h"
 #include "Utility.h"
 #include "Reader.h"
@@ -136,6 +137,16 @@ template <typename Data>
 void Subtree<Data>::send_leaves(CProxy_Partition<Data> part)
 {
   // TODO
+  std::vector<NodeWrapper<Data>> node_data;
+  for (Node<Data> *leaf : leaves)
+    if (leaf)
+      node_data.push_back(NodeWrapper<Data>(
+                            leaf->key, leaf->n_particles, leaf->depth,
+                            leaf->getBranchFactor(), leaf->is_leaf, leaf->data
+                            ));
+  // for now we just send leaves to the partition with the same index
+  // later will have to decide where to send leaves based on decomposition
+  part[this->thisIndex].receive_leaves(node_data);
 }
 
 template <typename Data>
@@ -373,29 +384,6 @@ void Subtree<Data>::initCache() {
     cache_init = true;
   }
 }
-
-// template <typename Data>
-// template <typename Visitor>
-// void Subtree<Data>::startDown() {
-//   traverser = new DownTraverser<Data, Visitor>(*this);
-//   traverser->start();
-// }
-
-// template <typename Data>
-// template <typename Visitor>
-// void Subtree<Data>::startUpAndDown() {
-//   traverser = new UpnDTraverser<Data, Visitor>(*this);
-//   traverser->start();
-// }
-
-// template <typename Data>
-// template <typename Visitor>
-// void Subtree<Data>::startDual() {
-//   auto && keys = ((SfcDecomposition*)treespec.ckLocalBranch()->getDecomposition())->getAllTpKeys(n_treepieces);
-//   traverser = new DualTraverser<Data, Visitor>(*this, keys);
-//   traverser->start();
-//   // root needs to be the root of the searched tree, not the searching tree
-// }
 
 template <typename Data>
 void Subtree<Data>::requestNodes(Key key, int cm_index) {

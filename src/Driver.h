@@ -142,9 +142,10 @@ public:
     CkPrintf("Created %d Partitions: %.3lf ms\n", n_subtrees,
         (CkWallTimer() - start_time) * 1000);
 
-    // Flush decomposed particles to home Subtrees
+    // Flush decomposed particles to home Subtrees and Partitions
+    // TODO Separate decomposition for Subtrees and Partitions
     start_time = CkWallTimer();
-    readers.flush(universe.n_particles, n_subtrees, subtrees);
+    readers.flush(universe.n_particles, n_subtrees, subtrees, partitions);
     CkStartQD(CkCallbackResumeThread());
     CkPrintf("Flushing particles to Subtrees: %.3lf ms\n",
         (CkWallTimer() - start_time) * 1000);
@@ -159,6 +160,9 @@ public:
   void run(CkCallback cb) {
     for (int iter = 0; iter < num_iterations; iter++) {
       CkPrintf("\n* Iteration %d\n", iter);
+
+      // Reset partition state
+      partitions.reset();
 
       // Start tree build in Subtrees
       start_time = CkWallTimer();
@@ -264,6 +268,7 @@ public:
     else {
       CkPrintf("Broadcasting every tree canopy because num_share_levels is unset\n");
     }
+
     // Send data to caches
     cache_manager.recvStarterPack(storage.data(), send_size, cb);
   }

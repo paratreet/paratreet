@@ -8,6 +8,7 @@ mainmodule paratreet {
   class CProxy_TreeSpec;
   include "MultiData.h";
   include "Decomposition.h";
+  include "NodeWrapper.h";
 
   readonly CProxy_Main mainProxy;
   readonly CProxy_Reader readers;
@@ -84,6 +85,9 @@ mainmodule paratreet {
     template <typename Visitor> entry void startDown();
     entry void interact(const CkCallback&);
     entry void goDown(Key);
+    entry void receive_leaves(std::vector<NodeWrapper<Data>>);
+    entry void receive(ParticleMsg*);
+    entry void reset();
   }
   array [1d] Partition<CentroidData>;
 
@@ -156,7 +160,7 @@ mainmodule paratreet {
     entry void localSort(const CkCallback&);
     entry void checkSort(const Key, const CkCallback&);
     template <typename Data>
-    entry void flush(int, int, CProxy_Subtree<Data>);
+    entry void flush(int, int, CProxy_Subtree<Data>, CProxy_Partition<Data>);
   };
 
   group TreeSpec {
@@ -166,7 +170,7 @@ mainmodule paratreet {
   }
 
   extern entry void Reader request<CentroidData>(CProxy_Subtree<CentroidData>, int, int);
-  extern entry void Reader flush<CentroidData>(int, int, CProxy_Subtree<CentroidData>);
+  extern entry void Reader flush<CentroidData>(int, int, CProxy_Subtree<CentroidData>, CProxy_Partition<CentroidData>);
 
   group CountManager {
     entry CountManager(double min, double max, int nbins);
