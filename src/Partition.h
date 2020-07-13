@@ -81,6 +81,10 @@ void Partition<Data>::goDown(Key new_key)
 template <typename Data>
 void Partition<Data>::interact(const CkCallback& cb)
 {
+  int total = 0;
+  for (const auto& v : interactions) total += v.size();
+  CkPrintf("%d has %d interactions\n", this->thisIndex, total);
+
   traverser->interact();
   this->contribute(cb);
 }
