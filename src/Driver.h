@@ -203,6 +203,15 @@ public:
       CkPrintf("Interactions: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
       //count_manager.sum(CkCallback(CkReductionTarget(Main, terminate), this->thisProxy));
 
+      // Output particle accelerations for verification
+      // TODO: Initial force interactions similar to ChaNGa
+      if (iter == 0 && verify) {
+        std::string output_file = input_file + ".acc";
+        CProxy_Writer w = CProxy_Writer::ckNew(output_file, universe.n_particles);
+        partitions[0].output(w, CkCallbackResumeThread());
+        CkPrintf("Outputting particle accelerations for verification...\n");
+      }
+
       // Move the particles in Subtrees
       start_time = CkWallTimer();
       bool complete_rebuild = (iter % flush_period == flush_period-1);
@@ -210,15 +219,6 @@ public:
       partitions.perturb(0.1, complete_rebuild);
       CkWaitQD();
       CkPrintf("Perturbations: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
-
-      // Output particle accelerations for verification
-      // TODO: Initial force interactions similar to ChaNGa
-      if (iter == 0 && verify) {
-        std::string output_file = input_file + ".acc";
-        CProxy_Writer w = CProxy_Writer::ckNew(output_file, universe.n_particles);
-        partitions[0].output(w, CkCallbackResumeThread(), complete_rebuild);
-        CkPrintf("Outputting particle accelerations for verification...\n");
-      }
 
       // Destroy subtrees and perform decomposition from scratch
       if (complete_rebuild) {

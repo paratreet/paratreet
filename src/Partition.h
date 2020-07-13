@@ -16,7 +16,6 @@ template <typename Data>
 struct Partition : public CBase_Partition<Data> {
   std::vector<Particle> particles;
   std::vector<Node<Data>*> leaves;
-  std::vector<Particle> flushed_particles; // for output
 
   Traverser<Data> *traverser;
   int n_partitions;
@@ -42,7 +41,7 @@ struct Partition : public CBase_Partition<Data> {
   void reset();
   void perturb(Real, bool);
   void flush(CProxy_Reader);
-  void output(CProxy_Writer w, CkCallback cb, bool);
+  void output(CProxy_Writer w, CkCallback cb);
 };
 
 template <typename Data>
@@ -146,20 +145,13 @@ void Partition<Data>::flush(CProxy_Reader readers)
     particles.data(), particles.size()
     );
   readers[CkMyPe()].receive(msg);
-  flushed_particles = std::move(particles);
   particles.clear();
 }
 
 template <typename Data>
-void Partition<Data>::output(CProxy_Writer w, CkCallback cb, bool flushed)
+void Partition<Data>::output(CProxy_Writer w, CkCallback cb)
 {
-  std::vector<Particle> particles = flushed ? flushed_particles : particles;
-  // std::vector<Particle> particles;
-
-  // for (const auto& leaf : leaves) {
-  //   particles.insert(particles.end(),
-  //                    leaf->particles(), leaf->particles() + leaf->n_particles);
-  // }
+  std::vector<Particle> particles = this->particles;
 
   std::sort(particles.begin(), particles.end(),
             [](const Particle& left, const Particle& right) {
@@ -189,7 +181,7 @@ void Partition<Data>::output(CProxy_Writer w, CkCallback cb, bool flushed)
   }
 
   if (this->thisIndex != n_partitions - 1)
-    this->thisProxy[this->thisIndex + 1].output(w, cb, flushed);
+    this->thisProxy[this->thisIndex + 1].output(w, cb);
 }
 
 #endif /* _PARTITION_H_ */
