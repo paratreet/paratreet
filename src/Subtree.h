@@ -183,7 +183,7 @@ template <typename Data>
 bool Subtree<Data>::recursiveBuild(Node<Data>* node, Particle* node_particles, bool saw_tp_key, size_t log_branch_factor) {
 #if DEBUG
   //CkPrintf("[Level %d] created node 0x%" PRIx64 " with %d particles\n",
-  //  node->depth, node->key, node->n_particles);
+    //  node->depth, node->key, node->n_particles);
 #endif
   // store reference to splitters
   //static std::vector<Splitter>& splitters = readers.ckLocalBranch()->splitters;
@@ -221,52 +221,52 @@ bool Subtree<Data>::recursiveBuild(Node<Data>* node, Particle* node_particles, b
 
   // For all other cases, we go deeper
   /* XXX: For SFC?
-     int owner_start = node->owner_tp_start;
-     int owner_end = node->owner_tp_end;
-     bool single_owner = (owner_start == owner_end);
+  int owner_start = node->owner_tp_start;
+  int owner_end = node->owner_tp_end;
+  bool single_owner = (owner_start == owner_end);
 
-     if (is_light) {
-     if (saw_tp_key) {
-     // we can make the node a local leaf
-     if (node->n_particles == 0)
-     node->type = Node<Data>::EmptyLeaf;
-     else
-     node->type = Node<Data>::Leaf;
+  if (is_light) {
+    if (saw_tp_key) {
+      // we can make the node a local leaf
+      if (node->n_particles == 0)
+        node->type = Node<Data>::EmptyLeaf;
+      else
+        node->type = Node<Data>::Leaf;
 
-     return true;
-     }
-     else if (!is_prefix) {
-     // we have diverged from the path to the subtree rooted at the treepiece's key
-     // so designate as remote
-     node->type = Node<Data>::Remote;
+        return true;
+    }
+    else if (!is_prefix) {
+      // we have diverged from the path to the subtree rooted at the treepiece's key
+      // so designate as remote
+      node->type = Node<Data>::Remote;
 
-     CkAssert(node->n_particles == 0);
-     CkAssert(node->n_children == 0);
+      CkAssert(node->n_particles == 0);
+      CkAssert(node->n_children == 0);
 
-     if (single_owner) {
-     int assigned = splitters[owner_start].n_particles;
-     if (assigned == 0) {
-     node->type = Node<Data>::RemoteEmptyLeaf;
-     }
-     else if (assigned <= BUCKET_TOLERANCE * max_particles_per_leaf) {
-     node->type = Node<Data>::RemoteLeaf;
-     }
-     else {
-     node->type = Node<Data>::Remote;
-     node->n_children = BRANCH_FACTOR;
-     }
-     }
-     else {
-     node->type = Node<Data>::Remote;
-     node->n_children = BRANCH_FACTOR;
-     }
+      if (single_owner) {
+        int assigned = splitters[owner_start].n_particles;
+        if (assigned == 0) {
+          node->type = Node<Data>::RemoteEmptyLeaf;
+        }
+        else if (assigned <= BUCKET_TOLERANCE * max_particles_per_leaf) {
+          node->type = Node<Data>::RemoteLeaf;
+        }
+        else {
+          node->type = Node<Data>::Remote;
+          node->n_children = BRANCH_FACTOR;
+        }
+      }
+      else {
+        node->type = Node<Data>::Remote;
+        node->n_children = BRANCH_FACTOR;
+      }
 
-     return false;
-     }
-     else {
-     CkAbort("Error: can a light node be an internal node (above a TP root)?");
-     }
-     }
+      return false;
+    }
+    else {
+      CkAbort("Error: can a light node be an internal node (above a TP root)?");
+    }
+  }
   */
 
   // Create children
@@ -294,26 +294,26 @@ bool Subtree<Data>::recursiveBuild(Node<Data>* node, Particle* node_particles, b
     int child_owner_start = owner_start;
     int child_owner_end;
     if (single_owner) {
-    child_owner_end = child_owner_start;
+      child_owner_end = child_owner_start;
     }
     else {
-    if (i < node->n_children - 1) {
-    int first_ge_tp = Utility::binarySearchGE(sibling_splitter, &splitters[0], owner_start, owner_end);
-    child_owner_end = first_ge_tp - 1;
-    owner_start = first_ge_tp;
-    }
-    else {
-    child_owner_end = owner_end;
-    }
+      if (i < node->n_children - 1) {
+        int first_ge_tp = Utility::binarySearchGE(sibling_splitter, &splitters[0], owner_start, owner_end);
+        child_owner_end = first_ge_tp - 1;
+        owner_start = first_ge_tp;
+      }
+      else {
+        child_owner_end = owner_end;
+      }
     }
     */
 
     // Create child and store in vector
     Node<Data>* child = treespec.ckLocalBranch()->template makeNode<Data>(child_key, node->depth + 1,
-                                                                          n_particles, node_particles + start, 0, n_treepieces - 1, true, node, this->thisIndex);
+        n_particles, node_particles + start, 0, n_treepieces - 1, true, node, this->thisIndex);
     /*
-      Node<Data>* child = new Node<Data>(child_key, node->depth + 1, node->particles + start,
-      n_particles, child_owner_start, child_owner_end, node);
+    Node<Data>* child = new Node<Data>(child_key, node->depth + 1, node->particles + start,
+        n_particles, child_owner_start, child_owner_end, node);
     */
     node->exchangeChild(i, child);;
 
