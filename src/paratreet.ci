@@ -89,6 +89,9 @@ mainmodule paratreet {
     entry void receive(ParticleMsg*);
     entry void destroy();
     entry void reset();
+    entry void perturb(Real, bool);
+    entry void flush(CProxy_Reader);
+    entry void output(CProxy_Writer w, CkCallback cb, bool);
   }
   array [1d] Partition<CentroidData>;
 

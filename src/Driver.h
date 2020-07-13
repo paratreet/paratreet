@@ -206,7 +206,8 @@ public:
       // Move the particles in Subtrees
       start_time = CkWallTimer();
       bool complete_rebuild = (iter % flush_period == flush_period-1);
-      subtrees.perturb(0.1, complete_rebuild); // 0.1s for example
+      //subtrees.perturb(0.1, complete_rebuild); // 0.1s for example
+      partitions.perturb(0.1, complete_rebuild);
       CkWaitQD();
       CkPrintf("Perturbations: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
 
@@ -215,19 +216,16 @@ public:
       if (iter == 0 && verify) {
         std::string output_file = input_file + ".acc";
         CProxy_Writer w = CProxy_Writer::ckNew(output_file, universe.n_particles);
-        subtrees[0].output(w, CkCallbackResumeThread());
+        partitions[0].output(w, CkCallbackResumeThread(), complete_rebuild);
         CkPrintf("Outputting particle accelerations for verification...\n");
       }
-
-      // reset partition state
-      partitions.reset();
 
       // Destroy subtrees and perform decomposition from scratch
       if (complete_rebuild) {
         subtrees.destroy();
         partitions.destroy();
         decompose(iter+1);
-      }
+      } else partitions.reset();
 
       // Clear cache and other storages used in this iteration
       centroid_cache.destroy(true);

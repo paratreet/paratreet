@@ -14,10 +14,11 @@ struct NodeWrapper {
 
   void pup(PUP::er& p) {
     p | key;
+    p | n_particles;
     p | depth;
-    p | data;
-    p | is_leaf;
     p | branch_factor;
+    p | is_leaf;
+    p | data;
   }
 
   NodeWrapper(Key k, int np, int de, int bf, bool l, Data d)

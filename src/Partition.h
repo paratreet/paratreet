@@ -10,12 +10,16 @@
 #include "paratreet.decl.h"
 
 extern CProxy_TreeSpec treespec;
+extern CProxy_Reader readers;
 
 template <typename Data>
 struct Partition : public CBase_Partition<Data> {
   std::vector<Particle> particles;
   std::vector<Node<Data>*> leaves;
+  std::vector<Particle> flushed_particles; // for output
+
   Traverser<Data> *traverser;
+  int n_partitions;
 
   // filled in during traversal
   std::vector<std::vector<Node<Data>*>> interactions;
@@ -36,14 +40,18 @@ struct Partition : public CBase_Partition<Data> {
   void receive(ParticleMsg*);
   void destroy();
   void reset();
+  void perturb(Real, bool);
+  void flush(CProxy_Reader);
+  void output(CProxy_Writer w, CkCallback cb, bool);
 };
 
 template <typename Data>
 Partition<Data>::Partition(
-  int n_partitions, CProxy_CacheManager<Data> cm,
+  int np, CProxy_CacheManager<Data> cm,
   CProxy_Resumer<Data> rp, TCHolder<Data> tc_holder
   )
 {
+  n_partitions = np;
   tc_proxy = tc_holder.proxy;
   r_proxy = rp;
   r_local = r_proxy.ckLocalBranch();
@@ -119,6 +127,69 @@ void Partition<Data>::reset()
 {
   leaves.clear();
   interactions.clear();
+}
+
+template <typename Data>
+void Partition<Data>::perturb(Real timestep, bool if_flush)
+{
+  // TODO: how do we decide when to send particles to other partitions?
+  for (auto& p : particles)
+    p.perturb(timestep, readers.ckLocalBranch()->universe.box);
+  if (if_flush)
+    flush(readers);
+}
+
+template <typename Data>
+void Partition<Data>::flush(CProxy_Reader readers)
+{
+  ParticleMsg *msg = new (particles.size()) ParticleMsg(
+    particles.data(), particles.size()
+    );
+  readers[CkMyPe()].receive(msg);
+  flushed_particles = std::move(particles);
+  particles.clear();
+}
+
+template <typename Data>
+void Partition<Data>::output(CProxy_Writer w, CkCallback cb, bool flushed)
+{
+  std::vector<Particle> particles = flushed ? flushed_particles : particles;
+  // std::vector<Particle> particles;
+
+  // for (const auto& leaf : leaves) {
+  //   particles.insert(particles.end(),
+  //                    leaf->particles(), leaf->particles() + leaf->n_particles);
+  // }
+
+  std::sort(particles.begin(), particles.end(),
+            [](const Particle& left, const Particle& right) {
+              return left.order < right.order;
+            });
+
+  int n_total_particles = readers.ckLocalBranch()->universe.n_particles;
+  int particles_per_writer = n_total_particles / CkNumPes();
+  if (particles_per_writer * CkNumPes() != n_total_particles)
+    ++particles_per_writer;
+
+  int particle_idx = 0;
+  while (particle_idx < particles.size()) {
+    int writer_idx = particles[particle_idx].order / particles_per_writer;
+    int first_particle = writer_idx * particles_per_writer;
+    std::vector<Particle> writer_particles;
+
+    while (
+      particles[particle_idx].order < first_particle + particles_per_writer
+      && particle_idx < particles.size()
+      ) {
+      writer_particles.push_back(particles[particle_idx]);
+      ++particle_idx;
+    }
+
+    w[writer_idx].receive(writer_particles, cb);
+  }
+
+  if (this->thisIndex != n_partitions - 1)
+    this->thisProxy[this->thisIndex + 1].output(w, cb, flushed);
 }
 
 #endif /* _PARTITION_H_ */
