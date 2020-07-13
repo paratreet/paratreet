@@ -32,8 +32,9 @@ struct Partition : public CBase_Partition<Data> {
   void goDown(Key);
   void interact(const CkCallback& cb);
 
-  void receive_leaves(std::vector<NodeWrapper<Data>>);
+  void receive_leaves(std::vector<NodeWrapper<Data>>, int);
   void receive(ParticleMsg*);
+  void destroy();
   void reset();
 };
 
@@ -78,16 +79,20 @@ void Partition<Data>::interact(const CkCallback& cb)
 }
 
 template <typename Data>
-void Partition<Data>::receive_leaves(std::vector<NodeWrapper<Data>> data)
+void Partition<Data>::receive_leaves(
+  std::vector<NodeWrapper<Data>> data, int subtree_idx
+  )
 {
   int from = 0;
   for (const NodeWrapper<Data>& leaf : data) {
     Key k = Utility::removeLeadingZeros(leaf.key);
     from = Utility::binarySearchGE(k, &particles[0], from, particles.size());
     int to = Utility::binarySearchGE(k, &particles[0], from + 1, particles.size());
+    CkAssert(leaf.n_particles == to - from);
+    // ^ Not necessarily true for SFC for "shared" nodes?
     Node<Data> *node = treespec.ckLocalBranch()->template makeNode<Data>(
       leaf.key, leaf.depth, leaf.n_particles, &particles[from],
-      this->thisIndex, this->thisIndex, leaf.is_leaf, nullptr, this->thisIndex
+      subtree_idx, subtree_idx, leaf.is_leaf, nullptr, subtree_idx
       );
     node->type = Node<Data>::Type::Leaf;
     leaves.push_back(node);
@@ -97,11 +102,16 @@ void Partition<Data>::receive_leaves(std::vector<NodeWrapper<Data>> data)
 template <typename Data>
 void Partition<Data>::receive(ParticleMsg *msg)
 {
-  particles.clear();
   particles.insert(particles.end(),
                    msg->particles, msg->particles + msg->n_particles);
   delete msg;
   std::sort(particles.begin(), particles.end());
+}
+
+template <typename Data>
+void Partition<Data>::destroy()
+{
+  this->thisProxy[this->thisIndex].ckDestroy();
 }
 
 template <typename Data>

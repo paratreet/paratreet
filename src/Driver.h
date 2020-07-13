@@ -161,9 +161,6 @@ public:
     for (int iter = 0; iter < num_iterations; iter++) {
       CkPrintf("\n* Iteration %d\n", iter);
 
-      // Reset partition state
-      partitions.reset();
-
       // Start tree build in Subtrees
       start_time = CkWallTimer();
       if (tree_type == OCT_TREE) {
@@ -222,9 +219,13 @@ public:
         CkPrintf("Outputting particle accelerations for verification...\n");
       }
 
+      // reset partition state
+      partitions.reset();
+
       // Destroy subtrees and perform decomposition from scratch
       if (complete_rebuild) {
         subtrees.destroy();
+        partitions.destroy();
         decompose(iter+1);
       }
 

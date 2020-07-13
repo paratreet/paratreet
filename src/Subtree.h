@@ -56,7 +56,7 @@ public:
   bool recursiveBuild(Node<Data>*, Particle* node_particles, bool, size_t);
   void populateTree();
   inline void initCache();
-  void send_leaves(CProxy_Partition<Data> p);
+  void send_leaves(CProxy_Partition<Data>);
   void requestNodes(Key, int);
   void print(Node<Data>*);
   void perturb (Real timestep, bool);
@@ -136,17 +136,16 @@ void Subtree<Data>::receive(ParticleMsg* msg) {
 template <typename Data>
 void Subtree<Data>::send_leaves(CProxy_Partition<Data> part)
 {
-  // TODO
   std::vector<NodeWrapper<Data>> node_data;
   for (Node<Data> *leaf : leaves)
     if (leaf)
-      node_data.push_back(NodeWrapper<Data>(
-                            leaf->key, leaf->n_particles, leaf->depth,
-                            leaf->getBranchFactor(), leaf->is_leaf, leaf->data
-                            ));
+      node_data.push_back(
+        NodeWrapper<Data>(leaf->key, leaf->n_particles, leaf->depth,
+                          leaf->getBranchFactor(), leaf->is_leaf, leaf->data)
+        );
   // for now we just send leaves to the partition with the same index
   // later will have to decide where to send leaves based on decomposition
-  part[this->thisIndex].receive_leaves(node_data);
+  part[this->thisIndex].receive_leaves(node_data, this->thisIndex);
 }
 
 template <typename Data>

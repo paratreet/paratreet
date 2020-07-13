@@ -85,8 +85,9 @@ mainmodule paratreet {
     template <typename Visitor> entry void startDown();
     entry void interact(const CkCallback&);
     entry void goDown(Key);
-    entry void receive_leaves(std::vector<NodeWrapper<Data>>);
+    entry void receive_leaves(std::vector<NodeWrapper<Data>>, int);
     entry void receive(ParticleMsg*);
+    entry void destroy();
     entry void reset();
   }
   array [1d] Partition<CentroidData>;
