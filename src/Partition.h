@@ -81,10 +81,6 @@ void Partition<Data>::goDown(Key new_key)
 template <typename Data>
 void Partition<Data>::interact(const CkCallback& cb)
 {
-  int total = 0;
-  for (const auto& v : interactions) total += v.size();
-  CkPrintf("%d has %d interactions\n", this->thisIndex, total);
-
   traverser->interact();
   this->contribute(cb);
 }
@@ -106,6 +102,7 @@ void Partition<Data>::receive_leaves(
       subtree_idx, subtree_idx, leaf.is_leaf, nullptr, subtree_idx
       );
     node->type = Node<Data>::Type::Leaf;
+    node->data = Data(node->particles(), node->n_particles);
     leaves.push_back(node);
   }
 }

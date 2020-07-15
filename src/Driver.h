@@ -135,9 +135,11 @@ public:
 
     // Create Partitions
     start_time = CkWallTimer();
+    CkArrayOptions opts(n_partitions);
+    opts.bindTo(subtrees);
     partitions = CProxy_Partition<CentroidData>::ckNew(
       n_partitions, centroid_cache, centroid_resumer,
-      centroid_calculator, n_partitions
+      centroid_calculator, opts
       );
     CkPrintf("Created %d Partitions: %.3lf ms\n", n_subtrees,
         (CkWallTimer() - start_time) * 1000);
