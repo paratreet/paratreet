@@ -15,7 +15,7 @@ private:
 
   void addGravity(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
     // Loop unrolling with a factor of 8
-    const int UNROLL_FACTOR = 8;
+    static constexpr int UNROLL_FACTOR = 8;
     const Vector3D<Real>& centroid = source.data.centroid;
     const Real& sum_mass = source.data.sum_mass;
     Vector3D<Real> diff[UNROLL_FACTOR];
