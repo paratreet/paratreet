@@ -22,15 +22,16 @@ private:
     Real rsq[UNROLL_FACTOR];
     Vector3D<Real> accel[UNROLL_FACTOR];
 
-    for (int i = 0; i < target.n_particles; i += UNROLL_FACTOR) {
-      diff[0] = centroid - target.particles()[i].position;
-      diff[1] = centroid - target.particles()[i+1].position;
-      diff[2] = centroid - target.particles()[i+2].position;
-      diff[3] = centroid - target.particles()[i+3].position;
-      diff[4] = centroid - target.particles()[i+4].position;
-      diff[5] = centroid - target.particles()[i+5].position;
-      diff[6] = centroid - target.particles()[i+6].position;
-      diff[7] = centroid - target.particles()[i+7].position;
+    int n_loops = target.n_particles / UNROLL_FACTOR;
+    for (int i = 0; i < n_loops; i++) {
+      diff[0] = centroid - target.particles()[UNROLL_FACTOR*i].position;
+      diff[1] = centroid - target.particles()[UNROLL_FACTOR*i+1].position;
+      diff[2] = centroid - target.particles()[UNROLL_FACTOR*i+2].position;
+      diff[3] = centroid - target.particles()[UNROLL_FACTOR*i+3].position;
+      diff[4] = centroid - target.particles()[UNROLL_FACTOR*i+4].position;
+      diff[5] = centroid - target.particles()[UNROLL_FACTOR*i+5].position;
+      diff[6] = centroid - target.particles()[UNROLL_FACTOR*i+6].position;
+      diff[7] = centroid - target.particles()[UNROLL_FACTOR*i+7].position;
       rsq[0] = diff[0].lengthSquared();
       rsq[1] = diff[1].lengthSquared();
       rsq[2] = diff[2].lengthSquared();
@@ -41,35 +42,35 @@ private:
       rsq[7] = diff[7].lengthSquared();
       if (rsq[0] != 0) {
         accel[0] = diff[0] * (sum_mass / (rsq[0] * sqrt(rsq[0])));
-        target.applyAcceleration(i, accel[0]);
+        target.applyAcceleration(UNROLL_FACTOR*i, accel[0]);
       }
       if (rsq[1] != 0) {
         accel[1] = diff[1] * (sum_mass / (rsq[1] * sqrt(rsq[1])));
-        target.applyAcceleration(i+1, accel[1]);
+        target.applyAcceleration(UNROLL_FACTOR*i+1, accel[1]);
       }
       if (rsq[2] != 0) {
         accel[2] = diff[2] * (sum_mass / (rsq[2] * sqrt(rsq[2])));
-        target.applyAcceleration(i+2, accel[2]);
+        target.applyAcceleration(UNROLL_FACTOR*i+2, accel[2]);
       }
       if (rsq[3] != 0) {
         accel[3] = diff[3] * (sum_mass / (rsq[3] * sqrt(rsq[3])));
-        target.applyAcceleration(i+3, accel[3]);
+        target.applyAcceleration(UNROLL_FACTOR*i+3, accel[3]);
       }
       if (rsq[4] != 0) {
         accel[4] = diff[4] * (sum_mass / (rsq[4] * sqrt(rsq[4])));
-        target.applyAcceleration(i+4, accel[4]);
+        target.applyAcceleration(UNROLL_FACTOR*i+4, accel[4]);
       }
       if (rsq[5] != 0) {
         accel[5] = diff[5] * (sum_mass / (rsq[5] * sqrt(rsq[5])));
-        target.applyAcceleration(i+5, accel[5]);
+        target.applyAcceleration(UNROLL_FACTOR*i+5, accel[5]);
       }
       if (rsq[6] != 0) {
         accel[6] = diff[6] * (sum_mass / (rsq[6] * sqrt(rsq[6])));
-        target.applyAcceleration(i+6, accel[6]);
+        target.applyAcceleration(UNROLL_FACTOR*i+6, accel[6]);
       }
       if (rsq[7] != 0) {
         accel[7] = diff[7] * (sum_mass / (rsq[7] * sqrt(rsq[7])));
-        target.applyAcceleration(i+7, accel[7]);
+        target.applyAcceleration(UNROLL_FACTOR*i+7, accel[7]);
       }
     }
 
