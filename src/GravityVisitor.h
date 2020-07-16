@@ -40,38 +40,22 @@ private:
       rsq[5] = diff[5].lengthSquared();
       rsq[6] = diff[6].lengthSquared();
       rsq[7] = diff[7].lengthSquared();
-      if (rsq[0] != 0) {
-        accel[0] = diff[0] * (sum_mass / (rsq[0] * sqrt(rsq[0])));
-        target.applyAcceleration(UNROLL_FACTOR*i, accel[0]);
-      }
-      if (rsq[1] != 0) {
-        accel[1] = diff[1] * (sum_mass / (rsq[1] * sqrt(rsq[1])));
-        target.applyAcceleration(UNROLL_FACTOR*i+1, accel[1]);
-      }
-      if (rsq[2] != 0) {
-        accel[2] = diff[2] * (sum_mass / (rsq[2] * sqrt(rsq[2])));
-        target.applyAcceleration(UNROLL_FACTOR*i+2, accel[2]);
-      }
-      if (rsq[3] != 0) {
-        accel[3] = diff[3] * (sum_mass / (rsq[3] * sqrt(rsq[3])));
-        target.applyAcceleration(UNROLL_FACTOR*i+3, accel[3]);
-      }
-      if (rsq[4] != 0) {
-        accel[4] = diff[4] * (sum_mass / (rsq[4] * sqrt(rsq[4])));
-        target.applyAcceleration(UNROLL_FACTOR*i+4, accel[4]);
-      }
-      if (rsq[5] != 0) {
-        accel[5] = diff[5] * (sum_mass / (rsq[5] * sqrt(rsq[5])));
-        target.applyAcceleration(UNROLL_FACTOR*i+5, accel[5]);
-      }
-      if (rsq[6] != 0) {
-        accel[6] = diff[6] * (sum_mass / (rsq[6] * sqrt(rsq[6])));
-        target.applyAcceleration(UNROLL_FACTOR*i+6, accel[6]);
-      }
-      if (rsq[7] != 0) {
-        accel[7] = diff[7] * (sum_mass / (rsq[7] * sqrt(rsq[7])));
-        target.applyAcceleration(UNROLL_FACTOR*i+7, accel[7]);
-      }
+      accel[0] = (rsq[0] != 0) ? diff[0] * (sum_mass / (rsq[0] * sqrt(rsq[0]))) : 0;
+      accel[1] = (rsq[1] != 0) ? diff[1] * (sum_mass / (rsq[1] * sqrt(rsq[1]))) : 0;
+      accel[2] = (rsq[2] != 0) ? diff[2] * (sum_mass / (rsq[2] * sqrt(rsq[2]))) : 0;
+      accel[3] = (rsq[3] != 0) ? diff[3] * (sum_mass / (rsq[3] * sqrt(rsq[3]))) : 0;
+      accel[4] = (rsq[4] != 0) ? diff[4] * (sum_mass / (rsq[4] * sqrt(rsq[4]))) : 0;
+      accel[5] = (rsq[5] != 0) ? diff[5] * (sum_mass / (rsq[5] * sqrt(rsq[5]))) : 0;
+      accel[6] = (rsq[6] != 0) ? diff[6] * (sum_mass / (rsq[6] * sqrt(rsq[6]))) : 0;
+      accel[7] = (rsq[7] != 0) ? diff[7] * (sum_mass / (rsq[7] * sqrt(rsq[7]))) : 0;
+      target.applyAcceleration(UNROLL_FACTOR*i, accel[0]);
+      target.applyAcceleration(UNROLL_FACTOR*i+1, accel[1]);
+      target.applyAcceleration(UNROLL_FACTOR*i+2, accel[2]);
+      target.applyAcceleration(UNROLL_FACTOR*i+3, accel[3]);
+      target.applyAcceleration(UNROLL_FACTOR*i+4, accel[4]);
+      target.applyAcceleration(UNROLL_FACTOR*i+5, accel[5]);
+      target.applyAcceleration(UNROLL_FACTOR*i+6, accel[6]);
+      target.applyAcceleration(UNROLL_FACTOR*i+7, accel[7]);
     }
 
     // Process remaining particles
