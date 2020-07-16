@@ -16,6 +16,7 @@
 #include "BufferedVec.h"
 #include "Utility.h"
 #include "DensityVisitor.h"
+#include "CollisionVisitor.h"
 #include "GravityVisitor.h"
 #include "PressureVisitor.h"
 #include "CountVisitor.h"
@@ -171,7 +172,8 @@ public:
       // Perform traversals
       start_time = CkWallTimer();
       //treepieces.template startUpAndDown<DensityVisitor>();
-      treepieces.template startDown<GravityVisitor>();
+      treepieces.template startDown<CollisionVisitor>();
+      //treepieces.template startDown<GravityVisitor>();
       CkWaitQD();
 #if DELAYLOCAL
       //treepieces.processLocal(CkCallbackResumeThread());

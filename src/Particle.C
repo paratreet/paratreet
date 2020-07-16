@@ -11,6 +11,9 @@ void Particle::pup(PUP::er &p) {
   p|density;
   p|pressure;
   p|potential;
+  p|ball;
+  p|deltaT;
+  p|soft;
   p|position;
   p|acceleration;
   p|velocity;
@@ -20,6 +23,8 @@ void Particle::reset() {
   density       = 0.0;
   pressure      = 0.0;
   potential     = 0.0;
+  deltaT        = 0.01633030773;
+  ball          = velocity.length()*deltaT + 4*soft;
   acceleration  = Vector3D<Real> (0.0, 0.0, 0.0);
 }
 

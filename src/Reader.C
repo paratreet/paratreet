@@ -60,6 +60,7 @@ void Reader::load(std::string input_file, const CkCallback& cb) {
         CkAbort("Could not read gas particle\n");
       }
       particles[i].mass = gp.mass;
+      particles[i].soft = gp.hsmooth;
       particles[i].position = gp.pos;
       particles[i].velocity = gp.vel;
     }
@@ -68,6 +69,7 @@ void Reader::load(std::string input_file, const CkCallback& cb) {
         CkAbort("Could not read dark particle\n");
       }
       particles[i].mass = dp.mass;
+      particles[i].soft = gp.hsmooth;
       particles[i].position = dp.pos;
       particles[i].velocity = dp.vel;
     }
@@ -76,6 +78,7 @@ void Reader::load(std::string input_file, const CkCallback& cb) {
         CkAbort("Could not read star particle\n");
       }
       particles[i].mass = sp.mass;
+      particles[i].soft = gp.hsmooth;
       particles[i].position = sp.pos;
       particles[i].velocity = sp.vel;
     }

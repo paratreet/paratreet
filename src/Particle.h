@@ -12,6 +12,9 @@ struct Particle {
   Real density;
   Real pressure;
   Real potential;
+  Real ball;
+  Real deltaT;
+  Real soft;
   Vector3D<Real> position;
   Vector3D<Real> acceleration;
   Vector3D<Real> velocity;

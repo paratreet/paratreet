@@ -101,6 +101,7 @@ mainmodule paratreet {
   array [1d] TreePiece<CentroidData>;
 
   extern entry void TreePiece<CentroidData> startDown<GravityVisitor> ();
+  extern entry void TreePiece<CentroidData> startDown<CollisionVisitor> ();
   extern entry void TreePiece<CentroidData> startDual<GravityVisitor> ();
   extern entry void TreePiece<CentroidData> startUpAndDown<DensityVisitor> ();
   extern entry void TreePiece<CentroidData> startDown<PressureVisitor> ();
