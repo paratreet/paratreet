@@ -10,15 +10,17 @@
 
 struct CentroidData {
   Vector3D<Real> moment;
-  Real sum_mass;
+  Real sum_mass = 0.0;
   Vector3D<Real> centroid; // too slow to compute this on the fly
   std::vector< std::priority_queue<Particle, std::vector<Particle>, particle_comp> > neighbors; // used for sph
+  std::vector< std::vector<Particle> > fixed_ball;
   OrientedBox<Real> box;
-  int count;
-  Real rsq;
+  int count = 0;
+  Real rsq  = 0;
 
-  CentroidData() :
-  moment(Vector3D<Real> (0,0,0)), sum_mass(0), count(0), rsq(0.) {}
+  CentroidData()
+    : moment(Vector3D<Real> (0,0,0))
+  {}
 
   CentroidData(const Particle* particles, int n_particles) : CentroidData() {
     for (int i = 0; i < n_particles; i++) {
@@ -28,6 +30,11 @@ struct CentroidData {
     }
     centroid = moment / sum_mass;
     count += n_particles;
+    fixed_ball.resize(n_particles);
+    for (int i = 0; i < n_particles; i++) {
+      particle_comp c (particles[i]);
+      neighbors.emplace_back(c);
+    }
   }
 
   const CentroidData& operator+=(const CentroidData& cd) { // needed for upward traversal
@@ -53,6 +60,8 @@ struct CentroidData {
     box = cd.box;
     count = cd.count;
     rsq = cd.rsq;
+    fixed_ball = cd.fixed_ball;
+    neighbors = cd.neighbors;
     return *this;
   }
 

@@ -11,14 +11,6 @@ struct DensityVisitor {
 // in leaf check for not same particle plz
 private:
   const int k = 32;
-private:
-  void prepNeighbors(SpatialNode<CentroidData>& target) {
-    for (int i = 0; i < target.n_particles; i++) {
-      particle_comp c (target.particles()[i]);
-      std::priority_queue<Particle, std::vector<Particle>, particle_comp> pq (c);
-      target.data.neighbors.resize(target.n_particles, pq);
-    }
-  }
 
 public:
   bool open(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
@@ -33,7 +25,6 @@ public:
   void node(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {}
 
   void leaf(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
-    if (!target.data.neighbors.size()) prepNeighbors(target);
     for (int i = 0; i < target.n_particles; i++) {
       for (int j = 0; j < source.n_particles; j++) {
         target.data.neighbors[i].push(source.particles()[j]);
