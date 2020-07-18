@@ -8,6 +8,9 @@
 #include <queue>
 
 struct CollisionVisitor {
+public:
+  static constexpr const bool CallSelfLeaf = true;
+
 // in leaf check for not same particle plz
 public:
   bool open(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
