@@ -8,6 +8,9 @@
 #include <queue>
 
 struct DensityVisitor {
+public:
+  static constexpr const bool CallSelfLeaf = true;
+
 // in leaf check for not same particle plz
 private:
   const int k = 32;

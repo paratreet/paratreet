@@ -6,6 +6,9 @@
 #include <cmath>
 
 struct PressureVisitor {
+public:
+  static constexpr const bool CallSelfLeaf = true;
+
 // in leaf check for not same particle plz
 private:
   const Real radius = .01;

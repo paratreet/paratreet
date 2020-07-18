@@ -10,6 +10,9 @@
 #include "common.h"
 
 class CountVisitor {
+public:
+  static constexpr const bool CallSelfLeaf = true;
+
 private:
   Real dist(Vector3D<Real> p1, Vector3D<Real> p2) {
     return (p1-p2).length();
