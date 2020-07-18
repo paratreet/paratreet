@@ -8,6 +8,9 @@
 extern CProxy_Resumer<CentroidData> centroid_resumer;
 
 class GravityVisitor {
+public:
+  static constexpr const bool CallSelfLeaf = false;
+
 private:
   // note gconst = 1
   static constexpr Real theta = 0.7;
