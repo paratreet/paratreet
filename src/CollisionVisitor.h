@@ -9,15 +9,6 @@
 
 struct CollisionVisitor {
 // in leaf check for not same particle plz
-private:
-  void prepNeighbors(SpatialNode<CentroidData>& target) {
-    for (int i = 0; i < target.n_particles; i++) {
-      particle_comp c (target.particles()[i]);
-      std::priority_queue<Particle, std::vector<Particle>, particle_comp> pq (c);
-      target.data.neighbors.resize(target.n_particles, pq);
-    }
-  }
-
 public:
   bool open(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
     // Optimization from ChaNGa to implement:
@@ -37,13 +28,12 @@ public:
   void node(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {}
 
   void leaf(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
-    if (!target.data.neighbors.size()) prepNeighbors(target);
     for (int i = 0; i < target.n_particles; i++) {
       for (int j = 0; j < source.n_particles; j++) {
         Real dsq = (target.particles()[i].position - source.particles()[j].position).lengthSquared();
         Real rsq = target.particles()[i].ball*target.particles()[i].ball;
         if (dsq < rsq)
-          target.data.neighbors[i].push(source.particles()[j]);
+          target.data.fixed_ball[i].push_back(source.particles()[j]);
       }
     }
   }
