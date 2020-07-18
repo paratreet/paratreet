@@ -25,6 +25,8 @@ struct Particle {
 
   void reset();
 
+  void finishSetup();
+
   void perturb (Real timestep, OrientedBox<Real> universe) {
     position += (velocity * timestep);
     position += (acceleration * timestep * timestep / 2);
