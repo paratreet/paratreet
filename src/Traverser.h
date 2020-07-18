@@ -45,7 +45,7 @@ protected:
     Visitor v;
     for (int i = 0; i < tp.interactions.size(); i++) {
       for (Node<Data>* source : tp.interactions[i]) {
-        if (source->key != tp.leaves[i]->key) v.leaf(*source, *(tp.leaves[i]));
+        v.leaf(*source, *(tp.leaves[i]));
       }
     }
   }
@@ -89,8 +89,10 @@ public:
         {
           // Store local and remote cached leaves for interactions
           for (auto bucket : active_buckets) {
-            if (delay_leaf) tp.interactions[bucket].push_back(node);
-            else v.leaf(*node, *tp.leaves[bucket]);
+            if (Visitor::CallSelfLeaf || tp.leaves[bucket]->key != node->key) {
+              if (delay_leaf) tp.interactions[bucket].push_back(node);
+              else v.leaf(*node, *tp.leaves[bucket]);
+            }
           }
           break;
         }
@@ -196,8 +198,10 @@ public:
             }
             else v.node(*node, *leaf);
           }
-          else if (node->type == Node<Data>::Type::Leaf) {  
-            v.leaf(*node, *leaf);
+          else if (node->type == Node<Data>::Type::Leaf) {
+            if (Visitor::CallSelfLeaf || node->key != leaf->key) {
+              v.leaf(*node, *leaf);
+            }
           }
         }
         if (trav_top == tp.local_root) break;
@@ -267,7 +271,7 @@ public:
       Node<Data>* node = nodes.top();
       nodes.pop();
       if (node->type == Node<Data>::Type::Leaf || node->type == Node<Data>::Type::CachedRemoteLeaf) {
-        v.leaf(*source_leaf, *node);
+        v.leaf(*source_leaf, *node); // why even call leaf() here? maybe just call node.
       } else {
         if (v.open(*node, *source_leaf)) {
           for (int j = 0; j < node->n_children; j++) {
