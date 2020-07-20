@@ -12,6 +12,9 @@
 extern CProxy_Main mainProxy;
 extern int n_readers;
 extern int decomp_type;
+extern CProxy_TreeSpec treespec;
+extern CProxy_TreeSpec treespec_subtrees;
+
 
 class Reader : public CBase_Reader {
   BoundingBox box;
@@ -44,9 +47,11 @@ class Reader : public CBase_Reader {
     template <typename Data>
     void request(CProxy_Subtree<Data>, int, int);
 
-    // Sending particles to home Subtrees
+    // Sending particles to home Partitions and Subtrees
     template <typename Data>
-    void flush(int, int, CProxy_Subtree<Data>, CProxy_Partition<Data>);
+    void flush(int, int, CProxy_Subtree<Data>);
+    template <typename Data>
+    void assign_partitions(int, int, CProxy_Partition<Data>);
 };
 
 template <typename Data>
@@ -63,17 +68,15 @@ void Reader::request(CProxy_Subtree<Data> tp_proxy, int index, int num_to_give) 
 }
 
 template <typename Data>
-void Reader::flush(int n_total_particles, int n_treepieces, CProxy_Subtree<Data> treepieces, CProxy_Partition<Data> partitions) {
+void Reader::flush(int n_total_particles, int n_subtrees,
+                   CProxy_Subtree<Data> subtrees) {
   auto sendParticles = [&](int dest, int n_particles, Particle* particles) {
     ParticleMsg* msg = new (n_particles) ParticleMsg(particles, n_particles);
-    treepieces[dest].receive(msg);
-    // TODO only send to partitions?
-    msg = new (n_particles) ParticleMsg(particles, n_particles);
-    partitions[dest].receive(msg);
+    subtrees[dest].receive(msg);
   };
 
-  int flush_count =
-      treespec.ckLocalBranch()->getDecomposition()->flush(n_total_particles, n_treepieces, sendParticles, particles);
+  int flush_count = treespec_subtrees.ckLocalBranch()->getDecomposition()->
+    flush(n_total_particles, n_subtrees, sendParticles, particles);
   if (flush_count != particles.size()) {
     CkPrintf("Reader %d failure: flushed %d out of %zu particles\n", thisIndex,
         flush_count, particles.size());
@@ -84,5 +87,27 @@ void Reader::flush(int n_total_particles, int n_treepieces, CProxy_Subtree<Data>
   particles.clear();
   particle_index = 0;
 }
+
+template <typename Data>
+void Reader::assign_partitions(int n_total_particles, int n_partitions, CProxy_Partition<Data> partitions)
+{
+  auto sendParticles =
+    [&](int dest, int n_particles, Particle* particles) {
+      for (int i = 0; i < n_particles; ++i)
+        particles[i].partition_idx = dest;
+
+      ParticleMsg* msg = new (n_particles) ParticleMsg(particles, n_particles);
+      partitions[dest].receive(msg);
+    };
+
+  int flush_count = treespec.ckLocalBranch()->getDecomposition()->
+    flush(n_total_particles, n_partitions, sendParticles, particles);
+  if (flush_count != particles.size()) {
+    CkPrintf("Reader %d failure: flushed %d out of %zu particles\n", thisIndex,
+        flush_count, particles.size());
+    CkAbort("Reader failure -- see stdout");
+  }
+}
+
 
 #endif // PARATREET_READER_H_

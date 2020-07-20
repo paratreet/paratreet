@@ -6,13 +6,14 @@
 #include "common.h"
 
 extern int decomp_type;
-extern CProxy_TreeSpec treespec;
+extern CProxy_TreeSpec treespec_subtrees;
 
 class OctTree {
 public:
 
   static void buildCanopy(int tp_index, const SendProxyFn &fn) {
-    Key tp_key = treespec.ckLocalBranch()->getDecomposition()->getTpKey(tp_index);
+    Key tp_key = treespec_subtrees
+      .ckLocalBranch()->getDecomposition()->getTpKey(tp_index);
     Key temp_key = tp_key;
     fn(tp_key, tp_index);
     while (temp_key > 0 && temp_key % BRANCH_FACTOR == 0) {

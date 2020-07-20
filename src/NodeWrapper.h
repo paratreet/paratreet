@@ -2,6 +2,7 @@
 #define _NODEWRAPPER_H_
 
 #include "common.h"
+#include "Particle.h"
 
 template <typename Data>
 struct NodeWrapper {

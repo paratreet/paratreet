@@ -28,6 +28,7 @@
 
 extern CProxy_Reader readers;
 extern CProxy_TreeSpec treespec;
+extern CProxy_TreeSpec treespec_subtrees;
 extern std::string input_file;
 extern int n_readers;
 extern double decomp_tolerance;
@@ -74,7 +75,7 @@ public:
     cb.send();
   }
 
-  void broadcastDecomposition(const CkCallback& cb) {
+  void broadcastDecomposition(const CkCallback& cb, CProxy_TreeSpec& treespec) {
     PUP::sizer sizer;
     treespec.ckLocalBranch()->getDecomposition()->pup(sizer);
     sizer | const_cast<CkCallback&>(cb);
@@ -119,24 +120,28 @@ public:
 
     // Set up splitters for decomposition
     start_time = CkWallTimer();
-    n_subtrees = treespec.ckLocalBranch()->getDecomposition()->findSplitters(universe, readers);
-    n_partitions = n_subtrees; // TODO partitions
-    broadcastDecomposition(CkCallbackResumeThread());
+    n_subtrees = treespec_subtrees.ckLocalBranch()->getDecomposition()->findSplitters(universe, readers);
+    n_partitions = treespec.ckLocalBranch()->getDecomposition()->findSplitters(universe, readers); // TODO partitions
+    broadcastDecomposition(CkCallbackResumeThread(), treespec_subtrees);
+    broadcastDecomposition(CkCallbackResumeThread(), treespec);
     CkPrintf("Setting up splitters for decomposition: %.3lf ms\n",
         (CkWallTimer() - start_time) * 1000);
 
     // Create Subtrees
     start_time = CkWallTimer();
-    subtrees = CProxy_Subtree<CentroidData>::ckNew(CkCallbackResumeThread(),
-        universe.n_particles, n_subtrees, centroid_calculator, centroid_resumer,
-        centroid_cache, this->thisProxy, n_subtrees);
+    subtrees = CProxy_Subtree<CentroidData>::ckNew(
+      CkCallbackResumeThread(),
+      universe.n_particles, n_subtrees, n_partitions,
+      centroid_calculator, centroid_resumer,
+      centroid_cache, this->thisProxy, n_subtrees
+      );
     CkPrintf("Created %d Subtrees: %.3lf ms\n", n_subtrees,
         (CkWallTimer() - start_time) * 1000);
 
     // Create Partitions
     start_time = CkWallTimer();
     CkArrayOptions opts(n_partitions);
-    opts.bindTo(subtrees);
+    //opts.bindTo(subtrees);
     partitions = CProxy_Partition<CentroidData>::ckNew(
       n_partitions, centroid_cache, centroid_resumer,
       centroid_calculator, opts
@@ -147,7 +152,13 @@ public:
     // Flush decomposed particles to home Subtrees and Partitions
     // TODO Separate decomposition for Subtrees and Partitions
     start_time = CkWallTimer();
-    readers.flush(universe.n_particles, n_subtrees, subtrees, partitions);
+    readers.assign_partitions(universe.n_particles, n_partitions, partitions);
+    CkStartQD(CkCallbackResumeThread());
+    CkPrintf("Assigning particles to Partitions: %.3lf ms\n",
+        (CkWallTimer() - start_time) * 1000);
+
+    start_time = CkWallTimer();
+    readers.flush(universe.n_particles, n_subtrees, subtrees);
     CkStartQD(CkCallbackResumeThread());
     CkPrintf("Flushing particles to Subtrees: %.3lf ms\n",
         (CkWallTimer() - start_time) * 1000);

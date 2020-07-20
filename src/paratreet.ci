@@ -13,6 +13,7 @@ mainmodule paratreet {
   readonly CProxy_Main mainProxy;
   readonly CProxy_Reader readers;
   readonly CProxy_TreeSpec treespec;
+  readonly CProxy_TreeSpec treespec_subtrees;
   readonly std::string input_file;
   readonly int n_readers;
   readonly double decomp_tolerance;
@@ -104,7 +105,7 @@ mainmodule paratreet {
 
   template <typename Data>
   array [1d] Subtree {
-    entry Subtree(const CkCallback&, int, int, TCHolder<Data>, CProxy_Resumer<Data>, CProxy_CacheManager<Data>, DPHolder<Data>);
+    entry Subtree(const CkCallback&, int, int, int, TCHolder<Data>, CProxy_Resumer<Data>, CProxy_CacheManager<Data>, DPHolder<Data>);
     entry void receive(ParticleMsg*);
     entry void buildTree();
     /* template<typename Visitor> entry void startDown(); */
@@ -164,7 +165,9 @@ mainmodule paratreet {
     entry void localSort(const CkCallback&);
     entry void checkSort(const Key, const CkCallback&);
     template <typename Data>
-    entry void flush(int, int, CProxy_Subtree<Data>, CProxy_Partition<Data>);
+    entry void flush(int, int, CProxy_Subtree<Data>);
+    template <typename Data>
+    entry void assign_partitions(int, int, CProxy_Partition<Data>);
   };
 
   group TreeSpec {
@@ -174,7 +177,8 @@ mainmodule paratreet {
   }
 
   extern entry void Reader request<CentroidData>(CProxy_Subtree<CentroidData>, int, int);
-  extern entry void Reader flush<CentroidData>(int, int, CProxy_Subtree<CentroidData>, CProxy_Partition<CentroidData>);
+  extern entry void Reader flush<CentroidData>(int, int, CProxy_Subtree<CentroidData>);
+  extern entry void Reader assign_partitions<CentroidData>(int, int, CProxy_Partition<CentroidData>);
 
   group CountManager {
     entry CountManager(double min, double max, int nbins);

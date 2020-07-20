@@ -18,6 +18,7 @@
 #include <vector>
 #include <fstream>
 
+extern CProxy_TreeSpec treespec_subtrees;
 extern CProxy_TreeSpec treespec;
 extern CProxy_Reader readers;
 extern int max_particles_per_leaf;
@@ -35,8 +36,8 @@ public:
 
   int n_total_particles;
   int n_treepieces;
+  int n_partitions;
   int particle_index;
-  int n_expected;
 
   Key tp_key; // Should be a prefix of all particle keys underneath this node
   Node<Data>* global_root; // Root of the global tree structure
@@ -49,7 +50,7 @@ public:
   std::vector<Particle> flushed_particles; // For debugging
   int dim_cnt;
 
-  Subtree(const CkCallback&, int, int, TCHolder<Data>,
+  Subtree(const CkCallback&, int, int, int, TCHolder<Data>,
           CProxy_Resumer<Data>, CProxy_CacheManager<Data>, DPHolder<Data>);
   void receive(ParticleMsg*);
   void buildTree();
@@ -84,10 +85,12 @@ public:
 
 template <typename Data>
 Subtree<Data>::Subtree(const CkCallback& cb, int n_total_particles_,
-                       int n_treepieces_, TCHolder<Data> tc_holder, CProxy_Resumer<Data> r_proxy_,
+                       int n_treepieces_, int n_partitions_, TCHolder<Data> tc_holder,
+                       CProxy_Resumer<Data> r_proxy_,
                        CProxy_CacheManager<Data> cm_proxy, DPHolder<Data> dp_holder) {
   n_total_particles = n_total_particles_;
   n_treepieces = n_treepieces_;
+  n_partitions = n_partitions_;
   particle_index = 0;
 
   tc_proxy = tc_holder.proxy;
@@ -97,10 +100,7 @@ Subtree<Data>::Subtree(const CkCallback& cb, int n_total_particles_,
   cache_init = false;
   dim_cnt = 0;
 
-  n_expected = treespec.ckLocalBranch()->getDecomposition()->
-    getNumExpectedParticles(n_total_particles, n_treepieces, this->thisIndex);
-
-  tp_key = treespec.ckLocalBranch()->getDecomposition()->
+  tp_key = treespec_subtrees.ckLocalBranch()->getDecomposition()->
     getTpKey(this->thisIndex);
 
   // Create TreeCanopies and send proxies
@@ -136,16 +136,30 @@ void Subtree<Data>::receive(ParticleMsg* msg) {
 template <typename Data>
 void Subtree<Data>::send_leaves(CProxy_Partition<Data> part)
 {
-  std::vector<NodeWrapper<Data>> node_data;
-  for (Node<Data> *leaf : leaves)
-    if (leaf)
+  if (leaves.size() == 0) return;
+
+  int leaf_idx = 0;
+  while (leaf_idx < leaves.size()) {
+    int current_part_idx = leaves[leaf_idx]->particles()->partition_idx;
+    std::vector<NodeWrapper<Data>> node_data;
+
+    while (
+      leaf_idx < leaves.size()
+      && leaves[leaf_idx]->particles()->partition_idx == current_part_idx
+      )
+    {
+      Node<Data> *leaf = leaves[leaf_idx];
       node_data.push_back(
-        NodeWrapper<Data>(leaf->key, leaf->n_particles, leaf->depth,
-                          leaf->getBranchFactor(), leaf->is_leaf, leaf->data)
+        NodeWrapper<Data>(
+          leaf->key, leaf->n_particles, leaf->depth,
+          leaf->getBranchFactor(), leaf->is_leaf, leaf->data
+          )
         );
-  // for now we just send leaves to the partition with the same index
-  // later will have to decide where to send leaves based on decomposition
-  part[this->thisIndex].receive_leaves(node_data, this->thisIndex);
+      ++leaf_idx;
+    }
+
+    part[current_part_idx].receive_leaves(node_data, this->thisIndex);
+  }
 }
 
 template <typename Data>
@@ -169,7 +183,7 @@ void Subtree<Data>::buildTree() {
 #if DEBUG
   CkPrintf("[TP %d] key: 0x%" PRIx64 " particles: %d\n", this->thisIndex, tp_key, particles.size());
 #endif
-  global_root = treespec.ckLocalBranch()->template makeNode<Data>(1, 0, particles.size(), &particles[0], 0, n_treepieces - 1, false, nullptr, this->thisIndex);
+  global_root = treespec_subtrees.ckLocalBranch()->template makeNode<Data>(1, 0, particles.size(), &particles[0], 0, n_treepieces - 1, false, nullptr, this->thisIndex);
   recursiveBuild(global_root, &particles[0], false, log2(global_root->getBranchFactor()));
 
   // Populate the tree structure (including TreeCanopy)
@@ -309,7 +323,7 @@ bool Subtree<Data>::recursiveBuild(Node<Data>* node, Particle* node_particles, b
     */
 
     // Create child and store in vector
-    Node<Data>* child = treespec.ckLocalBranch()->template makeNode<Data>(child_key, node->depth + 1,
+    Node<Data>* child = treespec_subtrees.ckLocalBranch()->template makeNode<Data>(child_key, node->depth + 1,
         n_particles, node_particles + start, 0, n_treepieces - 1, true, node, this->thisIndex);
     /*
     Node<Data>* child = new Node<Data>(child_key, node->depth + 1, node->particles + start,

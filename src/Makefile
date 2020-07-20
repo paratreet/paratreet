@@ -20,7 +20,7 @@ $(BINARY).decl.h: $(BINARY).ci
 
 common.h: $(STRUCTURE_PATH)/Vector3D.h $(STRUCTURE_PATH)/SFC.h Utility.h
 
-Main.o: Main.C $(BINARY).decl.h common.h Reader.h TreeSpec.h BoundingBox.h BufferedVec.h TreeCanopy.h CacheManager.h Node.h Resumer.h Traverser.h Driver.h GravityVisitor.h DensityVisitor.h PressureVisitor.h CountVisitor.h Writer.h Partition.h Subtree.h
+Main.o: Main.C $(BINARY).decl.h common.h Reader.h TreeSpec.h BoundingBox.h BufferedVec.h TreeCanopy.h CacheManager.h Node.h Resumer.h Traverser.h Driver.h GravityVisitor.h DensityVisitor.h PressureVisitor.h CountVisitor.h Writer.h Partition.h Subtree.h NodeWrapper.h
 	$(CHARMC) -c $<
 
 CacheManager.h: $(BINARY).decl.h
