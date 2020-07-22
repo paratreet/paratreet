@@ -137,15 +137,15 @@ class Main : public CBase_Main {
     CkPrintf("Input file: %s\n", input_file.c_str());
     CkPrintf("Decomposition type: %s\n", (decomp_type == OCT_DECOMP) ? "OCT" : "SFC");
     CkPrintf("Tree type: %s\n", (tree_type == OCT_TREE) ? "OCT" : "SFC");
-    if (decomp_type == SFC_DECOMP) {
-      if (n_treepieces <= 0) {
-        CkAbort("Number of treepieces must be larger than 0 with SFC decomposition!");
-      }
-      CkPrintf("Number of treepieces: %d\n", n_treepieces);
-    }
-    else if (decomp_type == OCT_DECOMP) {
+    // if (decomp_type == SFC_DECOMP) {
+    //   if (n_treepieces <= 0) {
+    //     CkAbort("Number of treepieces must be larger than 0 with SFC decomposition!");
+    //   }
+    //   CkPrintf("Number of treepieces: %d\n", n_treepieces);
+    // }
+    // else if (decomp_type == OCT_DECOMP) {
       CkPrintf("Maximum number of particles per treepiece: %d\n", max_particles_per_tp);
-    }
+    // }
     CkPrintf("Maximum number of particles per leaf: %d\n\n", max_particles_per_leaf);
 
     // Create Readers

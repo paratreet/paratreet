@@ -1,40 +1,25 @@
 #include <memory>
+#include <algorithm>
 
 #include "common.h"
 #include "Decomposition.h"
 #include "BufferedVec.h"
 #include "Reader.h"
 
-extern int decomp_type;
 extern int max_particles_per_tp; // for OCT decomposition
 
 int SfcDecomposition::flush(int n_total_particles, int n_treepieces, const SendParticlesFn &fn,
-    std::vector<Particle> &particles) {
-  // TODO SFC decomposition
-  // Probably need to use prefix sum
-  int flush_count;
-  int n_particles_left = particles.size();
-  for (int i = 0; i < n_treepieces; i++) {
-    int n_need = n_total_particles / n_treepieces;
-    if (i < (n_total_particles % n_treepieces))
-      n_need++;
+                            std::vector<Particle> &particles) {
+  int flush_count = 0;
+  Real threshold = DECOMP_TOLERANCE * Real(max_particles_per_tp);
+  for (int i = 0; i * threshold < particles.size(); ++i) {
+    int n_particles = (int)threshold;
+    if ((i + 1) * threshold >= particles.size())
+      n_particles = particles.size() - (int)(i * threshold);
 
-    if (n_particles_left > n_need) {
-      fn(i, n_need, &particles[flush_count]);
-      flush_count += n_need;
-      n_particles_left -= n_need;
-    }
-    else {
-      if (n_particles_left > 0) {
-        fn(i, n_particles_left, &particles[flush_count]);
-        flush_count += n_particles_left;
-        n_particles_left = 0;
-      }
-    }
-
-    if (n_particles_left == 0) break;
+    fn(i, n_particles, &particles[flush_count]);
+    flush_count += n_particles;
   }
-
   return flush_count;
 }
 
@@ -44,17 +29,67 @@ void SfcDecomposition::assignKeys(BoundingBox &universe, std::vector<Particle> &
     // Add placeholder bit
     particles[i].key |= (Key)1 << (KEY_BITS-1);
   }
+  std::sort(particles.begin(), particles.end());
 }
 
 int SfcDecomposition::getNumExpectedParticles(int n_total_particles, int n_treepieces,
-    int tp_index) {
+                                              int tp_index) {
   int n_expected = n_total_particles / n_treepieces;
   if (tp_index < (n_total_particles % n_treepieces)) n_expected++;
   return n_expected;
 }
 
 int SfcDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &readers) {
-  CkAbort("Find splitters not yet implemented for SFC Decomposition");
+  // countSfc finds the keys of all particles
+  CkReductionMsg *msg;
+  readers.countSfc(CkCallbackResumeThread((void*&)msg));
+  std::vector<Key> keys;
+  CkReduction::setElement *elem = (CkReduction::setElement *)msg->getData();
+  while (elem != NULL) {
+    Key *elemKeys = (Key *)&elem->data;
+    int n_keys = elem->dataSize / sizeof(Key);
+    keys.insert(keys.end(), elemKeys, elemKeys + n_keys);
+    elem = elem->next();
+  }
+
+  std::sort(keys.begin(), keys.end());
+
+  int decomp_particle_sum = 0;
+
+  Real threshold = DECOMP_TOLERANCE * Real(max_particles_per_tp);
+  for (int i = 0; i * threshold < keys.size(); ++i) {
+    Key from = keys[(int)(i * threshold)];
+    Key to;
+    int n_particles = (int)threshold;
+    if ((i + 1) * threshold >= keys.size()) {
+      to = ~Key(0);
+      n_particles = keys.size() - (int)(i * threshold);
+    } else to = keys[(int)((i + 1) * threshold)];
+
+    // Inverse bitwise-xor is used as a bitwise equality test, in conjunction with
+    // `removeTrailingBits` forms a mask that zeroes off all bits after the first
+    // differing bit between `from` and `to`
+    Key prefixMask = Utility::removeTrailingBits(~(from ^ (to - 1)));
+    Key prefix = prefixMask & from;
+    Splitter sp(Utility::removeLeadingZeros(from << 3),
+                Utility::removeLeadingZeros(to << 3), prefix << 3, n_particles);
+    splitters.push_back(sp);
+
+    decomp_particle_sum += n_particles;
+  }
+
+  // Check if decomposition is correct
+  if (decomp_particle_sum != universe.n_particles) {
+    CkPrintf("SFC Decomposition failure: only %d particles out of %d decomposed",
+             decomp_particle_sum, universe.n_particles);
+    CkAbort("SFC Decomposition failure -- see stdout");
+  }
+
+  // Sort our splitters
+  std::sort(splitters.begin(), splitters.end());
+
+  // Return the number of TreePieces
+  return splitters.size();
 }
 
 void SfcDecomposition::pup(PUP::er& p) {
@@ -66,12 +101,12 @@ int SfcDecomposition::getTpKey(int idx) {
 }
 
 int OctDecomposition::getNumExpectedParticles(int n_total_particles, int n_treepieces,
-    int tp_index) {
+                                              int tp_index) {
   return splitters[tp_index].n_particles;
 }
 
 int OctDecomposition::flush(int n_total_particles, int n_treepieces, const SendParticlesFn &fn,
-    std::vector<Particle> &particles) {
+                            std::vector<Particle> &particles) {
   // OCT decomposition
   int flush_count = 0;
   int start = 0;
@@ -101,7 +136,7 @@ int OctDecomposition::flush(int n_total_particles, int n_treepieces, const SendP
 void OctDecomposition::assignKeys(BoundingBox &universe, std::vector<Particle> &particles) {
   SfcDecomposition::assignKeys(universe, particles);
   // Sort particles for decomposition
-  std::sort(particles.begin(), particles.end());
+  // std::sort(particles.begin(), particles.end());
 }
 
 int OctDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &readers) {
@@ -163,7 +198,7 @@ int OctDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &reader
       else {
         // Create and store splitter
         Splitter sp(Utility::removeLeadingZeros(from),
-            Utility::removeLeadingZeros(to), from, n_particles);
+                    Utility::removeLeadingZeros(to), from, n_particles);
         splitters.push_back(sp);
 
         // Add up number of particles to check if all are flushed
@@ -178,7 +213,7 @@ int OctDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &reader
   // Check if decomposition is correct
   if (decomp_particle_sum != universe.n_particles) {
     CkPrintf("Decomposition failure: only %d particles out of %d decomposed",
-        decomp_particle_sum, universe.n_particles);
+             decomp_particle_sum, universe.n_particles);
     CkAbort("Decomposition failure -- see stdout");
   }
 

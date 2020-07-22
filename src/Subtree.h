@@ -22,7 +22,6 @@ extern CProxy_TreeSpec treespec_subtrees;
 extern CProxy_TreeSpec treespec;
 extern CProxy_Reader readers;
 extern int max_particles_per_leaf;
-extern int decomp_type;
 extern Decomposition* decomposition;
 extern int tree_type;
 extern CProxy_Main mainProxy;

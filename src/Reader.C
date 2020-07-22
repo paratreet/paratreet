@@ -156,6 +156,15 @@ void Reader::countOct(std::vector<Key> splitter_keys, const CkCallback& cb) {
   contribute(sizeof(int) * counts.size(), &counts[0], CkReduction::sum_int, cb);
 }
 
+void Reader::countSfc(const CkCallback& cb)
+{
+  std::vector<Key> keys;
+  for (const auto& p : particles)
+    keys.push_back(p.key);
+
+  contribute(keys.size() * sizeof(Key), &keys[0], CkReduction::set, cb);
+}
+
 /*
 void Reader::countSfc(const std::vector<Key>& splitter_keys, const CkCallback& cb) {
   std::vector<int> counts;

@@ -121,10 +121,14 @@ public:
     // Set up splitters for decomposition
     start_time = CkWallTimer();
     n_subtrees = treespec_subtrees.ckLocalBranch()->getDecomposition()->findSplitters(universe, readers);
-    n_partitions = treespec.ckLocalBranch()->getDecomposition()->findSplitters(universe, readers); // TODO partitions
     broadcastDecomposition(CkCallbackResumeThread(), treespec_subtrees);
+    CkPrintf("Setting up splitters for subtree decomposition: %.3lf ms\n",
+        (CkWallTimer() - start_time) * 1000);
+
+    start_time = CkWallTimer();
+    n_partitions = treespec.ckLocalBranch()->getDecomposition()->findSplitters(universe, readers);
     broadcastDecomposition(CkCallbackResumeThread(), treespec);
-    CkPrintf("Setting up splitters for decomposition: %.3lf ms\n",
+    CkPrintf("Setting up splitters for partition decomposition: %.3lf ms\n",
         (CkWallTimer() - start_time) * 1000);
 
     // Create Subtrees
