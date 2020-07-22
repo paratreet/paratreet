@@ -35,8 +35,17 @@ public:
       for (int j = 0; j < source.n_particles; j++) {
         Real dsq = (target.particles()[i].position - source.particles()[j].position).lengthSquared();
         Real rsq = target.particles()[i].ball*target.particles()[i].ball;
-        if (dsq < rsq)
+        // A particle cant be its own neighbor
+        if (target.particles()[i].order == source.particles()[j].order)
+          continue;
+        if (dsq < rsq) {
           target.data.fixed_ball[i].push_back(source.particles()[j]);
+          // For now, just print out the orders of the neighbors to check correctness
+          CkPrintf("%d %d %g %g %g %g %g\n", target.particles()[i].order, source.particles()[j].order,
+                                             target.particles()[i].ball, source.particles()[j].ball,
+                                             target.particles()[i].velocity.x, target.particles()[i].velocity.y,
+                                             target.particles()[i].velocity.z);
+          }
       }
     }
   }

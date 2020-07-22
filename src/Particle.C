@@ -23,11 +23,11 @@ void Particle::reset() {
   density       = 0.0;
   pressure      = 0.0;
   potential     = 0.0;
-  deltaT        = 0.01633030773;
+  deltaT        = 0.01570796326;
 }
 
 void Particle::finishSetup() {
-  ball          = velocity.length()*deltaT + 4*soft;
+  ball          = 2.0*velocity.length()*deltaT + (4*soft);
   acceleration  = Vector3D<Real> (0.0, 0.0, 0.0);
 }
 

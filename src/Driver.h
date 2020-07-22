@@ -172,6 +172,7 @@ public:
       // Perform traversals
       start_time = CkWallTimer();
       //treepieces.template startUpAndDown<DensityVisitor>();
+      //treepieces.template startUpAndDown<CollisionVisitor>();
       treepieces.template startDown<CollisionVisitor>();
       //treepieces.template startDown<GravityVisitor>();
       CkWaitQD();
