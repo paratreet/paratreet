@@ -41,10 +41,8 @@ public:
         if (dsq < rsq) {
           target.data.fixed_ball[i].push_back(source.particles()[j]);
           // For now, just print out the orders of the neighbors to check correctness
-          CkPrintf("%d %d %g %g %g %g %g\n", target.particles()[i].order, source.particles()[j].order,
-                                             target.particles()[i].ball, source.particles()[j].ball,
-                                             target.particles()[i].velocity.x, target.particles()[i].velocity.y,
-                                             target.particles()[i].velocity.z);
+          CkPrintf("%d %d %g %g %g %g\n", target.particles()[i].order, source.particles()[j].order,
+                                          target.particles()[i].ball, source.particles()[j].ball, dsq, rsq); 
           }
       }
     }
