@@ -12,6 +12,8 @@ struct CentroidData {
   Vector3D<Real> moment;
   Real sum_mass = 0.0;
   Vector3D<Real> centroid; // too slow to compute this on the fly
+  Real max_rad = 0.0; // largest particle in bucket
+  Real size_sm; // dist from centroid to furthest particle
   std::vector< std::priority_queue<Particle, std::vector<Particle>, particle_comp> > neighbors; // used for sph
   std::vector< std::vector<Particle> > fixed_ball;
   OrientedBox<Real> box;
@@ -27,8 +29,12 @@ struct CentroidData {
       moment += particles[i].mass * particles[i].position;
       sum_mass += particles[i].mass;
       box.grow(particles[i].position);
+
+      if (2*particles[i].soft > max_rad)
+        max_rad = 2*particles[i].soft;
     }
     centroid = moment / sum_mass;
+    size_sm = 0.5*(box.size()).length();
     count += n_particles;
     fixed_ball.resize(n_particles);
     for (int i = 0; i < n_particles; i++) {

@@ -14,10 +14,9 @@ public:
 // in leaf check for not same particle plz
 public:
   bool open(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
-    // Optimization from ChaNGa to implement:
-    // Create a bounding sphere around the target particles, test for intersect
-    // between that sphere and the bounding box of the source. No intersect -> skip
-    // the for loop
+    double r_bucket = target.data.size_sm + target.data.max_rad;
+    if (!intersect(source.data.box, target.data.box.center(), r_bucket*r_bucket))
+      return false;
 
     // Check if any of the target balls intersect the source volume
     for (int i = 0; i < target.n_particles; i++) {
