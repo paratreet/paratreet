@@ -95,8 +95,6 @@ void Partition<Data>::receive_leaves(
     Key k = Utility::removeLeadingZeros(leaf.key);
     from = Utility::binarySearchGE(k, &particles[0], from, particles.size());
     int to = Utility::binarySearchGE(k, &particles[0], from + 1, particles.size());
-    CkAssert(leaf.n_particles == to - from);
-    // ^ Not necessarily true for SFC for "shared" nodes?
     Node<Data> *node = treespec.ckLocalBranch()->template makeNode<Data>(
       leaf.key, leaf.depth, leaf.n_particles, &particles[from],
       subtree_idx, subtree_idx, leaf.is_leaf, nullptr, subtree_idx
