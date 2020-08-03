@@ -11,15 +11,19 @@ extern int max_particles_per_tp; // for OCT decomposition
 int SfcDecomposition::flush(int n_total_particles, int n_treepieces, const SendParticlesFn &fn,
                             std::vector<Particle> &particles) {
   int flush_count = 0;
-  Real threshold = DECOMP_TOLERANCE * Real(max_particles_per_tp);
-  for (int i = 0; i * threshold < particles.size(); ++i) {
-    int n_particles = (int)threshold;
-    if ((i + 1) * threshold >= particles.size())
-      n_particles = particles.size() - (int)(i * threshold);
-
-    fn(i, n_particles, &particles[flush_count]);
+  int particle_idx = Utility::binarySearchGE(
+    splitters[0].from, particles.data(), 0, particles.size()
+    );
+  for (int i = 0; i < splitters.size(); ++i) {
+    int end = Utility::binarySearchG(
+      splitters[i].to, particles.data(), particle_idx, particles.size()
+      );
+    int n_particles = end - particle_idx;
     flush_count += n_particles;
+    if (n_particles) fn(i, n_particles, &particles[particle_idx]);
+    particle_idx = end;
   }
+  splitters.clear();
   return flush_count;
 }
 
@@ -71,8 +75,8 @@ int SfcDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &reader
     // differing bit between `from` and `to`
     Key prefixMask = Utility::removeTrailingBits(~(from ^ (to - 1)));
     Key prefix = prefixMask & from;
-    Splitter sp(Utility::removeLeadingZeros(from << 3),
-                Utility::removeLeadingZeros(to << 3), prefix << 3, n_particles);
+    Splitter sp(Utility::removeLeadingZeros(from),
+                Utility::removeLeadingZeros(to), prefix, n_particles);
     splitters.push_back(sp);
 
     decomp_particle_sum += n_particles;
@@ -90,6 +94,25 @@ int SfcDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &reader
 
   // Return the number of TreePieces
   return splitters.size();
+}
+
+std::vector<Splitter> SfcDecomposition::getSplitters() { return splitters; }
+
+void SfcDecomposition::alignSplitters(Decomposition *decomp)
+{
+  std::vector<Splitter> target_splitters = decomp->getSplitters();
+  splitters[0].from = target_splitters[0].from;
+  int target_idx = 1;
+  for (int i = 1; i < splitters.size(); ++i, ++target_idx) {
+    target_idx = Utility::binarySearchGE(
+      splitters[i], target_splitters.data(), target_idx, target_splitters.size()
+      );
+    if (splitters[i].from == target_splitters[i].from) // splitter is already aligned
+      continue;
+
+    splitters[i].from = target_splitters[target_idx].from;
+    splitters[i - 1].to = splitters[i].from;
+  }
 }
 
 void SfcDecomposition::pup(PUP::er& p) {
