@@ -14,6 +14,7 @@
 #include "Driver.h"
 #include "OrientedBox.h"
 
+#include <cstring>
 #include <queue>
 #include <vector>
 #include <fstream>
@@ -24,7 +25,6 @@ extern int max_particles_per_leaf;
 extern int decomp_type;
 extern Decomposition* decomposition;
 extern int tree_type;
-extern CProxy_Main mainProxy;
 
 template <typename Data>
 class TreePiece : public CBase_TreePiece<Data> {
