@@ -1,0 +1,10 @@
+mainmodule Main {
+    extern module paratreet;
+
+    mainchare Main {
+        initnode void initialize();
+        entry Main(CkArgMsg* m);
+        entry [threaded] void run();
+        entry [reductiontarget] void checkParticlesChangedDone(bool result); // For debugging
+    };
+}
