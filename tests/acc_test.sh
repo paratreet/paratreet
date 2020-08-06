@@ -11,7 +11,7 @@ echo "Running ParaTreeT..."
 if [[ $hostname == *"lassen"* ]]; then
   jsrun -n2 -a1 -c20 -K1 -r2 ../src/paratreet -f $testname -v +ppn 20 +pemap L0-76:4,80-156:4 &> $testname.out
 else
-  ../src/charmrun ../src/paratreet ++local +p 4 -f $testname -v +ppn 2 +setcpuaffinity &> $testname.out
+  ../src/charmrun ../src/paratreet ++local +p 4 -d sfc -f $testname -v +ppn 2 +setcpuaffinity &> $testname.out
 fi
 
 echo -e "\nBuilding and running array utility..."

@@ -103,15 +103,22 @@ void SfcDecomposition::alignSplitters(Decomposition *decomp)
   std::vector<Splitter> target_splitters = decomp->getSplitters();
   splitters[0].from = target_splitters[0].from;
   int target_idx = 1;
-  for (int i = 1; i < splitters.size(); ++i, ++target_idx) {
+  for (int i = 1; i < splitters.size(); ++i) {
     target_idx = Utility::binarySearchGE(
       splitters[i], target_splitters.data(), target_idx, target_splitters.size()
       );
-    if (splitters[i].from == target_splitters[i].from) // splitter is already aligned
+    if (splitters[i].from == target_splitters[i].from) { // splitter is already aligned
+      if (target_idx < target_splitters.size()) ++target_idx;
       continue;
+    }
+    if (
+      splitters[i].from - target_splitters[target_idx - 1].from <
+      target_splitters[target_idx].from - splitters[i].from
+      ) --target_idx; // previous splitter is closer
 
     splitters[i].from = target_splitters[target_idx].from;
     splitters[i - 1].to = splitters[i].from;
+    if (target_idx < target_splitters.size()) ++target_idx;
   }
 }
 
