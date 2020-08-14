@@ -11,12 +11,21 @@ void TreeSpec::receiveDecomposition(CkMarshallMsg* msg) {
 
 Decomposition* TreeSpec::getDecomposition() {
   if (!decomp) {
-    if (decomp_type == OCT_DECOMP) {
+    if (config.decomp_type == OCT_DECOMP) {
       decomp.reset(new OctDecomposition());
-    } else if (decomp_type == SFC_DECOMP) {
+    } else if (config.decomp_type == SFC_DECOMP) {
       decomp.reset(new SfcDecomposition());
     }
   }
 
   return decomp.get();
+}
+
+void TreeSpec::receiveConfiguration(const paratreet::Configuration& cfg, CkCallback cb) {
+  config = cfg;
+  contribute(cb);
+}
+
+paratreet::Configuration& TreeSpec::getConfiguration() {
+  return config;
 }

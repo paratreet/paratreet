@@ -21,10 +21,6 @@
 
 extern CProxy_TreeSpec treespec;
 extern CProxy_Reader readers;
-extern int max_particles_per_leaf;
-extern int decomp_type;
-extern Decomposition* decomposition;
-extern int tree_type;
 
 template <typename Data>
 class TreePiece : public CBase_TreePiece<Data> {
@@ -126,7 +122,8 @@ TreePiece<Data>::TreePiece(const CkCallback& cb, int n_total_particles_,
     tc_proxy[dest].recvProxies(TPHolder<Data>(this->thisProxy), tp_index, cm_proxy, dp_holder);
   };
 
-  if (tree_type == OCT_TREE) {
+  auto config = treespec.ckLocalBranch()->getConfiguration();
+  if (config.tree_type == OCT_TREE) {
     OctTree::buildCanopy(this->thisIndex, sendProxy);
   }
 
@@ -206,6 +203,7 @@ bool TreePiece<Data>::recursiveBuild(Node<Data>* node, Particle* node_particles,
 #endif
   // store reference to splitters
   //static std::vector<Splitter>& splitters = readers.ckLocalBranch()->splitters;
+  auto config = treespec.ckLocalBranch()->getConfiguration();
 
   // Check if we are inside the subtree rooted at the treepiece's key
   if (!saw_tp_key) {
@@ -213,7 +211,7 @@ bool TreePiece<Data>::recursiveBuild(Node<Data>* node, Particle* node_particles,
     if (saw_tp_key) local_root = node;
   }
 
-  bool is_light = (node->n_particles <= ceil(BUCKET_TOLERANCE * max_particles_per_leaf));
+  bool is_light = (node->n_particles <= ceil(BUCKET_TOLERANCE * config.max_particles_per_leaf));
   bool is_prefix = Utility::isPrefix(node->key, tp_key, log_branch_factor);
 
   if (saw_tp_key) {

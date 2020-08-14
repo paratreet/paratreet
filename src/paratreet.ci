@@ -1,4 +1,5 @@
 module paratreet {
+  include "Configuration.h";
   include "BoundingBox.h";
   include "Splitter.h";
   include "CentroidData.h";
@@ -11,8 +12,8 @@ module paratreet {
 
   readonly CProxy_Reader readers;
   readonly CProxy_TreeSpec treespec;
-  readonly std::string input_file;
   readonly int n_readers;
+  /* readonly std::string input_file;
   readonly double decomp_tolerance;
   readonly int max_particles_per_tp;
   readonly int max_particles_per_leaf;
@@ -22,7 +23,7 @@ module paratreet {
   readonly int flush_period;
   readonly int num_share_levels;
   readonly int cache_share_depth;
-  readonly bool verify;
+  readonly bool verify; */
   readonly CProxy_TreeCanopy<CentroidData> centroid_calculator;
   readonly CProxy_CacheManager<CentroidData> centroid_cache;
   readonly CProxy_Resumer<CentroidData> centroid_resumer;
@@ -143,9 +144,11 @@ module paratreet {
   };
 
   group TreeSpec {
-    entry TreeSpec(int tree_type, int decomp_type);
+    entry TreeSpec(const paratreet::Configuration&);
     entry void receiveDecomposition(CkMarshallMsg*);
     entry [local] Decomposition* getDecomposition();
+    entry void receiveConfiguration(const paratreet::Configuration&,CkCallback);
+    entry [local] paratreet::Configuration& getConfiguration();
   }
 
   extern entry void Reader request<CentroidData>(CProxy_TreePiece<CentroidData>, int, int);

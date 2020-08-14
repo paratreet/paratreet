@@ -10,7 +10,6 @@
 #include "Modularization.h"
 
 extern int n_readers;
-extern int decomp_type;
 
 class Reader : public CBase_Reader {
   BoundingBox box;
