@@ -5,8 +5,7 @@
 #include "BufferedVec.h"
 #include "Reader.h"
 
-extern int decomp_type;
-extern int max_particles_per_tp; // for OCT decomposition
+extern CProxy_TreeSpec treespec;
 
 int SfcDecomposition::flush(int n_total_particles, int n_treepieces, const SendParticlesFn &fn,
     std::vector<Particle> &particles) {
@@ -123,7 +122,8 @@ int OctDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &reader
     int n_counts = msg->getSize() / sizeof(int);
 
     // Check counts and create splitters if necessary
-    Real threshold = (DECOMP_TOLERANCE * Real(max_particles_per_tp));
+    auto config = treespec.ckLocalBranch()->getConfiguration();
+    Real threshold = (DECOMP_TOLERANCE * Real(config.max_particles_per_tp));
     for (int i = 0; i < n_counts; i++) {
       Key from = keys.get(2*i);
       Key to = keys.get(2*i+1);

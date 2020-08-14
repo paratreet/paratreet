@@ -27,7 +27,7 @@ class Main : public CBase_Main {
     conf.num_share_levels = 3;
     conf.cache_share_depth= 3;
     conf.flush_period = 1;
-    verify = false;
+    // verify = false;
 
     // Initialize member variables
     n_treepieces = 0;
@@ -75,7 +75,7 @@ class Main : public CBase_Main {
           conf.flush_period = atoi(optarg);
           break;
         case 'v':
-          verify = true;
+          // verify = true;
           break;
         default:
           CkPrintf("Usage: %s\n", m->argv[0]);

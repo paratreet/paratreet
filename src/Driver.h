@@ -28,15 +28,6 @@
 
 extern CProxy_Reader readers;
 extern CProxy_TreeSpec treespec;
-extern std::string input_file;
-extern int n_readers;
-extern double decomp_tolerance;
-extern int max_particles_per_tp; // for OCT decomposition
-extern int max_particles_per_leaf; // for local tree build
-extern int decomp_type;
-extern int tree_type;
-extern int num_iterations;
-extern int flush_period;
 extern CProxy_TreeCanopy<CentroidData> centroid_calculator;
 extern CProxy_CacheManager<CentroidData> centroid_cache;
 extern CProxy_Resumer<CentroidData> centroid_resumer;
@@ -87,11 +78,12 @@ public:
   // by either loading particle information from input file or re-computing
   // the universal bounding box
   void decompose(int iter) {
+    auto config = treespec.ckLocalBranch()->getConfiguration();
     // Build universe
     start_time = CkWallTimer();
     CkReductionMsg* result;
     if (iter == 0) {
-      readers.load(input_file, CkCallbackResumeThread((void*&)result));
+      readers.load(config.input_file, CkCallbackResumeThread((void*&)result));
       CkPrintf("Loading Tipsy data and building universe: %.3lf ms\n",
           (CkWallTimer() - start_time) * 1000);
     } else {
@@ -104,7 +96,7 @@ public:
     std::cout << "Universal bounding box: " << universe << " with volume "
       << universe.box.volume() << std::endl;
 
-    if (universe.n_particles <= max_particles_per_tp) {
+    if (universe.n_particles <= config.max_particles_per_tp) {
       CkPrintf("WARNING: Consider using -p to lower max_particles_per_tp, only %d particles.\n",
         universe.n_particles);
     }
@@ -145,12 +137,13 @@ public:
 
   // Core iterative loop of the simulation
   void run(CkCallback cb) {
-    for (int iter = 0; iter < num_iterations; iter++) {
+    auto config = treespec.ckLocalBranch()->getConfiguration();
+    for (int iter = 0; iter < config.num_iterations; iter++) {
       CkPrintf("\n* Iteration %d\n", iter);
 
       // Start tree build in TreePieces
       start_time = CkWallTimer();
-      if (tree_type == OCT_TREE) {
+      if (config.tree_type == OCT_TREE) {
         treepieces.buildTree();
       } else {
         CkAbort("Only octree is currently supported");
@@ -186,19 +179,19 @@ public:
 
       // Move the particles in TreePieces
       start_time = CkWallTimer();
-      bool complete_rebuild = (iter % flush_period == flush_period-1);
+      bool complete_rebuild = (iter % config.flush_period == config.flush_period - 1);
       treepieces.perturb(0.1, complete_rebuild); // 0.1s for example
       CkWaitQD();
       CkPrintf("Perturbations: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
 
       // Output particle accelerations for verification
       // TODO: Initial force interactions similar to ChaNGa
-      if (iter == 0 && verify) {
-        std::string output_file = input_file + ".acc";
-        CProxy_Writer w = CProxy_Writer::ckNew(output_file, universe.n_particles);
-        treepieces[0].output(w, CkCallbackResumeThread());
-        CkPrintf("Outputting particle accelerations for verification...\n");
-      }
+      // if (iter == 0 && verify) {
+      //   std::string output_file = input_file + ".acc";
+      //   CProxy_Writer w = CProxy_Writer::ckNew(output_file, universe.n_particles);
+      //   treepieces[0].output(w, CkCallbackResumeThread());
+      //   CkPrintf("Outputting particle accelerations for verification...\n");
+      // }
 
       // Destroy treepieces and perform decomposition from scratch
       if (complete_rebuild) {
@@ -230,15 +223,15 @@ public:
   }
 
   void loadCache(CkCallback cb) {
+    auto config = treespec.ckLocalBranch()->getConfiguration();
     CkPrintf("Received data from %d TreeCanopies\n", storage.size());
     // Sort data received from TreeCanopies (by their indices)
     if (!storage_sorted) sortStorage();
 
     // Find how many should be sent to the caches
     int send_size = storage.size();
-    if (num_share_levels > 0) {
-      CkPrintf("Broadcasting top %d levels to caches\n", num_share_levels);
-      Key search_key {1ull << (LOG_BRANCH_FACTOR * num_share_levels)};
+    if (config.num_share_levels > 0) {
+      Key search_key {1ull << (LOG_BRANCH_FACTOR * config.num_share_levels)};
       auto comp = [] (const std::pair<Key, SpatialNode<Data>>& a, const Key & b) {return a.first < b;};
       auto it = std::lower_bound(storage.begin(), storage.end(), search_key, comp);
       send_size = std::distance(storage.begin(), it);

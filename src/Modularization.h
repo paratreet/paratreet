@@ -5,7 +5,6 @@
 #include "Decomposition.h"
 #include "common.h"
 
-extern int decomp_type;
 extern CProxy_TreeSpec treespec;
 
 class OctTree {
