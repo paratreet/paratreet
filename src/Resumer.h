@@ -13,16 +13,16 @@ class Resumer : public CBase_Resumer<Data> {
 public:
   CProxy_TreePiece<Data> tp_proxy;
   CacheManager<Data>* cm_local;
-  unsigned long long n_part_ints, n_node_ints;
+  unsigned long long n_part_ints, n_node_ints, n_opens, n_closes;
   std::vector<std::queue<Node<Data>*>> resume_nodes_per_tp;
   std::queue<Key> LRU_counter;
   std::unordered_map<Key, std::vector<int>> waiting;
 
   void destroy() {
 #if COUNT_INTERACTIONS
-    unsigned long long intrn_counts [2] = {n_node_ints, n_part_ints};
+    unsigned long long intrn_counts [4] = {n_node_ints, n_part_ints, n_opens, n_closes};
     CkCallback cb (CkReductionTarget(Driver<CentroidData>, countInts), centroid_driver);
-    this->contribute(2 * sizeof(unsigned long long), &intrn_counts, CkReduction::sum_ulong_long, cb);
+    this->contribute(4 * sizeof(unsigned long long), &intrn_counts, CkReduction::sum_ulong_long, cb);
 #endif
     n_part_ints = n_node_ints = 0;
     waiting.clear();
@@ -33,6 +33,10 @@ public:
   void countInts(int n_ints) {
     if (n_ints > 0 ) n_part_ints += n_ints;
     else n_node_ints -= n_ints;
+  }
+
+  void countOpen(bool should_open) {
+    should_open ? n_opens++ : n_closes++;
   }
 
   void process(Key key) {
