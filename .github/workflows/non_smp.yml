@@ -47,4 +47,4 @@ jobs:
         make -j4 MAKE_OPTS="-DGROUP_CACHE"
         cd ../examples/simple
         make
-        ./charmrun +p4 ./Main -f ../inputgen/1k.tipsy -p 100 ++local
+        ./charmrun +p4 ./Main -f ../../inputgen/1k.tipsy -p 100 ++local
