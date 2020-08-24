@@ -4,9 +4,14 @@
 #include <functional>
 #include <string>
 
+#include "CentroidData.h"
+
+template<typename T>
+class CProxy_TreePiece;
+
 namespace paratreet {
-    // using TraversalFn = std::function<void(CProxy_TreePiece<CentroidData>&,int)>;
-    // using PostInteractionsFn = std::function<void(CProxy_TreePiece<CentroidData>&,int)>;
+    using TraversalFn = std::function<void(CProxy_TreePiece<CentroidData>&,int)>;
+    using PostInteractionsFn = std::function<void(CProxy_TreePiece<CentroidData>&,int)>;
 
     struct Configuration {
         double decomp_tolerance;
@@ -19,8 +24,8 @@ namespace paratreet {
         int cache_share_depth;
         int flush_period;
         std::string input_file;
-        // TraversalFn traversalFn;
-        // PostInteractionsFn postInteractionsFn;
+        TraversalFn traversalFn;
+        PostInteractionsFn postInteractionsFn;
 #ifdef __CHARMC__
 #include "pup.h"
         void pup(PUP::er &p) {
@@ -38,4 +43,7 @@ namespace paratreet {
 #endif //__CHARMC__
     };
 }
+
+#include "paratreet.decl.h"
+
 #endif //PARATREET_CONFIGURATION_H_

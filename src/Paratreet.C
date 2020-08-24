@@ -33,11 +33,14 @@ namespace paratreet {
         readers = CProxy_Reader::ckNew();
         treespec = CProxy_TreeSpec::ckNew(conf);
 
+        // Set the local branch's configuration (function pointers remain intact)
+        treespec.ckLocalBranch()->setConfiguration(conf);
+
         // Create centroid data related chares
         centroid_calculator = CProxy_TreeCanopy<CentroidData>::ckNew();
         centroid_cache = CProxy_CacheManager<CentroidData>::ckNew();
         centroid_resumer = CProxy_Resumer<CentroidData>::ckNew();
-        centroid_driver = CProxy_Driver<CentroidData>::ckNew(centroid_cache, 0);
+        centroid_driver = CProxy_Driver<CentroidData>::ckNew(centroid_cache, CkMyPe());
         count_manager = CProxy_CountManager::ckNew(0.00001, 10000, 5);
 
         // Call the driver initialization routine (performs decomposition)

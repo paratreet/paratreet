@@ -15,6 +15,7 @@ public:
 
     void receiveConfiguration(const paratreet::Configuration&,CkCallback);
     paratreet::Configuration& getConfiguration();
+    void setConfiguration(const paratreet::Configuration& config_) { config = config_; }
 
     template <typename Data>
     Node<Data>* makeNode(Key key, int depth, int n_particles, Particle* particles, int owner_tp_start, int owner_tp_end, bool is_leaf, Node<Data>* parent, int tp_index) const {
