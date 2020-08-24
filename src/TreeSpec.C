@@ -22,7 +22,7 @@ Decomposition* TreeSpec::getDecomposition() {
 }
 
 void TreeSpec::receiveConfiguration(const paratreet::Configuration& cfg, CkCallback cb) {
-  config = cfg;
+  setConfiguration(cfg);
   contribute(cb);
 }
 
