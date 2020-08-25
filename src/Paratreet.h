@@ -7,7 +7,12 @@
 #include <string>
 
 #include "common.h"
+
+#include "ParticleMsg.h"
+#include "TreePiece.h"
+#include "GravityVisitor.h"
 #include "Configuration.h"
+
 #include "paratreet.decl.h"
 
 /* readonly */ extern CProxy_Reader readers;

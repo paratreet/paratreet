@@ -27,6 +27,16 @@ class Main : public CBase_Main {
     conf.num_share_levels = 3;
     conf.cache_share_depth= 3;
     conf.flush_period = 1;
+
+    conf.traversalFn = [] (CProxy_TreePiece<CentroidData>& tp, int iter) {
+      tp.template startDown<GravityVisitor>();
+    };
+
+    conf.postInteractionsFn = [] (CProxy_TreePiece<CentroidData>& tp, int iter) {
+      CkPrintf("[%d] post interactions fn called\n", iter);
+      return;
+    };
+
     // verify = false;
 
     // Initialize member variables
@@ -129,5 +139,7 @@ class Main : public CBase_Main {
     }
   }
 };
+// #include "paratreet.def.h"
+#include "templates.h"
 
 #include "Main.def.h"
