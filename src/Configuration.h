@@ -4,6 +4,7 @@
 #include <functional>
 #include <string>
 
+#include "BoundingBox.h"
 #include "CentroidData.h"
 
 template<typename T>
@@ -11,7 +12,7 @@ class CProxy_TreePiece;
 
 namespace paratreet {
     using TraversalFn = std::function<void(CProxy_TreePiece<CentroidData>&,int)>;
-    using PostInteractionsFn = std::function<void(CProxy_TreePiece<CentroidData>&,int)>;
+    using PostInteractionsFn = std::function<void(BoundingBox&,CProxy_TreePiece<CentroidData>&,int)>;
 
     struct Configuration {
         double decomp_tolerance;
