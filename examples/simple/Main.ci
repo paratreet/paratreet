@@ -7,4 +7,6 @@ mainmodule Main {
         entry [threaded] void run();
         entry [reductiontarget] void checkParticlesChangedDone(bool result); // For debugging
     };
+
+    extern entry void TreePiece<CentroidData> startDown<GravityVisitor> ();
 }

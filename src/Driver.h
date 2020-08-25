@@ -164,7 +164,8 @@ public:
       // Perform traversals
       start_time = CkWallTimer();
       //treepieces.template startUpAndDown<DensityVisitor>();
-      treepieces.template startDown<GravityVisitor>();
+      //treepieces.template startDown<GravityVisitor>();
+      treespec.ckLocalBranch()->getConfiguration().traversalFn(treepieces, iter);
       CkWaitQD();
 #if DELAYLOCAL
       //treepieces.processLocal(CkCallbackResumeThread());
@@ -192,6 +193,8 @@ public:
       //   treepieces[0].output(w, CkCallbackResumeThread());
       //   CkPrintf("Outputting particle accelerations for verification...\n");
       // }
+
+      treespec.ckLocalBranch()->getConfiguration().postInteractionsFn(treepieces, iter);
 
       // Destroy treepieces and perform decomposition from scratch
       if (complete_rebuild) {
