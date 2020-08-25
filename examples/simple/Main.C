@@ -6,6 +6,7 @@ class Main : public CBase_Main {
   int cur_iteration;
   double total_start_time;
   double start_time;
+  bool verify;
   paratreet::Configuration conf;
 
   public:
@@ -32,12 +33,14 @@ class Main : public CBase_Main {
       tp.template startDown<GravityVisitor>();
     };
 
-    conf.postInteractionsFn = [] (CProxy_TreePiece<CentroidData>& tp, int iter) {
-      CkPrintf("[%d] post interactions fn called\n", iter);
-      return;
-    };
+    conf.postInteractionsFn =
+      [this] (BoundingBox& universe, CProxy_TreePiece<CentroidData>& tp, int iter) {
+        if (iter == 0 && this->verify) {
+          paratreet::outputParticles(universe, tp);
+        }
+      };
 
-    // verify = false;
+    verify = false;
 
     // Initialize member variables
     n_treepieces = 0;

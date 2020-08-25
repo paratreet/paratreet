@@ -51,11 +51,11 @@ namespace paratreet {
         centroid_driver.run(cb);
     }
 
-    void outputParticles(CProxy_TreePiece<CentroidData>& treepieces) {
-        // std::string output_file = input_file + ".acc";
-        // CProxy_Writer w = CProxy_Writer::ckNew(output_file, universe.n_particles);
-        // treepieces[0].output(w, CkCallbackResumeThread());
-        // CkPrintf("Outputting particle accelerations for verification...\n");
+    void outputParticles(BoundingBox& universe, CProxy_TreePiece<CentroidData>& treepieces) {
+        std::string output_file = input_file + ".acc";
+        CProxy_Writer w = CProxy_Writer::ckNew(output_file, universe.n_particles);
+        treepieces[0].output(w, CkCallbackResumeThread());
+        CkPrintf("Outputting particle accelerations for verification...\n");
     }
 
     void updateConfiguration(const Configuration& cfg, CkCallback cb) {

@@ -8,6 +8,7 @@
 
 #include "common.h"
 
+#include "BoundingBox.h"
 #include "ParticleMsg.h"
 #include "TreePiece.h"
 #include "GravityVisitor.h"
@@ -28,7 +29,7 @@ namespace paratreet {
     void initialize(const Configuration&, CkCallback);
     void run(CkCallback);
     void updateConfiguration(const Configuration&, CkCallback);
-    void outputParticles(CProxy_TreePiece<CentroidData>&);
+    void outputParticles(BoundingBox&, CProxy_TreePiece<CentroidData>&);
 }
 
 #endif

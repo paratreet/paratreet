@@ -194,7 +194,7 @@ public:
       //   CkPrintf("Outputting particle accelerations for verification...\n");
       // }
 
-      treespec.ckLocalBranch()->getConfiguration().postInteractionsFn(treepieces, iter);
+      treespec.ckLocalBranch()->getConfiguration().postInteractionsFn(universe, treepieces, iter);
 
       // Destroy treepieces and perform decomposition from scratch
       if (complete_rebuild) {
