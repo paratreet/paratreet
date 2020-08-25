@@ -9,7 +9,7 @@ extern CProxy_Resumer<CentroidData> centroid_resumer;
 
 class GravityVisitor {
 public:
-  static constexpr const bool CallSelfLeaf = false;
+  static constexpr const bool CallSelfLeaf = true;
 
 private:
   // note gconst = 1
@@ -30,8 +30,21 @@ private:
   public:
   GravityVisitor() {}
 
+  /// @brief We've hit a leaf: N^2 interactions between all particles
+  /// in the target and node.
   void leaf(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
-    addGravity(source, target);
+      // addGravity(source, target);
+    for (int i = 0; i < target.n_particles; i++) {
+      Vector3D<Real> accel(0.0);
+      for (int j = 0; j < source.n_particles; j++) {
+          Vector3D<Real> diff = source.particles()[j].position - target.particles()[i].position;
+          Real rsq = diff.lengthSquared();
+          if (rsq != 0) {
+              accel += diff * (source.particles()[j].mass / (rsq * sqrt(rsq)));
+          }
+      }
+      target.applyAcceleration(i, accel);
+    }
 #if COUNT_INTERACTIONS
     centroid_resumer.ckLocalBranch()->countInts(target.n_particles);
 #endif
