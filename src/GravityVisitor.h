@@ -52,11 +52,13 @@ private:
 
   bool open(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
     if (source.n_particles <= nMinParticleNode) return true;
-    Vector3D<Real> dr = source.data.centroid - target.data.centroid;
-    Real dsq = dr.lengthSquared();
-    if (theta * dsq < source.data.rsq) {
+    if (intersect(source.data.box, target.data.box.center(), source.data.rsq))
       return true;
-    }
+    // Check if any of the target balls intersect the source volume
+    /*for (int i = 0; i < target.n_particles; i++) {
+      if(intersect(source.data.box, target.particles()[i].position, source.data.rsq))
+        return true;
+    }*/
     return false;
   }
 
@@ -95,6 +97,29 @@ private:
     }
     return false;
   }
+
+  static inline bool intersect(const OrientedBox<Real>& box, Vector3D<Real> pos, Real rsq) {
+    Real dsq = 0.0;
+    Real delta;
+    if((delta = box.lesser_corner.x - pos.x) > 0)
+	  dsq += delta * delta;
+    else if((delta = pos.x - box.greater_corner.x) > 0)
+	  dsq += delta * delta;
+    if(rsq < dsq)
+	  return false;
+    if((delta = box.lesser_corner.y - pos.y) > 0)
+	  dsq += delta * delta;
+    else if((delta = pos.y - box.greater_corner.y) > 0)
+	  dsq += delta * delta;
+    if(rsq < dsq)
+	  return false;
+    if((delta = box.lesser_corner.z - pos.z) > 0)
+	  dsq += delta * delta;
+    else if((delta = pos.z - box.greater_corner.z) > 0)
+	  dsq += delta * delta;
+    return (dsq <= rsq);
+  }
+
 };
 
 #endif //PARATREET_GRAVITYVISITOR_H_
