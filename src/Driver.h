@@ -185,15 +185,9 @@ public:
       CkWaitQD();
       CkPrintf("Perturbations: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
 
+      // Call user's post-interaction function, which may for example:
       // Output particle accelerations for verification
       // TODO: Initial force interactions similar to ChaNGa
-      // if (iter == 0 && verify) {
-      //   std::string output_file = input_file + ".acc";
-      //   CProxy_Writer w = CProxy_Writer::ckNew(output_file, universe.n_particles);
-      //   treepieces[0].output(w, CkCallbackResumeThread());
-      //   CkPrintf("Outputting particle accelerations for verification...\n");
-      // }
-
       treespec.ckLocalBranch()->getConfiguration().postInteractionsFn(universe, treepieces, iter);
 
       // Destroy treepieces and perform decomposition from scratch
