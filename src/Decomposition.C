@@ -130,35 +130,23 @@ int OctDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &reader
 
       int n_particles = counts[i];
       if ((Real)n_particles > threshold) {
-        // Create 8 more splitter key pairs to go one level deeper.
+        // Create BRANCH_FACTOR more splitter key pairs to go one level deeper.
         // Leading zeros will be removed in Reader::count() to enable
         // comparison of splitter key and particle key
-        keys.add(from << 3);
-        keys.add((from << 3) + 1);
+        for (int k = 0; k < BRANCH_FACTOR; k++) {
+          // Add first key in pair
+          keys.add((from << LOG_BRANCH_FACTOR) + k);
 
-        keys.add((from << 3) + 1);
-        keys.add((from << 3) + 2);
-
-        keys.add((from << 3) + 2);
-        keys.add((from << 3) + 3);
-
-        keys.add((from << 3) + 3);
-        keys.add((from << 3) + 4);
-
-        keys.add((from << 3) + 4);
-        keys.add((from << 3) + 5);
-
-        keys.add((from << 3) + 5);
-        keys.add((from << 3) + 6);
-
-        keys.add((from << 3) + 6);
-        keys.add((from << 3) + 7);
-
-        keys.add((from << 3) + 7);
-        if (to == (~Key(0)))
-          keys.add(~Key(0));
-        else
-          keys.add(to << 3);
+          // Add second key in pair
+          if (k < BRANCH_FACTOR-1) {
+            keys.add((from << LOG_BRANCH_FACTOR) + k + 1);
+          } else {
+            // Clamp to largest key if shifted key is larger
+            Key last = to << LOG_BRANCH_FACTOR;
+            if (last > ~Key(0)) keys.add(~Key(0));
+            else keys.add(last);
+          }
+        }
       }
       else {
         // Create and store splitter
