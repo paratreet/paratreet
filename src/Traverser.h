@@ -103,7 +103,11 @@ public:
           // Check if the opening condition is fulfilled
           // If so, need to go down deeper
           for (auto bucket : active_buckets) {
-            if (v.open(*node, *tp.leaves[bucket])) {
+            const bool should_open = v.open(*node, *tp.leaves[bucket]);
+#if COUNT_INTERACTIONS
+            tp.r_local->countOpen(should_open);
+#endif
+            if (should_open) {
               new_active_buckets.push_back(bucket);
             } else {
               // maybe delay as an interaction
