@@ -30,7 +30,7 @@
 /* readonly */ int decomp_type;
 /* readonly */ int tree_type;
 /* readonly */ int num_iterations;
-/* readonly */ int num_share_levels;
+/* readonly */ int num_share_nodes;
 /* readonly */ int cache_share_depth;
 /* readonly */ int flush_period;
 /* readonly */ bool verify;
@@ -62,7 +62,7 @@ class Main : public CBase_Main {
     decomp_type = OCT_DECOMP;
     tree_type = OCT_TREE;
     num_iterations = 3;
-    num_share_levels = 3;
+    num_share_nodes = 0;
     cache_share_depth= 3;
     flush_period = 1;
     verify = false;
@@ -107,7 +107,7 @@ class Main : public CBase_Main {
           num_iterations = atoi(optarg);
           break;
         case 's':
-          num_share_levels = atoi(optarg);
+          num_share_nodes = atoi(optarg);
           break;
         case 'u':
           flush_period = atoi(optarg);

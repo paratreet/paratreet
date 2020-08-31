@@ -45,7 +45,6 @@ extern CProxy_CountManager count_manager;
 template <typename Data>
 class Driver : public CBase_Driver<Data> {
 private:
-  static constexpr size_t LOG_BRANCH_FACTOR = 3; // TODO get rid of the need for this
 
 public:
   CProxy_CacheManager<Data> cache_manager;
@@ -236,15 +235,11 @@ public:
 
     // Find how many should be sent to the caches
     int send_size = storage.size();
-    if (num_share_levels > 0) {
-      CkPrintf("Broadcasting top %d levels to caches\n", num_share_levels);
-      Key search_key {1ull << (LOG_BRANCH_FACTOR * num_share_levels)};
-      auto comp = [] (const std::pair<Key, SpatialNode<Data>>& a, const Key & b) {return a.first < b;};
-      auto it = std::lower_bound(storage.begin(), storage.end(), search_key, comp);
-      send_size = std::distance(storage.begin(), it);
+    if (num_share_nodes > 0 && num_share_nodes < send_size) {
+      send_size = num_share_nodes;
     }
     else {
-      CkPrintf("Broadcasting every tree canopy because num_share_levels is unset\n");
+      CkPrintf("Broadcasting every tree canopy because num_share_nodes is unset\n");
     }
     // Send data to caches
     cache_manager.recvStarterPack(storage.data(), send_size, cb);
