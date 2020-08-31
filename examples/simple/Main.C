@@ -33,9 +33,10 @@ class Main : public CBase_Main {
       tp.template startDown<GravityVisitor>();
     };
 
+    const bool* verifyPtr = &this->verify;
     conf.postInteractionsFn =
-      [this] (BoundingBox& universe, CProxy_TreePiece<CentroidData>& tp, int iter) {
-        if (iter == 0 && this->verify) {
+      [verifyPtr] (BoundingBox& universe, CProxy_TreePiece<CentroidData>& tp, int iter) {
+        if (iter == 0 && *verifyPtr) {
           paratreet::outputParticles(universe, tp);
         }
       };
@@ -88,7 +89,7 @@ class Main : public CBase_Main {
           conf.flush_period = atoi(optarg);
           break;
         case 'v':
-          // verify = true;
+          verify = true;
           break;
         default:
           CkPrintf("Usage: %s\n", m->argv[0]);
