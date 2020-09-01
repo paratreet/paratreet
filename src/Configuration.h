@@ -21,7 +21,7 @@ namespace paratreet {
         int decomp_type;
         int tree_type;
         int num_iterations;
-        int num_share_levels;
+        int num_share_nodes;
         int cache_share_depth;
         int flush_period;
         std::string input_file;
@@ -36,7 +36,7 @@ namespace paratreet {
             p | decomp_type;
             p | tree_type;
             p | num_iterations;
-            p | num_share_levels;
+            p | num_share_nodes;
             p | cache_share_depth;
             p | flush_period;
             p | input_file;

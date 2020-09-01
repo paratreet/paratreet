@@ -25,7 +25,7 @@ class Main : public CBase_Main {
     conf.decomp_type = OCT_DECOMP;
     conf.tree_type = OCT_TREE;
     conf.num_iterations = 3;
-    conf.num_share_levels = 0; // 3;
+    conf.num_share_nodes = 0; // 3;
     conf.cache_share_depth= 3;
     conf.flush_period = 1;
 
@@ -65,7 +65,7 @@ class Main : public CBase_Main {
           conf.max_particles_per_leaf = atoi(optarg);
           break;
         case 'd':
-          input_str = optarg;r
+          input_str = optarg;
           if (input_str.compare("oct") == 0) {
             conf.decomp_type = OCT_DECOMP;
           }
@@ -83,7 +83,7 @@ class Main : public CBase_Main {
           conf.num_iterations = atoi(optarg);
           break;
         case 's':
-          conf.num_share_levels = atoi(optarg);
+          conf.num_share_nodes = atoi(optarg);
           break;
         case 'u':
           conf.flush_period = atoi(optarg);
