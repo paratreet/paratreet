@@ -21,7 +21,7 @@ module paratreet {
   readonly int tree_type;
   readonly int num_iterations;
   readonly int flush_period;
-  readonly int num_share_levels;
+  readonly int num_share_nodes;
   readonly int cache_share_depth;
   readonly bool verify; */
   readonly CProxy_TreeCanopy<CentroidData> centroid_calculator;
