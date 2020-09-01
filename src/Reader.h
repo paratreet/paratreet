@@ -9,9 +9,7 @@
 #include "Utility.h"
 #include "Modularization.h"
 
-extern CProxy_Main mainProxy;
 extern int n_readers;
-extern int decomp_type;
 
 class Reader : public CBase_Reader {
   BoundingBox box;

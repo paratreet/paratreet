@@ -13,7 +13,6 @@
 #include <mutex>
 
 extern CProxy_TreeSpec treespec;
-extern int cache_share_depth;
 
 template <typename Data>
 class CacheManager : public CBase_CacheManager<Data> {
@@ -211,11 +210,12 @@ void CacheManager<Data>::requestNodes(std::pair<Key, int> param) {
 template <typename Data>
 void CacheManager<Data>::makeMsgPerNode(int start_depth, std::vector<Node<Data>*>& sending_nodes, std::vector<Particle>& sending_particles, Node<Data>* to_process)
 {
+  auto config = treespec.ckLocalBranch()->getConfiguration();
   sending_nodes.push_back(to_process);
   if (to_process->type == Node<Data>::Type::Leaf) {
     std::copy(to_process->particles(), to_process->particles() + to_process->n_particles, std::back_inserter(sending_particles));
   }
-  if (to_process->depth + 1 < start_depth + cache_share_depth) {
+  if (to_process->depth + 1 < start_depth + config.cache_share_depth) {
     for (int i = 0; i < to_process->n_children; i++) {
       Node<Data>* child = to_process->getChild(i);
       makeMsgPerNode(start_depth, sending_nodes, sending_particles, child);

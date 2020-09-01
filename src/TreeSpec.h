@@ -6,13 +6,16 @@
 
 class TreeSpec : public CBase_TreeSpec {
 public:
-    TreeSpec(int tree_type_, int decomp_type_)
-    : tree_type(tree_type_),
-      decomp_type(decomp_type_),
+    TreeSpec(const paratreet::Configuration& config_)
+    : config(config_),
       decomp(nullptr) { }
 
     void receiveDecomposition(CkMarshallMsg*);
     Decomposition* getDecomposition();
+
+    void receiveConfiguration(const paratreet::Configuration&,CkCallback);
+    paratreet::Configuration& getConfiguration();
+    void setConfiguration(const paratreet::Configuration& config_) { config = config_; }
 
     template <typename Data>
     Node<Data>* makeNode(Key key, int depth, int n_particles, Particle* particles, int owner_tp_start, int owner_tp_end, bool is_leaf, Node<Data>* parent, int tp_index) const {
@@ -29,8 +32,8 @@ public:
     }
 
 protected:
-    int decomp_type, tree_type;
     std::unique_ptr<Decomposition> decomp;
+    paratreet::Configuration config;
 };
 
 #endif
