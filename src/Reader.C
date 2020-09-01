@@ -6,9 +6,7 @@
 #include <cstring>
 #include <algorithm>
 
-extern CProxy_Main mainProxy;
 extern int n_readers;
-extern int decomp_type;
 
 Reader::Reader() : particle_index(0) {}
 
