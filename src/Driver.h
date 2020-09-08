@@ -162,18 +162,19 @@ public:
       // Prefetch into cache
       start_time = CkWallTimer();
       // use exactly one of these three commands to load the software cache
-      //centroid_cache.startParentPrefetch(this->thisProxy, CkCallback::ignore); // MUST USE FOR UPND TRAVS
+      centroid_cache.startParentPrefetch(this->thisProxy, CkCallback::ignore); // MUST USE FOR UPND TRAVS
       //centroid_cache.template startPrefetch<GravityVisitor>(this->thisProxy, CkCallback::ignore);
       this->thisProxy.loadCache(CkCallbackResumeThread());
-      CkWaitQD();
+      //CkWaitQD();
       CkPrintf("TreeCanopy cache loading: %.3lf ms\n",
           (CkWallTimer() - start_time) * 1000);
 
       // Perform traversals
       start_time = CkWallTimer();
-      //treepieces.template startUpAndDown<DensityVisitor>();
       //treepieces.template startUpAndDown<CollisionVisitor>();
-      treepieces.template startDown<CollisionVisitor>();
+      treepieces.template startUpAndDown<DensityVisitor>();
+      treepieces.template startUpAndDown<PressureVisitor>();
+      //treepieces.template startDown<CollisionVisitor>();
       //treepieces.template startDown<GravityVisitor>();
       CkWaitQD();
 #if DELAYLOCAL

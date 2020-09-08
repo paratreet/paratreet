@@ -3,6 +3,7 @@
 
 #include "paratreet.decl.h"
 #include "common.h"
+#include "Space.h"
 #include <cmath>
 #include <vector>
 #include <queue>
@@ -15,13 +16,13 @@ public:
 public:
   bool open(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
     double r_bucket = target.data.size_sm + target.data.max_rad;
-    if (!intersect(source.data.box, target.data.box.center(), r_bucket*r_bucket))
+    if (!Space::intersect(source.data.box, target.data.box.center(), r_bucket*r_bucket))
       return false;
 
     // Check if any of the target balls intersect the source volume
     for (int i = 0; i < target.n_particles; i++) {
       Real ballSq = target.particles()[i].ball*target.particles()[i].ball;
-      if(intersect(source.data.box, target.particles()[i].position, ballSq))
+      if(Space::intersect(source.data.box, target.particles()[i].position, ballSq))
         return true;
     }
     return false;
@@ -55,7 +56,7 @@ private:
  * radius^2 for efficiency.
  * Copied from smooth.cpp in ChaNGa
  */
-static inline bool
+/*static inline bool
 intersect(const OrientedBox<Real>& box, Vector3D<Real> pos, Real rsq) {
     Real dsq = 0.0;
     Real delta;
@@ -77,7 +78,7 @@ intersect(const OrientedBox<Real>& box, Vector3D<Real> pos, Real rsq) {
     else if((delta = pos.z - box.greater_corner.z) > 0)
 	dsq += delta * delta;
     return (dsq <= rsq);
-    }
+    }*/
 };
 
 #endif // PARATREET_COLLISIONVISITOR_H_
