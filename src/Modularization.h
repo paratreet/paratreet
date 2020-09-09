@@ -20,6 +20,19 @@ public:
     }
   }
 
+  // Returns start + n_particles
+  template<typename Data>
+  static int findChildsLastParticle(Node<Data>* parent, int child, Key child_key, int start, int finish) {
+    Key sibling_splitter = Utility::removeLeadingZeros(child_key + 1);
+
+    // Find number of particles in child
+    if (child < parent->n_children - 1) {
+      return Utility::binarySearchGE(sibling_splitter, parent->particles(), start, finish);
+    } else {
+      return finish;
+    }
+  }
+
 private:
   static constexpr size_t BRANCH_FACTOR = 8;
 };
