@@ -295,15 +295,7 @@ bool TreePiece<Data>::recursiveBuild(Node<Data>* node, Particle* node_particles,
   int non_local_children = 0;
 
   for (int i = 0; i < node->n_children; i++) {
-    Key sibling_splitter = Utility::removeLeadingZeros(child_key + 1);
-
-    // Find number of particles in child
-    int first_ge_idx;
-    if (i < node->n_children - 1) {
-      first_ge_idx = Utility::binarySearchGE(sibling_splitter, node->particles(), start, finish);
-    } else {
-      first_ge_idx = finish;
-    }
+    int first_ge_idx = OctTree::findChildsLastParticle(node, i, child_key, start, finish);
     int n_particles = first_ge_idx - start;
 
     /*
