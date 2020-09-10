@@ -3,6 +3,7 @@
 
 #include "paratreet.decl.h"
 #include "common.h"
+#include "Space.h"
 #include <cmath>
 
 extern CProxy_Resumer<CentroidData> centroid_resumer;
@@ -52,7 +53,7 @@ private:
 
   bool open(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
     if (source.n_particles <= nMinParticleNode) return true;
-    if (intersect(source.data.box, target.data.box.center(), source.data.rsq))
+    if (Space::intersect(source.data.box, target.data.box.center(), source.data.rsq))
       return true;
     // Check if any of the target balls intersect the source volume
     /*for (int i = 0; i < target.n_particles; i++) {
@@ -96,28 +97,6 @@ private:
       }
     }
     return false;
-  }
-
-  static inline bool intersect(const OrientedBox<Real>& box, Vector3D<Real> pos, Real rsq) {
-    Real dsq = 0.0;
-    Real delta;
-    if((delta = box.lesser_corner.x - pos.x) > 0)
-	  dsq += delta * delta;
-    else if((delta = pos.x - box.greater_corner.x) > 0)
-	  dsq += delta * delta;
-    if(rsq < dsq)
-	  return false;
-    if((delta = box.lesser_corner.y - pos.y) > 0)
-	  dsq += delta * delta;
-    else if((delta = pos.y - box.greater_corner.y) > 0)
-	  dsq += delta * delta;
-    if(rsq < dsq)
-	  return false;
-    if((delta = box.lesser_corner.z - pos.z) > 0)
-	  dsq += delta * delta;
-    else if((delta = pos.z - box.greater_corner.z) > 0)
-	  dsq += delta * delta;
-    return (dsq <= rsq);
   }
 
 };
