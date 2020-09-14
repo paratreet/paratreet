@@ -14,7 +14,9 @@ struct CentroidData {
   Vector3D<Real> centroid; // too slow to compute this on the fly
   Real max_rad = 0.0; // largest particle in bucket
   Real size_sm; // dist from centroid to furthest particle
+  std::vector<Real> drMax2; // distance to furthest neighbor (for knn)
   std::vector< std::priority_queue<Particle, std::vector<Particle>, particle_comp> > neighbors; // used for sph
+  int neighborsInited = false;
   std::vector< std::vector<Particle> > fixed_ball;
   OrientedBox<Real> box;
   int count = 0;
