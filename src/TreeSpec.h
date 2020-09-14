@@ -3,6 +3,7 @@
 
 #include "paratreet.decl.h"
 #include "Node.h"
+#include "Modularization.h"
 
 class TreeSpec : public CBase_TreeSpec {
 public:
@@ -12,6 +13,8 @@ public:
 
     void receiveDecomposition(CkMarshallMsg*);
     Decomposition* getDecomposition();
+
+    Tree* getTree();
 
     void receiveConfiguration(const paratreet::Configuration&,CkCallback);
     paratreet::Configuration& getConfiguration();
@@ -32,6 +35,7 @@ public:
     }
 
 protected:
+    std::unique_ptr<Tree> tree;
     std::unique_ptr<Decomposition> decomp;
     paratreet::Configuration config;
 };

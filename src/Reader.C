@@ -6,8 +6,6 @@
 #include <cstring>
 #include <algorithm>
 
-extern int n_readers;
-
 Reader::Reader() : particle_index(0) {}
 
 void Reader::load(std::string input_file, const CkCallback& cb) {

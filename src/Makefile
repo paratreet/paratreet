@@ -5,7 +5,7 @@ CHARMC = $(CHARM_HOME)/bin/charmc $(OPTS)
 LD_LIBS = -L$(STRUCTURE_PATH) -lTipsy
 
 BINARY = paratreet
-OBJS = Paratreet.o Reader.o Writer.o Particle.o BoundingBox.o Decomposition.o TreeSpec.o
+OBJS = Paratreet.o Reader.o Writer.o Particle.o BoundingBox.o Decomposition.o Modularization.o TreeSpec.o
 
 all: $(BINARY).o
 
