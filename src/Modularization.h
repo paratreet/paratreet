@@ -33,7 +33,7 @@ public:
   }
 };
 
-class BinaryOctTree : public OctTree {
+class BinaryTree : public OctTree {
 public:
   int getBranchFactor() override {
     return 2;
