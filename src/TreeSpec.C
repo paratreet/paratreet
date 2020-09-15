@@ -21,6 +21,18 @@ Decomposition* TreeSpec::getDecomposition() {
   return decomp.get();
 }
 
+Tree* TreeSpec::getTree() {
+  if (!tree) {
+    if (config.tree_type == OCT_TREE) {
+      tree.reset(new OctTree());
+    } else if (config.tree_type == BINARY_TREE) {
+      tree.reset(new BinaryTree());
+    }
+  }
+
+  return tree.get();
+}
+
 void TreeSpec::receiveConfiguration(const paratreet::Configuration& cfg, CkCallback cb) {
   setConfiguration(cfg);
   contribute(cb);

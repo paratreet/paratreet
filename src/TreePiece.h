@@ -122,10 +122,7 @@ TreePiece<Data>::TreePiece(const CkCallback& cb, int n_total_particles_,
     tc_proxy[dest].recvProxies(TPHolder<Data>(this->thisProxy), tp_index, cm_proxy, dp_holder);
   };
 
-  auto config = treespec.ckLocalBranch()->getConfiguration();
-  if (config.tree_type == OCT_TREE) {
-    OctTree::buildCanopy(this->thisIndex, sendProxy);
-  }
+  treespec.ckLocalBranch()->getTree()->buildCanopy(this->thisIndex, sendProxy);
 
   global_root = nullptr;
   local_root = nullptr;

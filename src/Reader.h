@@ -7,9 +7,11 @@
 #include "BoundingBox.h"
 #include "Splitter.h"
 #include "Utility.h"
+#include "TreeSpec.h"
 #include "Modularization.h"
 
 extern int n_readers;
+extern CProxy_TreeSpec treespec;
 
 class Reader : public CBase_Reader {
   BoundingBox box;
