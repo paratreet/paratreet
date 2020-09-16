@@ -80,6 +80,7 @@ struct CentroidData {
     p | box;
     p | count;
     p | rsq;
+    p | drMax2;
   }
 
 };
