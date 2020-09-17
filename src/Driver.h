@@ -108,7 +108,7 @@ public:
 
     // Set up splitters for decomposition
     start_time = CkWallTimer();
-    n_treepieces = treespec.ckLocalBranch()->getDecomposition()->findSplitters(universe, readers);
+    n_treepieces = treespec.ckLocalBranch()->doFindSplitters(universe, readers);
     broadcastDecomposition(CkCallbackResumeThread());
     CkPrintf("Setting up splitters for decomposition: %.3lf ms\n",
         (CkWallTimer() - start_time) * 1000);

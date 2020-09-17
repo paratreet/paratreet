@@ -52,7 +52,7 @@ int SfcDecomposition::getNumExpectedParticles(int n_total_particles, int n_treep
   return n_expected;
 }
 
-int SfcDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &readers) {
+int SfcDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &readers, int branch_factor) {
   CkAbort("Find splitters not yet implemented for SFC Decomposition");
 }
 
@@ -103,7 +103,7 @@ void OctDecomposition::assignKeys(BoundingBox &universe, std::vector<Particle> &
   std::sort(particles.begin(), particles.end());
 }
 
-int OctDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &readers) {
+int OctDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &readers, int branch_factor) {
   BufferedVec<Key> keys;
 
   // Initial splitter keys (first and last)
@@ -130,35 +130,24 @@ int OctDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &reader
 
       int n_particles = counts[i];
       if ((Real)n_particles > threshold) {
-        // Create 8 more splitter key pairs to go one level deeper.
+        // Create *branch_factor* more splitter key pairs to go one level deeper.
         // Leading zeros will be removed in Reader::count() to enable
         // comparison of splitter key and particle key
-        keys.add(from << 3);
-        keys.add((from << 3) + 1);
 
-        keys.add((from << 3) + 1);
-        keys.add((from << 3) + 2);
+        for (int k = 0; k < branch_factor; k++) {
+          // Add first key in pair
+          keys.add(from * branch_factor + k);
 
-        keys.add((from << 3) + 2);
-        keys.add((from << 3) + 3);
-
-        keys.add((from << 3) + 3);
-        keys.add((from << 3) + 4);
-
-        keys.add((from << 3) + 4);
-        keys.add((from << 3) + 5);
-
-        keys.add((from << 3) + 5);
-        keys.add((from << 3) + 6);
-
-        keys.add((from << 3) + 6);
-        keys.add((from << 3) + 7);
-
-        keys.add((from << 3) + 7);
-        if (to == (~Key(0)))
-          keys.add(~Key(0));
-        else
-          keys.add(to << 3);
+          // Add second key in pair
+          if (k < branch_factor - 1) {
+            keys.add(from * branch_factor + k + 1);
+          } else {
+            // Clamp to largest key if shifted key is larger
+            Key last = to * branch_factor;
+            if (last > ~Key(0)) keys.add(~Key(0));
+            else keys.add(last);
+          }
+        }
       }
       else {
         // Create and store splitter
