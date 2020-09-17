@@ -24,6 +24,7 @@ namespace paratreet {
         int num_share_nodes;
         int cache_share_depth;
         int flush_period;
+        Real timestep_size;
         std::string input_file;
         TraversalFn traversalFn;
         PostInteractionsFn postInteractionsFn;
@@ -40,6 +41,7 @@ namespace paratreet {
             p | cache_share_depth;
             p | flush_period;
             p | input_file;
+            p | timestep_size;
         }
 #endif //__CHARMC__
     };

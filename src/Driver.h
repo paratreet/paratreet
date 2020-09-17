@@ -180,7 +180,7 @@ public:
       // Move the particles in TreePieces
       start_time = CkWallTimer();
       bool complete_rebuild = (iter % config.flush_period == config.flush_period - 1);
-      treepieces.perturb(0.1, complete_rebuild); // 0.1s for example
+      treepieces.perturb(config.timestep_size, complete_rebuild); // 0.1s for example
       CkWaitQD();
       CkPrintf("Perturbations: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
 
