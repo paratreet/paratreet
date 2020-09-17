@@ -220,7 +220,7 @@ public:
 
   void loadCache(CkCallback cb) {
     auto config = treespec.ckLocalBranch()->getConfiguration();
-    CkPrintf("Received data from %d TreeCanopies\n", storage.size());
+    CkPrintf("Received data from %d TreeCanopies\n", (int) storage.size());
     // Sort data received from TreeCanopies (by their indices)
     if (!storage_sorted) sortStorage();
 

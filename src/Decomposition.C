@@ -145,7 +145,7 @@ int OctDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &reader
             // Clamp to largest key if shifted key is larger
             Key last = to * branch_factor;
             if (last > ~Key(0)) keys.add(~Key(0));
-            else keys.add(last);
+            else keys.add(std::move(last)); // compiler reasons
           }
         }
       }
