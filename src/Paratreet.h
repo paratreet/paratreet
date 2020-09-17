@@ -10,10 +10,10 @@
 
 #include "BoundingBox.h"
 #include "ParticleMsg.h"
+#include "Reader.h"
 #include "TreePiece.h"
 #include "GravityVisitor.h"
 #include "Configuration.h"
-#include "Reader.h"
 
 #include "paratreet.decl.h"
 
