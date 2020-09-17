@@ -5,8 +5,7 @@
 #include "BufferedVec.h"
 #include "Reader.h"
 
-extern int decomp_type;
-extern int max_particles_per_tp; // for OCT decomposition
+extern CProxy_TreeSpec treespec;
 
 int SfcDecomposition::flush(int n_total_particles, int n_treepieces, const SendParticlesFn &fn,
     std::vector<Particle> &particles) {
@@ -53,7 +52,7 @@ int SfcDecomposition::getNumExpectedParticles(int n_total_particles, int n_treep
   return n_expected;
 }
 
-int SfcDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &readers) {
+int SfcDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &readers, int branch_factor) {
   CkAbort("Find splitters not yet implemented for SFC Decomposition");
 }
 
@@ -104,7 +103,7 @@ void OctDecomposition::assignKeys(BoundingBox &universe, std::vector<Particle> &
   std::sort(particles.begin(), particles.end());
 }
 
-int OctDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &readers) {
+int OctDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &readers, int branch_factor) {
   BufferedVec<Key> keys;
 
   // Initial splitter keys (first and last)
@@ -123,42 +122,32 @@ int OctDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &reader
     int n_counts = msg->getSize() / sizeof(int);
 
     // Check counts and create splitters if necessary
-    Real threshold = (DECOMP_TOLERANCE * Real(max_particles_per_tp));
+    auto config = treespec.ckLocalBranch()->getConfiguration();
+    Real threshold = (DECOMP_TOLERANCE * Real(config.max_particles_per_tp));
     for (int i = 0; i < n_counts; i++) {
       Key from = keys.get(2*i);
       Key to = keys.get(2*i+1);
 
       int n_particles = counts[i];
       if ((Real)n_particles > threshold) {
-        // Create 8 more splitter key pairs to go one level deeper.
+        // Create *branch_factor* more splitter key pairs to go one level deeper.
         // Leading zeros will be removed in Reader::count() to enable
         // comparison of splitter key and particle key
-        keys.add(from << 3);
-        keys.add((from << 3) + 1);
 
-        keys.add((from << 3) + 1);
-        keys.add((from << 3) + 2);
+        for (int k = 0; k < branch_factor; k++) {
+          // Add first key in pair
+          keys.add(from * branch_factor + k);
 
-        keys.add((from << 3) + 2);
-        keys.add((from << 3) + 3);
-
-        keys.add((from << 3) + 3);
-        keys.add((from << 3) + 4);
-
-        keys.add((from << 3) + 4);
-        keys.add((from << 3) + 5);
-
-        keys.add((from << 3) + 5);
-        keys.add((from << 3) + 6);
-
-        keys.add((from << 3) + 6);
-        keys.add((from << 3) + 7);
-
-        keys.add((from << 3) + 7);
-        if (to == (~Key(0)))
-          keys.add(~Key(0));
-        else
-          keys.add(to << 3);
+          // Add second key in pair
+          if (k < branch_factor - 1) {
+            keys.add(from * branch_factor + k + 1);
+          } else {
+            // Clamp to largest key if shifted key is larger
+            Key last = to * branch_factor;
+            if (last > ~Key(0)) keys.add(~Key(0));
+            else keys.add(std::move(last)); // compiler reasons
+          }
+        }
       }
       else {
         // Create and store splitter
