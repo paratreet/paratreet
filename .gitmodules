@@ -1,6 +1,7 @@
 [submodule "utility"]
 	path = utility
-	url = https://charm.cs.illinois.edu/gerrit/cosmo/utility.git
+	url = https://github.com/N-BodyShop/utility.git
+    branch = paratreet
 [submodule "psortingV"]
 	path = psortingV
 	url = charmgit:users/vipulharsh/psortingV
