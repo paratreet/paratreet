@@ -17,6 +17,10 @@ public:
 
     Tree* getTree();
 
+    int doFindSplitters(BoundingBox &universe, CProxy_Reader &readers) {
+        return decomp->findSplitters(universe, readers, tree->getBranchFactor());
+    }
+
     void receiveConfiguration(const paratreet::Configuration&,CkCallback);
     paratreet::Configuration& getConfiguration();
     void setConfiguration(const paratreet::Configuration& config_) { config = config_; }

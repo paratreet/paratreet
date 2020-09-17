@@ -108,7 +108,7 @@ public:
 
     // Set up splitters for decomposition
     start_time = CkWallTimer();
-    n_treepieces = treespec.ckLocalBranch()->getDecomposition()->findSplitters(universe, readers);
+    n_treepieces = treespec.ckLocalBranch()->doFindSplitters(universe, readers);
     broadcastDecomposition(CkCallbackResumeThread());
     CkPrintf("Setting up splitters for decomposition: %.3lf ms\n",
         (CkWallTimer() - start_time) * 1000);
@@ -220,7 +220,7 @@ public:
 
   void loadCache(CkCallback cb) {
     auto config = treespec.ckLocalBranch()->getConfiguration();
-    CkPrintf("Received data from %d TreeCanopies\n", storage.size());
+    CkPrintf("Received data from %d TreeCanopies\n", (int) storage.size());
     // Sort data received from TreeCanopies (by their indices)
     if (!storage_sorted) sortStorage();
 
