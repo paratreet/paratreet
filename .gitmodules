@@ -1,6 +1,3 @@
-[submodule "utility"]
-	path = utility
-	url = https://github.com/N-BodyShop/utility.git
 [submodule "psortingV"]
 	path = psortingV
 	url = charmgit:users/vipulharsh/psortingV
