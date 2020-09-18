@@ -142,11 +142,7 @@ public:
 
       // Start tree build in TreePieces
       start_time = CkWallTimer();
-      if (config.tree_type == OCT_TREE) {
-        treepieces.buildTree();
-      } else {
-        CkAbort("Only octree is currently supported");
-      }
+      treepieces.buildTree();
       CkWaitQD();
       CkPrintf("Tree build: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
 
