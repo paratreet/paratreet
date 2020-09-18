@@ -19,6 +19,7 @@
 #include "CollisionVisitor.h"
 #include "GravityVisitor.h"
 #include "PressureVisitor.h"
+#include "NeighborVisitor.h"
 #include "CountVisitor.h"
 #include "CacheManager.h"
 #include "CountManager.h"
@@ -173,6 +174,7 @@ public:
       start_time = CkWallTimer();
       //treepieces.template startUpAndDown<CollisionVisitor>();
       treepieces.template startUpAndDown<DensityVisitor>();
+      treepieces.template startUpAndDown<NeighborVisitor>();
       //treepieces.template startUpAndDown<PressureVisitor>();
       //treepieces.template startDown<CollisionVisitor>();
       //treepieces.template startDown<GravityVisitor>();
