@@ -16,6 +16,7 @@ struct CentroidData {
   OrientedBox<Real> box;
   int count;
   Real rsq;
+  static constexpr const double theta = 0.7;
 
   CentroidData() :
   moment(Vector3D<Real> (0,0,0)), sum_mass(0), count(0), rsq(0.) {}
@@ -40,7 +41,7 @@ struct CentroidData {
     delta1.x = (delta1.x > delta2.x ? delta1.x : delta2.x);
     delta1.y = (delta1.y > delta2.y ? delta1.y : delta2.y);
     delta1.z = (delta1.z > delta2.z ? delta1.z : delta2.z);
-    rsq = delta1.lengthSquared();
+    rsq = delta1.lengthSquared() / theta;
 
     count += cd.count;
     return *this;
