@@ -211,7 +211,7 @@ public:
   // -------------------
 
   void countInts(unsigned long long* intrn_counts) {
-    CkPrintf("%llu node-particle interactions, %llu bucket-particle interactions\n", intrn_counts[0], intrn_counts[1]);
+    CkPrintf("%llu node-particle interactions, %llu particle-particle interactions\n", intrn_counts[0], intrn_counts[1]);
   }
 
   void recvTC(std::pair<Key, SpatialNode<Data>> param) {

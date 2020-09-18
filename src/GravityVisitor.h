@@ -3,6 +3,7 @@
 
 #include "paratreet.decl.h"
 #include "common.h"
+#include "Space.h"
 #include <cmath>
 
 extern CProxy_Resumer<CentroidData> centroid_resumer;
@@ -52,11 +53,13 @@ private:
 
   bool open(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
     if (source.n_particles <= nMinParticleNode) return true;
-    Vector3D<Real> dr = source.data.centroid - target.data.centroid;
-    Real dsq = dr.lengthSquared();
-    if (theta * dsq < source.data.rsq) {
+    if (Space::intersect(source.data.box, target.data.box.center(), source.data.rsq))
       return true;
-    }
+    // Check if any of the target balls intersect the source volume
+    /*for (int i = 0; i < target.n_particles; i++) {
+      if(intersect(source.data.box, target.particles()[i].position, source.data.rsq))
+        return true;
+    }*/
     return false;
   }
 
@@ -95,6 +98,7 @@ private:
     }
     return false;
   }
+
 };
 
 #endif //PARATREET_GRAVITYVISITOR_H_
