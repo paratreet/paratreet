@@ -66,11 +66,6 @@ public:
   void leaf(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
     if (!target.data.neighborsInited) prepNeighbors(target);
     for (int i = 0; i < target.n_particles; i++) {
-
-      // For now, skip over buckets with only 1 particle
-      // This will be fixed once we construct PQs correctly
-      if (target.n_particles <= 1) continue;
-
       // If particle outside node sphere, continue
       Real r_bucket = source.data.size_sm + source.data.max_rad;
       Vector3D<Real> drBucket = source.data.box.center() - target.particles()[i].position;
@@ -80,10 +75,12 @@ public:
         // A particle cant be its own neighbor
         if (target.particles()[i].order == source.particles()[j].order)
           continue;
-        Real rOld2 = (target.data.neighbors[i].top().position - source.particles()[j].position).lengthSquared();
+        Real rOld2 = -1.0;
+        if (target.data.neighbors[i].size() > 0)
+          Real rOld2 = (target.data.neighbors[i].top().position - source.particles()[j].position).lengthSquared();
         Vector3D<Real> dr = target.particles()[i].position - source.particles()[j].position;
        
-        if (dr.lengthSquared() < rOld2) {
+        if ((dr.lengthSquared() < rOld2) || (rOld2 == -1.0)) {
           if (target.data.neighbors[i].size() >= k) target.data.neighbors[i].pop();
           target.data.neighbors[i].push(source.particles()[j]);
           target.data.drMax2[i] = (target.data.neighbors[i].top().position - source.particles()[j].position).lengthSquared();

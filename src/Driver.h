@@ -173,7 +173,7 @@ public:
       start_time = CkWallTimer();
       //treepieces.template startUpAndDown<CollisionVisitor>();
       treepieces.template startUpAndDown<DensityVisitor>();
-      treepieces.template startUpAndDown<PressureVisitor>();
+      //treepieces.template startUpAndDown<PressureVisitor>();
       //treepieces.template startDown<CollisionVisitor>();
       //treepieces.template startDown<GravityVisitor>();
       CkWaitQD();
