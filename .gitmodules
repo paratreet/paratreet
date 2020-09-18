@@ -6,4 +6,4 @@
 	url = charmgit:users/vipulharsh/psortingV
 [submodule "utility"]
 	path = utility
-	url = git@github.com:N-BodyShop/utility.git
+	url = https://github.com/N-BodyShop/utility.git
