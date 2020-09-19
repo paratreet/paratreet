@@ -24,6 +24,7 @@ typedef double Real;
 
 // Tree types
 #define OCT_TREE 20
+#define BINARY_TREE 21
 
 // Hyperparameters
 #define LOCAL_CACHE_SIZE 5000

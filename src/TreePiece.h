@@ -14,17 +14,13 @@
 #include "Driver.h"
 #include "OrientedBox.h"
 
+#include <cstring>
 #include <queue>
 #include <vector>
 #include <fstream>
 
 extern CProxy_TreeSpec treespec;
 extern CProxy_Reader readers;
-extern int max_particles_per_leaf;
-extern int decomp_type;
-extern Decomposition* decomposition;
-extern int tree_type;
-extern CProxy_Main mainProxy;
 
 template <typename Data>
 class TreePiece : public CBase_TreePiece<Data> {
@@ -126,9 +122,7 @@ TreePiece<Data>::TreePiece(const CkCallback& cb, int n_total_particles_,
     tc_proxy[dest].recvProxies(TPHolder<Data>(this->thisProxy), tp_index, cm_proxy, dp_holder);
   };
 
-  if (tree_type == OCT_TREE) {
-    OctTree::buildCanopy(this->thisIndex, sendProxy);
-  }
+  treespec.ckLocalBranch()->getTree()->buildCanopy(this->thisIndex, sendProxy);
 
   global_root = nullptr;
   local_root = nullptr;
@@ -193,7 +187,6 @@ void TreePiece<Data>::buildTree() {
 
   // Populate the tree structure (including TreeCanopy)
   populateTree();
-
   // Initialize cache
   initCache();
 }
@@ -206,6 +199,7 @@ bool TreePiece<Data>::recursiveBuild(Node<Data>* node, Particle* node_particles,
 #endif
   // store reference to splitters
   //static std::vector<Splitter>& splitters = readers.ckLocalBranch()->splitters;
+  auto config = treespec.ckLocalBranch()->getConfiguration();
 
   // Check if we are inside the subtree rooted at the treepiece's key
   if (!saw_tp_key) {
@@ -213,7 +207,7 @@ bool TreePiece<Data>::recursiveBuild(Node<Data>* node, Particle* node_particles,
     if (saw_tp_key) local_root = node;
   }
 
-  bool is_light = (node->n_particles <= ceil(BUCKET_TOLERANCE * max_particles_per_leaf));
+  bool is_light = (node->n_particles <= ceil(BUCKET_TOLERANCE * config.max_particles_per_leaf));
   bool is_prefix = Utility::isPrefix(node->key, tp_key, log_branch_factor);
 
   if (saw_tp_key) {
@@ -289,23 +283,15 @@ bool TreePiece<Data>::recursiveBuild(Node<Data>* node, Particle* node_particles,
   */
 
   // Create children
-  node->n_children = node->wait_count = node->getBranchFactor();
+  node->n_children = node->wait_count = (1 << log_branch_factor);
   node->is_leaf = false;
-  Key child_key = node->key * node->getBranchFactor();
+  Key child_key = (node->key << log_branch_factor);
   int start = 0;
   int finish = start + node->n_particles;
   int non_local_children = 0;
 
   for (int i = 0; i < node->n_children; i++) {
-    Key sibling_splitter = Utility::removeLeadingZeros(child_key + 1);
-
-    // Find number of particles in child
-    int first_ge_idx;
-    if (i < node->n_children - 1) {
-      first_ge_idx = Utility::binarySearchGE(sibling_splitter, node->particles(), start, finish);
-    } else {
-      first_ge_idx = finish;
-    }
+    int first_ge_idx = OctTree::findChildsLastParticle(node, i, child_key, start, finish, log_branch_factor);
     int n_particles = first_ge_idx - start;
 
     /*

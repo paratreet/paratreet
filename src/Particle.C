@@ -11,9 +11,6 @@ void Particle::pup(PUP::er &p) {
   p|density;
   p|pressure;
   p|potential;
-  p|ball;
-  p|deltaT;
-  p|soft;
   p|position;
   p|acceleration;
   p|velocity;
@@ -24,11 +21,11 @@ void Particle::reset() {
   pressure      = 0.0;
   potential     = 0.0;
   deltaT        = 0.01570796326;
+  acceleration  = Vector3D<Real> (0.0, 0.0, 0.0);
 }
 
 void Particle::finishSetup() {
   ball          = 2.0*velocity.length()*deltaT + (4*soft);
-  acceleration  = Vector3D<Real> (0.0, 0.0, 0.0);
 }
 
 bool Particle::operator==(const Particle& other) const {

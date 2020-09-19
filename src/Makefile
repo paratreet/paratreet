@@ -5,12 +5,12 @@ CHARMC = $(CHARM_HOME)/bin/charmc $(OPTS)
 LD_LIBS = -L$(STRUCTURE_PATH) -lTipsy
 
 BINARY = paratreet
-OBJS = Main.o Reader.o Particle.o BoundingBox.o Decomposition.o TreeSpec.o
+OBJS = Paratreet.o Reader.o Writer.o Particle.o BoundingBox.o Decomposition.o Modularization.o TreeSpec.o
 
-all: $(BINARY)
+all: $(BINARY).o
 
-$(BINARY): $(OBJS)
-	$(CHARMC) -language charm++ -o $(BINARY) $(OBJS) $(LD_LIBS)
+$(BINARY).o: $(OBJS)
+	$(CHARMC) -language charm++ -c $(OBJS) $(LD_LIBS)
 
 proj: $(OBJS)
 	$(CHARMC) -language charm++ -tracemode projections -o $(BINARY) $(OBJS) $(LD_LIBS)
@@ -19,9 +19,6 @@ $(BINARY).decl.h: $(BINARY).ci
 	$(CHARMC) $<
 
 common.h: $(STRUCTURE_PATH)/Vector3D.h $(STRUCTURE_PATH)/SFC.h Utility.h
-
-Main.o: Main.C $(BINARY).decl.h common.h Reader.h TreePiece.h TreeSpec.h BoundingBox.h BufferedVec.h TreeCanopy.h CacheManager.h Node.h Resumer.h Traverser.h Driver.h GravityVisitor.h DensityVisitor.h PressureVisitor.h CountVisitor.h Writer.h CentroidData.h CollisionVisitor.h
-	$(CHARMC) -c $<
 
 CacheManager.h: $(BINARY).decl.h
 
