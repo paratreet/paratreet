@@ -187,7 +187,6 @@ void TreePiece<Data>::buildTree() {
 
   // Populate the tree structure (including TreeCanopy)
   populateTree();
-
   // Initialize cache
   initCache();
 }
@@ -284,15 +283,15 @@ bool TreePiece<Data>::recursiveBuild(Node<Data>* node, Particle* node_particles,
   */
 
   // Create children
-  node->n_children = node->wait_count = node->getBranchFactor();
+  node->n_children = node->wait_count = (1 << log_branch_factor);
   node->is_leaf = false;
-  Key child_key = node->key * node->getBranchFactor();
+  Key child_key = (node->key << log_branch_factor);
   int start = 0;
   int finish = start + node->n_particles;
   int non_local_children = 0;
 
   for (int i = 0; i < node->n_children; i++) {
-    int first_ge_idx = OctTree::findChildsLastParticle(node, i, child_key, start, finish);
+    int first_ge_idx = OctTree::findChildsLastParticle(node, i, child_key, start, finish, log_branch_factor);
     int n_particles = first_ge_idx - start;
 
     /*
