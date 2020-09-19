@@ -52,7 +52,7 @@ int SfcDecomposition::getNumExpectedParticles(int n_total_particles, int n_treep
   return n_expected;
 }
 
-int SfcDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &readers, int branch_factor) {
+int SfcDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &readers, int log_branch_factor) {
   CkAbort("Find splitters not yet implemented for SFC Decomposition");
 }
 
@@ -103,8 +103,9 @@ void OctDecomposition::assignKeys(BoundingBox &universe, std::vector<Particle> &
   std::sort(particles.begin(), particles.end());
 }
 
-int OctDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &readers, int branch_factor) {
+int OctDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &readers, int log_branch_factor) {
   BufferedVec<Key> keys;
+  const int branch_factor = (1 << log_branch_factor);
 
   // Initial splitter keys (first and last)
   keys.add(Key(1)); // 0000...1
@@ -117,7 +118,7 @@ int OctDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &reader
   while (keys.size() != 0) {
     // Send splitters to Readers for histogramming
     CkReductionMsg *msg;
-    readers.countOct(keys.get(), CkCallbackResumeThread((void*&)msg));
+    readers.countOct(keys.get(), log_branch_factor, CkCallbackResumeThread((void*&)msg));
     int* counts = (int*)msg->getData();
     int n_counts = msg->getSize() / sizeof(int);
 
@@ -143,16 +144,15 @@ int OctDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &reader
             keys.add(from * branch_factor + k + 1);
           } else {
             // Clamp to largest key if shifted key is larger
-            Key last = to * branch_factor;
-            if (last > ~Key(0)) keys.add(~Key(0));
-            else keys.add(std::move(last)); // compiler reasons
+            if (to == (~Key(0))) keys.add(~Key(0));
+            else keys.add(to * branch_factor);
           }
         }
       }
       else {
         // Create and store splitter
-        Splitter sp(Utility::removeLeadingZeros(from),
-            Utility::removeLeadingZeros(to), from, n_particles);
+        Splitter sp(Utility::removeLeadingZeros(from, log_branch_factor),
+            Utility::removeLeadingZeros(to, log_branch_factor), from, n_particles);
         splitters.push_back(sp);
 
         // Add up number of particles to check if all are flushed

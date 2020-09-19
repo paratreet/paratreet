@@ -42,8 +42,6 @@ public:
   std::vector<std::pair<Key, SpatialNode<Data>>> storage;
   bool storage_sorted;
   BoundingBox universe;
-  Key smallest_particle_key;
-  Key largest_particle_key;
   CProxy_TreePiece<CentroidData> treepieces; // Cannot be a global readonly variable
   int n_treepieces;
   double start_time;
@@ -54,9 +52,6 @@ public:
   // Performs initial decomposition
   void init(CkCallback cb) {
     // Useful particle keys
-    smallest_particle_key = Utility::removeLeadingZeros(Key(1));
-    largest_particle_key = (~Key(0));
-
     CkPrintf("* Initialization\n");
     decompose(0);
     cb.send();

@@ -118,11 +118,11 @@ void Reader::assignKeys(BoundingBox universe_, const CkCallback& cb) {
   contribute(cb);
 }
 
-void Reader::countOct(std::vector<Key> splitter_keys, const CkCallback& cb) {
+void Reader::countOct(std::vector<Key> splitter_keys, size_t log_branch_factor, const CkCallback& cb) {
   std::vector<int> counts;
   counts.resize(splitter_keys.size()/2);
   for (int i = 0; i < splitter_keys.size(); i++) {
-    splitter_keys[i] = Utility::removeLeadingZeros(splitter_keys[i]);
+    splitter_keys[i] = Utility::removeLeadingZeros(splitter_keys[i], log_branch_factor);
   }
 
   // Search for the first particle whose key is greater or equal to the input key,
