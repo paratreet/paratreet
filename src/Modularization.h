@@ -15,7 +15,6 @@ public:
 class OctTree : public Tree {
 public:
   virtual ~OctTree() = default;
-
   virtual int getBranchFactor() override {
     return 8;
   }
