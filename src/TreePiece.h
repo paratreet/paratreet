@@ -49,7 +49,6 @@ public:
   std::vector<std::vector<Node<Data>*>> interactions;
   bool cache_init;
   std::vector<Particle> flushed_particles; // For debugging
-  int dim_cnt;
 
   TreePiece(const CkCallback&, int, int, TCHolder<Data>,
     CProxy_Resumer<Data>, CProxy_CacheManager<Data>, DPHolder<Data>);
@@ -109,7 +108,6 @@ TreePiece<Data>::TreePiece(const CkCallback& cb, int n_total_particles_,
   cm_local->r_proxy = r_proxy;
 
   cache_init = false;
-  dim_cnt = 0;
 
   n_expected = treespec.ckLocalBranch()->getDecomposition()->
       getNumExpectedParticles(n_total_particles, n_treepieces, this->thisIndex);
@@ -200,6 +198,7 @@ bool TreePiece<Data>::recursiveBuild(Node<Data>* node, Particle* node_particles,
   // store reference to splitters
   //static std::vector<Splitter>& splitters = readers.ckLocalBranch()->splitters;
   auto config = treespec.ckLocalBranch()->getConfiguration();
+  auto tree   = treespec.ckLocalBranch()->getTree();
 
   // Check if we are inside the subtree rooted at the treepiece's key
   if (!saw_tp_key) {
@@ -290,8 +289,12 @@ bool TreePiece<Data>::recursiveBuild(Node<Data>* node, Particle* node_particles,
   int finish = start + node->n_particles;
   int non_local_children = 0;
 
+  tree->prepParticles(node_particles, node->n_particles, node->depth);
   for (int i = 0; i < node->n_children; i++) {
-    int first_ge_idx = OctTree::findChildsLastParticle(node, i, child_key, start, finish, log_branch_factor);
+    int first_ge_idx = finish;
+    if (i < node->n_children - 1) {
+      first_ge_idx = tree->findChildsLastParticle(node_particles, child_key, start, finish, log_branch_factor);
+    }
     int n_particles = first_ge_idx - start;
 
     /*

@@ -27,6 +27,8 @@ Tree* TreeSpec::getTree() {
       tree.reset(new OctTree());
     } else if (config.tree_type == BINARY_TREE) {
       tree.reset(new BinaryTree());
+    } else if (config.tree_type == KD_TREE) {
+      tree.reset(new KdTree());
     }
   }
 
