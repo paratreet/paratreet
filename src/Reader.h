@@ -31,7 +31,7 @@ class Reader : public CBase_Reader {
     void assignKeys(BoundingBox, const CkCallback&);
 
     // OCT decomposition
-    void countOct(std::vector<Key>, const CkCallback&);
+    void countOct(std::vector<Key>, size_t, const CkCallback&);
 
     // SFC decomposition
     //void countSfc(const std::vector<Key>&, const CkCallback&);

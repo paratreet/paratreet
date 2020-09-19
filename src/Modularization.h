@@ -7,12 +7,14 @@
 
 class Tree {
 public:
+  virtual ~Tree() = default;
   virtual int getBranchFactor() = 0;
   virtual void buildCanopy(int tp_index, const SendProxyFn &fn) = 0;
 };
 
 class OctTree : public Tree {
 public:
+  virtual ~OctTree() = default;
   int getBranchFactor() override {
     return 8;
   }
@@ -22,7 +24,7 @@ public:
   // Returns start + n_particles
   template<typename Data>
   static int findChildsLastParticle(Node<Data>* parent, int child, Key child_key, int start, int finish) {
-    Key sibling_splitter = Utility::removeLeadingZeros(child_key + 1);
+    Key sibling_splitter = Utility::removeLeadingZeros(child_key + 1, 3);
 
     // Find number of particles in child
     if (child < parent->n_children - 1) {
@@ -35,6 +37,7 @@ public:
 
 class BinaryTree : public OctTree {
 public:
+virtual ~BinaryTree() = default;
   int getBranchFactor() override {
     return 2;
   }
