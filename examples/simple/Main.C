@@ -79,6 +79,9 @@ class Main : public CBase_Main {
           if (input_str.compare("oct") == 0) {
             conf.tree_type = OCT_TREE;
           }
+          else if (input_str.compare("bin") == 0) {
+            conf.tree_type = BINARY_TREE;
+          }
           break;
         case 'i':
           conf.num_iterations = atoi(optarg);
@@ -112,7 +115,7 @@ class Main : public CBase_Main {
     CkPrintf("\n[PARATREET]\n");
     CkPrintf("Input file: %s\n", conf.input_file.c_str());
     CkPrintf("Decomposition type: %s\n", (conf.decomp_type == OCT_DECOMP) ? "OCT" : "SFC");
-    CkPrintf("Tree type: %s\n", (conf.tree_type == OCT_TREE) ? "OCT" : "SFC");
+    CkPrintf("Tree type: %s\n", (conf.tree_type == OCT_TREE) ? "OCT" : "BIN");
     if (conf.decomp_type == SFC_DECOMP) {
       if (n_treepieces <= 0) {
         CkAbort("Number of treepieces must be larger than 0 with SFC decomposition!");
