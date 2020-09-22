@@ -33,7 +33,13 @@ struct CentroidData {
       box.grow(particles[i].position);
     }
     centroid = moment / sum_mass;
+    size_sm = 0.5*(box.size()).length();
     count += n_particles;
+    fixed_ball.resize(n_particles);
+    for (int i = 0; i < n_particles; i++) {
+      particle_comp c (particles[i]);
+      neighbors.emplace_back(c);
+    }
   }
 
   const CentroidData& operator+=(const CentroidData& cd) { // needed for upward traversal
@@ -59,6 +65,9 @@ struct CentroidData {
     box = cd.box;
     count = cd.count;
     rsq = cd.rsq;
+    max_rad = cd.max_rad;
+    size_sm = cd.size_sm;
+    fixed_ball = cd.fixed_ball;
     return *this;
   }
 
@@ -69,6 +78,9 @@ struct CentroidData {
     p | box;
     p | count;
     p | rsq;
+    p | max_rad;
+    p | size_sm;
+    p | fixed_ball;
   }
 
 };

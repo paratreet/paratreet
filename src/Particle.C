@@ -14,6 +14,8 @@ void Particle::pup(PUP::er &p) {
   p|position;
   p|acceleration;
   p|velocity;
+  p|ball;
+  p|soft;
 }
 
 void Particle::reset() {

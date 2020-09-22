@@ -41,11 +41,14 @@ public:
         if (dsq < rsq) {
           target.data.fixed_ball[i].push_back(source.particles()[j]);
           // For now, just print out the orders of the neighbors to check correctness
-          CkPrintf("%d %d %g %g %g %g\n", target.particles()[i].order, source.particles()[j].order,
-                                          target.particles()[i].ball, source.particles()[j].ball, dsq, rsq); 
+          //CkPrintf("%d %d %g %g %g %g\n", target.particles()[i].order, source.particles()[j].order,
+          //                                target.particles()[i].ball, source.particles()[j].ball, dsq, rsq); 
           }
       }
     }
+#if COUNT_INTERACTIONS
+    centroid_resumer.ckLocalBranch()->countInts(target.n_particles);
+#endif
   }
 
 private:
