@@ -85,7 +85,6 @@ void Reader::load(std::string input_file, const CkCallback& cb) {
     box.mass += particles[i].mass;
     box.ke += particles[i].mass * particles[i].velocity.lengthSquared();
     box.pe = 0.0;
-    particles[i].finishSetup();
   }
 
   box.ke /= 2.0;

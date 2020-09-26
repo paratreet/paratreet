@@ -12,12 +12,11 @@ struct CentroidData {
   Vector3D<Real> moment;
   Real sum_mass;
   Vector3D<Real> centroid; // too slow to compute this on the fly
-  Real max_rad = 0.0; // largest particle in bucket
-  Real size_sm; // dist from centroid to furthest particle
-  std::vector<Real> drMax2; // distance to furthest neighbor (for knn)
-  std::vector< std::priority_queue<Particle, std::vector<Particle>, particle_comp> > neighbors; // used for sph
+  Real max_rad = 0.0;
+  Real size_sm;
+  CkVec< CkVec<pqSmoothNode> > neighbors;
   int neighborsInited = false;
-  std::vector< std::vector<Particle> > fixed_ball;
+  CkVec< CkVec<Particle> > fixed_ball;
   OrientedBox<Real> box;
   int count;
   Real rsq;
@@ -36,10 +35,7 @@ struct CentroidData {
     size_sm = 0.5*(box.size()).length();
     count += n_particles;
     fixed_ball.resize(n_particles);
-    for (int i = 0; i < n_particles; i++) {
-      particle_comp c (particles[i]);
-      neighbors.emplace_back(c);
-    }
+    neighbors.resize(n_particles);
   }
 
   const CentroidData& operator+=(const CentroidData& cd) { // needed for upward traversal
@@ -53,6 +49,8 @@ struct CentroidData {
     delta1.y = (delta1.y > delta2.y ? delta1.y : delta2.y);
     delta1.z = (delta1.z > delta2.z ? delta1.z : delta2.z);
     rsq = delta1.lengthSquared() / theta;
+
+    // TODO: new variables here
 
     count += cd.count;
     return *this;
@@ -68,6 +66,7 @@ struct CentroidData {
     max_rad = cd.max_rad;
     size_sm = cd.size_sm;
     fixed_ball = cd.fixed_ball;
+    neighbors = cd.neighbors;
     return *this;
   }
 
@@ -81,6 +80,7 @@ struct CentroidData {
     p | max_rad;
     p | size_sm;
     p | fixed_ball;
+    p | neighbors;
   }
 
 };

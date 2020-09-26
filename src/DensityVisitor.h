@@ -17,30 +17,15 @@ private:
   const int k = 32;
 private:
   void prepNeighbors(SpatialNode<CentroidData>& target) {
-    target.data.drMax2.resize(target.n_particles);
-    target.data.neighbors.resize(target.n_particles);
-
     for (int i = 0; i < target.n_particles; i++) {
-      particle_comp c (target.particles()[i]);
-      std::priority_queue<Particle, std::vector<Particle>, particle_comp> pq (c);
-
-      // For now, just look at particles on this node
-      // If n_particles < k, need to look at surrounding nodes
-      int nMax = target.n_particles < k ? target.n_particles : k;
-      Real drMax2 = 0.001;
-      for (int j = 0; j < nMax; j++) {
-        if (i == j) continue;
-        Vector3D<Real> dr = target.particles()[i].position - target.particles()[j].position;
-        
-        if (dr.lengthSquared() > drMax2)
-          drMax2 = dr.lengthSquared();
-        pq.push(target.particles()[j]);
-        }
-
-      target.data.drMax2[i] = drMax2;
-      if (drMax2 > target.data.max_rad)
-        target.data.max_rad = sqrt(drMax2);
-      target.data.neighbors[i] = pq;
+       Vector3D<Real> dr(0, 0, 0);
+       pqSmoothNode pqNew;
+       //pqNew.pl = target.particles()[i];
+       pqNew.dx = dr;
+       pqNew.fKey = dr.lengthSquared();
+       CkVec<pqSmoothNode> *Q = &target.data.neighbors[i];
+       Q->push_back(pqNew);
+       //std::push_heap(&((*Q)[0]) + 0, &((*Q)[0]) + 1); 
     }
     target.data.neighborsInited = true;
   }
@@ -52,12 +37,12 @@ public:
       return false;
 
     // Check if any of the target balls intersect the source volume
-    for (int i = 0; i < target.n_particles; i++) {
+    /*for (int i = 0; i < target.n_particles; i++) {
       // TODO: Is ball what we want here?
       Real ballSq = target.particles()[i].ball*target.particles()[i].ball;
       if(Space::intersect(source.data.box, target.particles()[i].position, ballSq))
         return true;
-    }
+    }*/
     return false;
   }
 
@@ -66,25 +51,10 @@ public:
   void leaf(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
     if (!target.data.neighborsInited) prepNeighbors(target);
     for (int i = 0; i < target.n_particles; i++) {
-      // If particle outside node sphere, continue
-      Real r_bucket = source.data.size_sm + source.data.max_rad;
-      Vector3D<Real> drBucket = source.data.box.center() - target.particles()[i].position;
-      if (r_bucket < drBucket.length())
-        continue;
       for (int j = 0; j < source.n_particles; j++) {
         // A particle cant be its own neighbor
         if (target.particles()[i].order == source.particles()[j].order)
           continue;
-        Real rOld2 = -1.0;
-        if (target.data.neighbors[i].size() > 0)
-          Real rOld2 = (target.data.neighbors[i].top().position - source.particles()[j].position).lengthSquared();
-        Vector3D<Real> dr = target.particles()[i].position - source.particles()[j].position;
-       
-        if ((dr.lengthSquared() < rOld2) || (rOld2 == -1.0)) {
-          if (target.data.neighbors[i].size() >= k) target.data.neighbors[i].pop();
-          target.data.neighbors[i].push(source.particles()[j]);
-          target.data.drMax2[i] = (target.data.neighbors[i].top().position - source.particles()[j].position).lengthSquared();
-          }
       }
     }
   }

@@ -3,6 +3,17 @@
 
 #include "Particle.h"
 
+struct pqSmoothNode {
+    double fKey;    // distance^2 -> place in priority queue
+    Vector3D<double> dx; // displacement of this particle
+    //Particle pl; // particle data
+    void pup(PUP::er& p) {
+      p|fKey;
+      p|dx;
+      //p|pl;
+  }
+};
+
 struct particle_comp {
   Particle p;
   particle_comp() {}

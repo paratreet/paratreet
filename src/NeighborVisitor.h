@@ -22,11 +22,11 @@ public:
 
   void leaf(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
     for (int i = 0; i < target.data.neighbors.size(); i++) {
-      while (target.data.neighbors[i].size() > 0) {
+      /*while (target.data.neighbors[i].size() > 0) {
         int nOrder = target.data.neighbors[i].top().order;
         CkPrintf("%d %d\n", target.particles()[i].order, nOrder);
         target.data.neighbors[i].pop();
-      }
+      }*/
     }
   }
 };
