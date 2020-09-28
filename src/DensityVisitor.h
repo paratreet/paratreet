@@ -10,54 +10,59 @@
 
 struct DensityVisitor {
 public:
+  // No need for self-interactions, this gets taken care of during 'prepNeighbors'
   static constexpr const bool CallSelfLeaf = true;
 
 // in leaf check for not same particle plz
 private:
   const int k = 32;
-private:
-  void prepNeighbors(SpatialNode<CentroidData>& target) {
-    for (int i = 0; i < target.n_particles; i++) {
-       Vector3D<Real> dr(0, 0, 0);
-       pqSmoothNode pqNew;
-       //pqNew.pl = target.particles()[i];
-       pqNew.dx = dr;
-       pqNew.fKey = dr.lengthSquared();
-       CkVec<pqSmoothNode> *Q = &target.data.neighbors[i];
-       Q->push_back(pqNew);
-       //std::push_heap(&((*Q)[0]) + 0, &((*Q)[0]) + 1); 
-    }
-    target.data.neighborsInited = true;
-  }
-
 public:
   bool open(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
+    //return true;
+
     double r_bucket = target.data.size_sm + target.data.max_rad;
     if (!Space::intersect(source.data.box, target.data.box.center(), r_bucket*r_bucket))
       return false;
 
     // Check if any of the target balls intersect the source volume
-    /*for (int i = 0; i < target.n_particles; i++) {
-      // TODO: Is ball what we want here?
-      Real ballSq = target.particles()[i].ball*target.particles()[i].ball;
-      if(Space::intersect(source.data.box, target.particles()[i].position, ballSq))
+    for (int i = 0; i < target.n_particles; i++) {
+      if(Space::intersect(source.data.box, target.particles()[i].position, target.data.neighbors[i][0].fKey))
         return true;
-    }*/
+    }
     return false;
   }
 
   void node(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {}
 
   void leaf(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
-    if (!target.data.neighborsInited) prepNeighbors(target);
     for (int i = 0; i < target.n_particles; i++) {
+      CkVec<pqSmoothNode> &Q = target.data.neighbors[i];
       for (int j = 0; j < source.n_particles; j++) {
-        // A particle cant be its own neighbor
-        if (target.particles()[i].order == source.particles()[j].order)
-          continue;
+        Vector3D<Real> dr = target.particles()[i].position - source.particles()[j].position;
+        // Remove the most distant neighbor if this one is closer and the list is full
+        if (Q.size() == k) {
+          if (Q[0].fKey > dr.lengthSquared()) {
+            std::pop_heap(&(Q[0]) + 0, &(Q)[0] + k); 
+            Q.resize(Q.size()-1);
+          }
+        }
+        // Add the particle to the neighbor list if it isnt filled up
+        if (Q.size() < k) {
+          pqSmoothNode pqNew;
+          pqNew.pl = source.particles()[j];
+          pqNew.dx = dr;
+          pqNew.fKey = dr.lengthSquared();
+          Q.push_back(pqNew);
+          std::push_heap(&(Q)[0] + 0, &(Q)[0] + Q.size()); 
+
+          Real max_rad = dr.length();
+          if (max_rad > target.data.max_rad)
+            target.data.max_rad = max_rad;
+        }
       }
     }
   }
+
 };
 
 #endif // PARATREET_DENSITYVISITOR_H_

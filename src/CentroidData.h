@@ -15,7 +15,6 @@ struct CentroidData {
   Real max_rad = 0.0;
   Real size_sm;
   CkVec< CkVec<pqSmoothNode> > neighbors;
-  int neighborsInited = false;
   CkVec< CkVec<Particle> > fixed_ball;
   OrientedBox<Real> box;
   int count;
@@ -50,7 +49,16 @@ struct CentroidData {
     delta1.z = (delta1.z > delta2.z ? delta1.z : delta2.z);
     rsq = delta1.lengthSquared() / theta;
 
-    // TODO: new variables here
+    size_sm = 0.5*(box.size()).length();
+    max_rad = max_rad > cd.max_rad ? max_rad : cd.max_rad;
+
+    for (int i = 0; i < cd.fixed_ball.size(); i++) {
+      fixed_ball.insertAtEnd(cd.fixed_ball[i]);
+    }
+
+    for (int i = 0; i < cd.neighbors.size(); i++) {
+      neighbors.insertAtEnd(cd.neighbors[i]);
+    }
 
     count += cd.count;
     return *this;

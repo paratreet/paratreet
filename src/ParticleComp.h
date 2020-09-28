@@ -4,13 +4,18 @@
 #include "Particle.h"
 
 struct pqSmoothNode {
-    double fKey;    // distance^2 -> place in priority queue
+    Real fKey;    // distance^2 -> place in priority queue
     Vector3D<double> dx; // displacement of this particle
-    //Particle pl; // particle data
+    Particle pl; // particle data
+
+    inline bool operator<(const pqSmoothNode& n) const {
+      return fKey < n.fKey;
+    }
+
     void pup(PUP::er& p) {
       p|fKey;
       p|dx;
-      //p|pl;
+      p|pl;
   }
 };
 
