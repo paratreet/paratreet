@@ -9,16 +9,20 @@ struct PressureVisitor {
 public:
   static constexpr const bool CallSelfLeaf = true;
 
-// in leaf check for not same particle plz
-private:
-  const Real radius = .01;
-
 public:
   bool open(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
-    Real rsq = (source.data.centroid - target.data.centroid).lengthSquared();
-    return (rsq < radius * radius);
-    // this just looks at the centroids when it should look at the whole boxes
-    // need to use intersect(), maybe use Sphere<> ?
+    double r_bucket = target.data.size_sm + target.data.max_rad;
+    if (!Space::intersect(source.data.box, target.data.box.center(), r_bucket*r_bucket))
+      return false;
+
+    // Check if any of the target balls intersect the source volume
+    // Ball size is set by furthest neighbor found during density calculation
+    for (int i = 0; i < target.n_particles; i++) {
+      Real ballSq = target.data.neighbors[i][0].fKey;
+      if(Space::intersect(source.data.box, target.particles()[i].position, ballSq))
+        return true;
+    }
+    return false;
   }
 
   void node(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {}
@@ -26,11 +30,19 @@ public:
   void leaf(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
     for (int i = 0; i < target.n_particles; i++) {
       for (int j = 0; j < source.n_particles; j++) {
-        if ((target.particles()[i].position - source.particles()[j].position).lengthSquared() < radius * radius) {
-          //import kernel math here
-        }
+        Real dsq = (target.particles()[i].position - source.particles()[j].position).lengthSquared();
+        Real rsq = target.data.neighbors[i][0].fKey;
+        if (dsq < rsq) {
+          target.data.fixed_ball[i].push_back(source.particles()[j]);
+          // For now, just print out the orders of the neighbors to check correctness
+          //CkPrintf("%d %d %g %g %g %g\n", target.particles()[i].order, source.particles()[j].order,
+          //                                target.particles()[i].ball, source.particles()[j].ball, dsq, rsq); 
+          }
       }
     }
+#if COUNT_INTERACTIONS
+    centroid_resumer.ckLocalBranch()->countInts(target.n_particles);
+#endif
   }
 };
 
