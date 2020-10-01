@@ -1,5 +1,6 @@
 mainmodule Main {
     extern module paratreet;
+    readonly bool verify;
 
     mainchare Main {
         initnode void initialize();
