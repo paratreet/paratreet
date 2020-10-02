@@ -1,6 +1,20 @@
 #include "Main.decl.h"
 #include "Paratreet.h"
 
+/*readonly*/ bool verify;
+
+namespace paratreet {
+  void traversalFn(BoundingBox& universe, CProxy_TreePiece<CentroidData>& tp, int iter) {
+    tp.template startDown<GravityVisitor>();
+  }
+
+  void postInteractionsFn(BoundingBox& universe, CProxy_TreePiece<CentroidData>& tp, int iter) {
+    if (iter == 0 && verify) {
+      paratreet::outputParticles(universe, tp);
+    }
+  }
+}
+
 class Main : public CBase_Main {
   int n_treepieces; // Cannot be a readonly because of OCT decomposition
   int cur_iteration;
@@ -29,18 +43,6 @@ class Main : public CBase_Main {
     conf.cache_share_depth= 3;
     conf.flush_period = 1;
     conf.timestep_size = 0.1;
-
-    conf.traversalFn = [] (CProxy_TreePiece<CentroidData>& tp, int iter) {
-      tp.template startDown<GravityVisitor>();
-    };
-
-    const bool* verifyPtr = &this->verify;
-    conf.postInteractionsFn =
-      [verifyPtr] (BoundingBox& universe, CProxy_TreePiece<CentroidData>& tp, int iter) {
-        if (iter == 0 && *verifyPtr) {
-          paratreet::outputParticles(universe, tp);
-        }
-      };
 
     verify = false;
 

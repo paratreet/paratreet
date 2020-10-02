@@ -1,5 +1,10 @@
 #include "TreeSpec.h"
 
+void TreeSpec::check(const CkCallback &cb) {
+  CkAssert(this->getTree() && this->getDecomposition());
+  cb.send();
+}
+
 void TreeSpec::receiveDecomposition(CkMarshallMsg* msg) {
   char *buffer = msg->msgBuf;
   PUP::fromMem pupper(buffer);

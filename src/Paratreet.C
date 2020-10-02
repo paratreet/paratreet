@@ -33,9 +33,6 @@ namespace paratreet {
         readers = CProxy_Reader::ckNew();
         treespec = CProxy_TreeSpec::ckNew(conf);
 
-        // Set the local branch's configuration (function pointers remain intact)
-        treespec.ckLocalBranch()->setConfiguration(conf);
-
         // Create centroid data related chares
         centroid_calculator = CProxy_TreeCanopy<CentroidData>::ckNew();
         centroid_cache = CProxy_CacheManager<CentroidData>::ckNew();

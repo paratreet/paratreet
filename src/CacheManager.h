@@ -26,7 +26,8 @@ public:
   Data nodewide_data;
 
   CacheManager() {
-    initialize();
+    CkCallback cb(CkIndex_CacheManager<Data>::initialize(), this->thisProxy[this->thisIndex]);
+    treespec.check(cb);
   }
 
   void initialize() {
