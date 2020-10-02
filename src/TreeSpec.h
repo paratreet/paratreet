@@ -10,8 +10,9 @@ public:
     TreeSpec(const paratreet::Configuration& config_)
     : config(config_),
       decomp(nullptr),
-      tree(nullptr) { getTree(); }
+      tree(nullptr) { }
 
+    void check(const CkCallback &cb);
     void receiveDecomposition(CkMarshallMsg*);
     Decomposition* getDecomposition();
 
@@ -27,8 +28,8 @@ public:
     void setConfiguration(const paratreet::Configuration& config_) { config = config_; }
 
     template <typename Data>
-    Node<Data>* makeNode(Key key, int depth, int n_particles, Particle* particles, int owner_tp_start, int owner_tp_end, bool is_leaf, Node<Data>* parent, int tp_index) const {
-      switch (tree->getBranchFactor()) {
+    Node<Data>* makeNode(Key key, int depth, int n_particles, Particle* particles, int owner_tp_start, int owner_tp_end, bool is_leaf, Node<Data>* parent, int tp_index) {
+      switch (getTree()->getBranchFactor()) {
       case 2:
         return new FullNode<Data, 2> (key, depth, n_particles, particles, owner_tp_start, owner_tp_end, is_leaf, parent, tp_index);
       case 8:
@@ -45,7 +46,7 @@ public:
         particles = new Particle [spatial_node.n_particles];
         std::copy(particlesToCopy, particlesToCopy + spatial_node.n_particles, particles);
       }
-      switch (tree->getBranchFactor()) {
+      switch (getTree()->getBranchFactor()) {
       case 2:
         return new FullNode<Data, 2> (key, type, spatial_node.is_leaf, spatial_node, particles, parent);
       case 8:
