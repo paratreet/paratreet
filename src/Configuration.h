@@ -11,9 +11,6 @@ template<typename T>
 class CProxy_TreePiece;
 
 namespace paratreet {
-    using TraversalFn = std::function<void(CProxy_TreePiece<CentroidData>&,int)>;
-    using PostInteractionsFn = std::function<void(BoundingBox&,CProxy_TreePiece<CentroidData>&,int)>;
-
     struct Configuration {
         double decomp_tolerance;
         int max_particles_per_tp; // For OCT decomposition
@@ -26,8 +23,6 @@ namespace paratreet {
         int flush_period;
         Real timestep_size;
         std::string input_file;
-        TraversalFn traversalFn;
-        PostInteractionsFn postInteractionsFn;
 #ifdef __CHARMC__
 #include "pup.h"
         void pup(PUP::er &p) {

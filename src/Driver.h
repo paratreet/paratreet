@@ -33,6 +33,11 @@ extern CProxy_CacheManager<CentroidData> centroid_cache;
 extern CProxy_Resumer<CentroidData> centroid_resumer;
 extern CProxy_CountManager count_manager;
 
+namespace paratreet {
+  extern void traversalFn(BoundingBox&,CProxy_TreePiece<CentroidData>&,int);
+  extern void postInteractionsFn(BoundingBox&,CProxy_TreePiece<CentroidData>&,int);
+}
+
 template <typename Data>
 class Driver : public CBase_Driver<Data> {
 private:
@@ -155,7 +160,7 @@ public:
       start_time = CkWallTimer();
       //treepieces.template startUpAndDown<DensityVisitor>();
       //treepieces.template startDown<GravityVisitor>();
-      treespec.ckLocalBranch()->getConfiguration().traversalFn(treepieces, iter);
+      paratreet::traversalFn(universe, treepieces, iter);
       CkWaitQD();
 #if DELAYLOCAL
       //treepieces.processLocal(CkCallbackResumeThread());
@@ -178,7 +183,7 @@ public:
       // Call user's post-interaction function, which may for example:
       // Output particle accelerations for verification
       // TODO: Initial force interactions similar to ChaNGa
-      treespec.ckLocalBranch()->getConfiguration().postInteractionsFn(universe, treepieces, iter);
+      paratreet::postInteractionsFn(universe, treepieces, iter);
 
       // Destroy treepieces and perform decomposition from scratch
       if (complete_rebuild) {
