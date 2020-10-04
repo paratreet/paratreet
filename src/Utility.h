@@ -104,9 +104,9 @@ class Utility {
     return k1 == k2;
   }
 
-  static Key removeLeadingZeros(Key k) {
-    int depth = getDepthFromKey(k, 3); // doesn't matter what LBF is
-    return getParticleLevelKey(k, depth, 3);
+  static Key removeLeadingZeros(Key k, size_t log_branch_factor) {
+    int depth = getDepthFromKey(k, log_branch_factor); // doesn't matter what LBF is
+    return getParticleLevelKey(k, depth, log_branch_factor);
   }
 
   // Zeroes all bits after the first zero (in most-significant order)

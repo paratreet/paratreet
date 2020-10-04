@@ -101,9 +101,9 @@ public:
   virtual ~Node() = default;
 
 public:
-  int n_children; // TreePiece's recursiveBuild prevents the constness
+  int n_children; // Subtree's recursiveBuild prevents the constness
   Node* parent;   // CacheManager's insertNode  prevents the constness
-  Type type;      // TreePiece's recursiveBuild prevents the constness
+  Type type;      // Subtree's recursiveBuild prevents the constness
   const Key key;
 
   // this stuff gets edited:

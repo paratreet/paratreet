@@ -14,6 +14,7 @@
 #include "Driver.h"
 #include "OrientedBox.h"
 
+#include <cstring>
 #include <queue>
 #include <vector>
 #include <fstream>
@@ -24,7 +25,6 @@ extern CProxy_Reader readers;
 extern int max_particles_per_leaf;
 extern Decomposition* decomposition;
 extern int tree_type;
-extern CProxy_Main mainProxy;
 
 template <typename Data>
 class Subtree : public CBase_Subtree<Data> {
@@ -34,7 +34,7 @@ public:
   std::vector<Node<Data>*> empty_leaves;
 
   int n_total_particles;
-  int n_treepieces;
+  int n_subtrees;
   int n_partitions;
   int particle_index;
 
@@ -84,11 +84,11 @@ public:
 
 template <typename Data>
 Subtree<Data>::Subtree(const CkCallback& cb, int n_total_particles_,
-                       int n_treepieces_, int n_partitions_, TCHolder<Data> tc_holder,
+                       int n_subtrees_, int n_partitions_, TCHolder<Data> tc_holder,
                        CProxy_Resumer<Data> r_proxy_,
                        CProxy_CacheManager<Data> cm_proxy, DPHolder<Data> dp_holder) {
   n_total_particles = n_total_particles_;
-  n_treepieces = n_treepieces_;
+  n_subtrees = n_subtrees_;
   n_partitions = n_partitions_;
   particle_index = 0;
 
@@ -109,9 +109,7 @@ Subtree<Data>::Subtree(const CkCallback& cb, int n_total_particles_,
                                  tp_index, cm_proxy, dp_holder);
     };
 
-  if (tree_type == OCT_TREE) {
-    OctTree::buildCanopy(this->thisIndex, sendProxy);
-  }
+  treespec_subtrees.ckLocalBranch()->getTree()->buildCanopy(this->thisIndex, sendProxy);
 
   global_root = nullptr;
   local_root = nullptr;
@@ -138,6 +136,7 @@ void Subtree<Data>::send_leaves(CProxy_Partition<Data> part)
   if (leaves.size() == 0) return;
 
   int leaf_idx = 0;
+  size_t branch_factor = 0u;
   while (leaf_idx < leaves.size()) {
     int current_part_idx = leaves[leaf_idx]->particles()->partition_idx;
     std::vector<NodeWrapper<Data>> node_data;
@@ -148,16 +147,17 @@ void Subtree<Data>::send_leaves(CProxy_Partition<Data> part)
       )
     {
       Node<Data> *leaf = leaves[leaf_idx];
+      branch_factor = leaf->getBranchFactor();
       node_data.push_back(
         NodeWrapper<Data>(
           leaf->key, leaf->n_particles, leaf->depth,
-          leaf->getBranchFactor(), leaf->is_leaf, leaf->data
+          branch_factor, leaf->is_leaf, leaf->data
           )
         );
       ++leaf_idx;
     }
 
-    part[current_part_idx].receive_leaves(node_data, this->thisIndex);
+    part[current_part_idx].receiveLeaves(node_data, this->thisIndex, branch_factor);
   }
 }
 
@@ -182,12 +182,11 @@ void Subtree<Data>::buildTree() {
 #if DEBUG
   CkPrintf("[TP %d] key: 0x%" PRIx64 " particles: %d\n", this->thisIndex, tp_key, particles.size());
 #endif
-  global_root = treespec_subtrees.ckLocalBranch()->template makeNode<Data>(1, 0, particles.size(), &particles[0], 0, n_treepieces - 1, false, nullptr, this->thisIndex);
+  global_root = treespec_subtrees.ckLocalBranch()->template makeNode<Data>(1, 0, particles.size(), &particles[0], 0, n_subtrees - 1, false, nullptr, this->thisIndex);
   recursiveBuild(global_root, &particles[0], false, log2(global_root->getBranchFactor()));
 
   // Populate the tree structure (including TreeCanopy)
   populateTree();
-
   // Initialize cache
   initCache();
 }
@@ -200,14 +199,15 @@ bool Subtree<Data>::recursiveBuild(Node<Data>* node, Particle* node_particles, b
 #endif
   // store reference to splitters
   //static std::vector<Splitter>& splitters = readers.ckLocalBranch()->splitters;
+  auto config = treespec.ckLocalBranch()->getConfiguration();
 
-  // Check if we are inside the subtree rooted at the treepiece's key
+  // Check if we are inside the subtree rooted at the tp key
   if (!saw_tp_key) {
     saw_tp_key = (node->key == tp_key);
     if (saw_tp_key) local_root = node;
   }
 
-  bool is_light = (node->n_particles <= ceil(BUCKET_TOLERANCE * max_particles_per_leaf));
+  bool is_light = (node->n_particles <= ceil(BUCKET_TOLERANCE * config.max_particles_per_leaf));
   bool is_prefix = Utility::isPrefix(node->key, tp_key, log_branch_factor);
 
   if (saw_tp_key) {
@@ -283,23 +283,15 @@ bool Subtree<Data>::recursiveBuild(Node<Data>* node, Particle* node_particles, b
   */
 
   // Create children
-  node->n_children = node->wait_count = node->getBranchFactor();
+  node->n_children = node->wait_count = (1 << log_branch_factor);
   node->is_leaf = false;
-  Key child_key = node->key * node->getBranchFactor();
+  Key child_key = (node->key << log_branch_factor);
   int start = 0;
   int finish = start + node->n_particles;
   int non_local_children = 0;
 
   for (int i = 0; i < node->n_children; i++) {
-    Key sibling_splitter = Utility::removeLeadingZeros(child_key + 1);
-
-    // Find number of particles in child
-    int first_ge_idx;
-    if (i < node->n_children - 1) {
-      first_ge_idx = Utility::binarySearchGE(sibling_splitter, node->particles(), start, finish);
-    } else {
-      first_ge_idx = finish;
-    }
+    int first_ge_idx = OctTree::findChildsLastParticle(node, i, child_key, start, finish, log_branch_factor);
     int n_particles = first_ge_idx - start;
 
     /*
@@ -323,7 +315,7 @@ bool Subtree<Data>::recursiveBuild(Node<Data>* node, Particle* node_particles, b
 
     // Create child and store in vector
     Node<Data>* child = treespec_subtrees.ckLocalBranch()->template makeNode<Data>(child_key, node->depth + 1,
-        n_particles, node_particles + start, 0, n_treepieces - 1, true, node, this->thisIndex);
+        n_particles, node_particles + start, 0, n_subtrees - 1, true, node, this->thisIndex);
     /*
     Node<Data>* child = new Node<Data>(child_key, node->depth + 1, node->particles + start,
         n_particles, child_owner_start, child_owner_end, node);
@@ -554,7 +546,7 @@ void Subtree<Data>::output(CProxy_Writer w, CkCallback cb) {
     w[writer_idx].receive(writer_particles, cb);
   }
 
-  if (this->thisIndex != n_treepieces - 1) {
+  if (this->thisIndex != n_subtrees - 1) {
     this->thisProxy[this->thisIndex + 1].output(w, cb);
   }
 }

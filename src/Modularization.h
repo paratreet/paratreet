@@ -1,29 +1,47 @@
 #ifndef PARATREET_MODULARIZATION_H_
 #define PARATREET_MODULARIZATION_H_
 
-#include "TreeSpec.h"
-#include "Decomposition.h"
-#include "common.h"
+#include "paratreet.decl.h"
+#include "Node.h"
+#include "Utility.h"
 
 extern int decomp_type;
-extern CProxy_TreeSpec treespec_subtrees;
-
-class OctTree {
+class Tree {
 public:
+  virtual ~Tree() = default;
+  virtual int getBranchFactor() = 0;
+  virtual void buildCanopy(int tp_index, const SendProxyFn &fn) = 0;
+};
 
-  static void buildCanopy(int tp_index, const SendProxyFn &fn) {
-    Key tp_key = treespec_subtrees
-      .ckLocalBranch()->getDecomposition()->getTpKey(tp_index);
-    Key temp_key = tp_key;
-    fn(tp_key, tp_index);
-    while (temp_key > 0 && temp_key % BRANCH_FACTOR == 0) {
-      temp_key /= BRANCH_FACTOR;
-      fn(temp_key, -1);
-    }
+class OctTree : public Tree {
+public:
+  virtual ~OctTree() = default;
+  virtual int getBranchFactor() override {
+    return 8;
   }
 
-private:
-  static constexpr size_t BRANCH_FACTOR = 8;
+  void buildCanopy(int tp_index, const SendProxyFn &fn) override;
+
+  // Returns start + n_particles
+  template<typename Data>
+  static int findChildsLastParticle(Node<Data>* parent, int child, Key child_key, int start, int finish, size_t log_branch_factor) {
+    Key sibling_splitter = Utility::removeLeadingZeros(child_key + 1, log_branch_factor);
+
+    // Find number of particles in child
+    if (child < parent->n_children - 1) {
+      return Utility::binarySearchGE(sibling_splitter, parent->particles(), start, finish);
+    } else {
+      return finish;
+    }
+  }
+};
+
+class BinaryTree : public OctTree {
+public:
+  virtual ~BinaryTree() = default;
+  virtual int getBranchFactor() override {
+    return 2;
+  }
 };
 
 #endif

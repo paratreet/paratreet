@@ -6,9 +6,9 @@
 #include "BufferedVec.h"
 #include "Reader.h"
 
-extern int max_particles_per_tp; // for OCT decomposition
+extern CProxy_TreeSpec treespec;
 
-int SfcDecomposition::flush(int n_total_particles, int n_treepieces, const SendParticlesFn &fn,
+int SfcDecomposition::flush(int n_total_particles, int n_partitions, const SendParticlesFn &fn,
                             std::vector<Particle> &particles) {
   int flush_count = 0;
   int particle_idx = Utility::binarySearchGE(
@@ -36,14 +36,14 @@ void SfcDecomposition::assignKeys(BoundingBox &universe, std::vector<Particle> &
   std::sort(particles.begin(), particles.end());
 }
 
-int SfcDecomposition::getNumExpectedParticles(int n_total_particles, int n_treepieces,
+int SfcDecomposition::getNumExpectedParticles(int n_total_particles, int n_partitions,
                                               int tp_index) {
-  int n_expected = n_total_particles / n_treepieces;
-  if (tp_index < (n_total_particles % n_treepieces)) n_expected++;
+  int n_expected = n_total_particles / n_partitions;
+  if (tp_index < (n_total_particles % n_partitions)) n_expected++;
   return n_expected;
 }
 
-int SfcDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &readers) {
+int SfcDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &readers, int log_branch_factor) {
   // countSfc finds the keys of all particles
   CkReductionMsg *msg;
   readers.countSfc(CkCallbackResumeThread((void*&)msg));
@@ -60,7 +60,8 @@ int SfcDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &reader
 
   int decomp_particle_sum = 0;
 
-  Real threshold = DECOMP_TOLERANCE * Real(max_particles_per_tp);
+  auto config = treespec.ckLocalBranch()->getConfiguration();
+  Real threshold = DECOMP_TOLERANCE * Real(config.max_particles_per_tp);
   for (int i = 0; i * threshold < keys.size(); ++i) {
     Key from = keys[(int)(i * threshold)];
     Key to;
@@ -75,8 +76,8 @@ int SfcDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &reader
     // differing bit between `from` and `to`
     Key prefixMask = Utility::removeTrailingBits(~(from ^ (to - 1)));
     Key prefix = prefixMask & from;
-    Splitter sp(Utility::removeLeadingZeros(from),
-                Utility::removeLeadingZeros(to), prefix, n_particles);
+    Splitter sp(Utility::removeLeadingZeros(from, log_branch_factor),
+                Utility::removeLeadingZeros(to, log_branch_factor), prefix, n_particles);
     splitters.push_back(sp);
 
     decomp_particle_sum += n_particles;
@@ -130,12 +131,12 @@ int SfcDecomposition::getTpKey(int idx) {
   return splitters[idx].tp_key;
 }
 
-int OctDecomposition::getNumExpectedParticles(int n_total_particles, int n_treepieces,
+int OctDecomposition::getNumExpectedParticles(int n_total_particles, int n_partitions,
                                               int tp_index) {
   return splitters[tp_index].n_particles;
 }
 
-int OctDecomposition::flush(int n_total_particles, int n_treepieces, const SendParticlesFn &fn,
+int OctDecomposition::flush(int n_total_particles, int n_partitions, const SendParticlesFn &fn,
                             std::vector<Particle> &particles) {
   // OCT decomposition
   int flush_count = 0;
@@ -169,8 +170,9 @@ void OctDecomposition::assignKeys(BoundingBox &universe, std::vector<Particle> &
   // std::sort(particles.begin(), particles.end());
 }
 
-int OctDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &readers) {
+int OctDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &readers, int log_branch_factor) {
   BufferedVec<Key> keys;
+  const int branch_factor = (1 << log_branch_factor);
 
   // Initial splitter keys (first and last)
   keys.add(Key(1)); // 0000...1
@@ -183,52 +185,41 @@ int OctDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &reader
   while (keys.size() != 0) {
     // Send splitters to Readers for histogramming
     CkReductionMsg *msg;
-    readers.countOct(keys.get(), CkCallbackResumeThread((void*&)msg));
+    readers.countOct(keys.get(), log_branch_factor, CkCallbackResumeThread((void*&)msg));
     int* counts = (int*)msg->getData();
     int n_counts = msg->getSize() / sizeof(int);
 
     // Check counts and create splitters if necessary
-    Real threshold = (DECOMP_TOLERANCE * Real(max_particles_per_tp));
+    auto config = treespec.ckLocalBranch()->getConfiguration();
+    Real threshold = (DECOMP_TOLERANCE * Real(config.max_particles_per_tp));
     for (int i = 0; i < n_counts; i++) {
       Key from = keys.get(2*i);
       Key to = keys.get(2*i+1);
 
       int n_particles = counts[i];
       if ((Real)n_particles > threshold) {
-        // Create 8 more splitter key pairs to go one level deeper.
+        // Create *branch_factor* more splitter key pairs to go one level deeper.
         // Leading zeros will be removed in Reader::count() to enable
         // comparison of splitter key and particle key
-        keys.add(from << 3);
-        keys.add((from << 3) + 1);
 
-        keys.add((from << 3) + 1);
-        keys.add((from << 3) + 2);
+        for (int k = 0; k < branch_factor; k++) {
+          // Add first key in pair
+          keys.add(from * branch_factor + k);
 
-        keys.add((from << 3) + 2);
-        keys.add((from << 3) + 3);
-
-        keys.add((from << 3) + 3);
-        keys.add((from << 3) + 4);
-
-        keys.add((from << 3) + 4);
-        keys.add((from << 3) + 5);
-
-        keys.add((from << 3) + 5);
-        keys.add((from << 3) + 6);
-
-        keys.add((from << 3) + 6);
-        keys.add((from << 3) + 7);
-
-        keys.add((from << 3) + 7);
-        if (to == (~Key(0)))
-          keys.add(~Key(0));
-        else
-          keys.add(to << 3);
+          // Add second key in pair
+          if (k < branch_factor - 1) {
+            keys.add(from * branch_factor + k + 1);
+          } else {
+            // Clamp to largest key if shifted key is larger
+            if (to == (~Key(0))) keys.add(~Key(0));
+            else keys.add(to * branch_factor);
+          }
+        }
       }
       else {
         // Create and store splitter
-        Splitter sp(Utility::removeLeadingZeros(from),
-                    Utility::removeLeadingZeros(to), from, n_particles);
+        Splitter sp(Utility::removeLeadingZeros(from, log_branch_factor),
+            Utility::removeLeadingZeros(to, log_branch_factor), from, n_particles);
         splitters.push_back(sp);
 
         // Add up number of particles to check if all are flushed

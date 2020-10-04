@@ -1,4 +1,5 @@
-mainmodule paratreet {
+module paratreet {
+  include "Configuration.h";
   include "BoundingBox.h";
   include "Splitter.h";
   include "CentroidData.h";
@@ -10,33 +11,14 @@ mainmodule paratreet {
   include "Decomposition.h";
   include "NodeWrapper.h";
 
-  readonly CProxy_Main mainProxy;
   readonly CProxy_Reader readers;
   readonly CProxy_TreeSpec treespec;
   readonly CProxy_TreeSpec treespec_subtrees;
-  readonly std::string input_file;
   readonly int n_readers;
-  readonly double decomp_tolerance;
-  readonly int max_particles_per_tp;
-  readonly int max_particles_per_leaf;
-  readonly int decomp_type;
-  readonly int tree_type;
-  readonly int num_iterations;
-  readonly int flush_period;
-  readonly int num_share_levels;
-  readonly int cache_share_depth;
-  readonly bool verify;
   readonly CProxy_TreeCanopy<CentroidData> centroid_calculator;
   readonly CProxy_CacheManager<CentroidData> centroid_cache;
   readonly CProxy_Resumer<CentroidData> centroid_resumer;
   readonly CProxy_CountManager count_manager;
-
-  mainchare Main {
-    initnode void initialize();
-    entry Main(CkArgMsg* m);
-    entry [threaded] void run();
-    entry [reductiontarget] void checkParticlesChangedDone(bool result); // For debugging
-  };
 
   message ParticleMsg {
     Particle particles[];
@@ -49,6 +31,7 @@ mainmodule paratreet {
   nodegroup CacheManager {
 #endif
     entry CacheManager();
+    entry void initialize();
     entry void requestNodes(std::pair<Key, int>);
     entry void recvStarterPack(std::pair<Key, SpatialNode<Data>> pack [n], int n, CkCallback);
     entry void addCache(MultiData<Data>);
@@ -86,7 +69,7 @@ mainmodule paratreet {
     template <typename Visitor> entry void startDown();
     entry void interact(const CkCallback&);
     entry void goDown(Key);
-    entry void receive_leaves(std::vector<NodeWrapper<Data>>, int);
+    entry void receiveLeaves(std::vector<NodeWrapper<Data>>, int, size_t);
     entry void receive(ParticleMsg*);
     entry void destroy();
     entry void reset();
@@ -139,7 +122,7 @@ mainmodule paratreet {
     entry Driver(CProxy_CacheManager<Data>);
     entry [threaded] void init(CkCallback cb);
     entry [threaded] void run(CkCallback cb);
-    entry [reductiontarget] void countInts(unsigned long long intrn_counts [2]);
+    entry [reductiontarget] void countInts(unsigned long long intrn_counts [4]);
     entry void recvTC(std::pair<Key, SpatialNode<Data>>);
     entry void loadCache(CkCallback);
     template <typename Visitor>
@@ -156,9 +139,8 @@ mainmodule paratreet {
     entry void assignKeys(BoundingBox, const CkCallback&);
     template <typename Data>
     entry void request(CProxy_Subtree<Data>, int, int);
-    entry void countOct(std::vector<Key>, const CkCallback&);
+    entry void countOct(std::vector<Key>, size_t, const CkCallback&);
     entry void countSfc(const CkCallback&);
-    //entry void countSfc(const std::vector<Key>&, const CkCallback&);
     entry void pickSamples(const int, const CkCallback&);
     entry void prepMessages(const std::vector<Key>&, const CkCallback&);
     entry void redistribute();
@@ -172,9 +154,13 @@ mainmodule paratreet {
   };
 
   group TreeSpec {
-    entry TreeSpec(int tree_type, int decomp_type);
+    entry TreeSpec(const paratreet::Configuration&);
+    entry void check(const CkCallback&);
     entry void receiveDecomposition(CkMarshallMsg*);
     entry [local] Decomposition* getDecomposition();
+    entry void receiveConfiguration(const paratreet::Configuration&,CkCallback);
+    entry [local] paratreet::Configuration& getConfiguration();
+    entry [local] void setConfiguration(const paratreet::Configuration&);
   }
 
   extern entry void Reader request<CentroidData>(CProxy_Subtree<CentroidData>, int, int);

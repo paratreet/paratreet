@@ -35,7 +35,7 @@ struct Partition : public CBase_Partition<Data> {
   void goDown(Key);
   void interact(const CkCallback& cb);
 
-  void receive_leaves(std::vector<NodeWrapper<Data>>, int);
+  void receiveLeaves(std::vector<NodeWrapper<Data>>, int, size_t);
   void receive(ParticleMsg*);
   void destroy();
   void reset();
@@ -86,13 +86,13 @@ void Partition<Data>::interact(const CkCallback& cb)
 }
 
 template <typename Data>
-void Partition<Data>::receive_leaves(
-  std::vector<NodeWrapper<Data>> data, int subtree_idx
+void Partition<Data>::receiveLeaves(
+  std::vector<NodeWrapper<Data>> data, int subtree_idx, size_t branch_factor
   )
 {
   int from = 0;
   for (const NodeWrapper<Data>& leaf : data) {
-    Key k = Utility::removeLeadingZeros(leaf.key);
+    Key k = Utility::removeLeadingZeros(leaf.key, branch_factor);
     from = Utility::binarySearchGE(k, &particles[0], from, particles.size());
     int to = Utility::binarySearchGE(k, &particles[0], from + 1, particles.size());
     Node<Data> *node = treespec.ckLocalBranch()->template makeNode<Data>(

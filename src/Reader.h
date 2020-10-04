@@ -7,14 +7,13 @@
 #include "BoundingBox.h"
 #include "Splitter.h"
 #include "Utility.h"
+#include "TreeSpec.h"
 #include "Modularization.h"
 
-extern CProxy_Main mainProxy;
 extern int n_readers;
 extern int decomp_type;
 extern CProxy_TreeSpec treespec;
 extern CProxy_TreeSpec treespec_subtrees;
-
 
 class Reader : public CBase_Reader {
   BoundingBox box;
@@ -34,7 +33,7 @@ class Reader : public CBase_Reader {
     void assignKeys(BoundingBox, const CkCallback&);
 
     // OCT decomposition
-    void countOct(std::vector<Key>, const CkCallback&);
+    void countOct(std::vector<Key>, size_t, const CkCallback&);
 
     // SFC decomposition
     void countSfc(const CkCallback& cb);
