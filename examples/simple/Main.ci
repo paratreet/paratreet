@@ -1,0 +1,13 @@
+mainmodule Main {
+    extern module paratreet;
+    readonly bool verify;
+
+    mainchare Main {
+        initnode void initialize();
+        entry Main(CkArgMsg* m);
+        entry [threaded] void run();
+        entry [reductiontarget] void checkParticlesChangedDone(bool result); // For debugging
+    };
+
+    extern entry void Partition<CentroidData> startDown<GravityVisitor> ();
+}
