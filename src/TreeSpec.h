@@ -19,8 +19,8 @@ public:
     Tree* getTree();
 
     int doFindSplitters(BoundingBox &universe, CProxy_Reader &readers) {
-        int log_branch_factor = log2(tree->getBranchFactor());
-        return decomp->findSplitters(universe, readers, log_branch_factor);
+        int log_branch_factor = log2(getTree()->getBranchFactor());
+        return getDecomposition()->findSplitters(universe, readers, log_branch_factor);
     }
 
     void receiveConfiguration(const paratreet::Configuration&,CkCallback);
