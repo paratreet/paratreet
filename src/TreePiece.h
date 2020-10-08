@@ -70,6 +70,7 @@ public:
   void perturb (Real timestep, bool);
   void flush(CProxy_Reader);
   void destroy();
+  void doSph(CkCallback cb);
   void printNeighborList(bool fixedBall, CkCallback cb);
   void output(CProxy_Writer w, CkCallback cb);
 
@@ -544,6 +545,23 @@ void TreePiece<Data>::print(Node<Data>* node) {
   node->dot(out);
   out << "}" << endl;
   out.close();
+}
+
+template <typename Data>
+void TreePiece<Data>::doSph(CkCallback cb) {
+  for (const auto& leaf : leaves) {
+  // SPH calculations go here
+  //
+  // Set 'density' field for each particle
+  // Set 'pressure' field for each particle
+  // Run though each particles neighbor list and make sure each pair agrees on pressure force
+  }
+
+  if (this->thisIndex != n_treepieces - 1) {
+    this->thisProxy[this->thisIndex + 1].doSph(cb);
+  } else {
+    cb.send();
+  }
 }
 
 template <typename Data>

@@ -51,6 +51,10 @@ namespace paratreet {
         centroid_driver.run(cb);
     }
 
+    void doSph(CProxy_TreePiece<CentroidData>& treepieces) {
+        treepieces[0].doSph(CkCallbackResumeThread());
+    }
+
     void printNeighborList(bool fixed_ball, CProxy_TreePiece<CentroidData>& treepieces) {
         treepieces[0].printNeighborList(fixed_ball, CkCallbackResumeThread());
     }
