@@ -30,6 +30,7 @@ namespace paratreet {
     void initialize(const Configuration&, CkCallback);
     void run(CkCallback);
     void updateConfiguration(const Configuration&, CkCallback);
+    void printNeighborList(bool, CProxy_TreePiece<CentroidData>&);
     void outputParticles(BoundingBox&, CProxy_TreePiece<CentroidData>&);
 }
 

@@ -18,7 +18,7 @@ class Main : public CBase_Main {
     // mainProxy = thisProxy;
 
     // Initialize readonly variables
-    conf.input_file = "../../inputgen/hkshiftfull.1000000";
+    conf.input_file = "../../inputgen/disk4000.ic";
     conf.decomp_tolerance = 0.1;
     conf.max_particles_per_tp = 1000;
     conf.max_particles_per_leaf = 10;
@@ -38,11 +38,12 @@ class Main : public CBase_Main {
     conf.postInteractionsFn =
       [verifyPtr] (BoundingBox& universe, CProxy_TreePiece<CentroidData>& tp, int iter) {
         if (iter == 0 && *verifyPtr) {
-          paratreet::outputParticles(universe, tp);
+          bool fixed_ball = true;
+          paratreet::printNeighborList(fixed_ball, tp);
         }
       };
 
-    verify = false;
+    verify = true;
 
     // Initialize member variables
     n_treepieces = 0;

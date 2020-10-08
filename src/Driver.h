@@ -18,7 +18,6 @@
 #include "DensityVisitor.h"
 #include "GravityVisitor.h"
 #include "PressureVisitor.h"
-#include "NeighborVisitor.h"
 #include "CollisionVisitor.h"
 #include "CountVisitor.h"
 #include "CacheManager.h"

@@ -70,6 +70,7 @@ public:
   void perturb (Real timestep, bool);
   void flush(CProxy_Reader);
   void destroy();
+  void printNeighborList(bool fixedBall, CkCallback cb);
   void output(CProxy_Writer w, CkCallback cb);
 
   // For debugging
@@ -543,6 +544,31 @@ void TreePiece<Data>::print(Node<Data>* node) {
   node->dot(out);
   out << "}" << endl;
   out.close();
+}
+
+template <typename Data>
+void TreePiece<Data>::printNeighborList(bool fixed_ball, CkCallback cb) {
+  for (const auto& leaf : leaves) {
+    if (fixed_ball) {
+      for (int i = 0; i < leaf->n_particles; i++) {
+        for (int j = 0; j < leaf->data.fixed_ball[i].size(); j++) {
+          CkPrintf("%d %d\n", leaf->particles()[i].order, leaf->data.fixed_ball[i][j].order);
+        }
+      }
+    } else {
+      for (int i = 0; i < leaf->n_particles; i++) {
+        for (int j = 0; j < leaf->data.neighbors[i].size(); j++) {
+          CkPrintf("%d %d\n", leaf->particles()[i].order, leaf->data.neighbors[i][j].pl.order);
+        }
+      }
+    }
+  }
+
+  if (this->thisIndex != n_treepieces - 1) {
+    this->thisProxy[this->thisIndex + 1].printNeighborList(fixed_ball, cb);
+  } else {
+    cb.send();
+  }
 }
 
 template <typename Data>

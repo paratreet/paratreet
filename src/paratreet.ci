@@ -89,14 +89,15 @@ module paratreet {
     entry void destroy();
 
     entry void checkParticlesChanged(const CkCallback&);
+    entry void printNeighborList(bool fixed_ball, CkCallback cb);
     entry void output(CProxy_Writer w, CkCallback cb);
   };
   array [1d] TreePiece<CentroidData>;
 
   extern entry void TreePiece<CentroidData> startDown<GravityVisitor> ();
   extern entry void TreePiece<CentroidData> startDual<GravityVisitor> ();
+  extern entry void TreePiece<CentroidData> startDown<CollisionVisitor> ();
   extern entry void TreePiece<CentroidData> startUpAndDown<DensityVisitor> ();
-  extern entry void TreePiece<CentroidData> startUpAndDown<NeighborVisitor> ();
   extern entry void TreePiece<CentroidData> startDown<PressureVisitor> ();
   extern entry void TreePiece<CentroidData> startDual<CountVisitor> ();
 

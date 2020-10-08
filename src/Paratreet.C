@@ -51,6 +51,10 @@ namespace paratreet {
         centroid_driver.run(cb);
     }
 
+    void printNeighborList(bool fixed_ball, CProxy_TreePiece<CentroidData>& treepieces) {
+        treepieces[0].printNeighborList(fixed_ball, CkCallbackResumeThread());
+    }
+
     void outputParticles(BoundingBox& universe, CProxy_TreePiece<CentroidData>& treepieces) {
         std::string output_file = input_file + ".acc";
         CProxy_Writer w = CProxy_Writer::ckNew(output_file, universe.n_particles);
