@@ -15,7 +15,7 @@ public:
 // in leaf check for not same particle plz
 public:
   bool open(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
-    double r_bucket = target.data.size_sm + target.data.max_rad;
+    Real r_bucket = target.data.size_sm + target.data.max_rad;
     if (!Space::intersect(source.data.box, target.data.box.center(), r_bucket*r_bucket))
       return false;
 
@@ -35,12 +35,7 @@ public:
       for (int j = 0; j < source.n_particles; j++) {
         Real dsq = (target.particles()[i].position - source.particles()[j].position).lengthSquared();
         Real rsq = target.particles()[i].ball*target.particles()[i].ball;
-        if (dsq < rsq) {
-          target.data.fixed_ball[i].push_back(source.particles()[j]);
-          // For now, just print out the orders of the neighbors to check correctness
-          //CkPrintf("%d %d %g %g %g %g\n", target.particles()[i].order, source.particles()[j].order,
-          //                                target.particles()[i].ball, source.particles()[j].ball, dsq, rsq); 
-          }
+        if (dsq < rsq) target.data.fixed_ball[i].push_back(source.particles()[j]);
       }
     }
 #if COUNT_INTERACTIONS

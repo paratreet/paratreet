@@ -10,7 +10,6 @@
 
 struct DensityVisitor {
 public:
-  // No need for self-interactions, this gets taken care of during 'prepNeighbors'
   static constexpr const bool CallSelfLeaf = true;
 
 // in leaf check for not same particle plz
@@ -18,9 +17,7 @@ private:
   const int k = 32;
 public:
   bool open(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
-    //return true;
-
-    double r_bucket = target.data.size_sm + target.data.max_rad;
+    Real r_bucket = target.data.size_sm + target.data.max_rad;
     if (!Space::intersect(source.data.box, target.data.box.center(), r_bucket*r_bucket))
       return false;
 
@@ -50,7 +47,6 @@ public:
         if (Q.size() < k) {
           pqSmoothNode pqNew;
           pqNew.pl = source.particles()[j];
-          pqNew.dx = dr;
           pqNew.fKey = dr.lengthSquared();
           Q.push_back(pqNew);
           std::push_heap(&(Q)[0] + 0, &(Q)[0] + Q.size()); 
@@ -61,6 +57,9 @@ public:
         }
       }
     }
+#if COUNT_INTERACTIONS
+    centroid_resumer.ckLocalBranch()->countInts(target.n_particles);
+#endif
   }
 
 };

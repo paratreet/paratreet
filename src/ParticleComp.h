@@ -5,7 +5,6 @@
 
 struct pqSmoothNode {
     Real fKey;    // distance^2 -> place in priority queue
-    Vector3D<double> dx; // displacement of this particle
     Particle pl; // particle data
 
     inline bool operator<(const pqSmoothNode& n) const {
@@ -14,7 +13,6 @@ struct pqSmoothNode {
 
     void pup(PUP::er& p) {
       p|fKey;
-      p|dx;
       p|pl;
   }
 };
