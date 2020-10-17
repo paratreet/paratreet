@@ -369,6 +369,7 @@ void TreePiece<Data>::populateTree() {
       // Add this node's data to the parent, and add parent to the queue
       // if all children have contributed
       Node<Data>* parent = node->parent;
+      CkAssert(parent);
       parent->data += node->data;
       parent->wait_count--;
       if (parent->wait_count == 0) going_up.push(parent);
