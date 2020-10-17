@@ -78,6 +78,7 @@ public:
   }
   virtual void interact() override {this->template interactBase<Visitor> (tp);}
   void recurse(Node<Data>* node, std::vector<int>& active_buckets) {
+    CkAssert(node);
     Visitor v;
     std::vector<int> new_active_buckets;
 #if DEBUG
