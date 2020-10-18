@@ -1,4 +1,4 @@
-CHARM_HOME ?= $(HOME)/charm
+CHARM_HOME ?= $(HOME)/charm-paratreet
 STRUCTURE_PATH = ../utility/structures
 OPTS = -g -I$(STRUCTURE_PATH) -DCOUNT_INTERACTIONS=0 -DDEBUG=0 $(MAKE_OPTS)
 CHARMC = $(CHARM_HOME)/bin/charmc $(OPTS)

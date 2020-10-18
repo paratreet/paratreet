@@ -1,4 +1,4 @@
-CHARM_HOME ?= $(HOME)/charm
+CHARM_HOME ?= $(HOME)/charm-paratreet
 BASE_PATH=$(shell realpath "$(shell pwd)/../..")
 PARATREET_PATH = $(BASE_PATH)/src
 STRUCTURE_PATH = $(BASE_PATH)/utility/structures
