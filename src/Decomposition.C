@@ -6,8 +6,6 @@
 #include "BufferedVec.h"
 #include "Reader.h"
 
-extern CProxy_TreeSpec treespec;
-
 int SfcDecomposition::flush(int n_total_particles, int n_partitions, const SendParticlesFn &fn,
                             std::vector<Particle> &particles) {
   int flush_count = 0;
@@ -43,7 +41,7 @@ int SfcDecomposition::getNumExpectedParticles(int n_total_particles, int n_parti
   return n_expected;
 }
 
-int SfcDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &readers, int log_branch_factor) {
+int SfcDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &readers, const paratreet::Configuration& config, int log_branch_factor) {
   // countSfc finds the keys of all particles
   CkReductionMsg *msg;
   readers.countSfc(CkCallbackResumeThread((void*&)msg));
@@ -60,7 +58,6 @@ int SfcDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &reader
 
   int decomp_particle_sum = 0;
 
-  auto config = treespec.ckLocalBranch()->getConfiguration();
   Real threshold = DECOMP_TOLERANCE * Real(config.max_particles_per_tp);
   for (int i = 0; i * threshold < keys.size(); ++i) {
     Key from = keys[(int)(i * threshold)];
@@ -170,7 +167,7 @@ void OctDecomposition::assignKeys(BoundingBox &universe, std::vector<Particle> &
   // std::sort(particles.begin(), particles.end());
 }
 
-int OctDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &readers, int log_branch_factor) {
+int OctDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &readers, const paratreet::Configuration& config, int log_branch_factor) {
   BufferedVec<Key> keys;
   const int branch_factor = (1 << log_branch_factor);
 
@@ -190,7 +187,6 @@ int OctDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &reader
     int n_counts = msg->getSize() / sizeof(int);
 
     // Check counts and create splitters if necessary
-    auto config = treespec.ckLocalBranch()->getConfiguration();
     Real threshold = (DECOMP_TOLERANCE * Real(config.max_particles_per_tp));
     for (int i = 0; i < n_counts; i++) {
       Key from = keys.get(2*i);

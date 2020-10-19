@@ -8,6 +8,9 @@ class CProxy_Reader;
 class BoundingBox;
 class Splitter;
 class Particle;
+namespace paratreet {
+  class Configuration;
+}
 
 using SendProxyFn = std::function<void(int,int)>;
 using SendParticlesFn = std::function<void(int,int,Particle*)>;
@@ -21,7 +24,7 @@ struct Decomposition {
 
   virtual int getNumExpectedParticles(int n_total_particles, int n_partitions, int tp_index) = 0;
 
-  virtual int findSplitters(BoundingBox &universe, CProxy_Reader &readers, int log_branch_factor) = 0;
+  virtual int findSplitters(BoundingBox &universe, CProxy_Reader &readers, const paratreet::Configuration& config, int log_branch_factor) = 0;
 
   virtual void alignSplitters(Decomposition *) = 0;
 
@@ -46,7 +49,7 @@ struct SfcDecomposition : public Decomposition {
       const SendParticlesFn &fn, std::vector<Particle> &particles) override;
   void assignKeys(BoundingBox &universe, std::vector<Particle> &particles) override;
   int getNumExpectedParticles(int n_total_particles, int n_partitions, int tp_index) override;
-  int findSplitters(BoundingBox &universe, CProxy_Reader &readers, int log_branch_factor) override;
+  int findSplitters(BoundingBox &universe, CProxy_Reader &readers, const paratreet::Configuration& config, int log_branch_factor) override;
   void alignSplitters(Decomposition *) override;
   std::vector<Splitter> getSplitters() override;
   virtual void pup(PUP::er& p) override;
@@ -60,7 +63,7 @@ struct OctDecomposition : public SfcDecomposition {
       const SendParticlesFn &fn, std::vector<Particle> &particles) override;
   void assignKeys(BoundingBox &universe, std::vector<Particle> &particles) override;
   int getNumExpectedParticles(int n_total_particles, int n_partitions, int tp_index) override;
-  int findSplitters(BoundingBox &universe, CProxy_Reader &readers, int log_branch_factor) override;
+  int findSplitters(BoundingBox &universe, CProxy_Reader &readers, const paratreet::Configuration& config, int log_branch_factor) override;
 };
 
 #endif

@@ -21,7 +21,7 @@ Main.o: Main.C
 	$(CHARMC) -c $<
 
 test: all
-	./charmrun ./$(BINARY) -f $(BASE_PATH)/inputgen/100k.tipsy -l 1 -u 2 +p1 ++ppn 1 +pemap 1 +commap 0 ++local
+	./charmrun ./$(BINARY) -f $(BASE_PATH)/inputgen/100k.tipsy -d sfc +p3 ++ppn 3 +pemap 1-3 +commap 0 ++local
 
 clean:
 	rm -f *.decl.h *.def.h conv-host *.o $(BINARY) charmrun

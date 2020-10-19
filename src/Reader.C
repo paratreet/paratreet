@@ -119,8 +119,7 @@ void Reader::assignKeys(BoundingBox universe_, const CkCallback& cb) {
 }
 
 void Reader::countOct(std::vector<Key> splitter_keys, size_t log_branch_factor, const CkCallback& cb) {
-  std::vector<int> counts;
-  counts.resize(splitter_keys.size()/2);
+  std::vector<int> counts (splitter_keys.size()/2, 0);
   for (int i = 0; i < splitter_keys.size(); i++) {
     splitter_keys[i] = Utility::removeLeadingZeros(splitter_keys[i], log_branch_factor);
   }
@@ -141,11 +140,6 @@ void Reader::countOct(std::vector<Key> splitter_keys, size_t log_branch_factor, 
       counts[i] = end - begin;
 
       start = end;
-    }
-  }
-  else { // No particles
-    for (int i = 0; i < counts.size(); i++){
-      counts[i] = 0;
     }
   }
 

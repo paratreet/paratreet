@@ -175,11 +175,7 @@ public:
 
       // Start tree build in Subtrees
       start_time = CkWallTimer();
-      if (config.tree_type == OCT_TREE) {
-        subtrees.buildTree();
-      } else {
-        CkAbort("Only octree is currently supported");
-      }
+      subtrees.buildTree();
       CkWaitQD();
       CkPrintf("Tree build: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
 
