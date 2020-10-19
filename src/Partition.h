@@ -90,15 +90,13 @@ void Partition<Data>::receiveLeaves(
   std::vector<NodeWrapper<Data>> data, int subtree_idx, size_t branch_factor
   )
 {
-  int from = 0;
+  int part_index = 0;
   for (const NodeWrapper<Data>& leaf : data) {
-    Key k = Utility::removeLeadingZeros(leaf.key, branch_factor);
-    from = Utility::binarySearchGE(k, &particles[0], from, particles.size());
-    int to = Utility::binarySearchGE(k, &particles[0], from + 1, particles.size());
     Node<Data> *node = treespec.ckLocalBranch()->template makeNode<Data>(
-      leaf.key, leaf.depth, leaf.n_particles, &particles[from],
+      leaf.key, leaf.depth, leaf.n_particles, &particles[part_index],
       subtree_idx, subtree_idx, leaf.is_leaf, nullptr, subtree_idx
       );
+    part_index += leaf.n_particles;
     node->type = Node<Data>::Type::Leaf;
     node->data = Data(node->particles(), node->n_particles);
     leaves.push_back(node);
