@@ -16,6 +16,7 @@ lib: $(OBJS)
 
 paratreet.decl.h: paratreet.ci
 	$(CHARMC) $<
+	./makeReplacements.sh
 
 common.h: $(STRUCTURE_PATH)/Vector3D.h $(STRUCTURE_PATH)/SFC.h Utility.h
 

@@ -9,6 +9,7 @@ module paratreet {
   class CProxy_TreeSpec;
   include "MultiData.h";
   include "Decomposition.h";
+  include "NDMeshStreamer.h";
 
   readonly CProxy_Reader readers;
   readonly CProxy_TreeSpec treespec;
