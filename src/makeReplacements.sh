@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -x
 
 DECL_H="paratreet.decl.h"
 DEF_H="paratreet.def.h"
