@@ -115,6 +115,7 @@ class Main : public CBase_Main {
 
     // Print configuration
     CkPrintf("\n[PARATREET]\n");
+    if (conf.input_file.empty()) CkAbort("Input file unspecified");
     CkPrintf("Input file: %s\n", conf.input_file.c_str());
     CkPrintf("Decomposition type: %s\n", (conf.decomp_type == OCT_DECOMP) ? "OCT" : "SFC");
     CkPrintf("Tree type: %s\n", (conf.tree_type == OCT_TREE) ? "OCT" : "BIN");
