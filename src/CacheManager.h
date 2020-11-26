@@ -35,7 +35,7 @@ public:
     SpatialNode<Data> empty_sn (empty_data, 0, false, nullptr, 0);
     root = treespec.ckLocalBranch()->template makeCachedNode<Data>(
         Key(1), Node<Data>::Type::Boundary, empty_sn, nullptr, nullptr); // placeholder
-    delete_at_end.resize(CkNumPes());
+    delete_at_end.resize(CkNumPes(), std::vector<Node<Data>*>(0, nullptr));
   }
 
   ~CacheManager() {
