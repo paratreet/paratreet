@@ -9,9 +9,13 @@ testname="lambs.00200_subsamp_30K"
 
 echo "Running ParaTreeT..."
 if [[ $hostname == *"lassen"* ]]; then
-  jsrun -n2 -a1 -c20 -K1 -r2 ../src/paratreet -f $testname -v +ppn 20 +pemap L0-76:4,80-156:4 &> $testname.out
+  # LLNL Lassen
+  jsrun -n2 -a1 -c20 -K1 -r2 ../examples/simple/Main -f $testname -v +ppn 20 +pemap L0-76:4,80-156:4 &> $testname.out
+elif [[ $hostname == *"batch"* ]]; then
+  # OLCF Summit
+  jsrun -n2 -a1 -c21 -K1 -r2 ../examples/simple/Main -f $testname -v +ppn 21 +pemap L0-164:4 &> $testname.out
 else
-  ../src/charmrun ../src/paratreet +p 4 -f $testname -v +ppn 2 +setcpuaffinity &> $testname.out
+  ../examples/simple/charmrun ../examples/simple/Main +p 4 -f $testname -v +ppn 2 +setcpuaffinity &> $testname.out
 fi
 
 echo -e "\nBuilding and running array utility..."
