@@ -25,9 +25,11 @@ public:
   CProxy_Resumer<Data> r_proxy;
   Data nodewide_data;
 
-  CacheManager() {
-    CkCallback cb(CkIndex_CacheManager<Data>::initialize(), this->thisProxy[this->thisIndex]);
-    treespec.check(cb);
+  CacheManager() { }
+
+  void initialize(const CkCallback& cb) {
+    this->initialize();
+    this->contribute(cb);
   }
 
   void initialize() {
