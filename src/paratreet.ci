@@ -40,7 +40,7 @@ module paratreet {
   nodegroup CacheManager {
 #endif
     entry CacheManager();
-    entry void initialize();
+    entry void initialize(const CkCallback&);
     entry void requestNodes(std::pair<Key, int>);
     entry void recvStarterPack(std::pair<Key, SpatialNode<Data>> pack [n], int n, CkCallback);
     entry void addCache(MultiData<Data>);
