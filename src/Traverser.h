@@ -95,6 +95,7 @@ public:
               else v.leaf(*node, *tp.leaves[bucket]);
             }
           }
+          if (!delay_leaf) node->finish(active_buckets.size());
           break;
         }
       case Node<Data>::Type::Internal:
@@ -115,6 +116,7 @@ public:
               v.node(*node, *tp.leaves[bucket]);
             }
           }
+          node->finish(active_buckets.size() - new_active_buckets.size());
           break;
         }
       case Node<Data>::Type::Boundary:

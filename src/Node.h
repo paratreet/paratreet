@@ -98,7 +98,11 @@ public:
   {
   }
 
-  virtual ~Node() = default;
+  virtual ~Node() {
+    if (type == Type::CachedRemoteLeaf) {
+      this->freeParticles();
+    }
+  }
 
 public:
   int n_children; // TreePiece's recursiveBuild prevents the constness
@@ -113,6 +117,7 @@ public:
   int tp_index       = -1;
   int cm_index       = -1;
   std::atomic<bool> requested = ATOMIC_VAR_INIT(false);
+  std::atomic<size_t> num_buckets_finished = ATOMIC_VAR_INIT(0);
 
 public:
   Node<Data>* getDescendant(Key to_find) {
@@ -131,6 +136,15 @@ public:
     return node;
   }
  
+  void finish(size_t num_buckets) {
+    num_buckets_finished += num_buckets;
+  }
+
+  bool isCached() const {
+    return type == Type::CachedRemote
+        || type == Type::CachedBoundary
+        || type == Type::CachedRemoteLeaf;
+  }
 
   void triggerFree() {
     if (type == Type::Internal || type == Type::Boundary ||
@@ -143,9 +157,6 @@ public:
         delete child;
 	    exchangeChild(i, nullptr);
       }
-    }
-    else if (type == Type::CachedRemoteLeaf) {
-      this->freeParticles();
     }
   }
 

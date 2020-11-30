@@ -380,6 +380,7 @@ void TreePiece<Data>::populateTree() {
 template <typename Data>
 void TreePiece<Data>::initCache() {
   if (!cache_init) {
+    cm_local->num_buckets += leaves.size();
     cm_local->connect(local_root, false);
     auto local_parent = local_root->parent;
     if (local_parent) {

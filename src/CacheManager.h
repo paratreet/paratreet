@@ -24,9 +24,9 @@ public:
   std::vector<std::vector<Node<Data>*>> delete_at_end;
   CProxy_Resumer<Data> r_proxy;
   Data nodewide_data;
+  std::atomic<size_t> num_buckets = ATOMIC_VAR_INIT(0ul);
 
   CacheManager() { }
-
   void initialize(const CkCallback& cb) {
     this->initialize();
     this->contribute(cb);
@@ -38,12 +38,42 @@ public:
     root = treespec.ckLocalBranch()->template makeCachedNode<Data>(
         Key(1), Node<Data>::Type::Boundary, empty_sn, nullptr, nullptr); // placeholder
     delete_at_end.resize(CkNumPes(), std::vector<Node<Data>*>(0, nullptr));
+    num_buckets.store(0u);
   }
 
   ~CacheManager() {
     destroy(false);
   }
 
+  void cleanupFinishedCachedNodes() {
+    auto should_delete_root = cfcnHelper(root, 0);
+    CkAssert(!should_delete_root); // we'll keep the path to internals alive
+  }
+private:
+  bool cfcnHelper(Node<Data>* node, size_t sum_num_buckets_finished) { // returns should_delete
+    if (!node->isCached()) return false;
+    sum_num_buckets_finished += node->num_buckets_finished.load();
+    if (sum_num_buckets_finished == num_buckets.load()) {
+      node->triggerFree();
+      return true;
+    }
+    else if (sum_num_buckets_finished < num_buckets.load()) {
+      bool deleted_all_children = true;
+      for (int i = 0; i < node->n_children; i++) {
+        auto child = node->getChild(i);
+        if (child) {
+          auto should_del = cfcnHelper(child, sum_num_buckets_finished);
+          if (should_del) {
+            delete child;
+            node->exchangeChild(i, nullptr);
+          }
+          else deleted_all_children = false;
+        }
+      }
+      return deleted_all_children;
+    }
+  }
+public:
   void destroy(bool restore) {
     local_tps.clear();
     prefetch_set.clear();
@@ -154,7 +184,7 @@ void CacheManager<Data>::recvStarterPack(std::pair<Key, SpatialNode<Data>>* pack
     }
   }
   if (n == 0) root = local_tps[1];
-
+  CkAssert(root);
   this->contribute(cb);
 }
 
