@@ -45,11 +45,18 @@ public:
     destroy(false);
   }
 
+  // we can call this on a timer during the traversal to keep the footprint light
   void cleanupFinishedCachedNodes() {
     auto should_delete_root = cfcnHelper(root, 0);
     CkAssert(!should_delete_root); // we'll keep the path to internals alive
   }
 private:
+  // goal: delete cached nodes we fetched but are finished using.
+  // when a bucket will not open a node (either its a leaf
+  // or open() returned false) we do node->finished++
+  // then we sum up all those finisheds for a path
+  // when the sum == num_buckets, we can delete all further nodes down that path
+  // we can also delete our parent if all our siblings are finished too
   bool cfcnHelper(Node<Data>* node, size_t sum_num_buckets_finished) { // returns should_delete
     if (!node->isCached()) return false;
     sum_num_buckets_finished += node->num_buckets_finished.load();
