@@ -5,7 +5,6 @@
 #include "Node.h"
 #include "Utility.h"
 
-extern int decomp_type;
 class Tree {
 public:
   virtual ~Tree() = default;

@@ -22,9 +22,6 @@
 extern CProxy_TreeSpec treespec_subtrees;
 extern CProxy_TreeSpec treespec;
 extern CProxy_Reader readers;
-extern int max_particles_per_leaf;
-extern Decomposition* decomposition;
-extern int tree_type;
 
 template <typename Data>
 class Subtree : public CBase_Subtree<Data> {
@@ -369,6 +366,7 @@ void Subtree<Data>::populateTree() {
       // Add this node's data to the parent, and add parent to the queue
       // if all children have contributed
       Node<Data>* parent = node->parent;
+      CkAssert(parent);
       parent->data += node->data;
       parent->wait_count--;
       if (parent->wait_count == 0) going_up.push(parent);
@@ -379,6 +377,7 @@ void Subtree<Data>::populateTree() {
 template <typename Data>
 void Subtree<Data>::initCache() {
   if (!cache_init) {
+    cm_local->num_buckets += leaves.size();
     cm_local->connect(local_root, false);
     auto local_parent = local_root->parent;
     if (local_parent) {

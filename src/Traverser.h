@@ -46,7 +46,7 @@ protected:
     Visitor v;
     for (int i = 0; i < part.interactions.size(); i++) {
       for (Node<Data>* source : part.interactions[i]) {
-        if (source->key != part.leaves[i]->key) v.leaf(*source, *(part.leaves[i]));
+        v.leaf(*source, *(part.leaves[i]));
       }
     }
   }
@@ -79,6 +79,7 @@ public:
   }
   virtual void interact() override {this->template interactBase<Visitor> (part);}
   void recurse(Node<Data>* node, std::vector<int>& active_buckets) {
+    CkAssert(node);
     Visitor v;
     std::vector<int> new_active_buckets;
 #if DEBUG
@@ -95,6 +96,7 @@ public:
               else v.leaf(*node, *part.leaves[bucket]);
             }
           }
+          if (!delay_leaf) node->finish(active_buckets.size());
           break;
         }
       case Node<Data>::Type::Internal:
@@ -115,6 +117,7 @@ public:
               v.node(*node, *part.leaves[bucket]);
             }
           }
+          node->finish(active_buckets.size() - new_active_buckets.size());
           break;
         }
       case Node<Data>::Type::Boundary:

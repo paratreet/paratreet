@@ -14,7 +14,6 @@ module paratreet {
   readonly CProxy_Reader readers;
   readonly CProxy_TreeSpec treespec;
   readonly CProxy_TreeSpec treespec_subtrees;
-  readonly int n_readers;
   readonly CProxy_TreeCanopy<CentroidData> centroid_calculator;
   readonly CProxy_CacheManager<CentroidData> centroid_cache;
   readonly CProxy_Resumer<CentroidData> centroid_resumer;
@@ -31,7 +30,7 @@ module paratreet {
   nodegroup CacheManager {
 #endif
     entry CacheManager();
-    entry void initialize();
+    entry void initialize(const CkCallback&);
     entry void requestNodes(std::pair<Key, int>);
     entry void recvStarterPack(std::pair<Key, SpatialNode<Data>> pack [n], int n, CkCallback);
     entry void addCache(MultiData<Data>);

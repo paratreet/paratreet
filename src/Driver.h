@@ -59,6 +59,12 @@ public:
 
   // Performs initial decomposition
   void init(CkCallback cb) {
+    // Ensure all treespecs have been created
+    CkPrintf("* Validating tree specifications.\n");
+    treespec.check(CkCallbackResumeThread());
+    // Then, initialize the cache managers
+    CkPrintf("* Initializing cache managers.\n");
+    cache_manager.initialize(CkCallbackResumeThread());
     // Useful particle keys
     CkPrintf("* Initialization\n");
     decompose(0);
@@ -197,6 +203,8 @@ public:
 
       // Perform traversals
       start_time = CkWallTimer();
+      //treepieces.template startUpAndDown<DensityVisitor>();
+      //treepieces.template startDown<GravityVisitor>();
       paratreet::traversalFn(universe, partitions, iter);
       CkWaitQD();
 #if DELAYLOCAL

@@ -2,7 +2,7 @@
 
 void TreeSpec::check(const CkCallback &cb) {
   CkAssert(this->getTree() && this->getDecomposition());
-  cb.send();
+  this->contribute(cb);
 }
 
 void TreeSpec::receiveDecomposition(CkMarshallMsg* msg) {
