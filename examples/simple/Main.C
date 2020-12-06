@@ -20,7 +20,6 @@ class Main : public CBase_Main {
   int cur_iteration;
   double total_start_time;
   double start_time;
-  bool verify;
   paratreet::Configuration conf;
 
   public:
