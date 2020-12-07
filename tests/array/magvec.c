@@ -17,7 +17,7 @@ int main(void)
 	t = (double *)malloc(n*sizeof(double));
 	if (!t) {
 		fprintf(stderr, "Can't allocate memory for %d particles\n", n);
-		return;
+		return 1;
 		}
 	for (i=0;i<n;++i) {
 		a = scanf("%lg",&da);

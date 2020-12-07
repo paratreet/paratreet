@@ -7,6 +7,7 @@ Particle::Particle() : key(Key(0)) {
 void Particle::pup(PUP::er &p) {
   p|key;
   p|order;
+  p|partition_idx;
   p|mass;
   p|density;
   p|pressure;

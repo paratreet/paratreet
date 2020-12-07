@@ -7,6 +7,7 @@
 struct Particle {
   Key key;
   int order;
+  int partition_idx;
 
   Real mass;
   Real density;

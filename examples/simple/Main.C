@@ -4,13 +4,13 @@
 /*readonly*/ bool verify;
 
 namespace paratreet {
-  void traversalFn(BoundingBox& universe, CProxy_TreePiece<CentroidData>& tp, int iter) {
-    tp.template startDown<GravityVisitor>();
+  void traversalFn(BoundingBox& universe, CProxy_Partition<CentroidData>& part, int iter) {
+    part.template startDown<GravityVisitor>();
   }
 
-  void postInteractionsFn(BoundingBox& universe, CProxy_TreePiece<CentroidData>& tp, int iter) {
+  void postInteractionsFn(BoundingBox& universe, CProxy_Partition<CentroidData>& part, int iter) {
     if (iter == 0 && verify) {
-      paratreet::outputParticles(universe, tp);
+      paratreet::outputParticles(universe, part);
     }
   }
 }
@@ -20,7 +20,6 @@ class Main : public CBase_Main {
   int cur_iteration;
   double total_start_time;
   double start_time;
-  bool verify;
   paratreet::Configuration conf;
 
   public:
@@ -119,15 +118,7 @@ class Main : public CBase_Main {
     CkPrintf("Input file: %s\n", conf.input_file.c_str());
     CkPrintf("Decomposition type: %s\n", (conf.decomp_type == OCT_DECOMP) ? "OCT" : "SFC");
     CkPrintf("Tree type: %s\n", (conf.tree_type == OCT_TREE) ? "OCT" : "BIN");
-    if (conf.decomp_type == SFC_DECOMP) {
-      if (n_treepieces <= 0) {
-        CkAbort("Number of treepieces must be larger than 0 with SFC decomposition!");
-      }
-      CkPrintf("Number of treepieces: %d\n", n_treepieces);
-    }
-    else if (conf.decomp_type == OCT_DECOMP) {
-      CkPrintf("Maximum number of particles per treepiece: %d\n", conf.max_particles_per_tp);
-    }
+    CkPrintf("Maximum number of particles per treepiece: %d\n", conf.max_particles_per_tp);
     CkPrintf("Maximum number of particles per leaf: %d\n\n", conf.max_particles_per_leaf);
 
     // Delegate to Driver

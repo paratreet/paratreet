@@ -3,6 +3,7 @@
 
 #include "paratreet.decl.h"
 #include "common.h"
+#include "Partition.h"
 #include <unordered_map>
 #include <vector>
 
@@ -11,10 +12,10 @@ extern CProxy_Driver<CentroidData> centroid_driver;
 template <typename Data>
 class Resumer : public CBase_Resumer<Data> {
 public:
-  CProxy_TreePiece<Data> tp_proxy;
+  CProxy_Partition<Data> part_proxy;
   CacheManager<Data>* cm_local;
   unsigned long long n_part_ints, n_node_ints, n_opens, n_closes;
-  std::vector<std::queue<Node<Data>*>> resume_nodes_per_tp;
+  std::vector<std::queue<Node<Data>*>> resume_nodes_per_part;
   std::queue<Key> LRU_counter;
   std::unordered_map<Key, std::vector<int>> waiting;
 
@@ -40,18 +41,18 @@ public:
   }
 
   void process(Key key) {
-    CkAssert(!resume_nodes_per_tp.empty());
+    CkAssert(!resume_nodes_per_part.empty());
     auto node = cm_local->root->getDescendant(key);
     auto it = waiting.find(key);
     if (it == waiting.end()) return;
-    for (auto tp_index : it->second) {
-      auto && resume_nodes = resume_nodes_per_tp[tp_index];
+    for (auto part_index : it->second) {
+      auto && resume_nodes = resume_nodes_per_part[part_index];
       resume_nodes.push(node);
       // batched resume logic would go here --
       // if (resume_nodes > RESUME_BATCH_SIZE)
       // but I am not sure how to tune it so that
       // we actually complete on the last few reusmes
-      tp_proxy[tp_index].goDown(key);
+      part_proxy[part_index].goDown(key);
     }
     waiting.erase(it);
   }

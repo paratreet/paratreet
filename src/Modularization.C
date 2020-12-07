@@ -1,10 +1,10 @@
 #include "Modularization.h"
 #include "TreeSpec.h"
 
-extern CProxy_TreeSpec treespec;
+extern CProxy_TreeSpec treespec_subtrees;
 
 void OctTree::buildCanopy(int tp_index, const SendProxyFn &fn) {
-    Key tp_key = treespec.ckLocalBranch()->getDecomposition()->getTpKey(tp_index);
+    Key tp_key = treespec_subtrees.ckLocalBranch()->getDecomposition()->getTpKey(tp_index);
     Key temp_key = tp_key;
     fn(tp_key, tp_index);
     while (temp_key > 0 && temp_key % getBranchFactor() == 0) {

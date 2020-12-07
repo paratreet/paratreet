@@ -11,7 +11,8 @@
 #include "BoundingBox.h"
 #include "ParticleMsg.h"
 #include "Reader.h"
-#include "TreePiece.h"
+#include "Subtree.h"
+#include "Partition.h"
 #include "GravityVisitor.h"
 #include "Configuration.h"
 
@@ -27,13 +28,13 @@
 /* readonly */ extern CProxy_Driver<CentroidData> centroid_driver;
 
 namespace paratreet {
-    extern void traversalFn(BoundingBox&,CProxy_TreePiece<CentroidData>&,int);
-    extern void postInteractionsFn(BoundingBox&,CProxy_TreePiece<CentroidData>&,int);
+    extern void traversalFn(BoundingBox&,CProxy_Partition<CentroidData>&,int);
+    extern void postInteractionsFn(BoundingBox&,CProxy_Partition<CentroidData>&,int);
 
     void initialize(const Configuration&, CkCallback);
     void run(CkCallback);
     void updateConfiguration(const Configuration&, CkCallback);
-    void outputParticles(BoundingBox&, CProxy_TreePiece<CentroidData>&);
+    void outputParticles(BoundingBox&, CProxy_Partition<CentroidData>&);
 }
 
 #endif

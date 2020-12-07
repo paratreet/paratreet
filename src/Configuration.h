@@ -8,7 +8,7 @@
 #include "CentroidData.h"
 
 template<typename T>
-class CProxy_TreePiece;
+class CProxy_Subtree;
 
 namespace paratreet {
     struct Configuration {

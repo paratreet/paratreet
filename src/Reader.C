@@ -119,8 +119,7 @@ void Reader::assignKeys(BoundingBox universe_, const CkCallback& cb) {
 }
 
 void Reader::countOct(std::vector<Key> splitter_keys, size_t log_branch_factor, const CkCallback& cb) {
-  std::vector<int> counts;
-  counts.resize(splitter_keys.size()/2);
+  std::vector<int> counts (splitter_keys.size()/2, 0);
   for (int i = 0; i < splitter_keys.size(); i++) {
     splitter_keys[i] = Utility::removeLeadingZeros(splitter_keys[i], log_branch_factor);
   }
@@ -143,47 +142,18 @@ void Reader::countOct(std::vector<Key> splitter_keys, size_t log_branch_factor, 
       start = end;
     }
   }
-  else { // No particles
-    for (int i = 0; i < counts.size(); i++){
-      counts[i] = 0;
-    }
-  }
 
   contribute(sizeof(int) * counts.size(), &counts[0], CkReduction::sum_int, cb);
 }
 
-/*
-void Reader::countSfc(const std::vector<Key>& splitter_keys, const CkCallback& cb) {
-  std::vector<int> counts;
-  counts.resize(splitters.size()-1); // size equal to number of TreePieces
+void Reader::countSfc(const CkCallback& cb)
+{
+  std::vector<Key> keys;
+  for (const auto& p : particles)
+    keys.push_back(p.key);
 
-  // TODO code duplication with countOct()
-  // search for the first particle whose key is greater or equal to the input key,
-  // in the range [start, finish)
-  int start = 0;
-  int finish = particles.size();
-  Key from, to;
-  if (particles.size() > 0) {
-    for (int i = 0; i < counts.size(); i++) {
-      from = splitter_keys[i];
-      to = splitter_keys[i+1];
-
-      int begin = Utility::binarySearchGE(from, &particles[0], start, finish); // hmm how does this work for OCT
-      int end = Utility::binarySearchGE(to, &particles[0], begin, finish);
-      counts[i] = end - begin;
-
-      start = end;
-    }
-  }
-  else { // no particles
-    for (int i = 0; i < counts.size(); i++){
-      counts[i] = 0;
-    }
-  }
-
-    contribute(sizeof(int) * counts.size(), &counts[0], CkReduction::sum_int, cb);
+  contribute(keys.size() * sizeof(Key), &keys[0], CkReduction::set, cb);
 }
-*/
 
 void Reader::pickSamples(const int oversampling_ratio, const CkCallback& cb) {
   Key* sample_keys = new Key[oversampling_ratio];

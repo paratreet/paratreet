@@ -9,5 +9,5 @@ mainmodule Main {
         entry [reductiontarget] void checkParticlesChangedDone(bool result); // For debugging
     };
 
-    extern entry void TreePiece<CentroidData> startDown<GravityVisitor> ();
+    extern entry void Partition<CentroidData> startDown<GravityVisitor> ();
 }

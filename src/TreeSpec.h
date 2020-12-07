@@ -20,7 +20,7 @@ public:
 
     int doFindSplitters(BoundingBox &universe, CProxy_Reader &readers) {
         int log_branch_factor = log2(getTree()->getBranchFactor());
-        return getDecomposition()->findSplitters(universe, readers, log_branch_factor);
+        return getDecomposition()->findSplitters(universe, readers, getConfiguration(), log_branch_factor);
     }
 
     void receiveConfiguration(const paratreet::Configuration&,CkCallback);

@@ -147,7 +147,7 @@ void CacheManager<Data>::prepPrefetch(Node<Data>* node) {
 }
 
 // Invoked to restore a node in the cached tree structure
-// or to store the local roots of TreePieces after the tree is built
+// or to store the local roots of Subtrees after the tree is built
 template <typename Data>
 void CacheManager<Data>::connect(Node<Data>* node, bool should_process) {
 #if DEBUG
@@ -158,10 +158,10 @@ void CacheManager<Data>::connect(Node<Data>* node, bool should_process) {
     swapIn(node);
     if (should_process) process(node->key);
   } else {
-    // Invoked by TreePiece
+    // Invoked by Subtree
     if (this->isNodeGroup()) local_tps_lock.lock();
 
-    // Store/connect the incoming TreePiece's local root
+    // Store/connect the incoming Subtree's local root
     local_tps.insert(std::make_pair(node->key, node));
     prepPrefetch(node);
 

@@ -1,7 +1,8 @@
 #include "Driver.h"
 #include "Reader.h"
 #include "Splitter.h"
-#include "TreePiece.h"
+#include "Subtree.h"
+#include "Partition.h"
 #include "TreeCanopy.h"
 #include "BoundingBox.h"
 #include "BufferedVec.h"
@@ -18,6 +19,7 @@
 
 /* readonly */ CProxy_Reader readers;
 /* readonly */ CProxy_TreeSpec treespec;
+/* readonly */ CProxy_TreeSpec treespec_subtrees;
 /* readonly */ std::string input_file;
 /* readonly */ int n_readers;
 /* readonly */ CProxy_TreeCanopy<CentroidData> centroid_calculator;
@@ -32,6 +34,9 @@ namespace paratreet {
         n_readers = CkNumPes();
         readers = CProxy_Reader::ckNew();
         treespec = CProxy_TreeSpec::ckNew(conf);
+        auto conf_copy = conf;
+        conf_copy.decomp_type = OCT_DECOMP;
+        treespec_subtrees = CProxy_TreeSpec::ckNew(conf_copy);
 
         // Create centroid data related chares
         centroid_calculator = CProxy_TreeCanopy<CentroidData>::ckNew();
@@ -48,10 +53,10 @@ namespace paratreet {
         centroid_driver.run(cb);
     }
 
-    void outputParticles(BoundingBox& universe, CProxy_TreePiece<CentroidData>& treepieces) {
+    void outputParticles(BoundingBox& universe, CProxy_Partition<CentroidData>& partitions) {
         std::string output_file = input_file + ".acc";
         CProxy_Writer w = CProxy_Writer::ckNew(output_file, universe.n_particles);
-        treepieces[0].output(w, CkCallbackResumeThread());
+        partitions[0].output(w, CkCallbackResumeThread());
         CkPrintf("Outputting particle accelerations for verification...\n");
     }
 
