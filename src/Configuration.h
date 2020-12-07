@@ -23,6 +23,7 @@ namespace paratreet {
         int flush_period;
         Real timestep_size;
         std::string input_file;
+        std::string output_file;
 #ifdef __CHARMC__
 #include "pup.h"
         void pup(PUP::er &p) {
@@ -36,6 +37,7 @@ namespace paratreet {
             p | cache_share_depth;
             p | flush_period;
             p | input_file;
+            p | output_file;
             p | timestep_size;
         }
 #endif //__CHARMC__

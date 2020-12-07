@@ -32,6 +32,7 @@ class Main : public CBase_Main {
 
     // Initialize readonly variables
     conf.input_file = "";
+    conf.output_file = "";
     conf.decomp_tolerance = 0.1;
     conf.max_particles_per_tp = 1000;
     conf.max_particles_per_leaf = 10;
@@ -52,7 +53,7 @@ class Main : public CBase_Main {
     // Process command line arguments
     int c;
     std::string input_str;
-    while ((c = getopt(m->argc, m->argv, "f:n:p:l:d:t:i:s:u:v")) != -1) {
+    while ((c = getopt(m->argc, m->argv, "f:n:p:l:d:t:i:s:u:v:")) != -1) {
       switch (c) {
         case 'f':
           conf.input_file = optarg;
@@ -95,6 +96,8 @@ class Main : public CBase_Main {
           break;
         case 'v':
           verify = true;
+          conf.output_file = optarg;
+          if (conf.output_file.empty()) CkAbort("output file unspecified");
           break;
         default:
           CkPrintf("Usage: %s\n", m->argv[0]);

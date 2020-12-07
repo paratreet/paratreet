@@ -20,7 +20,6 @@
 /* readonly */ CProxy_Reader readers;
 /* readonly */ CProxy_TreeSpec treespec;
 /* readonly */ CProxy_TreeSpec treespec_subtrees;
-/* readonly */ std::string input_file;
 /* readonly */ int n_readers;
 /* readonly */ CProxy_TreeCanopy<CentroidData> centroid_calculator;
 /* readonly */ CProxy_CacheManager<CentroidData> centroid_cache;
@@ -54,7 +53,7 @@ namespace paratreet {
     }
 
     void outputParticles(BoundingBox& universe, CProxy_Partition<CentroidData>& partitions) {
-        std::string output_file = input_file + ".acc";
+        auto& output_file = treespec.ckLocalBranch()->getConfiguration().output_file;
         CProxy_Writer w = CProxy_Writer::ckNew(output_file, universe.n_particles);
         partitions[0].output(w, CkCallbackResumeThread());
         CkPrintf("Outputting particle accelerations for verification...\n");
