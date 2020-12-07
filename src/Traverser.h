@@ -70,7 +70,7 @@ protected:
   }
 
 public:
-  DownTraverser(Partition<Data>& parti, bool delay_leafi = true)
+  DownTraverser(Partition<Data>& parti, bool delay_leafi = false)
     : part(parti), delay_leaf(delay_leafi)
   { }
   virtual void start() override {
@@ -82,6 +82,7 @@ public:
     CkAssert(node);
     Visitor v;
     std::vector<int> new_active_buckets;
+    new_active_buckets.reserve(part.leaves.size());
 #if DEBUG
     CkPrintf("tp %d, key = %d, type = %d, pe %d\n", part.thisIndex, node->key, node->type, CkMyPe());
 #endif
