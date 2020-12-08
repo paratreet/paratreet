@@ -69,7 +69,7 @@ module paratreet {
     template <typename Visitor> entry void startDown();
     entry void interact(const CkCallback&);
     entry void goDown(Key);
-    entry void receiveLeaves(std::vector<NodeWrapper<Data>>, int, size_t);
+    entry void receiveLeaves(std::vector<NodeWrapper<Data>>, std::vector<Key>, int, size_t);
     entry void receive(ParticleMsg*);
     entry void destroy();
     entry void reset();
