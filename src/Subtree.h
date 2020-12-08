@@ -40,7 +40,7 @@ public:
   Node<Data>* local_root; // Root node of this Subtree, TreeCanopies sit above this node
 
   CProxy_TreeCanopy<Data> tc_proxy;
-  CacheManager<Data>* cm_local;
+  CProxy_CacheManager<Data> cm_proxy;
 
   std::vector<Particle> flushed_particles; // For debugging
 
@@ -81,15 +81,14 @@ template <typename Data>
 Subtree<Data>::Subtree(const CkCallback& cb, int n_total_particles_,
                        int n_subtrees_, int n_partitions_, TCHolder<Data> tc_holder,
                        CProxy_Resumer<Data> r_proxy_,
-                       CProxy_CacheManager<Data> cm_proxy, DPHolder<Data> dp_holder) {
+                       CProxy_CacheManager<Data> cm_proxy_, DPHolder<Data> dp_holder) {
   n_total_particles = n_total_particles_;
   n_subtrees = n_subtrees_;
   n_partitions = n_partitions_;
   particle_index = 0;
 
   tc_proxy = tc_holder.proxy;
-  cm_local = cm_proxy.ckLocalBranch();
-  cm_local->r_proxy = r_proxy_;
+  cm_proxy = cm_proxy_;
 
   tp_key = treespec_subtrees.ckLocalBranch()->getDecomposition()->
     getTpKey(this->thisIndex);
@@ -371,6 +370,7 @@ void Subtree<Data>::populateTree() {
 
 template <typename Data>
 void Subtree<Data>::initCache() {
+  auto cm_local = cm_proxy.ckLocalBranch();
   cm_local->num_buckets += leaves.size();
   cm_local->connect(local_root, false);
   auto local_parent = local_root->parent;
@@ -384,7 +384,7 @@ template <typename Data>
 void Subtree<Data>::requestNodes(Key key, int cm_index) {
   Node<Data>* node = local_root->getDescendant(key);
   if (!node) CkPrintf("null found for key %lu on tp %d\n", key, this->thisIndex);
-  cm_local->serviceRequest(node, cm_index);
+  cm_proxy.ckLocalBranch()->serviceRequest(node, cm_index);
 }
 
 template <typename Data>
