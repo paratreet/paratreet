@@ -128,7 +128,6 @@ void Subtree<Data>::send_leaves(CProxy_Partition<Data> part)
 
   int leaf_idx = 0;
   size_t branch_factor = 0u;
-  std::vector<Key> all_particle_keys;
   while (leaf_idx < leaves.size()) {
     int current_part_idx = leaves[leaf_idx]->particles()->partition_idx;
     std::vector<NodeWrapper<Data>> node_data;
@@ -146,13 +145,10 @@ void Subtree<Data>::send_leaves(CProxy_Partition<Data> part)
           branch_factor, leaf->is_leaf, leaf->data
           )
         );
-      for (int pi = 0; pi < leaf->n_particles; pi++) {
-        all_particle_keys.push_back(leaf->particles()[pi].key);
-      }
       ++leaf_idx;
     }
 
-    part[current_part_idx].receiveLeaves(node_data, all_particle_keys, this->thisIndex, branch_factor);
+    part[current_part_idx].receiveLeaves(node_data, this->thisIndex, branch_factor);
   }
 }
 

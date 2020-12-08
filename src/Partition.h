@@ -14,7 +14,6 @@ extern CProxy_Reader readers;
 
 template <typename Data>
 struct Partition : public CBase_Partition<Data> {
-  std::vector<Particle> received_particles;
   std::vector<Particle> particles;
   std::vector<Node<Data>*> leaves;
 
@@ -36,7 +35,7 @@ struct Partition : public CBase_Partition<Data> {
   void goDown(Key);
   void interact(const CkCallback& cb);
 
-  void receiveLeaves(std::vector<NodeWrapper<Data>>, std::vector<Key>, int, size_t);
+  void receiveLeaves(std::vector<NodeWrapper<Data>>, int, size_t);
   void receive(ParticleMsg*);
   void destroy();
   void reset();
@@ -74,10 +73,6 @@ template <typename Visitor>
 void Partition<Data>::startDown()
 {
   initLocalBranches();
-  if (received_particles.size() != particles.size()) {
-    CkAbort("Partition did not receive all of its leaves from Subtrees");
-  }
-  received_particles.clear();
   interactions.resize(leaves.size());
   traverser = new DownTraverser<Data, Visitor>(*this);
   traverser->start();
@@ -98,22 +93,16 @@ void Partition<Data>::interact(const CkCallback& cb)
 
 template <typename Data>
 void Partition<Data>::receiveLeaves(
-  std::vector<NodeWrapper<Data>> data, std::vector<Key> all_particle_keys,
-  int subtree_idx, size_t branch_factor
+  std::vector<NodeWrapper<Data>> data, int subtree_idx, size_t branch_factor
   )
 {
-  int received_part_index = particles.size();
-  for (int i = 0; i < all_particle_keys.size(); i++) {
-    auto it = std::lower_bound(received_particles.begin(), received_particles.end(), all_particle_keys[i]);
-    if (it == received_particles.end()) CkAbort("couldnt find particle key");
-    particles.push_back(*it);
-  }
+  int part_index = 0;
   for (const NodeWrapper<Data>& leaf : data) {
     Node<Data> *node = treespec.ckLocalBranch()->template makeNode<Data>(
-      leaf.key, leaf.depth, leaf.n_particles, &particles[received_part_index],
+      leaf.key, leaf.depth, leaf.n_particles, &particles[part_index],
       subtree_idx, subtree_idx, leaf.is_leaf, nullptr, subtree_idx
       );
-    received_part_index += leaf.n_particles;
+    part_index += leaf.n_particles;
     node->type = Node<Data>::Type::Leaf;
     node->data = Data(node->particles(), node->n_particles);
     leaves.push_back(node);
@@ -123,10 +112,10 @@ void Partition<Data>::receiveLeaves(
 template <typename Data>
 void Partition<Data>::receive(ParticleMsg *msg)
 {
-  received_particles.insert(received_particles.end(),
+  particles.insert(particles.end(),
                    msg->particles, msg->particles + msg->n_particles);
   delete msg;
-  std::sort(received_particles.begin(), received_particles.end());
+  std::sort(particles.begin(), particles.end());
 }
 
 template <typename Data>
