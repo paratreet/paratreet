@@ -144,6 +144,7 @@ void Partition<Data>::reset()
 {
   leaves.clear();
   interactions.clear();
+  particles.clear();
 }
 
 template <typename Data>
@@ -163,7 +164,6 @@ void Partition<Data>::flush(CProxy_Reader readers)
     particles.data(), particles.size()
     );
   readers[CkMyPe()].receive(msg);
-  particles.clear();
 }
 
 template <typename Data>

@@ -49,3 +49,4 @@ jobs:
         make
         ./charmrun +p1 ./Main -f ../../inputgen/1k.tipsy -p 100 ++local
         ./charmrun +p4 ./Main -f ../../inputgen/1k.tipsy -p 100 ++local
+        ./charmrun +p4 ./Main -f ../../inputgen/1k.tipsy -p 100 ++local -d sfc
