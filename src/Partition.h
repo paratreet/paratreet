@@ -20,6 +20,8 @@ struct Partition : public CBase_Partition<Data> {
   Traverser<Data> *traverser;
   int n_partitions;
 
+  int received_part_index = 0;
+
   // filled in during traversal
   std::vector<std::vector<Node<Data>*>> interactions;
 
@@ -35,7 +37,7 @@ struct Partition : public CBase_Partition<Data> {
   void goDown(Key);
   void interact(const CkCallback& cb);
 
-  void receiveLeaves(std::vector<NodeWrapper<Data>>, int, size_t);
+  void receiveLeaves(std::vector<NodeWrapper<Data>>, std::vector<Key>, int, size_t);
   void receive(ParticleMsg*);
   void destroy();
   void reset();
@@ -55,6 +57,7 @@ Partition<Data>::Partition(
   tc_proxy = tc_holder.proxy;
   r_proxy = rp;
   cm_proxy = cm;
+  received_part_index = 0;
   initLocalBranches();
 }
 
@@ -72,6 +75,7 @@ template <typename Data>
 template <typename Visitor>
 void Partition<Data>::startDown()
 {
+  received_part_index = 0; // reset
   initLocalBranches();
   interactions.resize(leaves.size());
   traverser = new DownTraverser<Data, Visitor>(*this);
@@ -93,16 +97,27 @@ void Partition<Data>::interact(const CkCallback& cb)
 
 template <typename Data>
 void Partition<Data>::receiveLeaves(
-  std::vector<NodeWrapper<Data>> data, int subtree_idx, size_t branch_factor
+  std::vector<NodeWrapper<Data>> data, std::vector<Key> all_particle_keys,
+  int subtree_idx, size_t branch_factor
   )
 {
-  int part_index = 0;
+  for (int i = 0; i < all_particle_keys.size(); i++) {
+    bool found = false;
+    for (int j = received_part_index + i; j < particles.size(); j++) {
+      if (particles[j].key == all_particle_keys[i]) {
+        std::swap(particles[received_part_index + i], particles[j]);
+        found = true;
+        break;
+      }
+    }
+    if (!found) CkAbort("couldnt find particle key");
+  }
   for (const NodeWrapper<Data>& leaf : data) {
     Node<Data> *node = treespec.ckLocalBranch()->template makeNode<Data>(
-      leaf.key, leaf.depth, leaf.n_particles, &particles[part_index],
+      leaf.key, leaf.depth, leaf.n_particles, &particles[received_part_index],
       subtree_idx, subtree_idx, leaf.is_leaf, nullptr, subtree_idx
       );
-    part_index += leaf.n_particles;
+    received_part_index += leaf.n_particles;
     node->type = Node<Data>::Type::Leaf;
     node->data = Data(node->particles(), node->n_particles);
     leaves.push_back(node);
