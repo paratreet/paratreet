@@ -42,6 +42,7 @@ struct Partition : public CBase_Partition<Data> {
   void perturb(Real, bool);
   void flush(CProxy_Reader);
   void output(CProxy_Writer w, CkCallback cb);
+  void initLocalBranches();
 };
 
 template <typename Data>
@@ -53,11 +54,15 @@ Partition<Data>::Partition(
   n_partitions = np;
   tc_proxy = tc_holder.proxy;
   r_proxy = rp;
+  cm_proxy = cm;
+  initLocalBranches();
+}
+
+template <typename Data>
+void Partition<Data>::initLocalBranches() {
   r_local = r_proxy.ckLocalBranch();
   r_local->part_proxy = this->thisProxy;
   r_local->resume_nodes_per_part.resize(n_partitions);
-  r_local = r_proxy.ckLocalBranch();
-  cm_proxy = cm;
   cm_local = cm_proxy.ckLocalBranch();
   r_local->cm_local = cm_local;
   cm_local->r_proxy = r_proxy;
@@ -67,6 +72,7 @@ template <typename Data>
 template <typename Visitor>
 void Partition<Data>::startDown()
 {
+  initLocalBranches();
   interactions.resize(leaves.size());
   traverser = new DownTraverser<Data, Visitor>(*this);
   traverser->start();
