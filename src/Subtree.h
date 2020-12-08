@@ -42,9 +42,7 @@ public:
   CProxy_TreeCanopy<Data> tc_proxy;
   CacheManager<Data>* cm_local;
 
-  bool cache_init;
   std::vector<Particle> flushed_particles; // For debugging
-  int dim_cnt;
 
   Subtree(const CkCallback&, int, int, int, TCHolder<Data>,
           CProxy_Resumer<Data>, CProxy_CacheManager<Data>, DPHolder<Data>);
@@ -92,9 +90,6 @@ Subtree<Data>::Subtree(const CkCallback& cb, int n_total_particles_,
   tc_proxy = tc_holder.proxy;
   cm_local = cm_proxy.ckLocalBranch();
   cm_local->r_proxy = r_proxy_;
-
-  cache_init = false;
-  dim_cnt = 0;
 
   tp_key = treespec_subtrees.ckLocalBranch()->getDecomposition()->
     getTpKey(this->thisIndex);
@@ -376,15 +371,12 @@ void Subtree<Data>::populateTree() {
 
 template <typename Data>
 void Subtree<Data>::initCache() {
-  if (!cache_init) {
-    cm_local->num_buckets += leaves.size();
-    cm_local->connect(local_root, false);
-    auto local_parent = local_root->parent;
-    if (local_parent) {
-      local_parent->exchangeChild(tp_key % local_root->getBranchFactor(),nullptr);
-      global_root->triggerFree();
-    }
-    cache_init = true;
+  cm_local->num_buckets += leaves.size();
+  cm_local->connect(local_root, false);
+  auto local_parent = local_root->parent;
+  if (local_parent) {
+    local_parent->exchangeChild(tp_key % local_root->getBranchFactor(),nullptr);
+    global_root->triggerFree();
   }
 }
 
