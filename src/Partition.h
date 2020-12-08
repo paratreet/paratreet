@@ -14,12 +14,13 @@ extern CProxy_Reader readers;
 
 template <typename Data>
 struct Partition : public CBase_Partition<Data> {
-  std::vector<Particle> received_particles;
   std::vector<Particle> particles;
   std::vector<Node<Data>*> leaves;
 
   Traverser<Data> *traverser;
   int n_partitions;
+
+  int received_part_index = 0;
 
   // filled in during traversal
   std::vector<std::vector<Node<Data>*>> interactions;
@@ -56,6 +57,7 @@ Partition<Data>::Partition(
   tc_proxy = tc_holder.proxy;
   r_proxy = rp;
   cm_proxy = cm;
+  received_part_index = 0;
   initLocalBranches();
 }
 
@@ -73,11 +75,8 @@ template <typename Data>
 template <typename Visitor>
 void Partition<Data>::startDown()
 {
+  received_part_index = 0; // reset
   initLocalBranches();
-  if (received_particles.size() != particles.size()) {
-    CkAbort("Partition did not receive all of its leaves from Subtrees");
-  }
-  received_particles.clear();
   interactions.resize(leaves.size());
   traverser = new DownTraverser<Data, Visitor>(*this);
   traverser->start();
@@ -102,11 +101,16 @@ void Partition<Data>::receiveLeaves(
   int subtree_idx, size_t branch_factor
   )
 {
-  int received_part_index = particles.size();
   for (int i = 0; i < all_particle_keys.size(); i++) {
-    auto it = std::lower_bound(received_particles.begin(), received_particles.end(), all_particle_keys[i]);
-    if (it == received_particles.end()) CkAbort("couldnt find particle key");
-    particles.push_back(*it);
+    bool found = false;
+    for (int j = received_part_index + i; j < particles.size(); j++) {
+      if (particles[j].key == all_particle_keys[i]) {
+        std::swap(particles[received_part_index + i], particles[j]);
+        found = true;
+        break;
+      }
+    }
+    if (!found) CkAbort("couldnt find particle key");
   }
   for (const NodeWrapper<Data>& leaf : data) {
     Node<Data> *node = treespec.ckLocalBranch()->template makeNode<Data>(
@@ -123,10 +127,10 @@ void Partition<Data>::receiveLeaves(
 template <typename Data>
 void Partition<Data>::receive(ParticleMsg *msg)
 {
-  received_particles.insert(received_particles.end(),
+  particles.insert(particles.end(),
                    msg->particles, msg->particles + msg->n_particles);
   delete msg;
-  std::sort(received_particles.begin(), received_particles.end());
+  std::sort(particles.begin(), particles.end());
 }
 
 template <typename Data>
