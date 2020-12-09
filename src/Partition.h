@@ -41,7 +41,7 @@ struct Partition : public CBase_Partition<Data> {
   void receive(ParticleMsg*);
   void destroy();
   void reset();
-  void perturb(Real, bool);
+  void perturb(TPHolder<Data>, Real, bool);
   void flush(CProxy_Reader);
   void output(CProxy_Writer w, CkCallback cb);
   void initLocalBranches();
@@ -136,6 +136,7 @@ void Partition<Data>::receive(ParticleMsg *msg)
 template <typename Data>
 void Partition<Data>::destroy()
 {
+  particles.clear();
   this->thisProxy[this->thisIndex].ckDestroy();
 }
 
@@ -144,17 +145,43 @@ void Partition<Data>::reset()
 {
   leaves.clear();
   interactions.clear();
-  particles.clear();
 }
 
 template <typename Data>
-void Partition<Data>::perturb(Real timestep, bool if_flush)
+void Partition<Data>::perturb(TPHolder<Data> tp_holder, Real timestep, bool if_flush)
 {
-  // TODO: how do we decide when to send particles to other partitions?
-  for (auto& p : particles)
+  for (auto && p : particles) {
     p.perturb(timestep, readers.ckLocalBranch()->universe.box);
-  if (if_flush)
+  }
+  if (if_flush) {
     flush(readers);
+    return;
+  }
+  std::map<int, std::vector<Particle>> out_particles;
+  for (auto& particle : particles) {
+    auto node = cm_proxy.ckLocalBranch()->root;
+    auto curr_box = readers.ckLocalBranch()->universe.box;
+    while (node->tp_index < 0) {
+      int child = 0;
+      Vector3D<Real> mean = curr_box.center();
+      for (int dim = 0; dim < 3; dim++) {
+        if (particle.position[dim] > mean[dim]) {
+          child |= (1 << (2 - dim));
+          curr_box.lesser_corner[dim] = mean[dim];
+        }
+        else curr_box.greater_corner[dim] = mean[dim];
+      }
+      if (node->type == Node<Data>::Type::RemoteAboveTPKey || node->type == Node<Data>::Type::Remote) {
+        CkAbort("flush period too large for initial particle velocities");
+      }
+      node = node->getChild(child); // move down the tree :)
+    }
+    out_particles[node->tp_index].push_back(particle);
+  }
+  for (auto it = out_particles.begin(); it != out_particles.end(); it++) {
+    ParticleMsg* msg = new (it->second.size()) ParticleMsg (it->second.data(), it->second.size());
+    tp_holder.proxy[it->first].receive(msg);
+  }
 }
 
 template <typename Data>

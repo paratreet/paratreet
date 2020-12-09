@@ -54,7 +54,6 @@ public:
   void send_leaves(CProxy_Partition<Data>);
   void requestNodes(Key, int);
   void print(Node<Data>*);
-  void perturb (Real timestep, bool);
   void flush(CProxy_Reader);
   void destroy();
   void output(CProxy_Writer w, CkCallback cb);
@@ -113,6 +112,10 @@ void Subtree<Data>::receive(ParticleMsg* msg) {
   // Copy particles to local vector
   // TODO: Remove memcpy by just storing the pointer to msg->particles
   // and using it in tree build
+  if (!particles.empty()) {
+    particles.clear();
+    particle_index = 0u;
+  }
   int initial_size = incoming_particles.size();
   incoming_particles.resize(initial_size + msg->n_particles);
   std::memcpy(&incoming_particles[initial_size], msg->particles,
@@ -389,92 +392,6 @@ void Subtree<Data>::requestNodes(Key key, int cm_index) {
   Node<Data>* node = local_root->getDescendant(key);
   if (!node) CkPrintf("null found for key %lu on tp %d\n", key, this->thisIndex);
   cm_proxy.ckLocalBranch()->serviceRequest(node, cm_index);
-}
-
-template <typename Data>
-void Subtree<Data>::perturb (Real timestep, bool if_flush) {
-  if (particles.empty()) return;
-  // If tree will be entirely rebuilt, just update particle positions
-  // based on the forces calculated from interactions
-  if (if_flush) {
-    for (auto && p : particles) {
-      p.perturb(timestep, readers.ckLocalBranch()->universe.box);
-    }
-    flush(readers);
-    return;
-  }
-
-  // Perturb particles for incremental tree building
-  // TODO: Fails with input files with randomly generated particles,
-  //       as the initial velocities are too large and particles shoot out
-  //       of the universe
-  std::vector<Particle> in_particles;
-  std::map<int, std::vector<Particle>> out_particles;
-  std::vector<int> remainders;
-  Key temp = tp_key;
-  const size_t branch_factor = leaves[0]->getBranchFactor();
-  while (temp >= branch_factor) {
-    remainders.push_back(temp % branch_factor);
-    temp /= branch_factor;
-  }
-  OrientedBox<Real> tp_box = readers.ckLocalBranch()->universe.box;
-  for (int i = remainders.size()-1; i >= 0; i--) {
-    for (int dim = 0; dim < 3; dim++) {
-      if (remainders[i] & (1 << (2-dim))) tp_box.lesser_corner[dim] = tp_box.center()[dim];
-      else tp_box.greater_corner[dim] = tp_box.center()[dim];
-    }
-  }
-
-  // calculate bounding box of TP
-  for (auto& particle : particles) {
-    Vector3D<Real> old_position = particle.position;
-    particle.perturb(timestep, readers.ckLocalBranch()->universe.box);
-    //CkPrintf("magitude of displacement = %lf\n", (old_position - leaf->particles[i].position).length());
-    //CkPrintf("total centroid is (%lf, %lf, %lf)\n", global_root->data.centroid.x, global_root->data.centroid.y, global_root->data.centroid.z);
-    OrientedBox<Real> curr_box = tp_box;
-    Node<Data>* node = local_root;
-    int remainders_index = 0;
-    while (!curr_box.contains(particle.position)) {
-      //CkPrintf("not under umbrella of node %d with volume %lf\n", node->key, curr_box.volume());
-/*      if (node->parent == nullptr) CkPrintf("point (%lf, %lf, %lf) has force (%lf, %lf, %lf) and old position (%lf, %lf, %lf)\n",
-        particle.position.x, particle.position.y, particle.position.z,
-        leaf->getForce(i).x / .001, leaf->getForce(i).y / .001, leaf->getForce(i).z / .001,
-        old_position.x, old_position.y, old_position.z);*/
-      Vector3D<Real> new_point = 2 * curr_box.greater_corner - curr_box.lesser_corner;
-      if (remainders[remainders_index] & 4) new_point.x = 2 * curr_box.lesser_corner.x - curr_box.greater_corner.x;
-      if (remainders[remainders_index] & 2) new_point.y = 2 * curr_box.lesser_corner.y - curr_box.greater_corner.y;
-      if (remainders[remainders_index] & 1) new_point.z = 2 * curr_box.lesser_corner.z - curr_box.greater_corner.z;
-      curr_box.grow(new_point);
-      remainders_index++;
-      node = node->parent;
-    }
-    //if (node->tp_index >= 0) CkPrintf("node tp_index %d\n", node->tp_index);
-    while (node->tp_index < 0) {
-      int child = 0;
-      Vector3D<Real> mean = curr_box.center();
-      for (int dim = 0; dim < 3; dim++) {
-        if (particle.position[dim] > mean[dim]) {
-          child |= (1 << (2 - dim));
-          curr_box.lesser_corner[dim] = mean[dim];
-        }
-        else curr_box.greater_corner[dim] = mean[dim];
-      }
-      if (node->type == Node<Data>::Type::RemoteAboveTPKey || node->type == Node<Data>::Type::Remote) {
-        CkAbort("flush period too large for initial particle velocities");
-      }
-      node = node->getChild(child); // move down the tree :)
-    }
-    if (node == local_root) in_particles.push_back(particle);
-    else {
-      std::vector<Particle>& particle_vec = out_particles[node->tp_index];
-      particle_vec.push_back(particle);
-    }
-  }
-  for (auto it = out_particles.begin(); it != out_particles.end(); it++) {
-    ParticleMsg* msg = new (it->second.size()) ParticleMsg (it->second.data(), it->second.size());
-    this->thisProxy[it->first].receive(msg);
-  }
-  particles = in_particles;
 }
 
 template <typename Data>

@@ -226,7 +226,7 @@ public:
       // Move the particles in Partitions
       start_time = CkWallTimer();
       bool complete_rebuild = (iter % config.flush_period == config.flush_period - 1);
-      partitions.perturb(config.timestep_size, complete_rebuild); // 0.1s for example
+      partitions.perturb(subtrees, config.timestep_size, complete_rebuild); // 0.1s for example
       CkWaitQD();
       CkPrintf("Perturbations: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
 
