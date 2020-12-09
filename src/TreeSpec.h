@@ -28,7 +28,7 @@ public:
     void setConfiguration(const paratreet::Configuration& config_) { config = config_; }
 
     template <typename Data>
-    Node<Data>* makeNode(Key key, int depth, int n_particles, Particle* particles, int owner_tp_start, int owner_tp_end, bool is_leaf, Node<Data>* parent, int tp_index) {
+    Node<Data>* makeNode(Key key, int depth, int n_particles, Particle* particles, int owner_tp_start, int owner_tp_end, bool is_leaf, Node<Data>* parent, Key tp_index) {
       switch (getTree()->getBranchFactor()) {
       case 2:
         return new FullNode<Data, 2> (key, depth, n_particles, particles, owner_tp_start, owner_tp_end, is_leaf, parent, tp_index);

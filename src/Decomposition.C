@@ -12,7 +12,7 @@ int SfcDecomposition::flush(int n_total_particles, int n_partitions, const SendP
   int particle_idx = Utility::binarySearchGE(
     splitters[0].from, particles.data(), 0, particles.size()
     );
-  for (int i = 0; i < splitters.size(); ++i) {
+  for (Key i = 0; i < splitters.size(); ++i) {
     int end = Utility::binarySearchG(
       splitters[i].to, particles.data(), particle_idx, particles.size()
       );
@@ -35,7 +35,7 @@ void SfcDecomposition::assignKeys(BoundingBox &universe, std::vector<Particle> &
 }
 
 int SfcDecomposition::getNumExpectedParticles(int n_total_particles, int n_partitions,
-                                              int tp_index) {
+                                              Key tp_index) {
   int n_expected = n_total_particles / n_partitions;
   if (tp_index < (n_total_particles % n_partitions)) n_expected++;
   return n_expected;
@@ -124,12 +124,12 @@ void SfcDecomposition::pup(PUP::er& p) {
   p | splitters;
 }
 
-int SfcDecomposition::getTpKey(int idx) {
+int SfcDecomposition::getTpKey(Key idx) {
   return splitters[idx].tp_key;
 }
 
 int OctDecomposition::getNumExpectedParticles(int n_total_particles, int n_partitions,
-                                              int tp_index) {
+                                              Key tp_index) {
   return splitters[tp_index].n_particles;
 }
 
@@ -141,7 +141,7 @@ int OctDecomposition::flush(int n_total_particles, int n_partitions, const SendP
   int finish = particles.size();
 
   // Find particles that belong to each splitter range and flush them
-  for (int i = 0; i < splitters.size(); i++) {
+  for (Key i = 0; i < splitters.size(); i++) {
     int begin = Utility::binarySearchGE(splitters[i].from, &particles[0], start, finish);
     int end = Utility::binarySearchGE(splitters[i].to, &particles[0], begin, finish);
 

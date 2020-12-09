@@ -95,7 +95,7 @@ Subtree<Data>::Subtree(const CkCallback& cb, int n_total_particles_,
 
   // Create TreeCanopies and send proxies
   auto sendProxy =
-    [&](int dest, int tp_index) {
+    [&](int dest, Key tp_index) {
       tc_proxy[dest].recvProxies(TPHolder<Data>(this->thisProxy),
                                  tp_index, cm_proxy, dp_holder);
     };
@@ -387,7 +387,7 @@ void Subtree<Data>::initCache() {
 template <typename Data>
 void Subtree<Data>::requestNodes(Key key, int cm_index) {
   Node<Data>* node = local_root->getDescendant(key);
-  if (!node) CkPrintf("null found for key %lu on tp %d\n", key, this->thisIndex);
+  if (!node) CkPrintf("null found for key %lu on tp %lu\n", key, this->thisIndex);
   cm_proxy.ckLocalBranch()->serviceRequest(node, cm_index);
 }
 

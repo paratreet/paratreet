@@ -75,7 +75,7 @@ public:
 
   Node(const Data& data, int _n_particles, Particle* _particles, int _depth,
         int _n_children, Node* _parent, Type _type, Key _key,
-        int _owner_tp_start, int _owner_tp_end, int _tp_index, int _cm_index)
+        int _owner_tp_start, int _owner_tp_end, Key _tp_index, int _cm_index)
     : SpatialNode<Data>(data, _n_particles, _n_children == 0, _particles, _depth),
       n_children(_n_children),
       parent(_parent),
@@ -114,7 +114,7 @@ public:
   int owner_tp_start = -1;
   int owner_tp_end   = -1;
   int wait_count     = -1;
-  int tp_index       = -1;
+  Key tp_index       = -1;
   int cm_index       = -1;
   std::atomic<bool> requested = ATOMIC_VAR_INIT(false);
   std::atomic<size_t> num_buckets_finished = ATOMIC_VAR_INIT(0);
@@ -213,7 +213,7 @@ public:
     initChildren();
   }
 
-  FullNode(Key _key, int _depth, int _n_particles, Particle* _particles, int _owner_tp_start, int _owner_tp_end, bool _is_leaf, Node<Data>* _parent, int _tp_index)
+  FullNode(Key _key, int _depth, int _n_particles, Particle* _particles, int _owner_tp_start, int _owner_tp_end, bool _is_leaf, Node<Data>* _parent, Key _tp_index)
     : Node<Data>(Data(), _n_particles, _particles, _depth, _is_leaf ? 0 : BRANCH_FACTOR, _parent, Node<Data>::Type::Invalid, _key, _owner_tp_start, _owner_tp_end, _tp_index, -1)
   {
     initChildren();

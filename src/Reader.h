@@ -70,7 +70,7 @@ void Reader::request(CProxy_Subtree<Data> tp_proxy, int index, int num_to_give) 
 template <typename Data>
 void Reader::flush(int n_total_particles, int n_subtrees,
                    CProxy_Subtree<Data> subtrees) {
-  auto sendParticles = [&](int dest, int n_particles, Particle* particles) {
+  auto sendParticles = [&](Key dest, int n_particles, Particle* particles) {
     ParticleMsg* msg = new (n_particles) ParticleMsg(particles, n_particles);
     subtrees[dest].receive(msg);
   };

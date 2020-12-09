@@ -12,8 +12,8 @@ namespace paratreet {
   class Configuration;
 }
 
-using SendProxyFn = std::function<void(int,int)>;
-using SendParticlesFn = std::function<void(int,int,Particle*)>;
+using SendProxyFn = std::function<void(Key,int)>;
+using SendParticlesFn = std::function<void(Key,int,Particle*)>;
 
 struct Decomposition {
   virtual ~Decomposition() = default;
@@ -22,7 +22,7 @@ struct Decomposition {
 
   virtual void assignKeys(BoundingBox &universe, std::vector<Particle> &particles) = 0;
 
-  virtual int getNumExpectedParticles(int n_total_particles, int n_partitions, int tp_index) = 0;
+  virtual int getNumExpectedParticles(int n_total_particles, int n_partitions, Key tp_index) = 0;
 
   virtual int findSplitters(BoundingBox &universe, CProxy_Reader &readers, const paratreet::Configuration& config, int log_branch_factor) = 0;
 
@@ -30,7 +30,7 @@ struct Decomposition {
 
   virtual void pup(PUP::er& p) = 0;
 
-  virtual int getTpKey(int idx) = 0;
+  virtual int getTpKey(Key idx) = 0;
 
   virtual std::vector<Splitter> getSplitters() = 0;
 
@@ -44,11 +44,11 @@ struct Decomposition {
 };
 
 struct SfcDecomposition : public Decomposition {
-  int getTpKey(int idx) override;
+  int getTpKey(Key idx) override;
   int flush(int n_total_particles, int n_partitions,
       const SendParticlesFn &fn, std::vector<Particle> &particles) override;
   void assignKeys(BoundingBox &universe, std::vector<Particle> &particles) override;
-  int getNumExpectedParticles(int n_total_particles, int n_partitions, int tp_index) override;
+  int getNumExpectedParticles(int n_total_particles, int n_partitions, Key tp_index) override;
   int findSplitters(BoundingBox &universe, CProxy_Reader &readers, const paratreet::Configuration& config, int log_branch_factor) override;
   void alignSplitters(Decomposition *) override;
   std::vector<Splitter> getSplitters() override;
@@ -62,7 +62,7 @@ struct OctDecomposition : public SfcDecomposition {
   int flush(int n_total_particles, int n_partitions,
       const SendParticlesFn &fn, std::vector<Particle> &particles) override;
   void assignKeys(BoundingBox &universe, std::vector<Particle> &particles) override;
-  int getNumExpectedParticles(int n_total_particles, int n_partitions, int tp_index) override;
+  int getNumExpectedParticles(int n_total_particles, int n_partitions, Key tp_index) override;
   int findSplitters(BoundingBox &universe, CProxy_Reader &readers, const paratreet::Configuration& config, int log_branch_factor) override;
 };
 
