@@ -57,6 +57,7 @@ public:
   void flush(CProxy_Reader);
   void destroy();
   void output(CProxy_Writer w, CkCallback cb);
+  void pup(PUP::er& p);
 
   // For debugging
   void checkParticlesChanged(const CkCallback& cb) {
@@ -105,6 +106,19 @@ Subtree<Data>::Subtree(const CkCallback& cb, int n_total_particles_,
   local_root = nullptr;
 
   this->contribute(cb);
+}
+
+template <typename Data>
+void Subtree<Data>::pup(PUP::er& p) {
+  p | n_total_particles;
+  p | n_subtrees;
+  p | n_partitions;
+  p | tp_key;
+  p | tc_proxy;
+  p | cm_proxy;
+  if (p.isUnpacking()) {
+    particle_index = 0;
+  }
 }
 
 template <typename Data>

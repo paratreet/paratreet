@@ -45,6 +45,7 @@ struct Partition : public CBase_Partition<Data> {
   void flush(CProxy_Reader);
   void output(CProxy_Writer w, CkCallback cb);
   void initLocalBranches();
+  void pup(PUP::er& p);
 };
 
 template <typename Data>
@@ -145,6 +146,20 @@ void Partition<Data>::reset()
 {
   leaves.clear();
   interactions.clear();
+}
+
+template <typename Data>
+void Partition<Data>::pup(PUP::er& p)
+{
+  p | particles;
+  p | n_partitions;
+  p | tc_proxy;
+  p | cm_proxy;
+  p | r_proxy;
+  if (p.isUnpacking()) {
+    received_part_index = 0;
+    initLocalBranches();
+  }
 }
 
 template <typename Data>
