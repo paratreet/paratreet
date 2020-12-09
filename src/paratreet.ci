@@ -1,5 +1,6 @@
 module paratreet {
   include "Configuration.h";
+  include "CkArrayIndexKey.h";
   include "BoundingBox.h";
   include "Splitter.h";
   include "CentroidData.h";
@@ -108,7 +109,7 @@ module paratreet {
   array [1d] Subtree<CentroidData>;
 
   template <typename Data>
-  array [1d] TreeCanopy {
+  array [Key] TreeCanopy {
     entry TreeCanopy();
     entry void reset();
     entry [createhere] void recvProxies(TPHolder<Data>, int, CProxy_CacheManager<Data>, DPHolder<Data>);
