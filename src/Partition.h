@@ -14,6 +14,7 @@ extern CProxy_Reader readers;
 
 template <typename Data>
 struct Partition : public CBase_Partition<Data> {
+  std::vector<Particle> received_particles;
   std::vector<Particle> particles;
   std::vector<Node<Data>*> leaves;
 
@@ -77,6 +78,10 @@ void Partition<Data>::startDown()
 {
   received_part_index = 0; // reset
   initLocalBranches();
+  if (received_particles.size() != particles.size()) {
+    CkAbort("Partition did not receive all of its leaves from Subtrees");
+  }
+  received_particles.clear();
   interactions.resize(leaves.size());
   traverser = new DownTraverser<Data, Visitor>(*this);
   traverser->start();
@@ -127,10 +132,10 @@ void Partition<Data>::receiveLeaves(
 template <typename Data>
 void Partition<Data>::receive(ParticleMsg *msg)
 {
-  particles.insert(particles.end(),
+  received_particles.insert(received_particles.end(),
                    msg->particles, msg->particles + msg->n_particles);
   delete msg;
-  std::sort(particles.begin(), particles.end());
+  std::sort(received_particles.begin(), received_particles.end());
 }
 
 template <typename Data>
