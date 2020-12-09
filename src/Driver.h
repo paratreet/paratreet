@@ -50,7 +50,7 @@ public:
   BoundingBox universe;
   CProxy_Subtree<CentroidData> subtrees; // Cannot be a global readonly variable
   CProxy_Partition<CentroidData> partitions;
-  int n_subtrees;
+  Key n_subtrees;
   int n_partitions;
   double start_time;
 
@@ -133,13 +133,16 @@ public:
 
     // Create Subtrees
     start_time = CkWallTimer();
+    CkArrayOptions options;
+    options.setStart(CkArrayIndexKey(0));
+    options.setEnd(CkArrayIndexKey(n_subtrees));
     subtrees = CProxy_Subtree<CentroidData>::ckNew(
       CkCallbackResumeThread(),
       universe.n_particles, n_subtrees, n_partitions,
       centroid_calculator, centroid_resumer,
-      centroid_cache, this->thisProxy, n_subtrees
-      );
-    CkPrintf("Created %d Subtrees: %.3lf ms\n", n_subtrees,
+      centroid_cache, this->thisProxy, options
+    );
+    CkPrintf("Created %lu Subtrees: %.3lf ms\n", n_subtrees,
         (CkWallTimer() - start_time) * 1000);
 
     // Create Partitions

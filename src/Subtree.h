@@ -31,7 +31,7 @@ public:
   std::vector<Node<Data>*> empty_leaves;
 
   int n_total_particles;
-  int n_subtrees;
+  Key n_subtrees;
   int n_partitions;
   int particle_index;
 
@@ -44,7 +44,7 @@ public:
 
   std::vector<Particle> flushed_particles; // For debugging
 
-  Subtree(const CkCallback&, int, int, int, TCHolder<Data>,
+  Subtree(const CkCallback&, int, Key, int, TCHolder<Data>,
           CProxy_Resumer<Data>, CProxy_CacheManager<Data>, DPHolder<Data>);
   void receive(ParticleMsg*);
   void buildTree();
@@ -79,7 +79,7 @@ public:
 
 template <typename Data>
 Subtree<Data>::Subtree(const CkCallback& cb, int n_total_particles_,
-                       int n_subtrees_, int n_partitions_, TCHolder<Data> tc_holder,
+                       Key n_subtrees_, int n_partitions_, TCHolder<Data> tc_holder,
                        CProxy_Resumer<Data> r_proxy_,
                        CProxy_CacheManager<Data> cm_proxy_, DPHolder<Data> dp_holder) {
   n_total_particles = n_total_particles_;

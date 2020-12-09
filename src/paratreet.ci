@@ -89,7 +89,7 @@ module paratreet {
 
   template <typename Data>
   array [Key] Subtree {
-    entry Subtree(const CkCallback&, int, int, int, TCHolder<Data>, CProxy_Resumer<Data>, CProxy_CacheManager<Data>, DPHolder<Data>);
+    entry Subtree(const CkCallback&, int, Key, int, TCHolder<Data>, CProxy_Resumer<Data>, CProxy_CacheManager<Data>, DPHolder<Data>);
     entry void receive(ParticleMsg*);
     entry void buildTree();
     /* template<typename Visitor> entry void startDown(); */
@@ -149,7 +149,7 @@ module paratreet {
     entry void localSort(const CkCallback&);
     entry void checkSort(const Key, const CkCallback&);
     template <typename Data>
-    entry void flush(int, int, CProxy_Subtree<Data>);
+    entry void flush(int, Key, CProxy_Subtree<Data>);
     template <typename Data>
     entry void assign_partitions(int, int, CProxy_Partition<Data>);
   };
@@ -165,7 +165,7 @@ module paratreet {
   }
 
   extern entry void Reader request<CentroidData>(CProxy_Subtree<CentroidData>, int, int);
-  extern entry void Reader flush<CentroidData>(int, int, CProxy_Subtree<CentroidData>);
+  extern entry void Reader flush<CentroidData>(int, Key, CProxy_Subtree<CentroidData>);
   extern entry void Reader assign_partitions<CentroidData>(int, int, CProxy_Partition<CentroidData>);
 
   group CountManager {
