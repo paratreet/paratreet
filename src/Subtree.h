@@ -95,7 +95,7 @@ Subtree<Data>::Subtree(const CkCallback& cb, int n_total_particles_,
 
   // Create TreeCanopies and send proxies
   auto sendProxy =
-    [&](int dest, int tp_index) {
+    [&](Key dest, int tp_index) {
       tc_proxy[dest].recvProxies(TPHolder<Data>(this->thisProxy),
                                  tp_index, cm_proxy, dp_holder);
     };
@@ -371,11 +371,12 @@ void Subtree<Data>::populateTree() {
   while (going_up.size()) {
     Node<Data>* node = going_up.front();
     going_up.pop();
+    CkAssert(node);
     if (node->key == tp_key) {
       // We are at the root of the Subtree, send accumulated data to
       // parent TreeCanopy
       int branch_factor = node->getBranchFactor();
-      size_t tc_key = tp_key / branch_factor;
+      Key tc_key = tp_key / branch_factor;
       if (tc_key > 0) tc_proxy[tc_key].recvData(*node, branch_factor);
     } else {
       // Add this node's data to the parent, and add parent to the queue
