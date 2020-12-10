@@ -12,7 +12,7 @@ namespace paratreet {
   class Configuration;
 }
 
-using SendProxyFn = std::function<void(int,int)>;
+using SendProxyFn = std::function<void(Key,int)>;
 using SendParticlesFn = std::function<void(int,int,Particle*)>;
 
 struct Decomposition {
