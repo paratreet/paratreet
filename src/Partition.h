@@ -123,6 +123,7 @@ void Partition<Data>::receiveLeaves(
     node->data = Data(node->particles(), node->n_particles);
     leaves.push_back(node);
   }
+  cm_local->num_buckets += leaves.size();
 }
 
 template <typename Data>
