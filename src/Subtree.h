@@ -259,9 +259,10 @@ void Subtree<Data>::populateTree() {
     leaf->data = Data(leaf->particles(), leaf->n_particles);
     going_up.push(leaf);
   }
-
-  if (!leaves.size()) going_up.push(local_root);
-  else for (auto empty_leaf : empty_leaves) going_up.push(empty_leaf);
+  for (auto empty_leaf : empty_leaves) {
+    going_up.push(empty_leaf);
+  }
+  CkAssert(!going_up.empty());
 
   while (going_up.size()) {
     Node<Data>* node = going_up.front();
