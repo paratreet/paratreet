@@ -166,11 +166,6 @@ public:
     CkStartQD(CkCallbackResumeThread());
     CkPrintf("Flushing particles to Subtrees: %.3lf ms\n",
         (CkWallTimer() - start_time) * 1000);
-
-#if DEBUG
-    // Check if all subtrees have received the right number of particles
-    subtrees.check(CkCallbackResumeThread());
-#endif
   }
 
   // Core iterative loop of the simulation

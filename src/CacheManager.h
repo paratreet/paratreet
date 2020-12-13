@@ -151,7 +151,7 @@ void CacheManager<Data>::prepPrefetch(Node<Data>* node) {
 template <typename Data>
 void CacheManager<Data>::connect(Node<Data>* node, bool should_process) {
 #if DEBUG
-  CkPrintf("connecting node %d of type %d\n", node->key, node->type);
+  CkPrintf("connecting node 0x%" PRIx64 " of type %d\n", node->key, node->type);
 #endif
   if (node->type == Node<Data>::Type::CachedBoundary) {
     // Invoked internally to update a cached node
@@ -204,7 +204,7 @@ void CacheManager<Data>::addCache(MultiData<Data> multidata) {
 template <typename Data>
 Node<Data>* CacheManager<Data>::addCacheHelper(Particle* particles, int n_particles, std::pair<Key, SpatialNode<Data>>* nodes, int n_nodes, int cm_index, int tp_index) {
 #if DEBUG
-  CkPrintf("adding cache for top node %d on cm %d\n", nodes[0].first, this->thisIndex);
+  CkPrintf("adding cache for top node 0x%" PRIx64 " on cm %d\n", nodes[0].first, this->thisIndex);
 #endif
 
   auto first_node_placeholder = root->getDescendant(nodes[0].first);

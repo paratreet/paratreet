@@ -186,8 +186,8 @@ void Subtree<Data>::buildTree() {
 template <typename Data>
 void Subtree<Data>::recursiveBuild(Node<Data>* node, Particle* node_particles, size_t log_branch_factor) {
 #if DEBUG
-  //CkPrintf("[Level %d] created node 0x%" PRIx64 " with %d particles\n",
-    //  node->depth, node->key, node->n_particles);
+  CkPrintf("[Level %d] created node 0x%" PRIx64 " with %d particles\n",
+      node->depth, node->key, node->n_particles);
 #endif
   // store reference to splitters
   //static std::vector<Splitter>& splitters = readers.ckLocalBranch()->splitters;
