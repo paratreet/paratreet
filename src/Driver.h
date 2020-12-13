@@ -187,7 +187,7 @@ public:
 
       // Send leaves to Partitions
       start_time = CkWallTimer();
-      subtrees.send_leaves(partitions);
+      subtrees.sendLeaves(partitions);
       CkWaitQD();
       CkPrintf("Sending leaves: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
 

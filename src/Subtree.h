@@ -49,7 +49,7 @@ public:
   void recursiveBuild(Node<Data>*, Particle* node_particles, size_t);
   void populateTree();
   inline void initCache();
-  void send_leaves(CProxy_Partition<Data>);
+  void sendLeaves(CProxy_Partition<Data>);
   void requestNodes(Key, int);
   void print(Node<Data>*);
   void flush(CProxy_Reader);
@@ -119,9 +119,7 @@ void Subtree<Data>::receive(ParticleMsg* msg) {
   // Copy particles to local vector
   // TODO: Remove memcpy by just storing the pointer to msg->particles
   // and using it in tree build
-  if (!particles.empty()) {
-    particles.clear();
-  }
+  particles.clear();
   int initial_size = incoming_particles.size();
   incoming_particles.resize(initial_size + msg->n_particles);
   std::memcpy(&incoming_particles[initial_size], msg->particles,
@@ -130,49 +128,37 @@ void Subtree<Data>::receive(ParticleMsg* msg) {
 }
 
 template <typename Data>
-void Subtree<Data>::send_leaves(CProxy_Partition<Data> part)
+void Subtree<Data>::sendLeaves(CProxy_Partition<Data> part)
 {
-  if (leaves.size() == 0) return;
-
-  int leaf_idx = 0;
-  size_t branch_factor = 0u;
-  std::vector<Key> all_particle_keys;
-  while (leaf_idx < leaves.size()) {
-    int current_part_idx = leaves[leaf_idx]->particles()->partition_idx;
-    std::vector<NodeWrapper<Data>> node_data;
-
-    while (
-      leaf_idx < leaves.size()
-      && leaves[leaf_idx]->particles()->partition_idx == current_part_idx
-      )
-    {
-      Node<Data> *leaf = leaves[leaf_idx];
-      branch_factor = leaf->getBranchFactor();
-      node_data.push_back(
-        NodeWrapper<Data>(
-          leaf->key, leaf->n_particles, leaf->depth,
-          branch_factor, leaf->is_leaf, leaf->data
-          )
-        );
-      for (int pi = 0; pi < leaf->n_particles; pi++) {
-        all_particle_keys.push_back(leaf->particles()[pi].key);
-      }
-      ++leaf_idx;
+  std::map<int, std::set<Node<Data>*>> part_idx_to_leaf;
+  for (auto && leaf : leaves) {
+    for (int pi = 0; pi < leaf->n_particles; pi++) {
+      auto partition_idx = leaf->particles()[pi].partition_idx;
+      part_idx_to_leaf[partition_idx].insert(leaf);
     }
+  }
 
-    part[current_part_idx].receiveLeaves(node_data, all_particle_keys, this->thisIndex, branch_factor);
+  for (auto && part_receiver : part_idx_to_leaf) {
+    std::vector<NodeWrapper> node_data;
+    std::vector<Key> all_particle_keys;
+    for (auto && leaf : part_receiver.second) {
+      size_t n_particles_here = 0u;
+      for (int pi = 0; pi < leaf->n_particles; pi++) {
+        if (leaf->particles()[pi].partition_idx == part_receiver.first) {
+          n_particles_here++;
+          all_particle_keys.push_back(leaf->particles()[pi].key);
+        }
+      }
+      node_data.emplace_back(leaf->key, n_particles_here, leaf->depth);
+    }
+    part[part_receiver.first].receiveLeaves(node_data, all_particle_keys, this->thisIndex);
   }
 }
 
 template <typename Data>
 void Subtree<Data>::buildTree() {
-  int n_particles_saved = particles.size();
-  int n_particles_received = incoming_particles.size();
-
   // Copy over received particles
-  particles.resize(n_particles_saved + n_particles_received);
-  std::copy(incoming_particles.begin(), incoming_particles.end(), particles.begin() + n_particles_saved);
-  incoming_particles.clear();
+  std::swap(particles, incoming_particles);
 
   // Sort particles
   std::sort(particles.begin(), particles.end());

@@ -37,7 +37,7 @@ struct Partition : public CBase_Partition<Data> {
   void goDown(Key);
   void interact(const CkCallback& cb);
 
-  void receiveLeaves(std::vector<NodeWrapper<Data>>, std::vector<Key>, int, size_t);
+  void receiveLeaves(std::vector<NodeWrapper>, std::vector<Key>, int);
   void receive(ParticleMsg*);
   void destroy();
   void reset();
@@ -98,9 +98,7 @@ void Partition<Data>::interact(const CkCallback& cb)
 
 template <typename Data>
 void Partition<Data>::receiveLeaves(
-  std::vector<NodeWrapper<Data>> data, std::vector<Key> all_particle_keys,
-  int subtree_idx, size_t branch_factor
-  )
+  std::vector<NodeWrapper> data, std::vector<Key> all_particle_keys, int subtree_idx)
 {
   for (int i = 0; i < all_particle_keys.size(); i++) {
     bool found = false;
@@ -113,10 +111,10 @@ void Partition<Data>::receiveLeaves(
     }
     if (!found) CkAbort("couldnt find particle key");
   }
-  for (const NodeWrapper<Data>& leaf : data) {
+  for (const NodeWrapper& leaf : data) {
     Node<Data> *node = treespec.ckLocalBranch()->template makeNode<Data>(
       leaf.key, leaf.depth, leaf.n_particles, &particles[received_part_index],
-      subtree_idx, subtree_idx, leaf.is_leaf, nullptr, subtree_idx
+      subtree_idx, subtree_idx, true, nullptr, subtree_idx
       );
     received_part_index += leaf.n_particles;
     node->type = Node<Data>::Type::Leaf;
