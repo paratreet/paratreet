@@ -32,6 +32,7 @@ public:
       switch (getTree()->getBranchFactor()) {
       case 2:
         return new FullNode<Data, 2> (key, depth, n_particles, particles, owner_tp_start, owner_tp_end, is_leaf, parent, tp_index);
+
       case 8:
         return new FullNode<Data, 8> (key, depth, n_particles, particles, owner_tp_start, owner_tp_end, is_leaf, parent, tp_index);
       default:
@@ -54,6 +55,11 @@ public:
       default:
         return nullptr;
       }
+    }
+
+    void reset() {
+      tree.reset();
+      decomp.reset();
     }
 
 protected:

@@ -98,9 +98,8 @@ module paratreet {
     /* entry void interact(const CkCallback&); */
     /* entry void goDown(Key); */
     entry void requestNodes(Key, int);
-    entry void flush(CProxy_Reader);
     entry void destroy();
-
+    entry void reset();
     entry void sendLeaves(CProxy_Partition<Data>);
     entry void checkParticlesChanged(const CkCallback&);
     entry void output(CProxy_Writer w, CkCallback cb);
@@ -156,6 +155,7 @@ module paratreet {
   group TreeSpec {
     entry TreeSpec(const paratreet::Configuration&);
     entry void check(const CkCallback&);
+    entry void reset();
     entry void receiveDecomposition(CkMarshallMsg*);
     entry [local] Decomposition* getDecomposition();
     entry void receiveConfiguration(const paratreet::Configuration&,CkCallback);

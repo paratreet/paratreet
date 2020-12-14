@@ -41,7 +41,6 @@ int SfcDecomposition::getNumExpectedParticles(int n_total_particles, int n_parti
 }
 
 int SfcDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &readers, const paratreet::Configuration& config, int log_branch_factor) {
-  splitters.clear();
   // countSfc finds the keys of all particles
   CkReductionMsg *msg;
   readers.countSfc(CkCallbackResumeThread((void*&)msg));

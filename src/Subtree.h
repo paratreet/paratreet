@@ -52,8 +52,8 @@ public:
   void sendLeaves(CProxy_Partition<Data>);
   void requestNodes(Key, int);
   void print(Node<Data>*);
-  void flush(CProxy_Reader);
   void destroy();
+  void reset();
   void output(CProxy_Writer w, CkCallback cb);
   void pup(PUP::er& p);
 
@@ -285,19 +285,13 @@ void Subtree<Data>::requestNodes(Key key, int cm_index) {
 }
 
 template <typename Data>
-void Subtree<Data>::flush(CProxy_Reader readers) {
-  // debug
-  flushed_particles.resize(0);
-  flushed_particles.insert(flushed_particles.end(), particles.begin(), particles.end());
-
-  ParticleMsg *msg = new (particles.size()) ParticleMsg(particles.data(), particles.size());
-  readers[CkMyPe()].receive(msg);
-  particles.resize(0);
+void Subtree<Data>::reset() {
+  particles.clear();
 }
 
 template <typename Data>
 void Subtree<Data>::destroy() {
-  this->thisProxy[this->thisIndex].ckDestroy();
+  reset();
 }
 
 template <typename Data>
@@ -314,14 +308,9 @@ void Subtree<Data>::print(Node<Data>* node) {
 
 template <typename Data>
 void Subtree<Data>::output(CProxy_Writer w, CkCallback cb) {
-  std::vector<Particle> particles;
 
-  for (const auto& leaf : leaves) {
-    particles.insert(particles.end(),
-                     leaf->particles(), leaf->particles() + leaf->n_particles);
-  }
-
-  std::sort(particles.begin(), particles.end(),
+  auto temp_particles = particles;
+  std::sort(temp_particles.begin(), temp_particles.end(),
             [](const Particle& left, const Particle& right) {
               return left.order < right.order;
             });
@@ -331,16 +320,16 @@ void Subtree<Data>::output(CProxy_Writer w, CkCallback cb) {
     ++particles_per_writer;
 
   int particle_idx = 0;
-  while (particle_idx < particles.size()) {
-    int writer_idx = particles[particle_idx].order / particles_per_writer;
+  while (particle_idx < temp_particles.size()) {
+    int writer_idx = temp_particles[particle_idx].order / particles_per_writer;
     int first_particle = writer_idx * particles_per_writer;
     std::vector<Particle> writer_particles;
 
     while (
-      particles[particle_idx].order < first_particle + particles_per_writer
+      temp_particles[particle_idx].order < first_particle + particles_per_writer
       && particle_idx < particles.size()
       ) {
-      writer_particles.push_back(particles[particle_idx]);
+      writer_particles.push_back(temp_particles[particle_idx]);
       ++particle_idx;
     }
 

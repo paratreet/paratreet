@@ -227,10 +227,15 @@ public:
 
       // Destroy subtrees and perform decomposition from scratch
       if (complete_rebuild) {
+        treespec.reset();
+        treespec_subtrees.reset();
         subtrees.destroy();
         partitions.destroy();
         decompose(iter+1);
-      } else partitions.reset();
+      } else {
+        partitions.reset();
+        subtrees.reset();
+      }
 
       // Clear cache and other storages used in this iteration
       centroid_cache.destroy(true);
