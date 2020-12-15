@@ -56,6 +56,7 @@ void Reader::load(std::string input_file, const CkCallback& cb) {
         CkAbort("Could not read gas particle\n");
       }
       particles[i].mass = gp.mass;
+      particles[i].soft = gp.hsmooth;
       particles[i].position = gp.pos;
       particles[i].velocity = gp.vel;
     }
@@ -82,6 +83,7 @@ void Reader::load(std::string input_file, const CkCallback& cb) {
     box.mass += particles[i].mass;
     box.ke += particles[i].mass * particles[i].velocity.lengthSquared();
     box.pe = 0.0;
+    particles[i].finishInit();
   }
 
   box.ke /= 2.0;

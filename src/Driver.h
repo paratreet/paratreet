@@ -17,6 +17,7 @@
 #include "DensityVisitor.h"
 #include "GravityVisitor.h"
 #include "PressureVisitor.h"
+#include "CollisionVisitor.h"
 #include "CountVisitor.h"
 #include "CacheManager.h"
 #include "CountManager.h"
@@ -253,7 +254,7 @@ public:
   // -------------------
 
   void countInts(unsigned long long* intrn_counts) {
-    CkPrintf("%llu node-particle interactions, %llu particle-particle interactions\n", intrn_counts[0], intrn_counts[1]);
+     CkPrintf("%llu node-particle interactions, %llu bucket-particle interactions %llu node opens, %llu node closes\n", intrn_counts[0], intrn_counts[1], intrn_counts[2], intrn_counts[3]);
   }
 
   void recvTC(std::pair<Key, SpatialNode<Data>> param) {
