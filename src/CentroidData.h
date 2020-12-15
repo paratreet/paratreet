@@ -14,8 +14,8 @@ struct CentroidData {
   Vector3D<Real> centroid; // too slow to compute this on the fly
   Real max_rad = 0.0;
   Real size_sm;
-  CkVec< CkVec<pqSmoothNode> > neighbors; // Neighbor list for knn search
-  CkVec< CkVec<Particle> > fixed_ball; // Neighbor list for fixed ball search
+  std::vector< CkVec<pqSmoothNode> > neighbors; // Neighbor list for knn search
+  std::vector< CkVec<Particle> > fixed_ball; // Neighbor list for fixed ball search
   OrientedBox<Real> box;
   int count;
   Real rsq;
@@ -49,32 +49,11 @@ struct CentroidData {
     delta1.z = (delta1.z > delta2.z ? delta1.z : delta2.z);
     rsq = delta1.lengthSquared() / theta;
     size_sm = 0.5*(box.size()).length();
-    max_rad = max_rad > cd.max_rad ? max_rad : cd.max_rad;
-
-    for (int i = 0; i < cd.fixed_ball.size(); i++) {
-      fixed_ball.insertAtEnd(cd.fixed_ball[i]);
-    }
-
-    for (int i = 0; i < cd.neighbors.size(); i++) {
-      neighbors.insertAtEnd(cd.neighbors[i]);
-    }
     count += cd.count;
     return *this;
   }
 
-  const CentroidData& operator= (const CentroidData& cd) {
-    moment = cd.moment;
-    sum_mass = cd.sum_mass;
-    centroid = cd.centroid;
-    box = cd.box;
-    count = cd.count;
-    rsq = cd.rsq;
-    max_rad = cd.max_rad;
-    size_sm = cd.size_sm;
-    fixed_ball = cd.fixed_ball;
-    neighbors = cd.neighbors;
-    return *this;
-  }
+  CentroidData& operator=(const CentroidData&) = default;
 
   void pup(PUP::er& p) {
     p | moment;
