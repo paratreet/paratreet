@@ -306,39 +306,4 @@ void Subtree<Data>::print(Node<Data>* node) {
   out.close();
 }
 
-template <typename Data>
-void Subtree<Data>::output(CProxy_Writer w, CkCallback cb) {
-
-  auto temp_particles = particles;
-  std::sort(temp_particles.begin(), temp_particles.end(),
-            [](const Particle& left, const Particle& right) {
-              return left.order < right.order;
-            });
-
-  int particles_per_writer = n_total_particles / CkNumPes();
-  if (particles_per_writer * CkNumPes() != n_total_particles)
-    ++particles_per_writer;
-
-  int particle_idx = 0;
-  while (particle_idx < temp_particles.size()) {
-    int writer_idx = temp_particles[particle_idx].order / particles_per_writer;
-    int first_particle = writer_idx * particles_per_writer;
-    std::vector<Particle> writer_particles;
-
-    while (
-      temp_particles[particle_idx].order < first_particle + particles_per_writer
-      && particle_idx < particles.size()
-      ) {
-      writer_particles.push_back(temp_particles[particle_idx]);
-      ++particle_idx;
-    }
-
-    w[writer_idx].receive(writer_particles, cb);
-  }
-
-  if (this->thisIndex != n_subtrees - 1) {
-    this->thisProxy[this->thisIndex + 1].output(w, cb);
-  }
-}
-
 #endif /* _SUBTREE_H_ */

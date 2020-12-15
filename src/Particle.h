@@ -13,6 +13,9 @@ struct Particle {
   Real density;
   Real pressure;
   Real potential;
+  Real ball;
+  Real deltaT;
+  Real soft;
   Vector3D<Real> position;
   Vector3D<Real> acceleration;
   Vector3D<Real> velocity;
@@ -22,6 +25,7 @@ struct Particle {
   void pup(PUP::er&) ;
 
   void reset();
+  void finishInit();
 
   void perturb (Real timestep, OrientedBox<Real> universe) {
     position += (velocity * timestep);

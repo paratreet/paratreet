@@ -81,6 +81,7 @@ module paratreet {
   array [1d] Partition<CentroidData>;
 
   extern entry void Partition<CentroidData> startDown<GravityVisitor> ();
+  extern entry void Partition<CentroidData> startDown<CollisionVisitor> ();
   /* extern entry void Subtree<CentroidData> startDown<GravityVisitor> (); */
   /* extern entry void Subtree<CentroidData> startDual<GravityVisitor> (); */
   /* extern entry void Subtree<CentroidData> startUpAndDown<DensityVisitor> (); */
@@ -102,7 +103,6 @@ module paratreet {
     entry void reset();
     entry void sendLeaves(CProxy_Partition<Data>);
     entry void checkParticlesChanged(const CkCallback&);
-    entry void output(CProxy_Writer w, CkCallback cb);
   }
   array [1d] Subtree<CentroidData>;
 

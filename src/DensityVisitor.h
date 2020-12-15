@@ -3,6 +3,7 @@
 
 #include "paratreet.decl.h"
 #include "common.h"
+#include "Space.h"
 #include <cmath>
 #include <vector>
 #include <queue>
@@ -14,37 +15,51 @@ public:
 // in leaf check for not same particle plz
 private:
   const int k = 32;
-private:
-  void prepNeighbors(SpatialNode<CentroidData>& target) {
-    for (int i = 0; i < target.n_particles; i++) {
-      particle_comp c (target.particles()[i]);
-      std::priority_queue<Particle, std::vector<Particle>, particle_comp> pq (c);
-      target.data.neighbors.resize(target.n_particles, pq);
-    }
-  }
 
 public:
   bool open(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
-    if (target.data.neighbors[0].size() < k) return true; // they all fill first k at the same time
-    Real dsq = (source.data.centroid - target.data.centroid).lengthSquared();
-    Real rsq = (target.data.neighbors[0].top().position - source.data.centroid).lengthSquared();
-    // we need to look at the whole bounding box instead of just the centroid
-
-    return (dsq < rsq);
+    Real r_bucket = target.data.size_sm + target.data.max_rad;
+    if (!Space::intersect(source.data.box, target.data.box.center(), r_bucket*r_bucket))
+      return false;
+    // Check if any of the target balls intersect the source volume
+    for (int i = 0; i < target.n_particles; i++) {
+      if(Space::intersect(source.data.box, target.particles()[i].position, target.data.neighbors[i][0].fKey))
+        return true;
+    }
+    return false;
   }
 
   void node(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {}
 
   void leaf(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
-    if (!target.data.neighbors.size()) prepNeighbors(target);
     for (int i = 0; i < target.n_particles; i++) {
+      CkVec<pqSmoothNode> &Q = target.data.neighbors[i];
       for (int j = 0; j < source.n_particles; j++) {
-        target.data.neighbors[i].push(source.particles()[j]);
-      }
-      while (target.data.neighbors[i].size() > k) {
-        target.data.neighbors[i].pop();
+        Vector3D<Real> dr = target.particles()[i].position - source.particles()[j].position;
+        // Remove the most distant neighbor if this one is closer and the list is full
+        if (Q.size() == k) {
+          if (Q[0].fKey > dr.lengthSquared()) {
+            std::pop_heap(&(Q[0]) + 0, &(Q)[0] + k);
+            Q.resize(Q.size()-1);
+          }
+        }
+        // Add the particle to the neighbor list if it isnt filled up
+        if (Q.size() < k) {
+          pqSmoothNode pqNew;
+          pqNew.pl = source.particles()[j];
+          pqNew.fKey = dr.lengthSquared();
+          Q.push_back(pqNew);
+          std::push_heap(&(Q)[0] + 0, &(Q)[0] + Q.size());
+
+          Real max_rad = dr.length();
+          if (max_rad > target.data.max_rad)
+            target.data.max_rad = max_rad;
+        }
       }
     }
+#if COUNT_INTERACTIONS
+    centroid_resumer.ckLocalBranch()->countInts(target.n_particles);
+#endif
   }
 };
 
