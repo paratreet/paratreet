@@ -139,6 +139,7 @@ void Partition<Data>::destroy()
 {
   particles.clear();
   reset();
+  this->thisProxy[this->thisIndex].ckDestroy();
 }
 
 template <typename Data>

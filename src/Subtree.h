@@ -119,7 +119,6 @@ void Subtree<Data>::receive(ParticleMsg* msg) {
   // Copy particles to local vector
   // TODO: Remove memcpy by just storing the pointer to msg->particles
   // and using it in tree build
-  particles.clear();
   int initial_size = incoming_particles.size();
   incoming_particles.resize(initial_size + msg->n_particles);
   std::memcpy(&incoming_particles[initial_size], msg->particles,
@@ -292,6 +291,7 @@ void Subtree<Data>::reset() {
 template <typename Data>
 void Subtree<Data>::destroy() {
   reset();
+  this->thisProxy[this->thisIndex].ckDestroy();
 }
 
 template <typename Data>

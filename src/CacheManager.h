@@ -18,7 +18,7 @@ template <typename Data>
 class CacheManager : public CBase_CacheManager<Data> {
 public:
   std::mutex local_tps_lock;
-  Node<Data>* root;
+  Node<Data>* root = nullptr;
   std::unordered_map<Key, Node<Data>*> local_tps;
   std::set<Key> prefetch_set;
   std::vector<std::vector<Node<Data>*>> delete_at_end;
@@ -33,10 +33,6 @@ public:
   }
 
   void initialize() {
-    Data empty_data;
-    SpatialNode<Data> empty_sn (empty_data, 0, false, nullptr, 0);
-    root = treespec.ckLocalBranch()->template makeCachedNode<Data>(
-        Key(1), Node<Data>::Type::Boundary, empty_sn, nullptr, nullptr); // placeholder
     delete_at_end.resize(CkNumPes(), std::vector<Node<Data>*>(0, nullptr));
     num_buckets.store(0u);
   }
@@ -179,6 +175,7 @@ template <typename Data>
 void CacheManager<Data>::recvStarterPack(std::pair<Key, SpatialNode<Data>>* pack, int n, CkCallback cb) {
   CkPrintf("[CacheManager %d] receiving starter pack, size = %d\n", this->thisIndex, n);
 
+  CkAssert(pack[0].first == Key(1));
   for (int i = 0; i < n; i++) {
 #if DEBUG
     CkPrintf("[CM %d] receiving node %d in starter pack\n", this->thisIndex, pack[i].first);
@@ -287,8 +284,7 @@ void CacheManager<Data>::restoreDataHelper(std::pair<Key, SpatialNode<Data>>& pa
   if (!should_process) CkPrintf("restoring data for node %d\n", param.first);
 #endif
   Key key = param.first;
-  auto branch_factor = root->getBranchFactor();
-  Node<Data>* parent = (key > 1) ? root->getDescendant(key / branch_factor) : nullptr;
+  Node<Data>* parent = (key == Key(1)) ? nullptr : root->getDescendant(key / root->getBranchFactor());
   auto node = treespec.ckLocalBranch()->template makeCachedNode<Data>(key,
       Node<Data>::Type::CachedBoundary, param.second, parent, nullptr);
   insertNode(node, true, false);
