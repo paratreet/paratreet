@@ -36,7 +36,7 @@ public:
       }
     }
 #if COUNT_INTERACTIONS
-    centroid_resumer.ckLocalBranch()->countInts(source.n_particles);
+    centroid_resumer.ckLocalBranch()->countInts(target.n_particles);
 #endif
   }
 };
