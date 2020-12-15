@@ -84,7 +84,7 @@ public:
     std::vector<int> new_active_buckets;
     new_active_buckets.reserve(part.leaves.size());
 #if DEBUG
-    CkPrintf("tp %d, key = %d, type = %d, pe %d\n", part.thisIndex, node->key, node->type, CkMyPe());
+    CkPrintf("tp %d, key = 0x%" PRIx64 ", type = %d, pe %d\n", part.thisIndex, node->key, node->type, CkMyPe());
 #endif
     switch (node->type) {
       case Node<Data>::Type::Leaf:

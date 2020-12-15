@@ -166,11 +166,6 @@ public:
     CkStartQD(CkCallbackResumeThread());
     CkPrintf("Flushing particles to Subtrees: %.3lf ms\n",
         (CkWallTimer() - start_time) * 1000);
-
-#if DEBUG
-    // Check if all subtrees have received the right number of particles
-    subtrees.check(CkCallbackResumeThread());
-#endif
   }
 
   // Core iterative loop of the simulation
@@ -187,7 +182,7 @@ public:
 
       // Send leaves to Partitions
       start_time = CkWallTimer();
-      subtrees.send_leaves(partitions);
+      subtrees.sendLeaves(partitions);
       CkWaitQD();
       CkPrintf("Sending leaves: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
 
@@ -232,10 +227,15 @@ public:
 
       // Destroy subtrees and perform decomposition from scratch
       if (complete_rebuild) {
+        treespec.reset();
+        treespec_subtrees.reset();
         subtrees.destroy();
         partitions.destroy();
         decompose(iter+1);
-      } else partitions.reset();
+      } else {
+        partitions.reset();
+        subtrees.reset();
+      }
 
       // Clear cache and other storages used in this iteration
       centroid_cache.destroy(true);

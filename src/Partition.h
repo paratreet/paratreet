@@ -10,6 +10,7 @@
 #include "paratreet.decl.h"
 
 extern CProxy_TreeSpec treespec;
+extern CProxy_TreeSpec treespec_subtrees;
 extern CProxy_Reader readers;
 
 template <typename Data>
@@ -37,7 +38,7 @@ struct Partition : public CBase_Partition<Data> {
   void goDown(Key);
   void interact(const CkCallback& cb);
 
-  void receiveLeaves(std::vector<NodeWrapper<Data>>, std::vector<Key>, int, size_t);
+  void receiveLeaves(std::vector<NodeWrapper>, std::vector<Key>, int);
   void receive(ParticleMsg*);
   void destroy();
   void reset();
@@ -98,9 +99,7 @@ void Partition<Data>::interact(const CkCallback& cb)
 
 template <typename Data>
 void Partition<Data>::receiveLeaves(
-  std::vector<NodeWrapper<Data>> data, std::vector<Key> all_particle_keys,
-  int subtree_idx, size_t branch_factor
-  )
+  std::vector<NodeWrapper> data, std::vector<Key> all_particle_keys, int subtree_idx)
 {
   for (int i = 0; i < all_particle_keys.size(); i++) {
     bool found = false;
@@ -113,16 +112,17 @@ void Partition<Data>::receiveLeaves(
     }
     if (!found) CkAbort("couldnt find particle key");
   }
-  for (const NodeWrapper<Data>& leaf : data) {
+  for (const NodeWrapper& leaf : data) {
     Node<Data> *node = treespec.ckLocalBranch()->template makeNode<Data>(
       leaf.key, leaf.depth, leaf.n_particles, &particles[received_part_index],
-      subtree_idx, subtree_idx, leaf.is_leaf, nullptr, subtree_idx
+      subtree_idx, subtree_idx, true, nullptr, subtree_idx
       );
     received_part_index += leaf.n_particles;
     node->type = Node<Data>::Type::Leaf;
     node->data = Data(node->particles(), node->n_particles);
     leaves.push_back(node);
   }
+  cm_local->num_buckets += leaves.size();
 }
 
 template <typename Data>
@@ -138,6 +138,7 @@ template <typename Data>
 void Partition<Data>::destroy()
 {
   particles.clear();
+  reset();
   this->thisProxy[this->thisIndex].ckDestroy();
 }
 
@@ -168,30 +169,18 @@ void Partition<Data>::perturb(TPHolder<Data> tp_holder, Real timestep, bool if_f
   for (auto && p : particles) {
     p.perturb(timestep, readers.ckLocalBranch()->universe.box);
   }
+
   if (if_flush) {
     flush(readers);
     return;
   }
+
   std::map<int, std::vector<Particle>> out_particles;
+  auto && splitters = treespec_subtrees.ckLocalBranch()->getDecomposition()->getSplitters();
+  CkAssert(!splitters.empty());
   for (auto& particle : particles) {
-    auto node = cm_proxy.ckLocalBranch()->root;
-    auto curr_box = readers.ckLocalBranch()->universe.box;
-    while (node->tp_index < 0) {
-      int child = 0;
-      Vector3D<Real> mean = curr_box.center();
-      for (int dim = 0; dim < 3; dim++) {
-        if (particle.position[dim] > mean[dim]) {
-          child |= (1 << (2 - dim));
-          curr_box.lesser_corner[dim] = mean[dim];
-        }
-        else curr_box.greater_corner[dim] = mean[dim];
-      }
-      if (node->type == Node<Data>::Type::RemoteAboveTPKey || node->type == Node<Data>::Type::Remote) {
-        CkAbort("flush period too large for initial particle velocities");
-      }
-      node = node->getChild(child); // move down the tree :)
-    }
-    out_particles[node->tp_index].push_back(particle);
+    int bucket = Utility::binarySearchG(particle.key, &splitters[0], 0, splitters.size()) - 1;
+    out_particles[bucket].push_back(particle);
   }
   for (auto it = out_particles.begin(); it != out_particles.end(); it++) {
     ParticleMsg* msg = new (it->second.size()) ParticleMsg (it->second.data(), it->second.size());

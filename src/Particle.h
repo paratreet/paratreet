@@ -31,6 +31,8 @@ struct Particle {
       else if (position[dim] > universe.greater_corner[dim]) position[dim] -= universe.greater_corner[dim] - universe.lesser_corner[dim];
     }
     velocity += (acceleration * timestep);
+    key = SFC::generateKey(position, universe);
+    key |= (Key)1 << (KEY_BITS-1); // Add placeholder bit
   }
 
   bool operator==(const Particle&) const;

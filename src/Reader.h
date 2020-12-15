@@ -99,7 +99,7 @@ void Reader::assign_partitions(int n_total_particles, int n_partitions, CProxy_P
       ParticleMsg* msg = new (n_particles) ParticleMsg(particles, n_particles);
       partitions[dest].receive(msg);
     };
-
+  std::sort(particles.begin(), particles.end());
   int flush_count = treespec.ckLocalBranch()->getDecomposition()->
     flush(n_total_particles, n_partitions, sendParticles, particles);
   if (flush_count != particles.size()) {

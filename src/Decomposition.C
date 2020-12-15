@@ -21,7 +21,6 @@ int SfcDecomposition::flush(int n_total_particles, int n_partitions, const SendP
     if (n_particles) fn(i, n_particles, &particles[particle_idx]);
     particle_idx = end;
   }
-  splitters.clear();
   return flush_count;
 }
 
@@ -156,8 +155,6 @@ int OctDecomposition::flush(int n_total_particles, int n_partitions, const SendP
   }
 
   // Free splitter memory
-  splitters.clear();
-
   return flush_count;
 }
 
