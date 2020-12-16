@@ -9,8 +9,11 @@ module paratreet {
   class CProxy_Reader;
   class CProxy_TreeSpec;
   include "MultiData.h";
-  include "Decomposition.h";
   include "NodeWrapper.h";
+
+  include "Decomposition.h";
+  PUPable SfcDecomposition;
+  PUPable OctDecomposition;
 
   readonly CProxy_Reader readers;
   readonly CProxy_TreeSpec treespec;
@@ -156,7 +159,7 @@ module paratreet {
     entry TreeSpec(const paratreet::Configuration&);
     entry void check(const CkCallback&);
     entry void reset();
-    entry void receiveDecomposition(CkMarshallMsg*);
+    entry void receiveDecomposition(const CkCallback&, CkPointer<Decomposition>);
     entry [local] Decomposition* getDecomposition();
     entry void receiveConfiguration(const paratreet::Configuration&,CkCallback);
     entry [local] paratreet::Configuration& getConfiguration();

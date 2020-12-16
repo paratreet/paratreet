@@ -73,14 +73,7 @@ public:
   }
 
   void broadcastDecomposition(const CkCallback& cb, CProxy_TreeSpec& treespec) {
-    PUP::sizer sizer;
-    treespec.ckLocalBranch()->getDecomposition()->pup(sizer);
-    sizer | const_cast<CkCallback&>(cb);
-    CkMarshallMsg *msg = CkAllocateMarshallMsg(sizer.size(), NULL);
-    PUP::toMem pupper((void *)msg->msgBuf);
-    treespec.ckLocalBranch()->getDecomposition()->pup(pupper);
-    pupper | const_cast<CkCallback&>(cb);
-    treespec.receiveDecomposition(msg);
+    treespec.receiveDecomposition(cb, CkPointer<Decomposition>(treespec.ckLocalBranch()->getDecomposition()));
   }
 
   // Performs decomposition by distributing particles among Subtrees,
