@@ -14,13 +14,7 @@
 #include "BoundingBox.h"
 #include "BufferedVec.h"
 #include "Utility.h"
-#include "DensityVisitor.h"
-#include "GravityVisitor.h"
-#include "PressureVisitor.h"
-#include "CollisionVisitor.h"
-#include "CountVisitor.h"
 #include "CacheManager.h"
-#include "CountManager.h"
 #include "Resumer.h"
 #include "Modularization.h"
 #include "Node.h"
@@ -33,9 +27,9 @@ extern CProxy_TreeSpec treespec_subtrees;
 extern CProxy_TreeCanopy<CentroidData> centroid_calculator;
 extern CProxy_CacheManager<CentroidData> centroid_cache;
 extern CProxy_Resumer<CentroidData> centroid_resumer;
-extern CProxy_CountManager count_manager;
 
 namespace paratreet {
+  extern void preTraversalFn(CProxy_Driver<CentroidData>&, CProxy_CacheManager<CentroidData>& cache);
   extern void traversalFn(BoundingBox&,CProxy_Partition<CentroidData>&,int);
   extern void postInteractionsFn(BoundingBox&,CProxy_Partition<CentroidData>&,int);
 }
@@ -149,7 +143,7 @@ public:
     // Flush decomposed particles to home Subtrees and Partitions
     // TODO Separate decomposition for Subtrees and Partitions
     start_time = CkWallTimer();
-    readers.assign_partitions(universe.n_particles, n_partitions, partitions);
+    readers.assignPartitions(universe.n_particles, n_partitions, partitions);
     CkStartQD(CkCallbackResumeThread());
     CkPrintf("Assigning particles to Partitions: %.3lf ms\n",
         (CkWallTimer() - start_time) * 1000);
@@ -182,17 +176,13 @@ public:
       // Prefetch into cache
       start_time = CkWallTimer();
       // use exactly one of these three commands to load the software cache
-      //centroid_cache.startParentPrefetch(this->thisProxy, CkCallback::ignore); // MUST USE FOR UPND TRAVS
-      //centroid_cache.template startPrefetch<GravityVisitor>(this->thisProxy, CkCallback::ignore);
-      this->thisProxy.loadCache(CkCallbackResumeThread());
+      paratreet::preTraversalFn(this->thisProxy, centroid_cache);
       CkWaitQD();
       CkPrintf("TreeCanopy cache loading: %.3lf ms\n",
           (CkWallTimer() - start_time) * 1000);
 
       // Perform traversals
       start_time = CkWallTimer();
-      //treepieces.template startUpAndDown<DensityVisitor>();
-      //treepieces.template startDown<GravityVisitor>();
       paratreet::traversalFn(universe, partitions, iter);
       CkWaitQD();
 #if DELAYLOCAL
@@ -204,7 +194,6 @@ public:
       start_time = CkWallTimer();
       partitions.interact(CkCallbackResumeThread());
       CkPrintf("Interactions: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
-      //count_manager.sum(CkCallback(CkReductionTarget(Main, terminate), this->thisProxy));
 
       // Call user's post-interaction function, which may for example:
       // Output particle accelerations for verification

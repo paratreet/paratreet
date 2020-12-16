@@ -7,12 +7,7 @@
 #include "BoundingBox.h"
 #include "BufferedVec.h"
 #include "Utility.h"
-#include "DensityVisitor.h"
-#include "GravityVisitor.h"
-#include "PressureVisitor.h"
-#include "CountVisitor.h"
 #include "CacheManager.h"
-#include "CountManager.h"
 #include "Resumer.h"
 
 #include "Paratreet.h"
@@ -24,7 +19,6 @@
 /* readonly */ CProxy_TreeCanopy<CentroidData> centroid_calculator;
 /* readonly */ CProxy_CacheManager<CentroidData> centroid_cache;
 /* readonly */ CProxy_Resumer<CentroidData> centroid_resumer;
-/* readonly */ CProxy_CountManager count_manager;
 /* readonly */ CProxy_Driver<CentroidData> centroid_driver;
 
 namespace paratreet {
@@ -42,8 +36,6 @@ namespace paratreet {
         centroid_cache = CProxy_CacheManager<CentroidData>::ckNew();
         centroid_resumer = CProxy_Resumer<CentroidData>::ckNew();
         centroid_driver = CProxy_Driver<CentroidData>::ckNew(centroid_cache, CkMyPe());
-        count_manager = CProxy_CountManager::ckNew(0.00001, 10000, 5);
-
         // Call the driver initialization routine (performs decomposition)
         centroid_driver.init(cb);
     }

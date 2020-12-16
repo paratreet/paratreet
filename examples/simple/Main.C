@@ -1,9 +1,21 @@
 #include "Main.decl.h"
 #include "Paratreet.h"
+#include "GravityVisitor.h"
+#include "DensityVisitor.h"
+#include "PressureVisitor.h"
+#include "CountVisitor.h"
+#include "CollisionVisitor.h"
 
-/*readonly*/ bool verify;
+/* readonly */ bool verify;
 
 namespace paratreet {
+
+  void preTraversalFn(CProxy_Driver<CentroidData>& driver, CProxy_CacheManager<CentroidData>& cache) {
+    //cache.startParentPrefetch(this->thisProxy, CkCallback::ignore); // MUST USE FOR UPND TRAVS
+    //cache.template startPrefetch<GravityVisitor>(this->thisProxy, CkCallback::ignore);
+    driver.loadCache(CkCallbackResumeThread());
+  }
+
   void traversalFn(BoundingBox& universe, CProxy_Partition<CentroidData>& part, int iter) {
     part.template startDown<GravityVisitor>();
   }
@@ -123,6 +135,8 @@ class Main : public CBase_Main {
     CkPrintf("Tree type: %s\n", (conf.tree_type == OCT_TREE) ? "OCT" : "BIN");
     CkPrintf("Maximum number of particles per treepiece: %d\n", conf.max_particles_per_tp);
     CkPrintf("Maximum number of particles per leaf: %d\n\n", conf.max_particles_per_leaf);
+
+    count_manager = CProxy_CountManager::ckNew(0.00001, 10000, 5);
 
     // Delegate to Driver
     CkCallback runCB(CkIndex_Main::run(), thisProxy);
