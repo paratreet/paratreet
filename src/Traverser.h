@@ -163,14 +163,16 @@ public:
   virtual void resumeTrav(Key new_key) override {
     auto && resume_nodes = part.r_local->resume_nodes_per_part[part.thisIndex];
     CkAssert(!resume_nodes.empty()); // nothing to resume on?
-    auto start_node = resume_nodes.front();
-    resume_nodes.pop();
+    while (!resume_nodes.empty()) {
+      auto start_node = resume_nodes.front();
+      resume_nodes.pop();
 #if DEBUG
-    CkPrintf("going down on key %d while its type is %d\n", new_key, start_node->type);
+      CkPrintf("going down on key %d while its type is %d\n", new_key, start_node->type);
 #endif
-    auto& now_ready = curr_nodes[new_key];
-    recurse(start_node, now_ready);
-    curr_nodes.erase(new_key);
+      auto& now_ready = curr_nodes[new_key];
+      recurse(start_node, now_ready);
+      curr_nodes.erase(new_key);
+    }
   }
 };
 
