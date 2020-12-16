@@ -110,7 +110,8 @@ public:
     n_subtrees = treespec_subtrees.ckLocalBranch()->doFindSplitters(universe, readers);
     treespec_subtrees.receiveDecomposition(CkCallbackResumeThread(),
       CkPointer<Decomposition>(treespec_subtrees.ckLocalBranch()->getDecomposition()));
-    if (config.decomp_type == OCT_DECOMP) {
+    auto config_subtrees = treespec_subtrees.ckLocalBranch()->getConfiguration();
+    if (config.decomp_type == config_subtrees.decomp_type) {
       n_partitions = n_subtrees;
       treespec.receiveDecomposition(CkCallbackResumeThread(),
         CkPointer<Decomposition>(treespec_subtrees.ckLocalBranch()->getDecomposition()));
