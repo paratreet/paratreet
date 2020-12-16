@@ -16,10 +16,14 @@ public:
   CacheManager<Data>* cm_local;
   unsigned long long n_part_ints, n_node_ints, n_opens, n_closes;
   std::vector<std::queue<Node<Data>*>> resume_nodes_per_part;
-  std::queue<Key> LRU_counter;
   std::unordered_map<Key, std::vector<int>> waiting;
 
   void destroy() {
+#if DEBUG
+    for (auto && rnq : resume_nodes_per_part) {
+      if (!rnq.empty()) CkAbort("did not complete last traversal");
+    }
+#endif
 #if COUNT_INTERACTIONS
     unsigned long long intrn_counts [4] = {n_node_ints, n_part_ints, n_opens, n_closes};
     CkCallback cb (CkReductionTarget(Driver<CentroidData>, countInts), centroid_driver);
