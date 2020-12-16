@@ -29,6 +29,7 @@ extern CProxy_CacheManager<CentroidData> centroid_cache;
 extern CProxy_Resumer<CentroidData> centroid_resumer;
 
 namespace paratreet {
+  extern void preTraversalFn(CProxy_Driver<CentroidData>&, CProxy_CacheManager<CentroidData>& cache);
   extern void traversalFn(BoundingBox&,CProxy_Partition<CentroidData>&,int);
   extern void postInteractionsFn(BoundingBox&,CProxy_Partition<CentroidData>&,int);
 }
@@ -175,17 +176,13 @@ public:
       // Prefetch into cache
       start_time = CkWallTimer();
       // use exactly one of these three commands to load the software cache
-      //centroid_cache.startParentPrefetch(this->thisProxy, CkCallback::ignore); // MUST USE FOR UPND TRAVS
-      //centroid_cache.template startPrefetch<GravityVisitor>(this->thisProxy, CkCallback::ignore);
-      this->thisProxy.loadCache(CkCallbackResumeThread());
+      paratreet::preTraversalFn(this->thisProxy, centroid_cache);
       CkWaitQD();
       CkPrintf("TreeCanopy cache loading: %.3lf ms\n",
           (CkWallTimer() - start_time) * 1000);
 
       // Perform traversals
       start_time = CkWallTimer();
-      //treepieces.template startUpAndDown<DensityVisitor>();
-      //treepieces.template startDown<GravityVisitor>();
       paratreet::traversalFn(universe, partitions, iter);
       CkWaitQD();
 #if DELAYLOCAL

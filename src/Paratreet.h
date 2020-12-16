@@ -26,6 +26,7 @@
 /* readonly */ extern CProxy_Driver<CentroidData> centroid_driver;
 
 namespace paratreet {
+    extern void preTraversalFn(CProxy_Driver<CentroidData>&, CProxy_CacheManager<CentroidData>& cache);
     extern void traversalFn(BoundingBox&,CProxy_Partition<CentroidData>&,int);
     extern void postInteractionsFn(BoundingBox&,CProxy_Partition<CentroidData>&,int);
 
