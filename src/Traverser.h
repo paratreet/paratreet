@@ -166,12 +166,13 @@ public:
     while (!resume_nodes.empty()) {
       auto start_node = resume_nodes.front();
       resume_nodes.pop();
+      auto key = start_node->key;
 #if DEBUG
-      CkPrintf("going down on key %d while its type is %d\n", new_key, start_node->type);
+      CkPrintf("going down on key %d while its type is %d\n", key, start_node->type);
 #endif
-      auto& now_ready = curr_nodes[new_key];
+      auto& now_ready = curr_nodes[key];
       recurse(start_node, now_ready);
-      curr_nodes.erase(new_key);
+      curr_nodes.erase(key);
     }
   }
 };
