@@ -120,6 +120,7 @@ void SfcDecomposition::alignSplitters(Decomposition *decomp)
 }
 
 void SfcDecomposition::pup(PUP::er& p) {
+  PUP::able::pup(p);
   p | splitters;
 }
 
