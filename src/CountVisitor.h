@@ -10,6 +10,9 @@
 #include "common.h"
 
 class CountVisitor {
+public:
+  static constexpr const bool CallSelfLeaf = true;
+
 private:
   Real dist(Vector3D<Real> p1, Vector3D<Real> p2) {
     return (p1-p2).length();
@@ -30,7 +33,7 @@ private:
   }
 
 public:
-  bool node(const SpatialNode<CentroidData>& from, SpatialNode<CentroidData>& on) {
+  bool open(const SpatialNode<CentroidData>& from, SpatialNode<CentroidData>& on) {
     if (from.data.count == 0 || on.data.count == 0) {
       return false;
     }
@@ -44,8 +47,10 @@ public:
     }
   }
 
+  void node(const SpatialNode<CentroidData>& from, SpatialNode<CentroidData>& on) {}
+
   bool cell(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
-    return node(source, target);
+    return open(source, target);
   }
 
   void leaf(const SpatialNode<CentroidData>& from, SpatialNode<CentroidData>& on) {
@@ -54,8 +59,8 @@ public:
     if (idx < 0) {
       for (int i = 0; i < from.n_particles; i++) {
         for (int j = 0; j < on.n_particles; j++) {
-          const Vector3D<Real>& p1 = from.particles[i].position;
-          const Vector3D<Real>& p2 = on.particles[j].position;
+          const Vector3D<Real>& p1 = from.particles()[i].position;
+          const Vector3D<Real>& p2 = on.particles()[j].position;
           countManager->count(dist(p1, p2));
         }
       }

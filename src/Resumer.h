@@ -3,6 +3,7 @@
 
 #include "paratreet.decl.h"
 #include "common.h"
+#include "Partition.h"
 #include <unordered_map>
 #include <vector>
 
@@ -11,18 +12,18 @@ extern CProxy_Driver<CentroidData> centroid_driver;
 template <typename Data>
 class Resumer : public CBase_Resumer<Data> {
 public:
-  CProxy_TreePiece<Data> tp_proxy;
+  CProxy_Partition<Data> part_proxy;
   CacheManager<Data>* cm_local;
-  int n_part_ints, n_node_ints;
-  std::vector<std::queue<Node<Data>*>> resume_nodes_per_tp;
+  unsigned long long n_part_ints, n_node_ints, n_opens, n_closes;
+  std::vector<std::queue<Node<Data>*>> resume_nodes_per_part;
   std::queue<Key> LRU_counter;
   std::unordered_map<Key, std::vector<int>> waiting;
 
   void destroy() {
-#if COUNT_INTRNS
-    int intrn_counts [2] = {n_node_ints, n_part_ints};
+#if COUNT_INTERACTIONS
+    unsigned long long intrn_counts [4] = {n_node_ints, n_part_ints, n_opens, n_closes};
     CkCallback cb (CkReductionTarget(Driver<CentroidData>, countInts), centroid_driver);
-    this->contribute(2 * sizeof(int), &intrn_counts, CkReduction::sum_int, cb);
+    this->contribute(4 * sizeof(unsigned long long), &intrn_counts, CkReduction::sum_ulong_long, cb);
 #endif
     n_part_ints = n_node_ints = 0;
     waiting.clear();
@@ -35,16 +36,20 @@ public:
     else n_node_ints -= n_ints;
   }
 
+  void countOpen(bool should_open) {
+    should_open ? n_opens++ : n_closes++;
+  }
+
   void process(Key key) {
-    CkAssert(!resume_nodes_per_tp.empty());
+    CkAssert(!resume_nodes_per_part.empty());
     auto node = cm_local->root->getDescendant(key);
     auto it = waiting.find(key);
     if (it == waiting.end()) return;
-    for (auto tp_index : it->second) {
-      auto && resume_nodes = resume_nodes_per_tp[tp_index];
+    for (auto part_index : it->second) {
+      auto && resume_nodes = resume_nodes_per_part[part_index];
       bool should_resume = resume_nodes.empty();
       resume_nodes.push(node);
-      if (should_resume) tp_proxy[tp_index].goDown(key);
+      if (should_resume) part_proxy[part_index].goDown(key);
     }
     waiting.erase(it);
   }

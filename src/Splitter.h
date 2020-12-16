@@ -36,6 +36,14 @@ struct Splitter {
     return !(*this >= other);
   }
 
+  bool operator<(const Key& k) const {
+    return !(*this >= k);
+  }
+
+  bool operator>(const Key& k) const {
+    return !(*this <= k);
+  }
+
   bool operator<=(const Key& k) const {
     return from <= k;
   }

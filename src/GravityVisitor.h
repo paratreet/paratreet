@@ -3,56 +3,75 @@
 
 #include "paratreet.decl.h"
 #include "common.h"
+#include "Space.h"
 #include <cmath>
 
 extern CProxy_Resumer<CentroidData> centroid_resumer;
 
 class GravityVisitor {
+public:
+  static constexpr const bool CallSelfLeaf = true;
+
 private:
-  const Real gconst = 0.000000000066742;
-  const Real theta = 0.5;
-  void addGravityLeaf(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
-    int curr_counter = 0;
+  // note gconst = 1
+  static constexpr Real theta = 0.7;
+  static constexpr int  nMinParticleNode = 6;
+
+  void addGravity(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
     for (int i = 0; i < target.n_particles; i++) {
-      Vector3D<Real> sum_force;
-      for (int j = 0; j < source.n_particles; j++) {
-        if (target.particles[i].key == source.particles[j].key) continue;
-        curr_counter++;
-        Vector3D<Real> diff = source.particles[j].position - target.particles[i].position;
-        Real rsq = diff.lengthSquared();
-        sum_force += diff * (source.particles[j].mass / (rsq * sqrt(rsq)));
-      }
-      target.applyForce(i, gconst * target.particles[i].mass * sum_force);
-    }
-#if COUNT_INTRNS
-    centroid_resumer.ckLocalBranch()->countInts(curr_counter);
-#endif
-  }
-  void addGravityNode(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
-    for (int i = 0; i < target.n_particles; i++) {
-      Vector3D<Real> diff = source.data.centroid - target.particles[i].position;
+      Vector3D<Real> diff = source.data.centroid - target.particles()[i].position;
       Real rsq = diff.lengthSquared();
-      Real scalar = (gconst * source.data.sum_mass * target.particles[i].mass / (rsq * sqrt(rsq)));
-      target.applyForce(i, diff * scalar);
+      if (rsq != 0) {
+        Vector3D<Real> accel = diff * (source.data.sum_mass / (rsq * sqrt(rsq)));
+        target.applyAcceleration(i, accel);
+      }
     }
-#if COUNT_INTRNS
-    centroid_resumer.ckLocalBranch()->countInts(-target.n_particles);
-#endif
   }
+
   public:
   GravityVisitor() {}
+
+  /// @brief We've hit a leaf: N^2 interactions between all particles
+  /// in the target and node.
   void leaf(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
-    addGravityLeaf(source, target);
-  }
-  bool node(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
-    Vector3D<Real> dr = source.data.centroid - target.data.centroid;
-    Real dsq = dr.lengthSquared();
-    if (theta * dsq < source.data.rsq) {
-      return true;
+      // addGravity(source, target);
+    for (int i = 0; i < target.n_particles; i++) {
+      Vector3D<Real> accel(0.0);
+      for (int j = 0; j < source.n_particles; j++) {
+          Vector3D<Real> diff = source.particles()[j].position - target.particles()[i].position;
+          Real rsq = diff.lengthSquared();
+          if (rsq != 0) {
+              accel += diff * (source.particles()[j].mass / (rsq * sqrt(rsq)));
+          }
+      }
+      target.applyAcceleration(i, accel);
     }
-    if (source.data.sum_mass > 0) addGravityNode(source, target);
+#if COUNT_INTERACTIONS
+    centroid_resumer.ckLocalBranch()->countInts(target.n_particles);
+#endif
+  }
+
+  bool open(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
+    if (source.n_particles <= nMinParticleNode) return true;
+    if (Space::intersect(source.data.box, target.data.box.center(), source.data.rsq))
+      return true;
+    // Check if any of the target balls intersect the source volume
+    /*for (int i = 0; i < target.n_particles; i++) {
+      if(intersect(source.data.box, target.particles()[i].position, source.data.rsq))
+        return true;
+    }*/
     return false;
   }
+
+  void node(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
+    if (source.data.sum_mass > 0) {
+      addGravity(source, target);
+#if COUNT_INTERACTIONS
+      centroid_resumer.ckLocalBranch()->countInts(-target.n_particles);
+#endif
+    }
+  }
+
   bool cell(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
     // find the closest particle in target to source's center
     // check all eight corners of bounding box
@@ -79,6 +98,7 @@ private:
     }
     return false;
   }
+
 };
 
 #endif //PARATREET_GRAVITYVISITOR_H_

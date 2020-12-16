@@ -3,10 +3,24 @@
 
 #include "Particle.h"
 
+struct pqSmoothNode {
+    Real fKey;    // distance^2 -> place in priority queue
+    Particle pl; // particle data
+
+    inline bool operator<(const pqSmoothNode& n) const {
+      return fKey < n.fKey;
+    }
+
+    void pup(PUP::er& p) {
+      p|fKey;
+      p|pl;
+  }
+};
+
 struct particle_comp {
   Particle p;
   particle_comp() {}
-  particle_comp (Particle& pi) : p(pi) {}
+  particle_comp (const Particle& pi) : p(pi) {}
   bool operator() (const Particle& a, const Particle& b) {
     return (a.position - p.position).lengthSquared() < (b.position - p.position).lengthSquared();
   }

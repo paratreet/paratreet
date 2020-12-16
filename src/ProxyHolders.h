@@ -4,12 +4,12 @@
 #include "paratreet.decl.h"
 
 template <typename Data>
-class CProxy_TreePiece;
+class CProxy_Subtree;
 
 template <typename Data>
 struct TPHolder {
-  CProxy_TreePiece<Data> proxy;
-  TPHolder(CProxy_TreePiece<Data> proxy_) : proxy(proxy_) {}
+  CProxy_Subtree<Data> proxy;
+  TPHolder(CProxy_Subtree<Data> proxy_) : proxy(proxy_) {}
   TPHolder() {}
   void pup(PUP::er& p) {
     p | proxy;

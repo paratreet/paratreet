@@ -28,7 +28,7 @@ jobs:
         git clone https://github.com/UIUC-PPL/charm.git
         cd charm
         git checkout v6.10.1
-        ./build charm++ netlrts-linux-x86_64 -g -j4 --with-production
+        ./build charm++ netlrts-linux-x86_64 -g -j4 --with-production --enable-error-checking
 
     # Prepare ParaTreeT build
     - name: prep-paratreet
@@ -45,4 +45,8 @@ jobs:
         export CHARM_HOME=$GITHUB_WORKSPACE/charm
         cd src
         make -j4 MAKE_OPTS="-DGROUP_CACHE"
-        ./charmrun +p4 ./paratreet -f ../inputgen/1k.tipsy -p 100 ++local
+        cd ../examples/simple
+        make
+        ./charmrun +p1 ./Main -f ../../inputgen/1k.tipsy -p 100 ++local -u 2
+        ./charmrun +p4 ./Main -f ../../inputgen/1k.tipsy -p 100 ++local -u 2
+        ./charmrun +p4 ./Main -f ../../inputgen/1k.tipsy -p 100 ++local -d sfc -u 2
