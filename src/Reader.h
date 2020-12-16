@@ -51,7 +51,7 @@ class Reader : public CBase_Reader {
     template <typename Data>
     void flush(int, int, CProxy_Subtree<Data>);
     template <typename Data>
-    void assign_partitions(int, int, CProxy_Partition<Data>);
+    void assignPartitions(int, int, CProxy_Partition<Data>);
 };
 
 template <typename Data>
@@ -89,7 +89,7 @@ void Reader::flush(int n_total_particles, int n_subtrees,
 }
 
 template <typename Data>
-void Reader::assign_partitions(int n_total_particles, int n_partitions, CProxy_Partition<Data> partitions)
+void Reader::assignPartitions(int n_total_particles, int n_partitions, CProxy_Partition<Data> partitions)
 {
   auto sendParticles =
     [&](int dest, int n_particles, Particle* particles) {

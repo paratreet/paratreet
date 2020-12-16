@@ -143,7 +143,7 @@ public:
     // Flush decomposed particles to home Subtrees and Partitions
     // TODO Separate decomposition for Subtrees and Partitions
     start_time = CkWallTimer();
-    readers.assign_partitions(universe.n_particles, n_partitions, partitions);
+    readers.assignPartitions(universe.n_particles, n_partitions, partitions);
     CkStartQD(CkCallbackResumeThread());
     CkPrintf("Assigning particles to Partitions: %.3lf ms\n",
         (CkWallTimer() - start_time) * 1000);

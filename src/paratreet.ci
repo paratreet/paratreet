@@ -135,7 +135,7 @@ module paratreet {
     template <typename Data>
     entry void flush(int, int, CProxy_Subtree<Data>);
     template <typename Data>
-    entry void assign_partitions(int, int, CProxy_Partition<Data>);
+    entry void assignPartitions(int, int, CProxy_Partition<Data>);
   };
 
   group TreeSpec {
@@ -151,6 +151,6 @@ module paratreet {
 
   extern entry void Reader request<CentroidData>(CProxy_Subtree<CentroidData>, int, int);
   extern entry void Reader flush<CentroidData>(int, int, CProxy_Subtree<CentroidData>);
-  extern entry void Reader assign_partitions<CentroidData>(int, int, CProxy_Partition<CentroidData>);
+  extern entry void Reader assignPartitions<CentroidData>(int, int, CProxy_Partition<CentroidData>);
 
 };
