@@ -3,11 +3,15 @@
 
 #include "paratreet.decl.h"
 #include "common.h"
+#include "Space.h"
 #include <cmath>
 
 extern CProxy_Resumer<CentroidData> centroid_resumer;
 
 class GravityVisitor {
+public:
+  static constexpr const bool CallSelfLeaf = true;
+
 private:
   // note gconst = 1
   static constexpr Real theta = 0.7;
@@ -74,8 +78,21 @@ private:
   public:
   GravityVisitor() {}
 
+  /// @brief We've hit a leaf: N^2 interactions between all particles
+  /// in the target and node.
   void leaf(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
-    addGravity(source, target);
+      // addGravity(source, target);
+    for (int i = 0; i < target.n_particles; i++) {
+      Vector3D<Real> accel(0.0);
+      for (int j = 0; j < source.n_particles; j++) {
+          Vector3D<Real> diff = source.particles()[j].position - target.particles()[i].position;
+          Real rsq = diff.lengthSquared();
+          if (rsq != 0) {
+              accel += diff * (source.particles()[j].mass / (rsq * sqrt(rsq)));
+          }
+      }
+      target.applyAcceleration(i, accel);
+    }
 #if COUNT_INTERACTIONS
     centroid_resumer.ckLocalBranch()->countInts(target.n_particles);
 #endif
@@ -83,11 +100,13 @@ private:
 
   bool open(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
     if (source.n_particles <= nMinParticleNode) return true;
-    Vector3D<Real> dr = source.data.centroid - target.data.centroid;
-    Real dsq = dr.lengthSquared();
-    if (theta * dsq < source.data.rsq) {
+    if (Space::intersect(source.data.box, target.data.box.center(), source.data.rsq))
       return true;
-    }
+    // Check if any of the target balls intersect the source volume
+    /*for (int i = 0; i < target.n_particles; i++) {
+      if(intersect(source.data.box, target.particles()[i].position, source.data.rsq))
+        return true;
+    }*/
     return false;
   }
 
@@ -126,6 +145,7 @@ private:
     }
     return false;
   }
+
 };
 
 #endif //PARATREET_GRAVITYVISITOR_H_

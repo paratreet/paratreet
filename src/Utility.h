@@ -104,11 +104,26 @@ class Utility {
     return k1 == k2;
   }
 
-  static Key removeLeadingZeros(Key k) {
-    int depth = getDepthFromKey(k, 3); // doesn't matter what LBF is
-    return getParticleLevelKey(k, depth, 3);
+  static Key removeLeadingZeros(Key k, size_t log_branch_factor) {
+    int depth = getDepthFromKey(k, log_branch_factor); // doesn't matter what LBF is
+    return getParticleLevelKey(k, depth, log_branch_factor);
   }
 
+  // Zeroes all bits after the first zero (in most-significant order)
+  // 0xffffff81 --> 0xffffff80
+  template <typename T>
+  static T removeTrailingBits(T t) {
+    T mask = T(1) << (sizeof(T) * 8 - 1);
+    T cumulativeMask = 0;
+    // until the first bit that is zero (most-significant order)
+    while (mask & t) {
+      // build a mask including all of the previous bits
+      cumulativeMask |= mask;
+      // move to the next bit
+      mask >>= 1;
+    }
+    return t & cumulativeMask;
+  }
 };
 
 #endif // PARATREET_UTILITY_H_

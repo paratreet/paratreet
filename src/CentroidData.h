@@ -12,10 +12,14 @@ struct CentroidData {
   Vector3D<Real> moment;
   Real sum_mass;
   Vector3D<Real> centroid; // too slow to compute this on the fly
-  std::vector< std::priority_queue<Particle, std::vector<Particle>, particle_comp> > neighbors; // used for sph
+  Real max_rad = 0.0;
+  Real size_sm;
+  std::vector< CkVec<pqSmoothNode> > neighbors; // Neighbor list for knn search
+  std::vector< CkVec<Particle> > fixed_ball; // Neighbor list for fixed ball search
   OrientedBox<Real> box;
   int count;
   Real rsq;
+  static constexpr const double theta = 0.7;
 
   CentroidData() :
   moment(Vector3D<Real> (0,0,0)), sum_mass(0), count(0), rsq(0.) {}
@@ -27,7 +31,10 @@ struct CentroidData {
       box.grow(particles[i].position);
     }
     centroid = moment / sum_mass;
+    size_sm = 0.5*(box.size()).length();
     count += n_particles;
+    fixed_ball.resize(n_particles);
+    neighbors.resize(n_particles);
   }
 
   const CentroidData& operator+=(const CentroidData& cd) { // needed for upward traversal
@@ -40,21 +47,13 @@ struct CentroidData {
     delta1.x = (delta1.x > delta2.x ? delta1.x : delta2.x);
     delta1.y = (delta1.y > delta2.y ? delta1.y : delta2.y);
     delta1.z = (delta1.z > delta2.z ? delta1.z : delta2.z);
-    rsq = delta1.lengthSquared();
-
+    rsq = delta1.lengthSquared() / theta;
+    size_sm = 0.5*(box.size()).length();
     count += cd.count;
     return *this;
   }
 
-  const CentroidData& operator= (const CentroidData& cd) {
-    moment = cd.moment;
-    sum_mass = cd.sum_mass;
-    centroid = cd.centroid;
-    box = cd.box;
-    count = cd.count;
-    rsq = cd.rsq;
-    return *this;
-  }
+  CentroidData& operator=(const CentroidData&) = default;
 
   void pup(PUP::er& p) {
     p | moment;
@@ -63,6 +62,10 @@ struct CentroidData {
     p | box;
     p | count;
     p | rsq;
+    p | max_rad;
+    p | size_sm;
+    p | fixed_ball;
+    p | neighbors;
   }
 
 };
