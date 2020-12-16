@@ -13,7 +13,7 @@ public:
       tree(nullptr) { }
 
     void check(const CkCallback &cb);
-    void receiveDecomposition(CkMarshallMsg*);
+    void receiveDecomposition(const CkCallback&, Decomposition*);
     Decomposition* getDecomposition();
 
     Tree* getTree();

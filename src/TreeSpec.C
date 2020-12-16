@@ -5,13 +5,9 @@ void TreeSpec::check(const CkCallback &cb) {
   this->contribute(cb);
 }
 
-void TreeSpec::receiveDecomposition(CkMarshallMsg* msg) {
-  char *buffer = msg->msgBuf;
-  PUP::fromMem pupper(buffer);
-  PUP::detail::TemporaryObjectHolder<CkCallback> cb;
-  this->getDecomposition()->pup(pupper);
-  pupper | cb;
-  contribute(cb.t);
+void TreeSpec::receiveDecomposition(const CkCallback& cb, Decomposition* d) {
+  decomp.reset(d);
+  contribute(cb);
 }
 
 Decomposition* TreeSpec::getDecomposition() {

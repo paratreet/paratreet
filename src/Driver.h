@@ -72,17 +72,6 @@ public:
     cb.send();
   }
 
-  void broadcastDecomposition(const CkCallback& cb, CProxy_TreeSpec& treespec) {
-    PUP::sizer sizer;
-    treespec.ckLocalBranch()->getDecomposition()->pup(sizer);
-    sizer | const_cast<CkCallback&>(cb);
-    CkMarshallMsg *msg = CkAllocateMarshallMsg(sizer.size(), NULL);
-    PUP::toMem pupper((void *)msg->msgBuf);
-    treespec.ckLocalBranch()->getDecomposition()->pup(pupper);
-    pupper | const_cast<CkCallback&>(cb);
-    treespec.receiveDecomposition(msg);
-  }
-
   // Performs decomposition by distributing particles among Subtrees,
   // by either loading particle information from input file or re-computing
   // the universal bounding box
@@ -119,17 +108,20 @@ public:
     // Set up splitters for decomposition
     start_time = CkWallTimer();
     n_subtrees = treespec_subtrees.ckLocalBranch()->doFindSplitters(universe, readers);
-    broadcastDecomposition(CkCallbackResumeThread(), treespec_subtrees);
-    CkPrintf("Setting up splitters for subtree decomposition: %.3lf ms\n",
-        (CkWallTimer() - start_time) * 1000);
-
-    start_time = CkWallTimer();
-    n_partitions = treespec.ckLocalBranch()->doFindSplitters(universe, readers);
-    treespec.ckLocalBranch()->getDecomposition()->alignSplitters(
-      treespec_subtrees.ckLocalBranch()->getDecomposition()
-      );
-    broadcastDecomposition(CkCallbackResumeThread(), treespec);
-    CkPrintf("Setting up splitters for partition decomposition: %.3lf ms\n",
+    treespec_subtrees.receiveDecomposition(CkCallbackResumeThread(),
+      CkPointer<Decomposition>(treespec_subtrees.ckLocalBranch()->getDecomposition()));
+    auto config_subtrees = treespec_subtrees.ckLocalBranch()->getConfiguration();
+    if (config.decomp_type == config_subtrees.decomp_type) {
+      n_partitions = n_subtrees;
+      treespec.receiveDecomposition(CkCallbackResumeThread(),
+        CkPointer<Decomposition>(treespec_subtrees.ckLocalBranch()->getDecomposition()));
+    }
+    else {
+      n_partitions = treespec.ckLocalBranch()->doFindSplitters(universe, readers);
+      treespec.receiveDecomposition(CkCallbackResumeThread(),
+        CkPointer<Decomposition>(treespec.ckLocalBranch()->getDecomposition()));
+    }
+    CkPrintf("Setting up splitters for particle decompositions: %.3lf ms\n",
         (CkWallTimer() - start_time) * 1000);
 
     // Create Subtrees
