@@ -14,13 +14,7 @@
 #include "BoundingBox.h"
 #include "BufferedVec.h"
 #include "Utility.h"
-#include "DensityVisitor.h"
-#include "GravityVisitor.h"
-#include "PressureVisitor.h"
-#include "CollisionVisitor.h"
-#include "CountVisitor.h"
 #include "CacheManager.h"
-#include "CountManager.h"
 #include "Resumer.h"
 #include "Modularization.h"
 #include "Node.h"
@@ -33,7 +27,6 @@ extern CProxy_TreeSpec treespec_subtrees;
 extern CProxy_TreeCanopy<CentroidData> centroid_calculator;
 extern CProxy_CacheManager<CentroidData> centroid_cache;
 extern CProxy_Resumer<CentroidData> centroid_resumer;
-extern CProxy_CountManager count_manager;
 
 namespace paratreet {
   extern void traversalFn(BoundingBox&,CProxy_Partition<CentroidData>&,int);
@@ -204,7 +197,6 @@ public:
       start_time = CkWallTimer();
       partitions.interact(CkCallbackResumeThread());
       CkPrintf("Interactions: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
-      //count_manager.sum(CkCallback(CkReductionTarget(Main, terminate), this->thisProxy));
 
       // Call user's post-interaction function, which may for example:
       // Output particle accelerations for verification

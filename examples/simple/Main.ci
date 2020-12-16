@@ -1,6 +1,8 @@
 mainmodule Main {
     extern module paratreet;
+
     readonly bool verify;
+    readonly CProxy_CountManager count_manager;
 
     mainchare Main {
         initnode void initialize();
@@ -9,5 +11,12 @@ mainmodule Main {
         entry [reductiontarget] void checkParticlesChangedDone(bool result); // For debugging
     };
 
+    group CountManager {
+        entry CountManager(double min, double max, int nbins);
+        entry void sum(const CkCallback&);
+    }
+
     extern entry void Partition<CentroidData> startDown<GravityVisitor> ();
+    extern entry void CacheManager<CentroidData> startPrefetch<GravityVisitor>(DPHolder<CentroidData>, CkCallback);
+    extern entry void Driver<CentroidData> prefetch<GravityVisitor> (CentroidData, int, CkCallback);
 }

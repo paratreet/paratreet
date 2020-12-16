@@ -9,6 +9,8 @@
 #include "CountManager.h"
 #include "common.h"
 
+/* readonly */ CProxy_CountManager count_manager;
+
 class CountVisitor {
 public:
   static constexpr const bool CallSelfLeaf = true;
