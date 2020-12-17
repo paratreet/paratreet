@@ -20,7 +20,6 @@ protected:
   template <typename Visitor>
   void runSimpleTraversal(Partition<Data>& part, Node<Data>* source_node, int leaf_index)
   {
-    Visitor v;
     std::stack<Node<Data>*> nodes;
     nodes.push(source_node);
     while (!nodes.empty()) {
@@ -29,12 +28,12 @@ protected:
       if (node->type == Node<Data>::Type::Leaf || node->type == Node<Data>::Type::CachedRemoteLeaf) {
         part.interactions[leaf_index].push_back(node);
       } else {
-        if (v.open(*node, *(part.leaves[leaf_index]))) {
+        if (Visitor::open(*node, *(part.leaves[leaf_index]))) {
           for (int j = 0; j < node->n_children; j++) {
             nodes.push(node->getChild(j));
           }
         } else {
-          v.node(*node, *(part.leaves[leaf_index]));
+          Visitor::node(*node, *(part.leaves[leaf_index]));
         }
       }
     }
@@ -43,10 +42,9 @@ protected:
   template <typename Visitor>
   void interactBase(Partition<Data>& part)
   {
-    Visitor v;
     for (int i = 0; i < part.interactions.size(); i++) {
       for (Node<Data>* source : part.interactions[i]) {
-        v.leaf(*source, *(part.leaves[i]));
+        Visitor::leaf(*source, *(part.leaves[i]));
       }
     }
   }
@@ -80,7 +78,6 @@ public:
   virtual void interact() override {this->template interactBase<Visitor> (part);}
   void recurse(Node<Data>* node, std::vector<int>& active_buckets) {
     CkAssert(node);
-    Visitor v;
     std::vector<int> new_active_buckets;
     new_active_buckets.reserve(part.leaves.size());
 #if DEBUG
@@ -94,7 +91,7 @@ public:
           for (auto bucket : active_buckets) {
             if (Visitor::CallSelfLeaf || part.leaves[bucket]->key != node->key) {
               if (delay_leaf) part.interactions[bucket].push_back(node);
-              else v.leaf(*node, *part.leaves[bucket]);
+              else Visitor::leaf(*node, *part.leaves[bucket]);
             }
           }
           if (!delay_leaf) node->finish(active_buckets.size());
@@ -107,7 +104,7 @@ public:
           // Check if the opening condition is fulfilled
           // If so, need to go down deeper
           for (auto bucket : active_buckets) {
-            const bool should_open = v.open(*node, *part.leaves[bucket]);
+            const bool should_open = Visitor::open(*node, *part.leaves[bucket]);
 #if COUNT_INTERACTIONS
             part.r_local->countOpen(should_open);
 #endif
@@ -115,7 +112,7 @@ public:
               new_active_buckets.push_back(bucket);
             } else {
               // maybe delay as an interaction
-              v.node(*node, *part.leaves[bucket]);
+              Visitor::node(*node, *part.leaves[bucket]);
             }
           }
           node->finish(active_buckets.size() - new_active_buckets.size());
@@ -193,7 +190,6 @@ public:
 
   void start() override {
     if (tp.leaves.empty()) return;
-    Visitor v;
     for (auto leaf : tp.leaves) {
       std::stack<Node<Data>*> nodes;
       nodes.push(leaf);
@@ -203,16 +199,16 @@ public:
           Node<Data>* node = nodes.top();
           nodes.pop();
           if (node->type == Node<Data>::Type::Internal) {
-            if (v.open(*node, *leaf)) {
+            if (Visitor::open(*node, *leaf)) {
               for (int i = 0; i < node->n_children; i++) {
                 nodes.push(node->getChild(i));
               }
             }
-            else v.node(*node, *leaf);
+            else Visitor::node(*node, *leaf);
           }
           else if (node->type == Node<Data>::Type::Leaf) {
             if (Visitor::CallSelfLeaf || node->key != leaf->key) {
-              v.leaf(*node, *leaf);
+              Visitor::leaf(*node, *leaf);
             }
           }
         }
@@ -276,28 +272,26 @@ public:
 
   void runInvertedTraversal(Node<Data>* source_leaf, Node<Data>* target_node)
   {
-    Visitor v;
     std::stack<Node<Data>*> nodes;
     nodes.push(target_node);
     while (!nodes.empty()) {
       Node<Data>* node = nodes.top();
       nodes.pop();
       if (node->type == Node<Data>::Type::Leaf || node->type == Node<Data>::Type::CachedRemoteLeaf) {
-        v.leaf(*source_leaf, *node); // why even call leaf() here? maybe just call node.
+        Visitor::leaf(*source_leaf, *node); // why even call leaf() here? maybe just call node.
       } else {
-        if (v.open(*node, *source_leaf)) {
+        if (Visitor::open(*node, *source_leaf)) {
           for (int j = 0; j < node->n_children; j++) {
             nodes.push(node->getChild(j));
           }
         } else {
-          v.node(*node, *source_leaf);
+          Visitor::node(*node, *source_leaf);
         }
       }
     }
   }
 
   virtual void resumeTrav(Key new_key) override {
-    Visitor v;
     auto& now_ready = curr_nodes[new_key];
     std::vector<std::pair<Key, Node<Data>*>> curr_nodes_insertions;
     Node<Data>* start_node = nullptr;
@@ -348,7 +342,7 @@ public:
           case Node<Data>::Type::CachedBoundary:
           case Node<Data>::Type::CachedRemote:
             {
-              if (v.cell(*node, *curr_payload)) {
+              if (Visitor::cell(*node, *curr_payload)) {
                 for (int i = 0; i < node->n_children; i++) {
                   for (int j = 0; j < curr_payload->n_children; j++) {
                     nodes.push(std::make_pair(node->getChild(i), curr_payload->getChild(j)));
