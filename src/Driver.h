@@ -221,7 +221,10 @@ public:
 
       // Clear cache and other storages used in this iteration
       centroid_cache.destroy(true);
-      centroid_resumer.destroy();
+#if COUNT_INTERACTIONS
+      CkCallback statsCb (CkReductionTarget(Driver<Data>, countInts), this->thisProxy);
+      centroid_resumer.collectAndResetStats(statsCb);
+#endif
       storage.clear();
       storage_sorted = false;
       CkWaitQD();

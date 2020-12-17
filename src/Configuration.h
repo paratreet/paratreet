@@ -5,7 +5,6 @@
 #include <string>
 
 #include "BoundingBox.h"
-#include "CentroidData.h"
 
 template<typename T>
 class CProxy_Subtree;
