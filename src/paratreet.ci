@@ -53,7 +53,7 @@ module paratreet {
   template <typename Data>
   group Resumer {
     entry Resumer();
-    entry void destroy();
+    entry void collectAndResetStats(CkCallback cb);
     entry [expedited] void process(Key);
   };
   group Resumer<CentroidData>;
