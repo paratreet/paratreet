@@ -38,9 +38,12 @@ public:
     n_part_ints = n_node_ints = n_opens = n_closes = 0ull;
   }
 
-  void countInts(int n_ints) {
-    if (n_ints > 0 ) n_part_ints += n_ints;
-    else n_node_ints -= n_ints;
+  void countLeafInts(int n_ints) {
+    n_part_ints += n_ints;
+  }
+
+  void countNodeInts(int n_ints) {
+    n_node_ints += n_ints;
   }
 
   void countOpen(bool should_open) {
