@@ -44,6 +44,9 @@ public:
       }
       target.applyAcceleration(i, accel);
     }
+#if COUNT_INTERACTIONS
+    centroid_resumer.ckLocalBranch()->countInts(target.n_particles);
+#endif
   }
 
   static bool open(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
