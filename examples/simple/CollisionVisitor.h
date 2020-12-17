@@ -38,9 +38,6 @@ public:
         if (dsq < rsq) target.data.fixed_ball[i].push_back(source.particles()[j]);
       }
     }
-#if COUNT_INTERACTIONS
-    centroid_resumer.ckLocalBranch()->countInts(target.n_particles);
-#endif
   }
 
 private:

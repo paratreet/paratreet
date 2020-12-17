@@ -9,6 +9,35 @@
 #include <unordered_map>
 #include <vector>
 
+namespace {
+
+template <typename Visitor, typename Node, typename StatCollector>
+inline bool doOpen(Node* source, Node* target, StatCollector* stats) {
+  auto should_open = Visitor::open(*source, *target);
+#if COUNT_INTERACTIONS
+  stats->countOpen(should_open);
+#endif
+  return should_open;
+}
+
+template <typename Visitor, typename Node, typename StatCollector>
+inline void doLeaf(Node* source, Node* target, StatCollector* stats) {
+  Visitor::leaf(*source, *target);
+#if COUNT_INTERACTIONS
+  stats->countInts(target->n_particles);
+#endif
+}
+
+template <typename Visitor, typename Node, typename StatCollector>
+inline void doNode(Node* source, Node* target, StatCollector* stats) {
+  Visitor::node(*source, *target);
+#if COUNT_INTERACTIONS
+  stats->countInts(-target->n_particles);
+#endif
+}
+
+} // empty namespace
+
 template <typename Data>
 class Traverser {
 public:
@@ -28,12 +57,12 @@ protected:
       if (node->type == Node<Data>::Type::Leaf || node->type == Node<Data>::Type::CachedRemoteLeaf) {
         part.interactions[leaf_index].push_back(node);
       } else {
-        if (Visitor::open(*node, *(part.leaves[leaf_index]))) {
+        if (doOpen<Visitor>(node, part.leaves[leaf_index].get()), part.r_local) {
           for (int j = 0; j < node->n_children; j++) {
             nodes.push(node->getChild(j));
           }
         } else {
-          Visitor::node(*node, *(part.leaves[leaf_index]));
+          doNode<Visitor>(node, part.leaves[leaf_index].get(), part.r_local);
         }
       }
     }
@@ -44,7 +73,7 @@ protected:
   {
     for (int i = 0; i < part.interactions.size(); i++) {
       for (Node<Data>* source : part.interactions[i]) {
-        Visitor::leaf(*source, *(part.leaves[i]));
+        doLeaf<Visitor>(source, part.leaves[i].get(), part.r_local);
       }
     }
   }
@@ -52,7 +81,7 @@ protected:
 
 template <typename Data, typename Visitor>
 class DownTraverser : public Traverser<Data> {
-private:
+protected:
   Partition<Data>& part;
   std::unordered_map<Key, std::vector<int>> curr_nodes;
   const bool delay_leaf;
@@ -91,7 +120,7 @@ public:
           for (auto bucket : active_buckets) {
             if (Visitor::CallSelfLeaf || part.leaves[bucket]->key != node->key) {
               if (delay_leaf) part.interactions[bucket].push_back(node);
-              else Visitor::leaf(*node, *part.leaves[bucket]);
+              else doLeaf<Visitor>(node, part.leaves[bucket].get(), part.r_local);
             }
           }
           if (!delay_leaf) node->finish(active_buckets.size());
@@ -104,15 +133,12 @@ public:
           // Check if the opening condition is fulfilled
           // If so, need to go down deeper
           for (auto bucket : active_buckets) {
-            const bool should_open = Visitor::open(*node, *part.leaves[bucket]);
-#if COUNT_INTERACTIONS
-            part.r_local->countOpen(should_open);
-#endif
+            const bool should_open = doOpen<Visitor>(node, part.leaves[bucket].get(), part.r_local);
             if (should_open) {
               new_active_buckets.push_back(bucket);
             } else {
               // maybe delay as an interaction
-              Visitor::node(*node, *part.leaves[bucket]);
+              doNode<Visitor>(node, part.leaves[bucket].get(), part.r_local);
             }
           }
           node->finish(active_buckets.size() - new_active_buckets.size());
@@ -199,16 +225,16 @@ public:
           Node<Data>* node = nodes.top();
           nodes.pop();
           if (node->type == Node<Data>::Type::Internal) {
-            if (Visitor::open(*node, *leaf)) {
+            if (doOpen<Visitor>(node, leaf, this->part.r_local)) {
               for (int i = 0; i < node->n_children; i++) {
                 nodes.push(node->getChild(i));
               }
             }
-            else Visitor::node(*node, *leaf);
+            else doNode<Visitor>(node, leaf, this->part.r_local);
           }
           else if (node->type == Node<Data>::Type::Leaf) {
             if (Visitor::CallSelfLeaf || node->key != leaf->key) {
-              Visitor::leaf(*node, *leaf);
+              doLeaf<Visitor>(node, leaf, this->part.r_local);
             }
           }
         }

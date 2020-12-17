@@ -44,9 +44,6 @@ public:
       }
       target.applyAcceleration(i, accel);
     }
-#if COUNT_INTERACTIONS
-    centroid_resumer.ckLocalBranch()->countInts(target.n_particles);
-#endif
   }
 
   static bool open(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
@@ -64,9 +61,6 @@ public:
   static void node(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
     if (source.data.sum_mass > 0) {
       addGravity(source, target);
-#if COUNT_INTERACTIONS
-      centroid_resumer.ckLocalBranch()->countInts(-target.n_particles);
-#endif
     }
   }
 
