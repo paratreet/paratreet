@@ -133,19 +133,6 @@ void Subtree<Data>::collectMetaData (Real timestep, const CkCallback & cb) {
   Real maxVelocity = 0.0;
   int particlesSize = particles.size();
 
-  //CkPrintf("[ST %d] particlesSize = %d\n", this->thisIndex, particlesSize);
-  if (particles.empty()) {
-    CkReduction::tupleElement tupleRedn[] = {
-      CkReduction::tupleElement(sizeof(Real), &maxVelocity, CkReduction::max_float),
-      CkReduction::tupleElement(sizeof(int), &particlesSize, CkReduction::max_int),
-      CkReduction::tupleElement(sizeof(int), &particlesSize, CkReduction::sum_int),
-    };
-    CkReductionMsg * msg = CkReductionMsg::buildFromTuple(tupleRedn, META_TUPLE_SIZE);
-    msg->setCallback(cb);
-    this->contribute(msg);
-    return;
-  };
-
   for (auto& particle : particles){
     if (particle.velocity.length() > maxVelocity)
       maxVelocity = particle.velocity.length();
