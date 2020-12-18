@@ -6,6 +6,7 @@
 #include "Vector3D.h"
 #include "SFC.h"
 
+static constexpr const size_t UNIVERSE_NDIM = 3;
 // Floating point type
 #ifndef USE_DOUBLE_FP
 typedef float Real;
