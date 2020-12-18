@@ -16,7 +16,6 @@
 #include "Configuration.h"
 
 #include "paratreet.decl.h"
-
 /* readonly */ extern CProxy_Reader readers;
 /* readonly */ extern CProxy_TreeSpec treespec;
 /* readonly */ extern int n_readers;

@@ -20,6 +20,7 @@ namespace paratreet {
         int num_share_nodes;
         int cache_share_depth;
         int flush_period;
+        int flush_max_avg_ratio;
         Real timestep_size;
         std::string input_file;
         std::string output_file;
@@ -35,6 +36,7 @@ namespace paratreet {
             p | num_share_nodes;
             p | cache_share_depth;
             p | flush_period;
+            p | flush_max_avg_ratio;
             p | input_file;
             p | output_file;
             p | timestep_size;

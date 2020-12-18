@@ -48,6 +48,8 @@ public:
   int n_subtrees;
   int n_partitions;
   double start_time;
+  Real max_velocity;
+  Real updated_timestep_size = 0.1;
 
   Driver(CProxy_CacheManager<Data> cache_manager_) :
     cache_manager(cache_manager_), storage_sorted(false) {}
@@ -202,8 +204,37 @@ public:
 
       // Move the particles in Partitions
       start_time = CkWallTimer();
-      bool complete_rebuild = (iter % config.flush_period == config.flush_period - 1);
-      partitions.perturb(subtrees, config.timestep_size, complete_rebuild); // 0.1s for example
+
+      // Meta data collections
+      CkReductionMsg * msg;
+      subtrees.collectMetaData(updated_timestep_size, CkCallbackResumeThread((void *&) msg));
+      CkWaitQD();
+       // Parse Subtree reduction message
+      int numRedn = 0;
+      CkReduction::tupleElement* res = NULL;
+      msg->toTuple(&res, &numRedn);
+      max_velocity = *(Real*)(res[0].data); // avoid max_velocity = 0.0
+      int maxParticlesSize = *(int*)(res[1].data);
+      int sumParticlesSize = *(int*)(res[2].data);
+      float avgTPSize = (float) sumParticlesSize / (float) n_subtrees;
+      float ratio = (float) maxParticlesSize / avgTPSize;
+
+      bool complete_rebuild = (config.flush_max_avg_ratio != 0?
+          (ratio > config.flush_max_avg_ratio) : // use flush_max_avg_ratio when it is not 0
+          (iter % config.flush_period == config.flush_period - 1)) ;
+      CkPrintf("[Meta] n_subtree = %d; timestep_size = %f; maxSubtreeSize = %d; sumSubtreeSize = %d; avgSubtreeSize = %f; ratio = %f; maxVelocity = %f; rebuild = %s\n", n_subtrees, updated_timestep_size, maxParticlesSize,sumParticlesSize, avgTPSize, ratio, max_velocity, (complete_rebuild? "yes" : "no"));
+      //End Subtree reduction message parsing
+
+      Real max_universe_box_dimension = 0;
+      for (int dim = 0; dim < UNIVERSE_NDIM; dim ++){
+        Real length = universe.box.greater_corner[dim] - universe.box.lesser_corner[dim];
+        if (length > max_universe_box_dimension)
+          max_universe_box_dimension = length;
+      }
+
+      updated_timestep_size = max_universe_box_dimension / max_velocity;
+      if (updated_timestep_size > config.timestep_size) updated_timestep_size = config.timestep_size;
+      partitions.perturb(subtrees, updated_timestep_size, complete_rebuild); // 0.1s for example
       CkWaitQD();
       CkPrintf("Perturbations: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
 
