@@ -22,6 +22,7 @@
 extern CProxy_TreeSpec treespec_subtrees;
 extern CProxy_TreeSpec treespec;
 extern CProxy_Reader readers;
+#define META_TUPLE_SIZE 3
 
 template <typename Data>
 class Subtree : public CBase_Subtree<Data> {
@@ -56,6 +57,7 @@ public:
   void reset();
   void output(CProxy_Writer w, CkCallback cb);
   void pup(PUP::er& p);
+  void collectMetaData(Real timestep, const CkCallback & cb);
 
   // For debugging
   void checkParticlesChanged(const CkCallback& cb) {
@@ -125,6 +127,27 @@ void Subtree<Data>::receive(ParticleMsg* msg) {
               msg->n_particles * sizeof(Particle));
   delete msg;
 }
+
+template <typename Data>
+void Subtree<Data>::collectMetaData (Real timestep, const CkCallback & cb) {
+  Real maxVelocity = 0.0;
+  int particlesSize = particles.size();
+
+  for (auto& particle : particles){
+    if (particle.velocity.length() > maxVelocity)
+      maxVelocity = particle.velocity.length();
+  }
+
+  CkReduction::tupleElement tupleRedn[] = {
+    CkReduction::tupleElement(sizeof(Real), &maxVelocity, CkReduction::max_float),
+    CkReduction::tupleElement(sizeof(int), &particlesSize, CkReduction::max_int),
+    CkReduction::tupleElement(sizeof(int), &particlesSize, CkReduction::sum_int),
+  };
+
+  CkReductionMsg * msg = CkReductionMsg::buildFromTuple(tupleRedn, META_TUPLE_SIZE);
+  msg->setCallback(cb);
+  this->contribute(msg);
+};
 
 template <typename Data>
 void Subtree<Data>::sendLeaves(CProxy_Partition<Data> part)

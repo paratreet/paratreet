@@ -90,6 +90,7 @@ module paratreet {
     entry void reset();
     entry void sendLeaves(CProxy_Partition<Data>);
     entry void checkParticlesChanged(const CkCallback&);
+    entry void collectMetaData(Real timestep, const CkCallback & cb);
   }
   array [1d] Subtree<CentroidData>;
 
