@@ -215,7 +215,7 @@ void Subtree<Data>::recursiveBuild(Node<Data>* node, Particle* node_particles, s
   //static std::vector<Splitter>& splitters = readers.ckLocalBranch()->splitters;
   auto config = treespec.ckLocalBranch()->getConfiguration();
   auto tree   = treespec.ckLocalBranch()->getTree();
-  bool is_light = (node->n_particles <= ceil(BUCKET_TOLERANCE * config.max_particles_per_leaf));
+  bool is_light = (node->n_particles <= config.max_particles_per_leaf);
 
   // we can stop going deeper if node is light
   if (is_light) {
