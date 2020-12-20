@@ -23,9 +23,9 @@ public:
   }
   virtual void prepParticles(Particle* particles, size_t n_particles, Key parent_key, size_t log_branch_factor) override {
     // sort by key
-    auto depth = Utility::getDepthFromKey(parent_key, log_branch_factor);
-    auto dim = depth % UNIVERSE_NDIM;
-    auto comp = [dim] (const Particle& a, const Particle& b) {return a.position[dim] < b.position[dim];};
+    int depth = Utility::getDepthFromKey(parent_key, log_branch_factor);
+    int cdim = depth % UNIVERSE_NDIM;
+    auto comp = [cdim] (const Particle& a, const Particle& b) {return a.position[cdim] < b.position[cdim];};
     std::sort(particles, particles + n_particles, comp);
   };
 };
