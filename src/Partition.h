@@ -178,9 +178,10 @@ void Partition<Data>::perturb(TPHolder<Data> tp_holder, Real timestep, bool if_f
 
   std::map<int, std::vector<Particle>> out_particles;
   auto && splitters = treespec_subtrees.ckLocalBranch()->getDecomposition()->getSplitters();
+  std::function<bool(const Splitter&, Key)> compG = [] (const Splitter& a, Key b) {return a.from > b;};
   CkAssert(!splitters.empty());
   for (auto& particle : particles) {
-    int bucket = Utility::binarySearchG(particle.key, &splitters[0], 0, splitters.size()) - 1;
+    int bucket = Utility::binarySearchComp(particle.key, &splitters[0], 0, splitters.size(), compG) - 1;
     out_particles[bucket].push_back(particle);
   }
   for (auto it = out_particles.begin(); it != out_particles.end(); it++) {

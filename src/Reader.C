@@ -132,13 +132,14 @@ void Reader::countOct(std::vector<Key> splitter_keys, size_t log_branch_factor, 
   int start = 0;
   int finish = particles.size();
   Key from, to;
+  std::function<bool(const Particle&, Key)> compGE = [] (const Particle& a, Key b) {return a.key >= b;};
   if (particles.size() > 0) {
     for (int i = 0; i < counts.size(); i++) {
       from = splitter_keys[2*i];
       to = splitter_keys[2*i+1];
 
-      int begin = Utility::binarySearchGE(from, &particles[0], start, finish);
-      int end = Utility::binarySearchGE(to, &particles[0], begin, finish);
+      int begin = Utility::binarySearchComp(from, &particles[0], start, finish, compGE);
+      int end = Utility::binarySearchComp(to, &particles[0], begin, finish, compGE);
       counts[i] = end - begin;
 
       start = end;
@@ -177,7 +178,7 @@ void Reader::prepMessages(const std::vector<Key>& splitter_keys, const CkCallbac
   for (int i = 0; i < particles.size(); i++) {
     // Use upper bound splitter index to determine Reader index
     // [lower splitter, upper splitter)
-    int bucket = Utility::binarySearchG(particles[i], &splitter_keys[0], 0, splitter_keys.size()) - 1;
+    int bucket = Utility::binarySearchG(particles[i].key, &splitter_keys[0], 0, splitter_keys.size()) - 1;
     send_vectors[bucket].push_back(particles[i]);
   }
 
@@ -236,7 +237,7 @@ void Reader::checkSort(const Key last, const CkCallback& cb) {
   bool sorted = true;
 
   if (particles.size() > 0) {
-    if (last > particles[0]) {
+    if (last > particles[0].key) {
       sorted = false;
     }
     else {
