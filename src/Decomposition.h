@@ -20,8 +20,8 @@ struct Decomposition: public PUP::able {
 
   Decomposition() { }
   Decomposition(CkMigrateMessage *m) : PUP::able(m) { }
-
   virtual ~Decomposition() = default;
+
   virtual int flush(std::vector<Particle> &particles, const SendParticlesFn &fn) = 0;
 
   virtual void assignKeys(BoundingBox &universe, std::vector<Particle> &particles) = 0;
@@ -30,7 +30,7 @@ struct Decomposition: public PUP::able {
 
   virtual int findSplitters(BoundingBox &universe, CProxy_Reader &readers, const paratreet::Configuration& config, int log_branch_factor) = 0;
 
-  virtual int getTpKey(int idx) = 0;
+  virtual Key getTpKey(int idx) = 0;
 
   std::vector<Key> getAllTpKeys(int n_partitions) {
     std::vector<Key> tp_keys (n_partitions);
@@ -46,8 +46,9 @@ struct SfcDecomposition : public Decomposition {
 
   SfcDecomposition() { }
   SfcDecomposition(CkMigrateMessage *m) : Decomposition(m) { }
+  virtual ~SfcDecomposition() = default;
 
-  int getTpKey(int idx) override;
+  Key getTpKey(int idx) override;
   int flush(std::vector<Particle> &particles, const SendParticlesFn &fn) override;
   void assignKeys(BoundingBox &universe, std::vector<Particle> &particles) override;
   int getNumExpectedParticles(int n_total_particles, int n_partitions, int tp_index) override;
@@ -66,12 +67,29 @@ struct OctDecomposition : public SfcDecomposition {
 
   OctDecomposition() { }
   OctDecomposition(CkMigrateMessage *m) : SfcDecomposition(m) { }
-
+  virtual ~OctDecomposition() = default;
 
   int flush(std::vector<Particle> &particles, const SendParticlesFn &fn) override;
   void assignKeys(BoundingBox &universe, std::vector<Particle> &particles) override;
   int getNumExpectedParticles(int n_total_particles, int n_partitions, int tp_index) override;
   int findSplitters(BoundingBox &universe, CProxy_Reader &readers, const paratreet::Configuration& config, int log_branch_factor) override;
 };
+
+struct KdDecomposition : public Decomposition {
+  PUPable_decl(KdDecomposition);
+
+  KdDecomposition() = default;
+  KdDecomposition(CkMigrateMessage *m) : Decomposition(m) { }
+  virtual ~KdDecomposition() = default;
+
+  Key getTpKey(int idx) override;
+  int flush(std::vector<Particle> &particles, const SendParticlesFn &fn) override;
+  void assignKeys(BoundingBox &universe, std::vector<Particle> &particles) override;
+  int getNumExpectedParticles(int n_total_particles, int n_partitions, int tp_index) override;
+  int findSplitters(BoundingBox &universe, CProxy_Reader &readers, const paratreet::Configuration& config, int log_branch_factor) override;
+
+  //virtual void pup(PUP::er& p) override;
+};
+
 
 #endif

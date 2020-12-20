@@ -126,7 +126,7 @@ void SfcDecomposition::pup(PUP::er& p) {
   p | splitters;
 }
 
-int SfcDecomposition::getTpKey(int idx) {
+Key SfcDecomposition::getTpKey(int idx) {
   return splitters[idx].tp_key;
 }
 
@@ -240,3 +240,32 @@ int OctDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &reader
   // Return the number of TreePieces
   return splitters.size();
 }
+
+Key KdDecomposition::getTpKey(int idx) {
+  CkAbort("not implemented yet");
+  return 0;
+}
+
+int KdDecomposition::flush(std::vector<Particle> &particles, const SendParticlesFn &fn) {
+  CkAbort("not implemented yet");
+  return 0;
+}
+
+void KdDecomposition::assignKeys(BoundingBox &universe, std::vector<Particle> &particles) {
+  CkAbort("not implemented yet");
+}
+
+int KdDecomposition::getNumExpectedParticles(int n_total_particles, int n_partitions,
+                                              int tp_index) {
+  return 0;
+}
+
+int KdDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &readers, const paratreet::Configuration& config, int log_branch_factor) {
+  CkAbort("not implemented yet");
+  return 0;
+  // countSfc finds the keys of all particles
+}
+
+//void KdDecomposition::pup(PUP::er& p) {
+ // PUP::able::pup(p);
+//}

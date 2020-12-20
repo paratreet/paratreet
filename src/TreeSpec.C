@@ -16,6 +16,8 @@ Decomposition* TreeSpec::getDecomposition() {
       decomp.reset(new OctDecomposition());
     } else if (config.decomp_type == SFC_DECOMP) {
       decomp.reset(new SfcDecomposition());
+    } else if (config.decomp_type == KD_DECOMP) {
+      decomp.reset(new KdDecomposition());
     }
   }
 
@@ -28,6 +30,8 @@ Tree* TreeSpec::getTree() {
       tree.reset(new OctTree());
     } else if (config.tree_type == BINARY_TREE) {
       tree.reset(new BinaryTree());
+    } else if (config.tree_type == KD_TREE) {
+      tree.reset(new KdTree());
     }
   }
 

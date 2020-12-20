@@ -24,12 +24,13 @@ public:
   virtual void prepParticles(Particle* particles, size_t n_particles, Key parent_key, size_t log_branch_factor) override {
     // sort by key
     int depth = Utility::getDepthFromKey(parent_key, log_branch_factor);
-    int cdim = depth % UNIVERSE_NDIM;
-    auto comp = [cdim] (const Particle& a, const Particle& b) {
-      const Real apos = a.position[cdim], bpos = b.position[cdim];
-      return apos < bpos;
-    };
-    std::sort(particles, particles + n_particles, comp);
+    int dim = depth % UNIVERSE_NDIM;
+    static auto compX = [] (const Particle& a, const Particle& b) {return a.position.x < b.position.x;};
+    static auto compY = [] (const Particle& a, const Particle& b) {return a.position.y < b.position.y;};
+    static auto compZ = [] (const Particle& a, const Particle& b) {return a.position.z < b.position.z;};
+    if (dim == 0)      std::sort(particles, particles + n_particles, compX);
+    else if (dim == 1) std::sort(particles, particles + n_particles, compY);
+    else if (dim == 2) std::sort(particles, particles + n_particles, compZ);
   };
 };
 
