@@ -14,6 +14,7 @@ module paratreet {
   include "Decomposition.h";
   PUPable SfcDecomposition;
   PUPable OctDecomposition;
+  PUPable KdDecomposition;
 
   readonly CProxy_Reader readers;
   readonly CProxy_TreeSpec treespec;

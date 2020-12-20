@@ -173,19 +173,14 @@ void Partition<Data>::perturb(TPHolder<Data> tp_holder, Real timestep, bool if_f
 
   if (if_flush) {
     flush(readers);
-    return;
   }
-
-  std::map<int, std::vector<Particle>> out_particles;
-  auto && splitters = treespec_subtrees.ckLocalBranch()->getDecomposition()->getSplitters();
-  CkAssert(!splitters.empty());
-  for (auto& particle : particles) {
-    int bucket = Utility::binarySearchG(particle.key, &splitters[0], 0, splitters.size()) - 1;
-    out_particles[bucket].push_back(particle);
-  }
-  for (auto it = out_particles.begin(); it != out_particles.end(); it++) {
-    ParticleMsg* msg = new (it->second.size()) ParticleMsg (it->second.data(), it->second.size());
-    tp_holder.proxy[it->first].receive(msg);
+  else {
+    auto sendParticles = [&](int dest, int n_particles, Particle* particles) {
+      ParticleMsg* msg = new (n_particles) ParticleMsg(particles, n_particles);
+      tp_holder.proxy[dest].receive(msg);
+    };
+    std::sort(particles.begin(), particles.end());
+    treespec_subtrees.ckLocalBranch()->getDecomposition()->flush(particles, sendParticles);
   }
 }
 

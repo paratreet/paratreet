@@ -6,15 +6,16 @@
 #include "BufferedVec.h"
 #include "Reader.h"
 
-int SfcDecomposition::flush(int n_total_particles, int n_partitions, const SendParticlesFn &fn,
-                            std::vector<Particle> &particles) {
+int SfcDecomposition::flush(std::vector<Particle> &particles, const SendParticlesFn &fn) {
   int flush_count = 0;
-  int particle_idx = Utility::binarySearchGE(
-    splitters[0].from, particles.data(), 0, particles.size()
+  std::function<bool(const Particle&, Key)> compGE = [] (const Particle& a, Key b) {return a.key >= b;};
+  std::function<bool(const Particle&, Key)> compG  = [] (const Particle& a, Key b) {return a.key > b;};
+  int particle_idx = Utility::binarySearchComp(
+    splitters[0].from, particles.data(), 0, particles.size(), compGE
     );
   for (int i = 0; i < splitters.size(); ++i) {
-    int end = Utility::binarySearchG(
-      splitters[i].to, particles.data(), particle_idx, particles.size()
+    int end = Utility::binarySearchComp(
+      splitters[i].to, particles.data(), particle_idx, particles.size(), compG
       );
     int n_particles = end - particle_idx;
     flush_count += n_particles;
@@ -57,7 +58,7 @@ int SfcDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &reader
 
   int decomp_particle_sum = 0;
 
-  Real threshold = DECOMP_TOLERANCE * Real(config.max_particles_per_tp);
+  Real threshold = config.decomp_tolerance * Real(config.max_particles_per_tp);
   for (int i = 0; i * threshold < keys.size(); ++i) {
     Key from = keys[(int)(i * threshold)];
     Key to;
@@ -95,14 +96,15 @@ int SfcDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &reader
 
 std::vector<Splitter> SfcDecomposition::getSplitters() { return splitters; }
 
-void SfcDecomposition::alignSplitters(Decomposition *decomp)
+void SfcDecomposition::alignSplitters(SfcDecomposition *decomp)
 {
   std::vector<Splitter> target_splitters = decomp->getSplitters();
   splitters[0].from = target_splitters[0].from;
   int target_idx = 1;
+  std::function<bool(const Splitter&, Key)> compGE = [] (const Splitter& a, Key b) {return a.from >= b;};
   for (int i = 1; i < splitters.size(); ++i) {
-    target_idx = Utility::binarySearchGE(
-      splitters[i], target_splitters.data(), target_idx, target_splitters.size()
+    target_idx = Utility::binarySearchComp(
+      splitters[i].from, target_splitters.data(), target_idx, target_splitters.size(), compGE
       );
     if (splitters[i].from == target_splitters[i].from) { // splitter is already aligned
       if (target_idx < target_splitters.size()) ++target_idx;
@@ -124,7 +126,7 @@ void SfcDecomposition::pup(PUP::er& p) {
   p | splitters;
 }
 
-int SfcDecomposition::getTpKey(int idx) {
+Key SfcDecomposition::getTpKey(int idx) {
   return splitters[idx].tp_key;
 }
 
@@ -133,17 +135,17 @@ int OctDecomposition::getNumExpectedParticles(int n_total_particles, int n_parti
   return splitters[tp_index].n_particles;
 }
 
-int OctDecomposition::flush(int n_total_particles, int n_partitions, const SendParticlesFn &fn,
-                            std::vector<Particle> &particles) {
+int OctDecomposition::flush(std::vector<Particle> &particles, const SendParticlesFn &fn) {
   // OCT decomposition
   int flush_count = 0;
   int start = 0;
   int finish = particles.size();
 
   // Find particles that belong to each splitter range and flush them
+  std::function<bool(const Particle&, Key)> compGE = [] (const Particle& a, Key b) {return a.key >= b;};
   for (int i = 0; i < splitters.size(); i++) {
-    int begin = Utility::binarySearchGE(splitters[i].from, &particles[0], start, finish);
-    int end = Utility::binarySearchGE(splitters[i].to, &particles[0], begin, finish);
+    int begin = Utility::binarySearchComp(splitters[i].from, &particles[0], start, finish, compGE);
+    int end = Utility::binarySearchComp(splitters[i].to, &particles[0], begin, finish, compGE);
 
     int n_particles = end - begin;
 
@@ -185,7 +187,7 @@ int OctDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &reader
     int n_counts = msg->getSize() / sizeof(int);
 
     // Check counts and create splitters if necessary
-    Real threshold = (DECOMP_TOLERANCE * Real(config.max_particles_per_tp));
+    Real threshold = (config.decomp_tolerance * Real(config.max_particles_per_tp));
     for (int i = 0; i < n_counts; i++) {
       Key from = keys.get(2*i);
       Key to = keys.get(2*i+1);
@@ -237,4 +239,33 @@ int OctDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &reader
 
   // Return the number of TreePieces
   return splitters.size();
+}
+
+Key KdDecomposition::getTpKey(int idx) {
+  CkAbort("not implemented yet");
+  return 0;
+}
+
+int KdDecomposition::flush(std::vector<Particle> &particles, const SendParticlesFn &fn) {
+  CkAbort("not implemented yet");
+  return 0;
+}
+
+void KdDecomposition::assignKeys(BoundingBox &universe, std::vector<Particle> &particles) {
+  CkAbort("not implemented yet");
+}
+
+int KdDecomposition::getNumExpectedParticles(int n_total_particles, int n_partitions,
+                                              int tp_index) {
+  return 0;
+}
+
+int KdDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &readers, const paratreet::Configuration& config, int log_branch_factor) {
+  CkAbort("not implemented yet");
+  return 0;
+  // countSfc finds the keys of all particles
+}
+
+void KdDecomposition::pup(PUP::er& p) {
+  PUP::able::pup(p);
 }

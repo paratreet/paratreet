@@ -226,7 +226,7 @@ public:
       //End Subtree reduction message parsing
 
       Real max_universe_box_dimension = 0;
-      for (int dim = 0; dim < UNIVERSE_NDIM; dim ++){
+      for (int dim = 0; dim < NDIM; dim ++){
         Real length = universe.box.greater_corner[dim] - universe.box.lesser_corner[dim];
         if (length > max_universe_box_dimension)
           max_universe_box_dimension = length;

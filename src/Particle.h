@@ -48,14 +48,6 @@ struct Particle {
   bool operator>(const Particle&) const;
   bool operator>=(const Particle&) const;
   bool operator<(const Particle&) const;
-  friend bool operator<=(const Particle&, const Key&);
-  friend bool operator>(const Particle&, const Key&);
-  friend bool operator>=(const Particle&, const Key&);
-  friend bool operator<(const Particle&, const Key&);
-  friend bool operator<=(const Key&, const Particle&);
-  friend bool operator>(const Key&, const Particle&);
-  friend bool operator>=(const Key&, const Particle&);
-  friend bool operator<(const Key&, const Particle&);
 };
 
 #endif // PARATREET_PARTICLE_H_

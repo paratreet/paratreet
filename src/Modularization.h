@@ -9,8 +9,31 @@ class Tree {
 public:
   virtual ~Tree() = default;
   virtual int getBranchFactor() = 0;
-  virtual void buildCanopy(int tp_index, const SendProxyFn &fn) = 0;
+  virtual void buildCanopy(int tp_index, const SendProxyFn &fn);
+  virtual void prepParticles(Particle* particles, size_t n_particles, Key parent_key, size_t log_branch_factor) {};
+  virtual int findChildsLastParticle(const Particle* particles, int start, int finish, Key child_key, size_t log_branch_factor) = 0;
 };
+
+class KdTree : public Tree {
+public:
+  virtual ~KdTree() = default;
+  virtual int getBranchFactor() override {return 2;}
+  virtual int findChildsLastParticle(const Particle* particles, int start, int finish, Key child_key, size_t log_branch_factor) override {
+    return (start + finish) / 2; // might be +1
+  }
+  virtual void prepParticles(Particle* particles, size_t n_particles, Key parent_key, size_t log_branch_factor) override {
+    // sort by key
+    int depth = Utility::getDepthFromKey(parent_key, log_branch_factor);
+    int dim = depth % NDIM;
+    static auto compX = [] (const Particle& a, const Particle& b) {return a.position.x < b.position.x;};
+    static auto compY = [] (const Particle& a, const Particle& b) {return a.position.y < b.position.y;};
+    static auto compZ = [] (const Particle& a, const Particle& b) {return a.position.z < b.position.z;};
+    if (dim == 0)      std::sort(particles, particles + n_particles, compX);
+    else if (dim == 1) std::sort(particles, particles + n_particles, compY);
+    else if (dim == 2) std::sort(particles, particles + n_particles, compZ);
+  };
+};
+
 
 class OctTree : public Tree {
 public:
@@ -19,19 +42,12 @@ public:
     return 8;
   }
 
-  void buildCanopy(int tp_index, const SendProxyFn &fn) override;
-
   // Returns start + n_particles
-  template<typename Data>
-  static int findChildsLastParticle(Node<Data>* parent, int child, Key child_key, int start, int finish, size_t log_branch_factor) {
+  virtual int findChildsLastParticle(const Particle* particles, int start, int finish, Key child_key, size_t log_branch_factor) override {
     Key sibling_splitter = Utility::removeLeadingZeros(child_key + 1, log_branch_factor);
-
+    std::function<bool(const Particle&, Key)> compGE = [] (const Particle& a, Key b) {return a.key >= b;};
     // Find number of particles in child
-    if (child < parent->n_children - 1) {
-      return Utility::binarySearchGE(sibling_splitter, parent->particles(), start, finish);
-    } else {
-      return finish;
-    }
+    return Utility::binarySearchComp(sibling_splitter, particles, start, finish, compGE);
   }
 };
 
