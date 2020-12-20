@@ -8,8 +8,8 @@
 
 int SfcDecomposition::flush(std::vector<Particle> &particles, const SendParticlesFn &fn) {
   int flush_count = 0;
-  std::function<bool(const Particle&, Key)> compGE = [this] (const Particle& a, Key b) {return a.key >= b;};
-  std::function<bool(const Particle&, Key)> compG  = [this] (const Particle& a, Key b) {return a.key > b;};
+  std::function<bool(const Particle&, Key)> compGE = [] (const Particle& a, Key b) {return a.key >= b;};
+  std::function<bool(const Particle&, Key)> compG  = [] (const Particle& a, Key b) {return a.key > b;};
   int particle_idx = Utility::binarySearchComp(
     splitters[0].from, particles.data(), 0, particles.size(), compGE
     );
@@ -101,7 +101,7 @@ void SfcDecomposition::alignSplitters(SfcDecomposition *decomp)
   std::vector<Splitter> target_splitters = decomp->getSplitters();
   splitters[0].from = target_splitters[0].from;
   int target_idx = 1;
-  std::function<bool(const Splitter&, Key)> compGE = [this] (const Splitter& a, Key b) {return a.from >= b;};
+  std::function<bool(const Splitter&, Key)> compGE = [] (const Splitter& a, Key b) {return a.from >= b;};
   for (int i = 1; i < splitters.size(); ++i) {
     target_idx = Utility::binarySearchComp(
       splitters[i].from, target_splitters.data(), target_idx, target_splitters.size(), compGE
@@ -142,7 +142,7 @@ int OctDecomposition::flush(std::vector<Particle> &particles, const SendParticle
   int finish = particles.size();
 
   // Find particles that belong to each splitter range and flush them
-  std::function<bool(const Particle&, Key)> compGE = [this] (const Particle& a, Key b) {return a.key >= b;};
+  std::function<bool(const Particle&, Key)> compGE = [] (const Particle& a, Key b) {return a.key >= b;};
   for (int i = 0; i < splitters.size(); i++) {
     int begin = Utility::binarySearchComp(splitters[i].from, &particles[0], start, finish, compGE);
     int end = Utility::binarySearchComp(splitters[i].to, &particles[0], begin, finish, compGE);

@@ -11,17 +11,17 @@ class CProxy_Subtree;
 
 namespace paratreet {
     enum class DecompType {
-      eOct,
+      eOct = 0,
       eSfc,
       eKd,
-      Unknown = 100
+      eInvalid = 100
     };
 
     enum class TreeType {
-      eOct,
+      eOct = 0,
       eOctBinary,
       eKd,
-      Unknown = 100
+      eInvalid = 100
     };
 
     struct Configuration {
@@ -67,7 +67,7 @@ namespace paratreet {
         case TreeType::eKd:
           return "KdTree";
         default:
-          return "UnknownTreeType";
+          return "InvalidTreeType";
       }
     }
 
@@ -80,7 +80,7 @@ namespace paratreet {
         case DecompType::eKd:
           return "KdDecomp";
         default:
-         return "UnknownDecompType";
+         return "InvalidDecompType";
       }
     }
 
@@ -92,7 +92,7 @@ namespace paratreet {
         case TreeType::eKd:
           return DecompType::eKd;
         default:
-          return DecompType::Unknown;
+          return DecompType::eInvalid;
       }
     }
 
