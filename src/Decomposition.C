@@ -96,7 +96,7 @@ int SfcDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &reader
 
 std::vector<Splitter> SfcDecomposition::getSplitters() { return splitters; }
 
-void SfcDecomposition::alignSplitters(Decomposition *decomp)
+void SfcDecomposition::alignSplitters(SfcDecomposition *decomp)
 {
   std::vector<Splitter> target_splitters = decomp->getSplitters();
   splitters[0].from = target_splitters[0].from;

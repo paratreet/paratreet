@@ -25,7 +25,10 @@ public:
     // sort by key
     int depth = Utility::getDepthFromKey(parent_key, log_branch_factor);
     int cdim = depth % UNIVERSE_NDIM;
-    auto comp = [cdim] (const Particle& a, const Particle& b) {return a.position[cdim] < b.position[cdim];};
+    auto comp = [cdim] (const Particle& a, const Particle& b) {
+      const Real apos = a.position[cdim], bpos = b.position[cdim];
+      return apos < bpos;
+    };
     std::sort(particles, particles + n_particles, comp);
   };
 };

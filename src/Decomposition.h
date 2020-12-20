@@ -30,11 +30,7 @@ struct Decomposition: public PUP::able {
 
   virtual int findSplitters(BoundingBox &universe, CProxy_Reader &readers, const paratreet::Configuration& config, int log_branch_factor) = 0;
 
-  virtual void alignSplitters(Decomposition *) = 0;
-
   virtual int getTpKey(int idx) = 0;
-
-  virtual std::vector<Splitter> getSplitters() = 0;
 
   std::vector<Key> getAllTpKeys(int n_partitions) {
     std::vector<Key> tp_keys (n_partitions);
@@ -52,13 +48,13 @@ struct SfcDecomposition : public Decomposition {
   SfcDecomposition(CkMigrateMessage *m) : Decomposition(m) { }
 
   int getTpKey(int idx) override;
-
   int flush(std::vector<Particle> &particles, const SendParticlesFn &fn) override;
   void assignKeys(BoundingBox &universe, std::vector<Particle> &particles) override;
   int getNumExpectedParticles(int n_total_particles, int n_partitions, int tp_index) override;
   int findSplitters(BoundingBox &universe, CProxy_Reader &readers, const paratreet::Configuration& config, int log_branch_factor) override;
-  void alignSplitters(Decomposition *) override;
-  std::vector<Splitter> getSplitters() override;
+
+  void alignSplitters(SfcDecomposition *);
+  std::vector<Splitter> getSplitters();
   virtual void pup(PUP::er& p) override;
 
 protected:
