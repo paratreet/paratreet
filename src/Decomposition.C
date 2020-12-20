@@ -6,8 +6,7 @@
 #include "BufferedVec.h"
 #include "Reader.h"
 
-int SfcDecomposition::flush(int n_total_particles, int n_partitions, const SendParticlesFn &fn,
-                            std::vector<Particle> &particles) {
+int SfcDecomposition::flush(std::vector<Particle> &particles, const SendParticlesFn &fn) {
   int flush_count = 0;
   std::function<bool(const Particle&, Key)> compGE = [this] (const Particle& a, Key b) {return a.key >= b;};
   std::function<bool(const Particle&, Key)> compG  = [this] (const Particle& a, Key b) {return a.key > b;};
@@ -136,8 +135,7 @@ int OctDecomposition::getNumExpectedParticles(int n_total_particles, int n_parti
   return splitters[tp_index].n_particles;
 }
 
-int OctDecomposition::flush(int n_total_particles, int n_partitions, const SendParticlesFn &fn,
-                            std::vector<Particle> &particles) {
+int OctDecomposition::flush(std::vector<Particle> &particles, const SendParticlesFn &fn) {
   // OCT decomposition
   int flush_count = 0;
   int start = 0;

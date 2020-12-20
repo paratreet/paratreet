@@ -75,8 +75,7 @@ void Reader::flush(int n_total_particles, int n_subtrees,
     subtrees[dest].receive(msg);
   };
 
-  int flush_count = treespec_subtrees.ckLocalBranch()->getDecomposition()->
-    flush(n_total_particles, n_subtrees, sendParticles, particles);
+  int flush_count = treespec_subtrees.ckLocalBranch()->getDecomposition()->flush(particles, sendParticles);
   if (flush_count != particles.size()) {
     CkPrintf("Reader %d failure: flushed %d out of %zu particles\n", thisIndex,
         flush_count, particles.size());
@@ -100,8 +99,7 @@ void Reader::assignPartitions(int n_total_particles, int n_partitions, CProxy_Pa
       partitions[dest].receive(msg);
     };
   std::sort(particles.begin(), particles.end());
-  int flush_count = treespec.ckLocalBranch()->getDecomposition()->
-    flush(n_total_particles, n_partitions, sendParticles, particles);
+  int flush_count = treespec.ckLocalBranch()->getDecomposition()->flush(particles, sendParticles);
   if (flush_count != particles.size()) {
     CkPrintf("Reader %d failure: flushed %d out of %zu particles\n", thisIndex,
         flush_count, particles.size());
