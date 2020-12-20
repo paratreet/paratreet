@@ -3,7 +3,7 @@
 
 extern CProxy_TreeSpec treespec_subtrees;
 
-void OctTree::buildCanopy(int tp_index, const SendProxyFn &fn) {
+void Tree::buildCanopy(int tp_index, const SendProxyFn &fn) {
     Key tp_key = treespec_subtrees.ckLocalBranch()->getDecomposition()->getTpKey(tp_index);
     Key temp_key = tp_key;
     fn(tp_key, tp_index);

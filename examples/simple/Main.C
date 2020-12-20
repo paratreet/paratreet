@@ -88,6 +88,10 @@ class Main : public CBase_Main {
           else if (input_str.compare("sfc") == 0) {
             conf.decomp_type = SFC_DECOMP;
           }
+          else if (input_str.compare("kd") == 0) {
+            conf.decomp_type = KD_DECOMP;
+            conf.tree_type = KD_TREE;
+          }
           break;
         case 't':
           input_str = optarg;
@@ -96,6 +100,10 @@ class Main : public CBase_Main {
           }
           else if (input_str.compare("bin") == 0) {
             conf.tree_type = BINARY_TREE;
+          }
+          else if (input_str.compare("kd") == 0) {
+            conf.tree_type = KD_TREE;
+            conf.decomp_type = KD_DECOMP;
           }
           break;
         case 'i':
@@ -121,8 +129,8 @@ class Main : public CBase_Main {
           CkPrintf("\t-n [number of treepieces]\n");
           CkPrintf("\t-p [maximum number of particles per treepiece]\n");
           CkPrintf("\t-l [maximum number of particles per leaf]\n");
-          CkPrintf("\t-d [decomposition type: oct, sfc]\n");
-          CkPrintf("\t-t [tree type: oct]\n");
+          CkPrintf("\t-d [decomposition type: oct, sfc, kd]\n");
+          CkPrintf("\t-t [tree type: oct, bin, kd]\n");
           CkPrintf("\t-i [number of iterations]\n");
           CkPrintf("\t-s [number of shared tree levels]\n");
           CkPrintf("\t-u [flush period]\n");
@@ -136,8 +144,8 @@ class Main : public CBase_Main {
     CkPrintf("\n[PARATREET]\n");
     if (conf.input_file.empty()) CkAbort("Input file unspecified");
     CkPrintf("Input file: %s\n", conf.input_file.c_str());
-    CkPrintf("Decomposition type: %s\n", (conf.decomp_type == OCT_DECOMP) ? "OCT" : "SFC");
-    CkPrintf("Tree type: %s\n", (conf.tree_type == OCT_TREE) ? "OCT" : "BIN");
+    CkPrintf("Decomposition type: %s\n", (conf.decomp_type == OCT_DECOMP) ? "OCT" : ((conf.decomp_type == KD_TREE) ? "KD" :"SFC"));
+    CkPrintf("Tree type: %s\n", (conf.tree_type == OCT_TREE) ? "OCT" : ((conf.tree_type == KD_TREE) ? "KD" : "BIN"));
     CkPrintf("Maximum number of particles per treepiece: %d\n", conf.max_particles_per_tp);
     CkPrintf("Maximum number of particles per leaf: %d\n\n", conf.max_particles_per_leaf);
 

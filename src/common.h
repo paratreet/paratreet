@@ -22,10 +22,12 @@ typedef double Real;
 // Decomposition types
 #define OCT_DECOMP 10
 #define SFC_DECOMP 11
+#define KD_DECOMP 12
 
 // Tree types
 #define OCT_TREE 20
 #define BINARY_TREE 21
+#define KD_TREE 22
 
 // Hyperparameters
 #define LOCAL_CACHE_SIZE 5000

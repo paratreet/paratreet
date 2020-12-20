@@ -214,6 +214,7 @@ void Subtree<Data>::recursiveBuild(Node<Data>* node, Particle* node_particles, s
   // store reference to splitters
   //static std::vector<Splitter>& splitters = readers.ckLocalBranch()->splitters;
   auto config = treespec.ckLocalBranch()->getConfiguration();
+  auto tree   = treespec.ckLocalBranch()->getTree();
   bool is_light = (node->n_particles <= ceil(BUCKET_TOLERANCE * config.max_particles_per_leaf));
 
   // we can stop going deeper if node is light
@@ -237,8 +238,12 @@ void Subtree<Data>::recursiveBuild(Node<Data>* node, Particle* node_particles, s
   int start = 0;
   int finish = start + node->n_particles;
 
+  tree->prepParticles(node_particles, node->n_particles, node->key, log_branch_factor);
   for (int i = 0; i < node->n_children; i++) {
-    int first_ge_idx = OctTree::findChildsLastParticle(node, i, child_key, start, finish, log_branch_factor);
+    int first_ge_idx = finish;
+    if (i < node->n_children - 1) {
+      first_ge_idx = tree->findChildsLastParticle(node_particles, start, finish, child_key, log_branch_factor);
+    }
     int n_particles = first_ge_idx - start;
 
     // Create child and store in vector
