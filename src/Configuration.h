@@ -10,12 +10,26 @@ template<typename T>
 class CProxy_Subtree;
 
 namespace paratreet {
+    enum class DecompType {
+      eOct,
+      eSfc,
+      eKd,
+      Unknown = 100
+    };
+
+    enum class TreeType {
+      eOct,
+      eOctBinary,
+      eKd,
+      Unknown = 100
+    };
+
     struct Configuration {
         double decomp_tolerance;
         int max_particles_per_tp; // For OCT decomposition
         int max_particles_per_leaf; // For local tree build
-        int decomp_type;
-        int tree_type;
+        DecompType decomp_type;
+        TreeType tree_type;
         int num_iterations;
         int num_share_nodes;
         int cache_share_depth;
@@ -43,6 +57,45 @@ namespace paratreet {
         }
 #endif //__CHARMC__
     };
+
+    static std::string asString(TreeType t) {
+      switch (t) {
+        case TreeType::eOct:
+          return "Octree";
+        case TreeType::eOctBinary:
+          return "OctBinaryTree";
+        case TreeType::eKd:
+          return "KdTree";
+        default:
+          return "UnknownTreeType";
+      }
+    }
+
+    static std::string asString(DecompType t) {
+      switch (t) {
+        case DecompType::eOct:
+          return "OctDecomp";
+        case DecompType::eSfc:
+          return "SfcDecomp";
+        case DecompType::eKd:
+          return "KdDecomp";
+        default:
+         return "UnknownDecompType";
+      }
+    }
+
+    static DecompType subtreeDecompForTree(TreeType t) {
+      switch (t) {
+        case TreeType::eOct:
+        case TreeType::eOctBinary:
+          return DecompType::eOct;
+        case TreeType::eKd:
+          return DecompType::eKd;
+        default:
+          return DecompType::Unknown;
+      }
+    }
+
 }
 
 #include "paratreet.decl.h"

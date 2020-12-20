@@ -88,7 +88,7 @@ struct KdDecomposition : public Decomposition {
   int getNumExpectedParticles(int n_total_particles, int n_partitions, int tp_index) override;
   int findSplitters(BoundingBox &universe, CProxy_Reader &readers, const paratreet::Configuration& config, int log_branch_factor) override;
 
-  //virtual void pup(PUP::er& p) override;
+  virtual void pup(PUP::er& p) override;
 };
 
 

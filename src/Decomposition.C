@@ -266,6 +266,6 @@ int KdDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &readers
   // countSfc finds the keys of all particles
 }
 
-//void KdDecomposition::pup(PUP::er& p) {
- // PUP::able::pup(p);
-//}
+void KdDecomposition::pup(PUP::er& p) {
+  PUP::able::pup(p);
+}

@@ -48,8 +48,8 @@ class Main : public CBase_Main {
     conf.decomp_tolerance = 0.1;
     conf.max_particles_per_tp = 1000;
     conf.max_particles_per_leaf = 10;
-    conf.decomp_type = OCT_DECOMP;
-    conf.tree_type = OCT_TREE;
+    conf.decomp_type = paratreet::DecompType::eOct;
+    conf.tree_type = paratreet::TreeType::eOct;
     conf.num_iterations = 3;
     conf.num_share_nodes = 0; // 3;
     conf.cache_share_depth= 3;
@@ -83,27 +83,25 @@ class Main : public CBase_Main {
         case 'd':
           input_str = optarg;
           if (input_str.compare("oct") == 0) {
-            conf.decomp_type = OCT_DECOMP;
+            conf.decomp_type = paratreet::DecompType::eOct;
           }
           else if (input_str.compare("sfc") == 0) {
-            conf.decomp_type = SFC_DECOMP;
+            conf.decomp_type = paratreet::DecompType::eSfc;
           }
           else if (input_str.compare("kd") == 0) {
-            conf.decomp_type = KD_DECOMP;
-            conf.tree_type = KD_TREE;
+            conf.decomp_type = paratreet::DecompType::eKd;
           }
           break;
         case 't':
           input_str = optarg;
           if (input_str.compare("oct") == 0) {
-            conf.tree_type = OCT_TREE;
+            conf.tree_type = paratreet::TreeType::eOct;
           }
           else if (input_str.compare("bin") == 0) {
-            conf.tree_type = BINARY_TREE;
+            conf.tree_type = paratreet::TreeType::eOctBinary;
           }
           else if (input_str.compare("kd") == 0) {
-            conf.tree_type = KD_TREE;
-            conf.decomp_type = KD_DECOMP;
+            conf.tree_type = paratreet::TreeType::eKd;
           }
           break;
         case 'i':
@@ -144,8 +142,8 @@ class Main : public CBase_Main {
     CkPrintf("\n[PARATREET]\n");
     if (conf.input_file.empty()) CkAbort("Input file unspecified");
     CkPrintf("Input file: %s\n", conf.input_file.c_str());
-    CkPrintf("Decomposition type: %s\n", (conf.decomp_type == OCT_DECOMP) ? "OCT" : ((conf.decomp_type == KD_TREE) ? "KD" :"SFC"));
-    CkPrintf("Tree type: %s\n", (conf.tree_type == OCT_TREE) ? "OCT" : ((conf.tree_type == KD_TREE) ? "KD" : "BIN"));
+    CkPrintf("Decomposition type: %s\n", paratreet::asString(conf.decomp_type).c_str());
+    CkPrintf("Tree type: %s\n", paratreet::asString(conf.tree_type).c_str());
     CkPrintf("Maximum number of particles per treepiece: %d\n", conf.max_particles_per_tp);
     CkPrintf("Maximum number of particles per leaf: %d\n\n", conf.max_particles_per_leaf);
 

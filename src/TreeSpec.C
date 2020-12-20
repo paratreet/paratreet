@@ -12,11 +12,11 @@ void TreeSpec::receiveDecomposition(const CkCallback& cb, Decomposition* d) {
 
 Decomposition* TreeSpec::getDecomposition() {
   if (!decomp) {
-    if (config.decomp_type == OCT_DECOMP) {
+    if (config.decomp_type == paratreet::DecompType::eOct) {
       decomp.reset(new OctDecomposition());
-    } else if (config.decomp_type == SFC_DECOMP) {
+    } else if (config.decomp_type == paratreet::DecompType::eSfc) {
       decomp.reset(new SfcDecomposition());
-    } else if (config.decomp_type == KD_DECOMP) {
+    } else if (config.decomp_type == paratreet::DecompType::eKd) {
       decomp.reset(new KdDecomposition());
     }
   }
@@ -26,11 +26,11 @@ Decomposition* TreeSpec::getDecomposition() {
 
 Tree* TreeSpec::getTree() {
   if (!tree) {
-    if (config.tree_type == OCT_TREE) {
+    if (config.tree_type == paratreet::TreeType::eOct) {
       tree.reset(new OctTree());
-    } else if (config.tree_type == BINARY_TREE) {
+    } else if (config.tree_type == paratreet::TreeType::eOctBinary) {
       tree.reset(new BinaryTree());
-    } else if (config.tree_type == KD_TREE) {
+    } else if (config.tree_type == paratreet::TreeType::eKd) {
       tree.reset(new KdTree());
     }
   }

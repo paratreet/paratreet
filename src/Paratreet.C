@@ -28,7 +28,7 @@ namespace paratreet {
         readers = CProxy_Reader::ckNew();
         treespec = CProxy_TreeSpec::ckNew(conf);
         auto conf_subtrees = conf;
-        conf_subtrees.decomp_type = (conf.tree_type == KD_TREE) ? KD_DECOMP : OCT_DECOMP;
+        conf_subtrees.decomp_type = subtreeDecompForTree(conf.tree_type);
         treespec_subtrees = CProxy_TreeSpec::ckNew(conf_subtrees);
 
         // Create centroid data related chares
