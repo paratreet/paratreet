@@ -22,7 +22,7 @@ common.h: $(STRUCTURE_PATH)/Vector3D.h $(STRUCTURE_PATH)/SFC.h Utility.h
 CacheManager.h: paratreet.decl.h
 
 %.o: %.C %.h paratreet.decl.h
-	$(CHARMC) -c $<
+	$(CHARMC) -module CommonLBs -c $<
 
 clean:
 	rm -f *.decl.h *.def.h conv-host *.o libparatreet.a charmrun

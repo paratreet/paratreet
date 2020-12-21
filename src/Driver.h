@@ -235,6 +235,7 @@ public:
       updated_timestep_size = max_universe_box_dimension / max_velocity;
       if (updated_timestep_size > config.timestep_size) updated_timestep_size = config.timestep_size;
       partitions.perturb(subtrees, updated_timestep_size, complete_rebuild); // 0.1s for example
+      subtrees.pauseForLB();
       CkWaitQD();
       CkPrintf("Perturbations: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
 

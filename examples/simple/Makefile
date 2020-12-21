@@ -15,7 +15,7 @@ $(BINARY).decl.h: $(BINARY).ci
 	$(CHARMC) $<
 
 $(BINARY): $(BINARY).decl.h $(OBJS)
-	$(CHARMC) -language charm++ -o $(BINARY) $(OBJS) $(LD_LIBS)
+	$(CHARMC) -language charm++ -module CommonLBs -o $(BINARY) $(OBJS) $(LD_LIBS)
 
 Main.o: Main.C
 	$(CHARMC) -c $<

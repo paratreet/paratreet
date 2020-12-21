@@ -58,6 +58,14 @@ public:
   void output(CProxy_Writer w, CkCallback cb);
   void pup(PUP::er& p);
   void collectMetaData(Real timestep, const CkCallback & cb);
+  void pauseForLB(){
+    CkPrintf("[ST %d]  pause for LB on PE %d\n", this->thisIndex, CkMyPe());
+    this->AtSync();
+  }
+  void ResumeFromSync(){
+    CkPrintf("[ST %d]  resume from sync for LB on PE %d\n", this->thisIndex, CkMyPe());
+    return;
+  };
 
   // For debugging
   void checkParticlesChanged(const CkCallback& cb) {
@@ -82,6 +90,7 @@ Subtree<Data>::Subtree(const CkCallback& cb, int n_total_particles_,
                        int n_subtrees_, int n_partitions_, TCHolder<Data> tc_holder,
                        CProxy_Resumer<Data> r_proxy_,
                        CProxy_CacheManager<Data> cm_proxy_, DPHolder<Data> dp_holder) {
+  this->usesAtSync = true;
   n_total_particles = n_total_particles_;
   n_subtrees = n_subtrees_;
   n_partitions = n_partitions_;
@@ -114,6 +123,7 @@ void Subtree<Data>::pup(PUP::er& p) {
   p | tp_key;
   p | tc_proxy;
   p | cm_proxy;
+  p | incoming_particles;
 }
 
 template <typename Data>
