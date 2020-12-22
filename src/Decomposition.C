@@ -42,9 +42,8 @@ int SfcDecomposition::getNumExpectedParticles(int n_total_particles, int n_parti
 }
 
 int SfcDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &readers, const paratreet::Configuration& config, int log_branch_factor) {
-  // countSfc finds the keys of all particles
   CkReductionMsg *msg;
-  readers.countSfc(CkCallbackResumeThread((void*&)msg));
+  readers.getAllSfcKeys(CkCallbackResumeThread((void*&)msg));
   std::vector<Key> keys;
   CkReduction::setElement *elem = (CkReduction::setElement *)msg->getData();
   while (elem != NULL) {
@@ -269,9 +268,8 @@ int KdDecomposition::getNumExpectedParticles(int n_total_particles, int n_partit
 }
 
 int KdDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &readers, const paratreet::Configuration& config, int log_branch_factor) {
-  // countKd finds the positions of all particles
   CkReductionMsg *msg;
-  readers.countKd(CkCallbackResumeThread((void*&)msg));
+  readers.getAllPositions(CkCallbackResumeThread((void*&)msg));
   std::vector<Vector3D<Real>> positions;
   CkReduction::setElement *elem = (CkReduction::setElement *)msg->getData();
   while (elem != NULL) {

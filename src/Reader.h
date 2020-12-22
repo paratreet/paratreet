@@ -36,8 +36,8 @@ class Reader : public CBase_Reader {
     void countOct(std::vector<Key>, size_t, const CkCallback&);
 
     // SFC decomposition
-    void countSfc(const CkCallback& cb);
-    void countKd(const CkCallback& cb);
+    void getAllSfcKeys(const CkCallback& cb);
+    void getAllPositions(const CkCallback& cb);
     //void countSfc(const std::vector<Key>&, const CkCallback&);
     void pickSamples(const int, const CkCallback&);
     void prepMessages(const std::vector<Key>&, const CkCallback&);

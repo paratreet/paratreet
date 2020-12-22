@@ -150,7 +150,7 @@ void Reader::countOct(std::vector<Key> splitter_keys, size_t log_branch_factor, 
   contribute(sizeof(int) * counts.size(), &counts[0], CkReduction::sum_int, cb);
 }
 
-void Reader::countSfc(const CkCallback& cb)
+void Reader::getAllSfcKeys(const CkCallback& cb)
 {
   std::vector<Key> keys;
   for (const auto& p : particles)
@@ -159,7 +159,7 @@ void Reader::countSfc(const CkCallback& cb)
   contribute(keys.size() * sizeof(Key), &keys[0], CkReduction::set, cb);
 }
 
-void Reader::countKd(const CkCallback& cb)
+void Reader::getAllPositions(const CkCallback& cb)
 {
   std::vector<Vector3D<Real>> positions;
   for (const auto& p : particles)
