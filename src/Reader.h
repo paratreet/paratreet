@@ -36,7 +36,8 @@ class Reader : public CBase_Reader {
     void countOct(std::vector<Key>, size_t, const CkCallback&);
 
     // SFC decomposition
-    void countSfc(const CkCallback& cb);
+    void getAllSfcKeys(const CkCallback& cb);
+    void getAllPositions(const CkCallback& cb);
     //void countSfc(const std::vector<Key>&, const CkCallback&);
     void pickSamples(const int, const CkCallback&);
     void prepMessages(const std::vector<Key>&, const CkCallback&);
@@ -51,7 +52,7 @@ class Reader : public CBase_Reader {
     template <typename Data>
     void flush(int, int, CProxy_Subtree<Data>);
     template <typename Data>
-    void assign_partitions(int, int, CProxy_Partition<Data>);
+    void assignPartitions(int, int, CProxy_Partition<Data>);
 };
 
 template <typename Data>
@@ -75,8 +76,7 @@ void Reader::flush(int n_total_particles, int n_subtrees,
     subtrees[dest].receive(msg);
   };
 
-  int flush_count = treespec_subtrees.ckLocalBranch()->getDecomposition()->
-    flush(n_total_particles, n_subtrees, sendParticles, particles);
+  int flush_count = treespec_subtrees.ckLocalBranch()->getDecomposition()->flush(particles, sendParticles);
   if (flush_count != particles.size()) {
     CkPrintf("Reader %d failure: flushed %d out of %zu particles\n", thisIndex,
         flush_count, particles.size());
@@ -89,7 +89,7 @@ void Reader::flush(int n_total_particles, int n_subtrees,
 }
 
 template <typename Data>
-void Reader::assign_partitions(int n_total_particles, int n_partitions, CProxy_Partition<Data> partitions)
+void Reader::assignPartitions(int n_total_particles, int n_partitions, CProxy_Partition<Data> partitions)
 {
   auto sendParticles =
     [&](int dest, int n_particles, Particle* particles) {
@@ -99,9 +99,7 @@ void Reader::assign_partitions(int n_total_particles, int n_partitions, CProxy_P
       ParticleMsg* msg = new (n_particles) ParticleMsg(particles, n_particles);
       partitions[dest].receive(msg);
     };
-  std::sort(particles.begin(), particles.end());
-  int flush_count = treespec.ckLocalBranch()->getDecomposition()->
-    flush(n_total_particles, n_partitions, sendParticles, particles);
+  int flush_count = treespec.ckLocalBranch()->getDecomposition()->flush(particles, sendParticles);
   if (flush_count != particles.size()) {
     CkPrintf("Reader %d failure: flushed %d out of %zu particles\n", thisIndex,
         flush_count, particles.size());

@@ -15,13 +15,11 @@ extern CProxy_Reader readers;
 
 template <typename Data>
 struct Partition : public CBase_Partition<Data> {
-  std::vector<Particle> particles;
-  std::vector<Node<Data>*> leaves;
+  std::vector<Particle> particles, incoming_particles;
+  std::vector<std::unique_ptr<Node<Data>>> leaves;
 
-  Traverser<Data> *traverser;
+  std::unique_ptr<Traverser<Data>> traverser;
   int n_partitions;
-
-  int received_part_index = 0;
 
   // filled in during traversal
   std::vector<std::vector<Node<Data>*>> interactions;
@@ -59,7 +57,6 @@ Partition<Data>::Partition(
   tc_proxy = tc_holder.proxy;
   r_proxy = rp;
   cm_proxy = cm;
-  received_part_index = 0;
   initLocalBranches();
 }
 
@@ -77,10 +74,9 @@ template <typename Data>
 template <typename Visitor>
 void Partition<Data>::startDown()
 {
-  received_part_index = 0; // reset
   initLocalBranches();
   interactions.resize(leaves.size());
-  traverser = new DownTraverser<Data, Visitor>(*this);
+  traverser.reset(new DownTraverser<Data, Visitor>(*this));
   traverser->start();
 }
 
@@ -101,16 +97,15 @@ template <typename Data>
 void Partition<Data>::receiveLeaves(
   std::vector<NodeWrapper> data, std::vector<Key> all_particle_keys, int subtree_idx)
 {
+  particles.reserve(incoming_particles.size());
+  std::function<bool(const Particle&, Key)> compGE = [] (const Particle& a, Key b) {return a.key >= b;};
+  std::sort(incoming_particles.begin(), incoming_particles.end());
+  int received_part_index = particles.size();
   for (int i = 0; i < all_particle_keys.size(); i++) {
-    bool found = false;
-    for (int j = received_part_index + i; j < particles.size(); j++) {
-      if (particles[j].key == all_particle_keys[i]) {
-        std::swap(particles[received_part_index + i], particles[j]);
-        found = true;
-        break;
-      }
-    }
-    if (!found) CkAbort("couldnt find particle key");
+    int particle_idx = Utility::binarySearchComp(all_particle_keys[i],
+      incoming_particles.data(), 0, incoming_particles.size(), compGE);
+    if (particle_idx == incoming_particles.size()) CkAbort("couldnt find particle key");
+    else particles.push_back(incoming_particles[particle_idx]);
   }
   for (const NodeWrapper& leaf : data) {
     Node<Data> *node = treespec.ckLocalBranch()->template makeNode<Data>(
@@ -120,7 +115,7 @@ void Partition<Data>::receiveLeaves(
     received_part_index += leaf.n_particles;
     node->type = Node<Data>::Type::Leaf;
     node->data = Data(node->particles(), node->n_particles);
-    leaves.push_back(node);
+    leaves.emplace_back(node);
   }
   cm_local->num_buckets += leaves.size();
 }
@@ -128,10 +123,9 @@ void Partition<Data>::receiveLeaves(
 template <typename Data>
 void Partition<Data>::receive(ParticleMsg *msg)
 {
-  particles.insert(particles.end(),
+  incoming_particles.insert(incoming_particles.end(),
                    msg->particles, msg->particles + msg->n_particles);
   delete msg;
-  std::sort(particles.begin(), particles.end());
 }
 
 template <typename Data>
@@ -145,6 +139,8 @@ void Partition<Data>::destroy()
 template <typename Data>
 void Partition<Data>::reset()
 {
+  incoming_particles = std::move(particles);
+  traverser.reset();
   leaves.clear();
   interactions.clear();
 }
@@ -158,7 +154,6 @@ void Partition<Data>::pup(PUP::er& p)
   p | cm_proxy;
   p | r_proxy;
   if (p.isUnpacking()) {
-    received_part_index = 0;
     initLocalBranches();
   }
 }
@@ -172,19 +167,13 @@ void Partition<Data>::perturb(TPHolder<Data> tp_holder, Real timestep, bool if_f
 
   if (if_flush) {
     flush(readers);
-    return;
   }
-
-  std::map<int, std::vector<Particle>> out_particles;
-  auto && splitters = treespec_subtrees.ckLocalBranch()->getDecomposition()->getSplitters();
-  CkAssert(!splitters.empty());
-  for (auto& particle : particles) {
-    int bucket = Utility::binarySearchG(particle.key, &splitters[0], 0, splitters.size()) - 1;
-    out_particles[bucket].push_back(particle);
-  }
-  for (auto it = out_particles.begin(); it != out_particles.end(); it++) {
-    ParticleMsg* msg = new (it->second.size()) ParticleMsg (it->second.data(), it->second.size());
-    tp_holder.proxy[it->first].receive(msg);
+  else {
+    auto sendParticles = [&](int dest, int n_particles, Particle* particles) {
+      ParticleMsg* msg = new (n_particles) ParticleMsg(particles, n_particles);
+      tp_holder.proxy[dest].receive(msg);
+    };
+    treespec_subtrees.ckLocalBranch()->getDecomposition()->flush(particles, sendParticles);
   }
 }
 

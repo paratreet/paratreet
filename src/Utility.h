@@ -31,6 +31,26 @@ class Utility {
   }
 
   template<typename KEY_TYPE, typename OBJ_TYPE>
+  static int binarySearchComp(const KEY_TYPE &check, const OBJ_TYPE* numbers, int start, int end, std::function<bool(const OBJ_TYPE&, KEY_TYPE)> comp) {
+    int lo = start;
+    int hi = end;
+    int mid;
+
+    while (lo < hi) {
+      mid = lo + ((hi - lo) >> 1);
+      if (comp(numbers[mid],check)) {
+        hi = mid;
+      }
+      else {
+        lo = mid + 1;
+      }
+    }
+
+    return lo;
+  }
+
+
+  template<typename KEY_TYPE, typename OBJ_TYPE>
   static int binarySearchG(const KEY_TYPE &check, const OBJ_TYPE* numbers, int start, int end) {
     int lo = start;
     int hi = end;

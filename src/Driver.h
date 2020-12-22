@@ -14,13 +14,7 @@
 #include "BoundingBox.h"
 #include "BufferedVec.h"
 #include "Utility.h"
-#include "DensityVisitor.h"
-#include "GravityVisitor.h"
-#include "PressureVisitor.h"
-#include "CollisionVisitor.h"
-#include "CountVisitor.h"
 #include "CacheManager.h"
-#include "CountManager.h"
 #include "Resumer.h"
 #include "Modularization.h"
 #include "Node.h"
@@ -33,9 +27,9 @@ extern CProxy_TreeSpec treespec_subtrees;
 extern CProxy_TreeCanopy<CentroidData> centroid_calculator;
 extern CProxy_CacheManager<CentroidData> centroid_cache;
 extern CProxy_Resumer<CentroidData> centroid_resumer;
-extern CProxy_CountManager count_manager;
 
 namespace paratreet {
+  extern void preTraversalFn(CProxy_Driver<CentroidData>&, CProxy_CacheManager<CentroidData>& cache);
   extern void traversalFn(BoundingBox&,CProxy_Partition<CentroidData>&,int);
   extern void postInteractionsFn(BoundingBox&,CProxy_Partition<CentroidData>&,int);
 }
@@ -54,6 +48,8 @@ public:
   int n_subtrees;
   int n_partitions;
   double start_time;
+  Real max_velocity;
+  Real updated_timestep_size = 0.1;
 
   Driver(CProxy_CacheManager<Data> cache_manager_) :
     cache_manager(cache_manager_), storage_sorted(false) {}
@@ -149,7 +145,7 @@ public:
     // Flush decomposed particles to home Subtrees and Partitions
     // TODO Separate decomposition for Subtrees and Partitions
     start_time = CkWallTimer();
-    readers.assign_partitions(universe.n_particles, n_partitions, partitions);
+    readers.assignPartitions(universe.n_particles, n_partitions, partitions);
     CkStartQD(CkCallbackResumeThread());
     CkPrintf("Assigning particles to Partitions: %.3lf ms\n",
         (CkWallTimer() - start_time) * 1000);
@@ -182,17 +178,13 @@ public:
       // Prefetch into cache
       start_time = CkWallTimer();
       // use exactly one of these three commands to load the software cache
-      //centroid_cache.startParentPrefetch(this->thisProxy, CkCallback::ignore); // MUST USE FOR UPND TRAVS
-      //centroid_cache.template startPrefetch<GravityVisitor>(this->thisProxy, CkCallback::ignore);
-      this->thisProxy.loadCache(CkCallbackResumeThread());
+      paratreet::preTraversalFn(this->thisProxy, centroid_cache);
       CkWaitQD();
       CkPrintf("TreeCanopy cache loading: %.3lf ms\n",
           (CkWallTimer() - start_time) * 1000);
 
       // Perform traversals
       start_time = CkWallTimer();
-      //treepieces.template startUpAndDown<DensityVisitor>();
-      //treepieces.template startDown<GravityVisitor>();
       paratreet::traversalFn(universe, partitions, iter);
       CkWaitQD();
 #if DELAYLOCAL
@@ -204,7 +196,6 @@ public:
       start_time = CkWallTimer();
       partitions.interact(CkCallbackResumeThread());
       CkPrintf("Interactions: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
-      //count_manager.sum(CkCallback(CkReductionTarget(Main, terminate), this->thisProxy));
 
       // Call user's post-interaction function, which may for example:
       // Output particle accelerations for verification
@@ -213,8 +204,37 @@ public:
 
       // Move the particles in Partitions
       start_time = CkWallTimer();
-      bool complete_rebuild = (iter % config.flush_period == config.flush_period - 1);
-      partitions.perturb(subtrees, config.timestep_size, complete_rebuild); // 0.1s for example
+
+      // Meta data collections
+      CkReductionMsg * msg;
+      subtrees.collectMetaData(updated_timestep_size, CkCallbackResumeThread((void *&) msg));
+      CkWaitQD();
+       // Parse Subtree reduction message
+      int numRedn = 0;
+      CkReduction::tupleElement* res = NULL;
+      msg->toTuple(&res, &numRedn);
+      max_velocity = *(Real*)(res[0].data); // avoid max_velocity = 0.0
+      int maxParticlesSize = *(int*)(res[1].data);
+      int sumParticlesSize = *(int*)(res[2].data);
+      float avgTPSize = (float) sumParticlesSize / (float) n_subtrees;
+      float ratio = (float) maxParticlesSize / avgTPSize;
+
+      bool complete_rebuild = (config.flush_max_avg_ratio != 0?
+          (ratio > config.flush_max_avg_ratio) : // use flush_max_avg_ratio when it is not 0
+          (iter % config.flush_period == config.flush_period - 1)) ;
+      CkPrintf("[Meta] n_subtree = %d; timestep_size = %f; maxSubtreeSize = %d; sumSubtreeSize = %d; avgSubtreeSize = %f; ratio = %f; maxVelocity = %f; rebuild = %s\n", n_subtrees, updated_timestep_size, maxParticlesSize,sumParticlesSize, avgTPSize, ratio, max_velocity, (complete_rebuild? "yes" : "no"));
+      //End Subtree reduction message parsing
+
+      Real max_universe_box_dimension = 0;
+      for (int dim = 0; dim < NDIM; dim ++){
+        Real length = universe.box.greater_corner[dim] - universe.box.lesser_corner[dim];
+        if (length > max_universe_box_dimension)
+          max_universe_box_dimension = length;
+      }
+
+      updated_timestep_size = max_universe_box_dimension / max_velocity;
+      if (updated_timestep_size > config.timestep_size) updated_timestep_size = config.timestep_size;
+      partitions.perturb(subtrees, updated_timestep_size, complete_rebuild); // 0.1s for example
       CkWaitQD();
       CkPrintf("Perturbations: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
 
@@ -232,7 +252,10 @@ public:
 
       // Clear cache and other storages used in this iteration
       centroid_cache.destroy(true);
-      centroid_resumer.destroy();
+#if COUNT_INTERACTIONS
+      CkCallback statsCb (CkReductionTarget(Driver<Data>, countInts), this->thisProxy);
+      centroid_resumer.collectAndResetStats(statsCb);
+#endif
       storage.clear();
       storage_sorted = false;
       CkWaitQD();

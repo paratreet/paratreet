@@ -22,6 +22,7 @@
 extern CProxy_TreeSpec treespec_subtrees;
 extern CProxy_TreeSpec treespec;
 extern CProxy_Reader readers;
+#define META_TUPLE_SIZE 3
 
 template <typename Data>
 class Subtree : public CBase_Subtree<Data> {
@@ -56,6 +57,7 @@ public:
   void reset();
   void output(CProxy_Writer w, CkCallback cb);
   void pup(PUP::er& p);
+  void collectMetaData(Real timestep, const CkCallback & cb);
 
   // For debugging
   void checkParticlesChanged(const CkCallback& cb) {
@@ -127,6 +129,27 @@ void Subtree<Data>::receive(ParticleMsg* msg) {
 }
 
 template <typename Data>
+void Subtree<Data>::collectMetaData (Real timestep, const CkCallback & cb) {
+  Real maxVelocity = 0.0;
+  int particlesSize = particles.size();
+
+  for (auto& particle : particles){
+    if (particle.velocity.length() > maxVelocity)
+      maxVelocity = particle.velocity.length();
+  }
+
+  CkReduction::tupleElement tupleRedn[] = {
+    CkReduction::tupleElement(sizeof(Real), &maxVelocity, CkReduction::max_float),
+    CkReduction::tupleElement(sizeof(int), &particlesSize, CkReduction::max_int),
+    CkReduction::tupleElement(sizeof(int), &particlesSize, CkReduction::sum_int),
+  };
+
+  CkReductionMsg * msg = CkReductionMsg::buildFromTuple(tupleRedn, META_TUPLE_SIZE);
+  msg->setCallback(cb);
+  this->contribute(msg);
+};
+
+template <typename Data>
 void Subtree<Data>::sendLeaves(CProxy_Partition<Data> part)
 {
   std::map<int, std::set<Node<Data>*>> part_idx_to_leaf;
@@ -191,7 +214,8 @@ void Subtree<Data>::recursiveBuild(Node<Data>* node, Particle* node_particles, s
   // store reference to splitters
   //static std::vector<Splitter>& splitters = readers.ckLocalBranch()->splitters;
   auto config = treespec.ckLocalBranch()->getConfiguration();
-  bool is_light = (node->n_particles <= ceil(BUCKET_TOLERANCE * config.max_particles_per_leaf));
+  auto tree   = treespec.ckLocalBranch()->getTree();
+  bool is_light = (node->n_particles <= config.max_particles_per_leaf);
 
   // we can stop going deeper if node is light
   if (is_light) {
@@ -214,8 +238,12 @@ void Subtree<Data>::recursiveBuild(Node<Data>* node, Particle* node_particles, s
   int start = 0;
   int finish = start + node->n_particles;
 
+  tree->prepParticles(node_particles, node->n_particles, node->key, log_branch_factor);
   for (int i = 0; i < node->n_children; i++) {
-    int first_ge_idx = OctTree::findChildsLastParticle(node, i, child_key, start, finish, log_branch_factor);
+    int first_ge_idx = finish;
+    if (i < node->n_children - 1) {
+      first_ge_idx = tree->findChildsLastParticle(node_particles, start, finish, child_key, log_branch_factor);
+    }
     int n_particles = first_ge_idx - start;
 
     // Create child and store in vector

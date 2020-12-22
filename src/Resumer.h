@@ -7,37 +7,43 @@
 #include <unordered_map>
 #include <vector>
 
-extern CProxy_Driver<CentroidData> centroid_driver;
-
 template <typename Data>
 class Resumer : public CBase_Resumer<Data> {
-public:
+public: // these need to be seen by other local chares
   CProxy_Partition<Data> part_proxy;
   CacheManager<Data>* cm_local;
-  unsigned long long n_part_ints, n_node_ints, n_opens, n_closes;
   std::vector<std::queue<Node<Data>*>> resume_nodes_per_part;
   std::unordered_map<Key, std::vector<int>> waiting;
 
-  void destroy() {
+private: // stats
+  unsigned long long n_part_ints = 0ull;
+  unsigned long long n_node_ints = 0ull;
+  unsigned long long n_opens     = 0ull;
+  unsigned long long n_closes    = 0ull;
+
+public:
+  void collectAndResetStats(CkCallback cb) {
+     unsigned long long intrn_counts [4] = {n_node_ints, n_part_ints, n_opens, n_closes};
+     this->contribute(4 * sizeof(unsigned long long), &intrn_counts, CkReduction::sum_ulong_long, cb);
+     reset();
+  }
+
+  void reset() {
 #if DEBUG
     for (auto && rnq : resume_nodes_per_part) {
       if (!rnq.empty()) CkAbort("did not complete last traversal");
     }
+    CkAssert(waiting.empty()); // should have gotten rid of them
 #endif
-#if COUNT_INTERACTIONS
-    unsigned long long intrn_counts [4] = {n_node_ints, n_part_ints, n_opens, n_closes};
-    CkCallback cb (CkReductionTarget(Driver<CentroidData>, countInts), centroid_driver);
-    this->contribute(4 * sizeof(unsigned long long), &intrn_counts, CkReduction::sum_ulong_long, cb);
-#endif
-    n_part_ints = n_node_ints = 0;
-    waiting.clear();
+    n_part_ints = n_node_ints = n_opens = n_closes = 0ull;
   }
 
-  Resumer() : n_part_ints(0), n_node_ints(0) {}
+  void countLeafInts(int n_ints) {
+    n_part_ints += n_ints;
+  }
 
-  void countInts(int n_ints) {
-    if (n_ints > 0 ) n_part_ints += n_ints;
-    else n_node_ints -= n_ints;
+  void countNodeInts(int n_ints) {
+    n_node_ints += n_ints;
   }
 
   void countOpen(bool should_open) {

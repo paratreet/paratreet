@@ -14,6 +14,7 @@ module paratreet {
   include "Decomposition.h";
   PUPable SfcDecomposition;
   PUPable OctDecomposition;
+  PUPable KdDecomposition;
 
   readonly CProxy_Reader readers;
   readonly CProxy_TreeSpec treespec;
@@ -22,7 +23,6 @@ module paratreet {
   readonly CProxy_TreeCanopy<CentroidData> centroid_calculator;
   readonly CProxy_CacheManager<CentroidData> centroid_cache;
   readonly CProxy_Resumer<CentroidData> centroid_resumer;
-  readonly CProxy_CountManager count_manager;
 
   message ParticleMsg {
     Particle particles[];
@@ -51,12 +51,10 @@ module paratreet {
   nodegroup CacheManager<CentroidData>;
 #endif
 
-  extern entry void CacheManager<CentroidData> startPrefetch<GravityVisitor>(DPHolder<CentroidData>, CkCallback); 
-
   template <typename Data>
   group Resumer {
     entry Resumer();
-    entry void destroy();
+    entry void collectAndResetStats(CkCallback cb);
     entry [expedited] void process(Key);
   };
   group Resumer<CentroidData>;
@@ -83,29 +81,17 @@ module paratreet {
   }
   array [1d] Partition<CentroidData>;
 
-  extern entry void Partition<CentroidData> startDown<GravityVisitor> ();
-  extern entry void Partition<CentroidData> startDown<CollisionVisitor> ();
-  /* extern entry void Subtree<CentroidData> startDown<GravityVisitor> (); */
-  /* extern entry void Subtree<CentroidData> startDual<GravityVisitor> (); */
-  /* extern entry void Subtree<CentroidData> startUpAndDown<DensityVisitor> (); */
-  /* extern entry void Subtree<CentroidData> startDown<PressureVisitor> (); */
-  /* extern entry void Subtree<CentroidData> startDual<CountVisitor> (); */
-
   template <typename Data>
   array [1d] Subtree {
     entry Subtree(const CkCallback&, int, int, int, TCHolder<Data>, CProxy_Resumer<Data>, CProxy_CacheManager<Data>, DPHolder<Data>);
     entry void receive(ParticleMsg*);
     entry void buildTree();
-    /* template<typename Visitor> entry void startDown(); */
-    /* template<typename Visitor> entry void startUpAndDown(); */
-    /* template<typename Visitor> entry void startDual(); */
-    /* entry void interact(const CkCallback&); */
-    /* entry void goDown(Key); */
     entry void requestNodes(Key, int);
     entry void destroy();
     entry void reset();
     entry void sendLeaves(CProxy_Partition<Data>);
     entry void checkParticlesChanged(const CkCallback&);
+    entry void collectMetaData(Real timestep, const CkCallback & cb);
   }
   array [1d] Subtree<CentroidData>;
 
@@ -132,7 +118,6 @@ module paratreet {
     entry void request(Key request_list [list_size], int list_size, int, CkCallback);
   }
   chare Driver<CentroidData>;
-  extern entry void Driver<CentroidData> prefetch<GravityVisitor> (CentroidData, int, CkCallback);
 
   group Reader {
     entry Reader();
@@ -142,7 +127,8 @@ module paratreet {
     template <typename Data>
     entry void request(CProxy_Subtree<Data>, int, int);
     entry void countOct(std::vector<Key>, size_t, const CkCallback&);
-    entry void countSfc(const CkCallback&);
+    entry void getAllSfcKeys(const CkCallback&);
+    entry void getAllPositions(const CkCallback&);
     entry void pickSamples(const int, const CkCallback&);
     entry void prepMessages(const std::vector<Key>&, const CkCallback&);
     entry void redistribute();
@@ -152,7 +138,7 @@ module paratreet {
     template <typename Data>
     entry void flush(int, int, CProxy_Subtree<Data>);
     template <typename Data>
-    entry void assign_partitions(int, int, CProxy_Partition<Data>);
+    entry void assignPartitions(int, int, CProxy_Partition<Data>);
   };
 
   group TreeSpec {
@@ -168,10 +154,6 @@ module paratreet {
 
   extern entry void Reader request<CentroidData>(CProxy_Subtree<CentroidData>, int, int);
   extern entry void Reader flush<CentroidData>(int, int, CProxy_Subtree<CentroidData>);
-  extern entry void Reader assign_partitions<CentroidData>(int, int, CProxy_Partition<CentroidData>);
+  extern entry void Reader assignPartitions<CentroidData>(int, int, CProxy_Partition<CentroidData>);
 
-  group CountManager {
-    entry CountManager(double min, double max, int nbins);
-    entry void sum(const CkCallback&);
-  }
 };

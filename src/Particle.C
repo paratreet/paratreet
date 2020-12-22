@@ -50,35 +50,3 @@ bool Particle::operator>=(const Particle& other) const {
 bool Particle::operator<(const Particle& other) const {
   return !(*this >= other);
 }
-
-bool operator<=(const Particle& p, const Key& k) {
-  return p.key <= k;
-}
-
-bool operator>(const Particle& p, const Key& k) {
-  return !(p <= k);
-}
-
-bool operator>=(const Particle& p, const Key& k) {
-  return p.key >= k;
-}
-
-bool operator<(const Particle& p, const Key& k) {
-  return !(p >= k);
-}
-
-bool operator<=(const Key& k, const Particle& p) {
-  return p >= k;
-}
-
-bool operator>(const Key& k, const Particle& p) {
-  return p < k;
-}
-
-bool operator>=(const Key& k, const Particle& p) {
-  return p <= k;
-}
-
-bool operator<(const Key& k, const Particle& p) {
-  return p > k;
-}

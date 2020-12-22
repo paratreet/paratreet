@@ -31,8 +31,12 @@ struct Particle {
     position += (velocity * timestep);
     position += (acceleration * timestep * timestep / 2);
     for (int dim = 0; dim < 3; dim++) {
-      if (position[dim] < universe.lesser_corner[dim]) position[dim] += universe.greater_corner[dim] - universe.lesser_corner[dim];
-      else if (position[dim] > universe.greater_corner[dim]) position[dim] -= universe.greater_corner[dim] - universe.lesser_corner[dim];
+      while (position[dim] < universe.lesser_corner[dim]) {
+        position[dim] += universe.greater_corner[dim] - universe.lesser_corner[dim];
+      }
+      while (position[dim] > universe.greater_corner[dim]) {
+        position[dim] -= universe.greater_corner[dim] - universe.lesser_corner[dim];
+      }
     }
     velocity += (acceleration * timestep);
     key = SFC::generateKey(position, universe);
@@ -44,14 +48,6 @@ struct Particle {
   bool operator>(const Particle&) const;
   bool operator>=(const Particle&) const;
   bool operator<(const Particle&) const;
-  friend bool operator<=(const Particle&, const Key&);
-  friend bool operator>(const Particle&, const Key&);
-  friend bool operator>=(const Particle&, const Key&);
-  friend bool operator<(const Particle&, const Key&);
-  friend bool operator<=(const Key&, const Particle&);
-  friend bool operator>(const Key&, const Particle&);
-  friend bool operator>=(const Key&, const Particle&);
-  friend bool operator<(const Key&, const Particle&);
 };
 
 #endif // PARATREET_PARTICLE_H_

@@ -6,6 +6,10 @@ CHARMC = $(CHARM_HOME)/bin/charmc $(OPTS)
 OBJS = Paratreet.o Reader.o Writer.o Particle.o BoundingBox.o Decomposition.o Modularization.o TreeSpec.o
 TIPSY_OBJS = NChilReader.o SS.o TipsyFile.o TipsyReader.o hilbert.o
 
+UTILITY_HEADERS = common.h Utility.h $(STRUCTURE_PATH)/Vector3D.h $(STRUCTURE_PATH)/SFC.h
+CORE_HEADERS = BoundingBox.h BufferedVec.h CentroidData.h MultiData.h Node.h NodeWrapper.h ParticleComp.h ParticleMsg.h Splitter.h
+IMPL_HEADERS = CacheManager.h Configuration.h Driver.h Partition.h Reader.h Resumer.h Splitter.h Subtree.h Traverser.h TreeCanopy.h
+
 all: lib
 
 lib: $(OBJS)
@@ -17,9 +21,8 @@ lib: $(OBJS)
 paratreet.decl.h: paratreet.ci
 	$(CHARMC) $<
 
-common.h: $(STRUCTURE_PATH)/Vector3D.h $(STRUCTURE_PATH)/SFC.h Utility.h
-
-CacheManager.h: paratreet.decl.h
+Paratreet.o: $(UTILITY_HEADERS) $(CORE_HEADERS) $(IMPL_HEADERS) paratreet.decl.h
+	$(CHARMC) -c Paratreet.C
 
 %.o: %.C %.h paratreet.decl.h
 	$(CHARMC) -c $<
