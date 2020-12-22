@@ -131,7 +131,6 @@ void Partition<Data>::receive(ParticleMsg *msg)
   particles.insert(particles.end(),
                    msg->particles, msg->particles + msg->n_particles);
   delete msg;
-  std::sort(particles.begin(), particles.end());
 }
 
 template <typename Data>
@@ -179,7 +178,6 @@ void Partition<Data>::perturb(TPHolder<Data> tp_holder, Real timestep, bool if_f
       ParticleMsg* msg = new (n_particles) ParticleMsg(particles, n_particles);
       tp_holder.proxy[dest].receive(msg);
     };
-    std::sort(particles.begin(), particles.end());
     treespec_subtrees.ckLocalBranch()->getDecomposition()->flush(particles, sendParticles);
   }
 }

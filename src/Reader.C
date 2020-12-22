@@ -133,6 +133,7 @@ void Reader::countOct(std::vector<Key> splitter_keys, size_t log_branch_factor, 
   int finish = particles.size();
   Key from, to;
   std::function<bool(const Particle&, Key)> compGE = [] (const Particle& a, Key b) {return a.key >= b;};
+  std::sort(particles.begin(), particles.end());
   if (particles.size() > 0) {
     for (int i = 0; i < counts.size(); i++) {
       from = splitter_keys[2*i];
@@ -149,13 +150,22 @@ void Reader::countOct(std::vector<Key> splitter_keys, size_t log_branch_factor, 
   contribute(sizeof(int) * counts.size(), &counts[0], CkReduction::sum_int, cb);
 }
 
-void Reader::countSfc(const CkCallback& cb)
+void Reader::getAllSfcKeys(const CkCallback& cb)
 {
   std::vector<Key> keys;
   for (const auto& p : particles)
     keys.push_back(p.key);
 
   contribute(keys.size() * sizeof(Key), &keys[0], CkReduction::set, cb);
+}
+
+void Reader::getAllPositions(const CkCallback& cb)
+{
+  std::vector<Vector3D<Real>> positions;
+  for (const auto& p : particles)
+    positions.push_back(p.position);
+
+  contribute(positions.size() * sizeof(Vector3D<Real>), &positions[0], CkReduction::set, cb);
 }
 
 void Reader::pickSamples(const int oversampling_ratio, const CkCallback& cb) {

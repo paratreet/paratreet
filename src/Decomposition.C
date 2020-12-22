@@ -6,10 +6,19 @@
 #include "BufferedVec.h"
 #include "Reader.h"
 
+void Decomposition::assignKeys(BoundingBox &universe, std::vector<Particle> &particles) {
+  for (auto & particle : particles) {
+    particle.key = SFC::generateKey(particle.position, universe.box);
+    // Add placeholder bit
+    particle.key |= (Key)1 << (KEY_BITS-1);
+  }
+}
+
 int SfcDecomposition::flush(std::vector<Particle> &particles, const SendParticlesFn &fn) {
   int flush_count = 0;
   std::function<bool(const Particle&, Key)> compGE = [] (const Particle& a, Key b) {return a.key >= b;};
   std::function<bool(const Particle&, Key)> compG  = [] (const Particle& a, Key b) {return a.key > b;};
+  std::sort(particles.begin(), particles.end());
   int particle_idx = Utility::binarySearchComp(
     splitters[0].from, particles.data(), 0, particles.size(), compGE
     );
@@ -25,15 +34,6 @@ int SfcDecomposition::flush(std::vector<Particle> &particles, const SendParticle
   return flush_count;
 }
 
-void SfcDecomposition::assignKeys(BoundingBox &universe, std::vector<Particle> &particles) {
-  for (unsigned int i = 0; i < particles.size(); i++) {
-    particles[i].key = SFC::generateKey(particles[i].position, universe.box);
-    // Add placeholder bit
-    particles[i].key |= (Key)1 << (KEY_BITS-1);
-  }
-  std::sort(particles.begin(), particles.end());
-}
-
 int SfcDecomposition::getNumExpectedParticles(int n_total_particles, int n_partitions,
                                               int tp_index) {
   int n_expected = n_total_particles / n_partitions;
@@ -42,9 +42,8 @@ int SfcDecomposition::getNumExpectedParticles(int n_total_particles, int n_parti
 }
 
 int SfcDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &readers, const paratreet::Configuration& config, int log_branch_factor) {
-  // countSfc finds the keys of all particles
   CkReductionMsg *msg;
-  readers.countSfc(CkCallbackResumeThread((void*&)msg));
+  readers.getAllSfcKeys(CkCallbackResumeThread((void*&)msg));
   std::vector<Key> keys;
   CkReduction::setElement *elem = (CkReduction::setElement *)msg->getData();
   while (elem != NULL) {
@@ -53,7 +52,6 @@ int SfcDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &reader
     keys.insert(keys.end(), elemKeys, elemKeys + n_keys);
     elem = elem->next();
   }
-
   std::sort(keys.begin(), keys.end());
 
   int decomp_particle_sum = 0;
@@ -143,6 +141,7 @@ int OctDecomposition::flush(std::vector<Particle> &particles, const SendParticle
 
   // Find particles that belong to each splitter range and flush them
   std::function<bool(const Particle&, Key)> compGE = [] (const Particle& a, Key b) {return a.key >= b;};
+  std::sort(particles.begin(), particles.end());
   for (int i = 0; i < splitters.size(); i++) {
     int begin = Utility::binarySearchComp(splitters[i].from, &particles[0], start, finish, compGE);
     int end = Utility::binarySearchComp(splitters[i].to, &particles[0], begin, finish, compGE);
@@ -161,11 +160,6 @@ int OctDecomposition::flush(std::vector<Particle> &particles, const SendParticle
   return flush_count;
 }
 
-void OctDecomposition::assignKeys(BoundingBox &universe, std::vector<Particle> &particles) {
-  SfcDecomposition::assignKeys(universe, particles);
-  // Sort particles for decomposition
-  // std::sort(particles.begin(), particles.end());
-}
 
 int OctDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &readers, const paratreet::Configuration& config, int log_branch_factor) {
   BufferedVec<Key> keys;
@@ -242,30 +236,80 @@ int OctDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &reader
 }
 
 Key KdDecomposition::getTpKey(int idx) {
-  CkAbort("not implemented yet");
-  return 0;
+  return idx + (1 << depth);
 }
 
 int KdDecomposition::flush(std::vector<Particle> &particles, const SendParticlesFn &fn) {
-  CkAbort("not implemented yet");
-  return 0;
+  std::vector<std::vector<Particle>> out_particles (1 << depth);
+  for (auto && particle : particles) {
+    int index = 1;
+    for (int cdepth = 0; cdepth < depth; cdepth++) {
+      if (particle.position[cdepth % NDIM] > splitters[index]) {
+        index = index * 2 + 1;
+      }
+      else {
+        index = index * 2;
+      }
+    }
+    auto part_index = index - (1 << depth);
+    out_particles[part_index].push_back(particle);
+  }
+  particles.clear();
+  for (int idx = 0; idx < out_particles.size(); idx++) {
+    auto && out = out_particles[idx];
+    if (!out.empty()) fn(idx, out.size(), out.data());
+    particles.insert(particles.begin(), out.begin(), out.end());
+  }
+  return particles.size();
 }
 
-void KdDecomposition::assignKeys(BoundingBox &universe, std::vector<Particle> &particles) {
-  CkAbort("not implemented yet");
-}
-
-int KdDecomposition::getNumExpectedParticles(int n_total_particles, int n_partitions,
-                                              int tp_index) {
-  return 0;
+int KdDecomposition::getNumExpectedParticles(int n_total_particles, int n_partitions, int tp_index) {
+  return 0; // not implemented yet
 }
 
 int KdDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &readers, const paratreet::Configuration& config, int log_branch_factor) {
-  CkAbort("not implemented yet");
-  return 0;
-  // countSfc finds the keys of all particles
+  CkReductionMsg *msg;
+  readers.getAllPositions(CkCallbackResumeThread((void*&)msg));
+  std::vector<Vector3D<Real>> positions;
+  CkReduction::setElement *elem = (CkReduction::setElement *)msg->getData();
+  while (elem != NULL) {
+    Vector3D<Real> *elemPos = (Vector3D<Real> *)&elem->data;
+    int n_pos = elem->dataSize / sizeof(Vector3D<Real>);
+    positions.insert(positions.end(), elemPos, elemPos + n_pos);
+    elem = elem->next();
+  }
+
+  auto num_partitions = positions.size() / config.max_particles_per_tp;
+  std::vector<std::vector<Vector3D<Real>>> bins;
+  bins.emplace_back(positions);
+  splitters.push_back(0); // empty space for key=0
+  for (; (1 << depth) < num_partitions; depth++) {
+    decltype(bins) binsCopy;
+    for (auto && bin : bins) {
+      static auto compX = [] (const Vector3D<Real>& a, const Vector3D<Real>& b) {return a.x < b.x;};
+      static auto compY = [] (const Vector3D<Real>& a, const Vector3D<Real>& b) {return a.y < b.y;};
+      static auto compZ = [] (const Vector3D<Real>& a, const Vector3D<Real>& b) {return a.z < b.z;};
+      int dim = depth % NDIM;
+      if (dim == 0)      std::sort(bin.begin(), bin.end(), compX);
+      else if (dim == 1) std::sort(bin.begin(), bin.end(), compY);
+      else if (dim == 2) std::sort(bin.begin(), bin.end(), compZ);
+      size_t medianIndex = (bin.size() + 1) / 2;
+      auto median = bin[medianIndex][dim]; // not average?
+      splitters.push_back(median);
+      binsCopy.emplace_back();
+      auto && left = binsCopy.back();
+      left.insert(left.end(), bin.begin(), bin.begin() + medianIndex);
+      binsCopy.emplace_back();
+      auto && right = binsCopy.back();
+      right.insert(right.end(), bin.begin() + medianIndex, bin.end());
+    }
+    bins = std::move(binsCopy);
+  }
+  return (1 << depth);
 }
 
 void KdDecomposition::pup(PUP::er& p) {
   PUP::able::pup(p);
+  p | splitters;
+  p | depth;
 }

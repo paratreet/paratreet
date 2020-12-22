@@ -24,7 +24,7 @@ struct Decomposition: public PUP::able {
 
   virtual int flush(std::vector<Particle> &particles, const SendParticlesFn &fn) = 0;
 
-  virtual void assignKeys(BoundingBox &universe, std::vector<Particle> &particles) = 0;
+  virtual void assignKeys(BoundingBox &universe, std::vector<Particle> &particles);
 
   virtual int getNumExpectedParticles(int n_total_particles, int n_partitions, int tp_index) = 0;
 
@@ -50,7 +50,6 @@ struct SfcDecomposition : public Decomposition {
 
   Key getTpKey(int idx) override;
   int flush(std::vector<Particle> &particles, const SendParticlesFn &fn) override;
-  void assignKeys(BoundingBox &universe, std::vector<Particle> &particles) override;
   int getNumExpectedParticles(int n_total_particles, int n_partitions, int tp_index) override;
   int findSplitters(BoundingBox &universe, CProxy_Reader &readers, const paratreet::Configuration& config, int log_branch_factor) override;
 
@@ -70,7 +69,6 @@ struct OctDecomposition : public SfcDecomposition {
   virtual ~OctDecomposition() = default;
 
   int flush(std::vector<Particle> &particles, const SendParticlesFn &fn) override;
-  void assignKeys(BoundingBox &universe, std::vector<Particle> &particles) override;
   int getNumExpectedParticles(int n_total_particles, int n_partitions, int tp_index) override;
   int findSplitters(BoundingBox &universe, CProxy_Reader &readers, const paratreet::Configuration& config, int log_branch_factor) override;
 };
@@ -84,11 +82,15 @@ struct KdDecomposition : public Decomposition {
 
   Key getTpKey(int idx) override;
   int flush(std::vector<Particle> &particles, const SendParticlesFn &fn) override;
-  void assignKeys(BoundingBox &universe, std::vector<Particle> &particles) override;
   int getNumExpectedParticles(int n_total_particles, int n_partitions, int tp_index) override;
   int findSplitters(BoundingBox &universe, CProxy_Reader &readers, const paratreet::Configuration& config, int log_branch_factor) override;
 
   virtual void pup(PUP::er& p) override;
+
+private:
+  std::vector<Real> splitters;
+  size_t depth = 0;
+
 };
 
 
