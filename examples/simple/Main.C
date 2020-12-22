@@ -45,7 +45,6 @@ class Main : public CBase_Main {
     // Initialize readonly variables
     conf.input_file = "";
     conf.output_file = "";
-    conf.decomp_tolerance = 0.1;
     conf.max_particles_per_tp = 1000;
     conf.max_particles_per_leaf = 10;
     conf.decomp_type = paratreet::DecompType::eOct;

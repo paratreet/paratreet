@@ -50,3 +50,4 @@ jobs:
         ./charmrun +p1 ./Main -f ../../inputgen/1k.tipsy -p 100 ++local -u 2
         ./charmrun +p4 ./Main -f ../../inputgen/1k.tipsy -p 100 ++local -u 2
         ./charmrun +p4 ./Main -f ../../inputgen/1k.tipsy -p 100 ++local -d sfc -u 2
+        ./charmrun +p4 ./Main -f ../../inputgen/1k.tipsy -p 100 ++local -d kd -t kd -u 2

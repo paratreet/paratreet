@@ -25,7 +25,6 @@ namespace paratreet {
     };
 
     struct Configuration {
-        double decomp_tolerance;
         int max_particles_per_tp; // For OCT decomposition
         int max_particles_per_leaf; // For local tree build
         DecompType decomp_type;
@@ -41,7 +40,6 @@ namespace paratreet {
 #ifdef __CHARMC__
 #include "pup.h"
         void pup(PUP::er &p) {
-            p | decomp_tolerance;
             p | max_particles_per_tp;
             p | max_particles_per_leaf;
             p | decomp_type;

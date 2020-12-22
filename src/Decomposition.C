@@ -56,7 +56,7 @@ int SfcDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &reader
 
   int decomp_particle_sum = 0;
 
-  Real threshold = config.decomp_tolerance * Real(config.max_particles_per_tp);
+  auto threshold = config.max_particles_per_tp;
   for (int i = 0; i * threshold < keys.size(); ++i) {
     Key from = keys[(int)(i * threshold)];
     Key to;
@@ -181,7 +181,7 @@ int OctDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &reader
     int n_counts = msg->getSize() / sizeof(int);
 
     // Check counts and create splitters if necessary
-    Real threshold = (config.decomp_tolerance * Real(config.max_particles_per_tp));
+    auto threshold = config.max_particles_per_tp;
     for (int i = 0; i < n_counts; i++) {
       Key from = keys.get(2*i);
       Key to = keys.get(2*i+1);
