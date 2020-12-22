@@ -8,7 +8,7 @@ TIPSY_OBJS = NChilReader.o SS.o TipsyFile.o TipsyReader.o hilbert.o
 
 UTILITY_HEADERS = common.h Utility.h $(STRUCTURE_PATH)/Vector3D.h $(STRUCTURE_PATH)/SFC.h
 CORE_HEADERS = BoundingBox.h BufferedVec.h CentroidData.h MultiData.h Node.h NodeWrapper.h ParticleComp.h ParticleMsg.h Splitter.h
-IMPL_HEADERS = CacheManager.h Configuration.h Driver.h Partition.h Resumer.h Splitter.h Subtree.h Traverser.h TreeCanopy.h
+IMPL_HEADERS = CacheManager.h Configuration.h Driver.h Partition.h Reader.h Resumer.h Splitter.h Subtree.h Traverser.h TreeCanopy.h
 
 all: lib
 
