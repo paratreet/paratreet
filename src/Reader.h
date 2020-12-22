@@ -37,6 +37,7 @@ class Reader : public CBase_Reader {
 
     // SFC decomposition
     void countSfc(const CkCallback& cb);
+    void countKd(const CkCallback& cb);
     //void countSfc(const std::vector<Key>&, const CkCallback&);
     void pickSamples(const int, const CkCallback&);
     void prepMessages(const std::vector<Key>&, const CkCallback&);
@@ -98,7 +99,6 @@ void Reader::assignPartitions(int n_total_particles, int n_partitions, CProxy_Pa
       ParticleMsg* msg = new (n_particles) ParticleMsg(particles, n_particles);
       partitions[dest].receive(msg);
     };
-  std::sort(particles.begin(), particles.end());
   int flush_count = treespec.ckLocalBranch()->getDecomposition()->flush(particles, sendParticles);
   if (flush_count != particles.size()) {
     CkPrintf("Reader %d failure: flushed %d out of %zu particles\n", thisIndex,

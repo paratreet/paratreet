@@ -128,6 +128,7 @@ module paratreet {
     entry void request(CProxy_Subtree<Data>, int, int);
     entry void countOct(std::vector<Key>, size_t, const CkCallback&);
     entry void countSfc(const CkCallback&);
+    entry void countKd(const CkCallback&);
     entry void pickSamples(const int, const CkCallback&);
     entry void prepMessages(const std::vector<Key>&, const CkCallback&);
     entry void redistribute();
