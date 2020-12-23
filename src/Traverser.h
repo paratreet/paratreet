@@ -206,42 +206,41 @@ template <typename Data, typename Visitor>
 class UpnDTraverser : public DownTraverser<Data, Visitor>
 {
 private:
-  Subtree<Data>& tp;
+  Partition<Data>& tp;
   Node<Data>* trav_top = nullptr;
 public:
-  UpnDTraverser(Subtree<Data>& tpi)
+  UpnDTraverser(Partition<Data>& tpi)
     : tp(tpi), DownTraverser<Data, Visitor>(tpi, false) {
   }
   virtual ~UpnDTraverser() = default;
-  virtual void interact() override {
-    if (tp.thisIndex == 0) CkPrintf("no need to call interact()\n");
-  }
+  virtual void interact() override {}
 
   void start() override {
+    Key dca_key (1); // deepest common ancestor key
     if (tp.leaves.empty()) return;
-    for (auto leaf : tp.leaves) {
+    for (auto && leaf : tp.leaves) {
       std::stack<Node<Data>*> nodes;
-      nodes.push(leaf);
-      trav_top = leaf;
+      nodes.push(leaf.get());
+      trav_top = leaf.get();
       while (1) {
         while (!nodes.empty()) {
           Node<Data>* node = nodes.top();
           nodes.pop();
           if (node->type == Node<Data>::Type::Internal) {
-            if (doOpen<Visitor>(node, leaf, this->part.r_local)) {
+            if (doOpen<Visitor>(node, leaf.get(), this->part.r_local)) {
               for (int i = 0; i < node->n_children; i++) {
                 nodes.push(node->getChild(i));
               }
             }
-            else doNode<Visitor>(node, leaf, this->part.r_local);
+            else doNode<Visitor>(node, leaf.get(), this->part.r_local);
           }
           else if (node->type == Node<Data>::Type::Leaf) {
             if (Visitor::CallSelfLeaf || node->key != leaf->key) {
-              doLeaf<Visitor>(node, leaf, this->part.r_local);
+              doLeaf<Visitor>(node, leaf.get(), this->part.r_local);
             }
           }
         }
-        if (trav_top == tp.local_root) break;
+        if (trav_top->key == dca_key) break;
         for (int j = 0; j < trav_top->parent->n_children; j++) {
           auto child = trav_top->parent->getChild(j);
           if (child != trav_top) nodes.push(child);
@@ -263,7 +262,9 @@ public:
 private:
   void adjustTop() {
     if (this->isFinished() && trav_top->parent) {
-      std::cout << "TP " << tp.tp_key << " finished traversal with top " << trav_top->key << std::endl;
+#if DEBUG
+      CkPrintf("TP %d finished traversal with top %llu\n", tp.tp_key, trav_top->key);
+#endif
       for (int j = 0; j < trav_top->parent->n_children; j++) {
         Node<Data>* child = trav_top->parent->getChild(j);
         if (child == nullptr) {

@@ -33,6 +33,7 @@ struct Partition : public CBase_Partition<Data> {
   Partition(int, CProxy_CacheManager<Data>, CProxy_Resumer<Data>, TCHolder<Data>);
 
   template<typename Visitor> void startDown();
+  template<typename Visitor> void startUpAndDown();
   void goDown(Key);
   void interact(const CkCallback& cb);
 
@@ -77,6 +78,16 @@ void Partition<Data>::startDown()
   initLocalBranches();
   interactions.resize(leaves.size());
   traverser.reset(new DownTraverser<Data, Visitor>(*this));
+  traverser->start();
+}
+
+template <typename Data>
+template <typename Visitor>
+void Partition<Data>::startUpAndDown()
+{
+  initLocalBranches();
+  interactions.resize(leaves.size());
+  traverser.reset(new UpnDTraverser<Data, Visitor>(*this));
   traverser->start();
 }
 

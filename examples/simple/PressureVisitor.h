@@ -3,6 +3,7 @@
 
 #include "paratreet.decl.h"
 #include "common.h"
+#include "Space.h"
 #include <cmath>
 
 struct PressureVisitor {
