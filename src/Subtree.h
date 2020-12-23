@@ -307,7 +307,7 @@ void Subtree<Data>::initCache() {
 template <typename Data>
 void Subtree<Data>::requestNodes(Key key, int cm_index) {
   Node<Data>* node = local_root->getDescendant(key);
-  if (!node) CkPrintf("null found for key %llu on tp %d\n", key, this->thisIndex);
+  if (!node) CkPrintf("null found for key %lu on tp %d\n", key, this->thisIndex);
   cm_proxy.ckLocalBranch()->serviceRequest(node, cm_index);
 }
 
