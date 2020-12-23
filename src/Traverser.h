@@ -58,12 +58,12 @@ protected:
       if (node->type == Node<Data>::Type::Leaf || node->type == Node<Data>::Type::CachedRemoteLeaf) {
         part.interactions[leaf_index].push_back(node);
       } else {
-        if (doOpen<Visitor>(node, part.leaves[leaf_index].get()), part.r_local) {
+        if (doOpen<Visitor>(node, part.leaves[leaf_index]), part.r_local) {
           for (int j = 0; j < node->n_children; j++) {
             nodes.push(node->getChild(j));
           }
         } else {
-          doNode<Visitor>(node, part.leaves[leaf_index].get(), part.r_local);
+          doNode<Visitor>(node, part.leaves[leaf_index], part.r_local);
         }
       }
     }
@@ -74,7 +74,7 @@ protected:
   {
     for (int i = 0; i < part.interactions.size(); i++) {
       for (Node<Data>* source : part.interactions[i]) {
-        doLeaf<Visitor>(source, part.leaves[i].get(), part.r_local);
+        doLeaf<Visitor>(source, part.leaves[i], part.r_local);
       }
     }
   }
@@ -83,6 +83,7 @@ protected:
 template <typename Data, typename Visitor>
 class DownTraverser : public Traverser<Data> {
 protected:
+  std::vector<Node<Data>*> leaves;
   Partition<Data>& part;
   std::unordered_map<Key, std::vector<int>> curr_nodes;
   const bool delay_leaf;
@@ -93,13 +94,13 @@ public:
 protected:
   void startTrav(Node<Data>* new_payload) {
     std::vector<int> all_leaves;
-    for (int i = 0; i < part.leaves.size(); i++) all_leaves.push_back(i);
+    for (int i = 0; i < leaves.size(); i++) all_leaves.push_back(i);
     recurse(new_payload, all_leaves);
   }
 
 public:
-  DownTraverser(Partition<Data>& parti, bool delay_leafi = false)
-    : part(parti), delay_leaf(delay_leafi)
+  DownTraverser(std::vector<Node<Data>*> leavesi, Partition<Data>& parti, bool delay_leafi = false)
+    : leaves(leavesi), part(parti), delay_leaf(delay_leafi)
   { }
   virtual ~DownTraverser() = default;
   virtual void start() override {
@@ -110,7 +111,7 @@ public:
   void recurse(Node<Data>* node, std::vector<int>& active_buckets) {
     CkAssert(node);
     std::vector<int> new_active_buckets;
-    new_active_buckets.reserve(part.leaves.size());
+    new_active_buckets.reserve(leaves.size());
 #if DEBUG
     CkPrintf("tp %d, key = 0x%" PRIx64 ", type = %d, pe %d\n", part.thisIndex, node->key, node->type, CkMyPe());
 #endif
@@ -120,9 +121,9 @@ public:
         {
           // Store local and remote cached leaves for interactions
           for (auto bucket : active_buckets) {
-            if (Visitor::CallSelfLeaf || part.leaves[bucket]->key != node->key) {
+            if (Visitor::CallSelfLeaf || leaves[bucket]->key != node->key) {
               if (delay_leaf) part.interactions[bucket].push_back(node);
-              else doLeaf<Visitor>(node, part.leaves[bucket].get(), part.r_local);
+              else doLeaf<Visitor>(node, leaves[bucket], part.r_local);
             }
           }
           if (!delay_leaf) node->finish(active_buckets.size());
@@ -135,12 +136,12 @@ public:
           // Check if the opening condition is fulfilled
           // If so, need to go down deeper
           for (auto bucket : active_buckets) {
-            const bool should_open = doOpen<Visitor>(node, part.leaves[bucket].get(), part.r_local);
+            const bool should_open = doOpen<Visitor>(node, leaves[bucket], part.r_local);
             if (should_open) {
               new_active_buckets.push_back(bucket);
             } else {
               // maybe delay as an interaction
-              doNode<Visitor>(node, part.leaves[bucket].get(), part.r_local);
+              doNode<Visitor>(node, leaves[bucket], part.r_local);
             }
           }
           node->finish(active_buckets.size() - new_active_buckets.size());
@@ -206,37 +207,37 @@ template <typename Data, typename Visitor>
 class UpnDTraverser : public DownTraverser<Data, Visitor>
 {
 private:
-  Partition<Data>& tp;
+  std::vector<Node<Data>*> leaves;
   Node<Data>* trav_top = nullptr;
 public:
-  UpnDTraverser(Partition<Data>& tpi)
-    : tp(tpi), DownTraverser<Data, Visitor>(tpi, false) {
+  UpnDTraverser(Partition<Data>& parti)
+    : DownTraverser<Data, Visitor>(parti.leaves, parti, false) {
   }
   virtual ~UpnDTraverser() = default;
   virtual void interact() override {}
 
   void start() override {
     Key dca_key (1); // deepest common ancestor key
-    if (tp.leaves.empty()) return;
-    for (auto && leaf : tp.leaves) {
+    if (leaves.empty()) return;
+    for (auto && leaf : leaves) {
       std::stack<Node<Data>*> nodes;
-      nodes.push(leaf.get());
-      trav_top = leaf.get();
+      nodes.push(leaf);
+      trav_top = leaf;
       while (1) {
         while (!nodes.empty()) {
           Node<Data>* node = nodes.top();
           nodes.pop();
           if (node->type == Node<Data>::Type::Internal) {
-            if (doOpen<Visitor>(node, leaf.get(), this->part.r_local)) {
+            if (doOpen<Visitor>(node, leaf, this->part.r_local)) {
               for (int i = 0; i < node->n_children; i++) {
                 nodes.push(node->getChild(i));
               }
             }
-            else doNode<Visitor>(node, leaf.get(), this->part.r_local);
+            else doNode<Visitor>(node, leaf, this->part.r_local);
           }
           else if (node->type == Node<Data>::Type::Leaf) {
             if (Visitor::CallSelfLeaf || node->key != leaf->key) {
-              doLeaf<Visitor>(node, leaf.get(), this->part.r_local);
+              doLeaf<Visitor>(node, leaf, this->part.r_local);
             }
           }
         }
@@ -248,7 +249,7 @@ public:
         trav_top = trav_top->parent;
       }
     }
-    // initial traversal just within TP
+    // initial traversal just within partition
     // we dont need a permanent state for this phase
     // of the traversal cause we do it all at once
     adjustTop();
@@ -262,9 +263,6 @@ public:
 private:
   void adjustTop() {
     if (this->isFinished() && trav_top->parent) {
-#if DEBUG
-      CkPrintf("TP %d finished traversal with top %llu\n", tp.tp_key, trav_top->key);
-#endif
       for (int j = 0; j < trav_top->parent->n_children; j++) {
         Node<Data>* child = trav_top->parent->getChild(j);
         if (child == nullptr) {

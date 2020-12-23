@@ -16,7 +16,7 @@ extern CProxy_Reader readers;
 template <typename Data>
 struct Partition : public CBase_Partition<Data> {
   std::vector<Particle> particles, incoming_particles;
-  std::vector<std::unique_ptr<Node<Data>>> leaves;
+  std::vector<Node<Data>*> leaves;
 
   std::unique_ptr<Traverser<Data>> traverser;
   int n_partitions;
@@ -77,7 +77,7 @@ void Partition<Data>::startDown()
 {
   initLocalBranches();
   interactions.resize(leaves.size());
-  traverser.reset(new DownTraverser<Data, Visitor>(*this));
+  traverser.reset(new DownTraverser<Data, Visitor>(leaves, *this));
   traverser->start();
 }
 
@@ -126,7 +126,7 @@ void Partition<Data>::receiveLeaves(
     received_part_index += leaf.n_particles;
     node->type = Node<Data>::Type::Leaf;
     node->data = Data(node->particles(), node->n_particles);
-    leaves.emplace_back(node);
+    leaves.push_back(node);
   }
   cm_local->num_buckets += leaves.size();
 }
