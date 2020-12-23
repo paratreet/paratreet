@@ -41,6 +41,7 @@ inline void doNode(Node* source, Node* target, StatCollector* stats) {
 template <typename Data>
 class Traverser {
 public:
+  virtual ~Traverser() = default;
   virtual void resumeTrav(Key) = 0;
   virtual void interact() = 0;
   virtual void start() = 0;
@@ -100,6 +101,7 @@ public:
   DownTraverser(Partition<Data>& parti, bool delay_leafi = false)
     : part(parti), delay_leaf(delay_leafi)
   { }
+  virtual ~DownTraverser() = default;
   virtual void start() override {
     // Initialize with global root key and leaves
     startTrav(part.cm_local->root);
@@ -210,6 +212,7 @@ public:
   UpnDTraverser(Subtree<Data>& tpi)
     : tp(tpi), DownTraverser<Data, Visitor>(tpi, false) {
   }
+  virtual ~UpnDTraverser() = default;
   virtual void interact() override {
     if (tp.thisIndex == 0) CkPrintf("no need to call interact()\n");
   }
