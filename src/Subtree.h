@@ -42,6 +42,7 @@ public:
   CProxy_CacheManager<Data> cm_proxy;
 
   std::vector<Particle> flushed_particles; // For debugging
+  std::set<int> cm_indices_copied;
 
   Subtree(const CkCallback&, int, int, int, TCHolder<Data>,
           CProxy_Resumer<Data>, CProxy_CacheManager<Data>, DPHolder<Data>);
@@ -303,11 +304,12 @@ void Subtree<Data>::populateTree() {
 template <typename Data>
 void Subtree<Data>::initCache() {
   cm_proxy.ckLocalBranch()->connect(local_root, false);
+  cm_indices_copied.insert(cm_proxy.ckLocalBranch()->thisIndex);
 }
 
 template <typename Data>
 void Subtree<Data>::requestCopy(int cm_index) {
-  if (cm_index == cm_proxy.ckLocalBranch()->thisIndex) return;
+  if (!cm_indices_copied.emplace(cm_index).second) return;
   cm_proxy.ckLocalBranch()->serviceRequest(local_root, cm_index, true);
 }
 
@@ -322,6 +324,7 @@ void Subtree<Data>::requestNodes(Key key, int cm_index) {
 template <typename Data>
 void Subtree<Data>::reset() {
   particles.clear();
+  cm_indices_copied.clear();
 }
 
 template <typename Data>
