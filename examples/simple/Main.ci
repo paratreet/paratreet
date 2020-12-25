@@ -20,6 +20,7 @@ mainmodule Main {
     group NeighborListCollector {
         entry NeighborListCollector();
         entry void share(const CkCallback&);
+        entry void reset(const CkCallback&);
     }
 
     extern entry void Partition<CentroidData> startDown<GravityVisitor> ();

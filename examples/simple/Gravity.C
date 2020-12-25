@@ -21,4 +21,6 @@ namespace paratreet {
       paratreet::outputParticles(universe, part);
     }
   }
+
+  void perLeafFn(SpatialNode<CentroidData>& leaf) {}
 }

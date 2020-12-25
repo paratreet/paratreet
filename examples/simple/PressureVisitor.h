@@ -38,8 +38,8 @@ public:
         Real dsq = (target.particles()[i].position - source.particles()[j].position).lengthSquared();
         Real rsq = target.data.neighbors[i][0].fKey;
         if (dsq < rsq) {
-          target.data.fixed_ball[i].push_back(source.particles()[j]);
-          collector->addNeighbor(target.particles()[i].key, source.particles()[j].key);
+          Vector3D<Real> force_on_target = 0.; // TODO SPH math
+          collector->addNeighbor(target.particles()[i].key, source.particles()[j].key, force_on_target);
         }
       }
     }

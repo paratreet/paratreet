@@ -7,6 +7,8 @@ CHARMC = $(CHARM_HOME)/bin/charmc $(OPTS)
 LD_LIBS = -L$(PARATREET_PATH) -lparatreet
 
 all: Gravity SPH
+VISITORS: DensityVisitor.h PressureVisitor.h GravityVisitor.h
+OTHERS: CountManager.h NeighborListCollector.h
 
 Main.decl.h: Main.ci
 	$(CHARMC) $<
@@ -17,13 +19,13 @@ Gravity: Main.decl.h Gravity.o Main.o
 SPH: Main.decl.h SPH.o Main.o
 	$(CHARMC) -language charm++ -o SPH SPH.o Main.o $(LD_LIBS)
 
-Gravity.o: Gravity.C GravityVisitor.h
+Gravity.o: Gravity.C
 	$(CHARMC) -c $<
 
-SPH.o: SPH.C DensityVisitor.h PressureVisitor.h
+SPH.o: SPH.C
 	$(CHARMC) -c $<
 
-Main.o: Main.C
+Main.o: Main.C $(VISITORS) $(OTHERS)
 	$(CHARMC) -c $<
 
 test: all
