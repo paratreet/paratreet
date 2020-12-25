@@ -51,6 +51,7 @@ public:
   void populateTree();
   inline void initCache();
   void sendLeaves(CProxy_Partition<Data>);
+  void requestCopy(int);
   void requestNodes(Key, int);
   void print(Node<Data>*);
   void destroy();
@@ -173,7 +174,7 @@ void Subtree<Data>::sendLeaves(CProxy_Partition<Data> part)
       }
       node_data.emplace_back(leaf->key, n_particles_here, leaf->depth);
     }
-    part[part_receiver.first].receiveLeaves(node_data, all_particle_keys, this->thisIndex);
+    part[part_receiver.first].receiveLeaves(node_data, all_particle_keys, this->thisProxy, this->thisIndex);
   }
 }
 
@@ -305,10 +306,17 @@ void Subtree<Data>::initCache() {
 }
 
 template <typename Data>
+void Subtree<Data>::requestCopy(int cm_index) {
+  if (cm_index == cm_proxy.ckLocalBranch()->thisIndex) return;
+  cm_proxy.ckLocalBranch()->serviceRequest(local_root, cm_index, true);
+}
+
+template <typename Data>
 void Subtree<Data>::requestNodes(Key key, int cm_index) {
+  if (cm_index == cm_proxy.ckLocalBranch()->thisIndex) return;
   Node<Data>* node = local_root->getDescendant(key);
   if (!node) CkPrintf("null found for key %lu on tp %d\n", key, this->thisIndex);
-  cm_proxy.ckLocalBranch()->serviceRequest(node, cm_index);
+  cm_proxy.ckLocalBranch()->serviceRequest(node, cm_index, false);
 }
 
 template <typename Data>

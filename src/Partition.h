@@ -17,6 +17,7 @@ template <typename Data>
 struct Partition : public CBase_Partition<Data> {
   std::vector<Particle> particles, incoming_particles;
   std::vector<Node<Data>*> leaves;
+  std::vector<size_t> locations;
 
   std::unique_ptr<Traverser<Data>> traverser;
   int n_partitions;
@@ -37,7 +38,7 @@ struct Partition : public CBase_Partition<Data> {
   void goDown(Key);
   void interact(const CkCallback& cb);
 
-  void receiveLeaves(std::vector<NodeWrapper>, std::vector<Key>, int);
+  void receiveLeaves(std::vector<NodeWrapper>, std::vector<Key>, TPHolder<Data>, int);
   void receive(ParticleMsg*);
   void destroy();
   void reset();
@@ -106,7 +107,8 @@ void Partition<Data>::interact(const CkCallback& cb)
 
 template <typename Data>
 void Partition<Data>::receiveLeaves(
-  std::vector<NodeWrapper> data, std::vector<Key> all_particle_keys, int subtree_idx)
+  std::vector<NodeWrapper> data, std::vector<Key> all_particle_keys,
+  TPHolder<Data> tp_holder, int subtree_idx)
 {
   particles.reserve(incoming_particles.size());
   std::function<bool(const Particle&, Key)> compGE = [] (const Particle& a, Key b) {return a.key >= b;};
@@ -127,8 +129,10 @@ void Partition<Data>::receiveLeaves(
     node->type = Node<Data>::Type::Leaf;
     node->data = Data(node->particles(), node->n_particles);
     leaves.push_back(node);
+    locations.push_back(subtree_idx);
   }
   cm_local->num_buckets += leaves.size();
+  tp_holder.proxy[subtree_idx].requestCopy(cm_local->thisIndex);
 }
 
 template <typename Data>
@@ -153,6 +157,7 @@ void Partition<Data>::reset()
   incoming_particles = std::move(particles);
   traverser.reset();
   leaves.clear();
+  locations.clear();
   interactions.clear();
 }
 

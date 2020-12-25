@@ -103,11 +103,12 @@ public:
   void prepPrefetch(Node<Data>*);
   void connect(Node<Data>*, bool);
   void requestNodes(std::pair<Key, int>);
-  void makeMsgPerNode(int, std::vector<Node<Data>*>&, std::vector<Particle>&, Node<Data>*);
-  void serviceRequest(Node<Data>*, int);
+  void makeMsgPerNode(int, std::vector<Node<Data>*>&, std::vector<Particle>&, Node<Data>*, bool);
+  void serviceRequest(Node<Data>*, int, bool);
   void recvStarterPack(std::pair<Key, SpatialNode<Data>>* pack, int n, CkCallback);
   void addCache(MultiData<Data>);
-  Node<Data>* addCacheHelper(Particle*, int, std::pair<Key, SpatialNode<Data>>*, int, int, int);
+  void addSubtree(MultiData<Data>);
+  Node<Data>* addCacheHelper(Particle*, int, std::pair<Key, SpatialNode<Data>>*, int, int, int, bool);
   void restoreData(std::pair<Key, SpatialNode<Data>>);
   void restoreDataHelper(std::pair<Key, SpatialNode<Data>>&, bool);
   void insertNode(Node<Data>*, bool, bool);
@@ -193,27 +194,36 @@ void CacheManager<Data>::recvStarterPack(std::pair<Key, SpatialNode<Data>>* pack
 }
 
 template <typename Data>
+void CacheManager<Data>::addSubtree(MultiData<Data> multidata) {
+  addCacheHelper(multidata.particles.data(), multidata.n_particles, multidata.nodes.data(), multidata.n_nodes, multidata.cm_index, multidata.tp_index, true);
+}
+
+template <typename Data>
 void CacheManager<Data>::addCache(MultiData<Data> multidata) {
-  Node<Data>* top_node = addCacheHelper(multidata.particles.data(), multidata.n_particles, multidata.nodes.data(), multidata.n_nodes, multidata.cm_index, multidata.tp_index);
+  Node<Data>* top_node = addCacheHelper(multidata.particles.data(), multidata.n_particles, multidata.nodes.data(), multidata.n_nodes, multidata.cm_index, multidata.tp_index, false);
   process(top_node->key);
 }
 
 template <typename Data>
-Node<Data>* CacheManager<Data>::addCacheHelper(Particle* particles, int n_particles, std::pair<Key, SpatialNode<Data>>* nodes, int n_nodes, int cm_index, int tp_index) {
+Node<Data>* CacheManager<Data>::addCacheHelper(Particle* particles, int n_particles, std::pair<Key, SpatialNode<Data>>* nodes, int n_nodes, int cm_index, int tp_index, bool add_to_tps) {
 #if DEBUG
   CkPrintf("adding cache for top node 0x%" PRIx64 " on cm %d\n", nodes[0].first, this->thisIndex);
 #endif
 
-  auto first_node_placeholder = root->getDescendant(nodes[0].first);
-  if (first_node_placeholder->type == Node<Data>::Type::CachedRemote
+  Node<Data>* first_node_placeholder_parent = nullptr;
+  if (!add_to_tps) {
+    auto first_node_placeholder = (!add_to_tps) ? root->getDescendant(nodes[0].first) : nullptr;
+    if (first_node_placeholder->type == Node<Data>::Type::CachedRemote
       || first_node_placeholder->type == Node<Data>::Type::CachedRemoteLeaf)
-  {
-    CkAbort("Invalid node placeholder type in CacheManager::addCacheHelper");
+    {
+      CkAbort("Invalid node placeholder type in CacheManager::addCacheHelper");
+    }
+    first_node_placeholder_parent = first_node_placeholder->parent;
   }
 
   int p_index = 0;
   auto top_type = nodes[0].second.is_leaf ? Node<Data>::Type::CachedRemoteLeaf : Node<Data>::Type::CachedRemote;
-  auto first_node = treespec.ckLocalBranch()->template makeCachedNode<Data>(nodes[0].first, top_type, nodes[0].second, first_node_placeholder->parent, particles);
+  auto first_node = treespec.ckLocalBranch()->template makeCachedNode<Data>(nodes[0].first, top_type, nodes[0].second, first_node_placeholder_parent, particles);
   first_node->cm_index = cm_index;
   first_node->tp_index = tp_index;
   insertNode(first_node, false, false);
@@ -229,7 +239,8 @@ Node<Data>* CacheManager<Data>::addCacheHelper(Particle* particles, int n_partic
     if (node->is_leaf) p_index += spatial_node.n_particles;
     insertNode(node, false, true);
   }
-  swapIn(first_node);
+  if (add_to_tps) connect(first_node, false);
+  else swapIn(first_node);
   return first_node;
 }
 
@@ -243,34 +254,35 @@ void CacheManager<Data>::requestNodes(std::pair<Key, int> param) {
     CkPrintf("CacheManager::requestNodes: node not found for key %lu on cm %d\n", param.first, this->thisIndex);
     CkAbort("CacheManager::requestNodes: node not found");
   }
-  serviceRequest(node, param.second);
+  serviceRequest(node, param.second, false);
 }
 
 template <typename Data>
-void CacheManager<Data>::makeMsgPerNode(int start_depth, std::vector<Node<Data>*>& sending_nodes, std::vector<Particle>& sending_particles, Node<Data>* to_process)
+void CacheManager<Data>::makeMsgPerNode(int start_depth, std::vector<Node<Data>*>& sending_nodes, std::vector<Particle>& sending_particles, Node<Data>* to_process, bool send_all)
 {
   auto config = treespec.ckLocalBranch()->getConfiguration();
   sending_nodes.push_back(to_process);
   if (to_process->type == Node<Data>::Type::Leaf) {
     std::copy(to_process->particles(), to_process->particles() + to_process->n_particles, std::back_inserter(sending_particles));
   }
-  if (to_process->depth + 1 < start_depth + config.cache_share_depth) {
+  if (send_all || to_process->depth + 1 < start_depth + config.cache_share_depth) {
     for (int i = 0; i < to_process->n_children; i++) {
       Node<Data>* child = to_process->getChild(i);
-      makeMsgPerNode(start_depth, sending_nodes, sending_particles, child);
+      makeMsgPerNode(start_depth, sending_nodes, sending_particles, child, send_all);
     }
   }
 }
 
 template <typename Data>
-void CacheManager<Data>::serviceRequest(Node<Data>* node, int cm_index) {
+void CacheManager<Data>::serviceRequest(Node<Data>* node, int cm_index, bool send_all) {
   if (cm_index == this->thisIndex) return; // you'll get it later!
   std::vector<Node<Data>*> sending_nodes;
   std::vector<Particle> sending_particles;
   int start_depth = node->depth;
-  makeMsgPerNode(node->depth, sending_nodes, sending_particles, node);
+  makeMsgPerNode(node->depth, sending_nodes, sending_particles, node, send_all);
   MultiData<Data> multidata (sending_particles.data(), sending_particles.size(), sending_nodes.data(), sending_nodes.size(), this->thisIndex, node->tp_index);
-  this->thisProxy[cm_index].addCache(multidata);
+  if (send_all) this->thisProxy[cm_index].addSubtree(multidata);
+  else this->thisProxy[cm_index].addCache(multidata);
 }
 
 template <typename Data>
