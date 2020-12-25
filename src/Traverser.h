@@ -42,7 +42,7 @@ template <typename Data>
 class Traverser {
 public:
   virtual ~Traverser() = default;
-  virtual void resumeTrav(Key) = 0;
+  virtual void resumeTrav() = 0;
   virtual void interact() = 0;
   virtual void start() = 0;
 
@@ -186,7 +186,7 @@ public:
       }
     }
   }
-  virtual void resumeTrav(Key new_key) override {
+  virtual void resumeTrav() override {
     auto && resume_nodes = part.r_local->resume_nodes_per_part[part.thisIndex];
     CkAssert(!resume_nodes.empty()); // nothing to resume on?
     while (!resume_nodes.empty()) {
@@ -234,7 +234,7 @@ public:
     }
   }
 
-  virtual void resumeTrav(Key new_key) {
+  virtual void resumeTrav() {
     auto && resume_nodes = part.r_local->resume_nodes_per_part[part.thisIndex];
     CkAssert(!resume_nodes.empty()); // nothing to resume on?
     while (!resume_nodes.empty()) {
@@ -332,10 +332,11 @@ private:
     curr_nodes.erase(key);
     for (auto cn : curr_nodes_insertions) curr_nodes[cn.first].push_back(cn.second);
     auto && resume_nodes = part.r_local->resume_nodes_per_part[part.thisIndex];
+    bool should_resume = !new_nodes.empty() && resume_nodes.empty();
     for (auto new_node : new_nodes) {
       resume_nodes.push(new_node);
-      part.thisProxy[part.thisIndex].goDown(new_node->key);
     }
+    if (should_resume) part.thisProxy[part.thisIndex].goDown();
   }
 };
 

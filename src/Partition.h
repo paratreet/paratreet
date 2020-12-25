@@ -39,7 +39,7 @@ struct Partition : public CBase_Partition<Data> {
 
   template<typename Visitor> void startDown();
   template<typename Visitor> void startUpAndDown();
-  void goDown(Key);
+  void goDown();
   void interact(const CkCallback& cb);
 
   void receiveLeaves(std::vector<NodeWrapper>, std::vector<Key>, TPHolder<Data>, int);
@@ -98,9 +98,9 @@ void Partition<Data>::startUpAndDown()
 }
 
 template <typename Data>
-void Partition<Data>::goDown(Key new_key)
+void Partition<Data>::goDown()
 {
-  traverser->resumeTrav(new_key);
+  traverser->resumeTrav();
 }
 
 template <typename Data>

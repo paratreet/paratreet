@@ -60,7 +60,7 @@ public:
       auto && resume_nodes = resume_nodes_per_part[part_index];
       bool should_resume = resume_nodes.empty();
       resume_nodes.push(node);
-      if (should_resume) part_proxy[part_index].goDown(key);
+      if (should_resume) part_proxy[part_index].goDown();
     }
     waiting.erase(it);
   }
