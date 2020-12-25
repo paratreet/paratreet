@@ -232,11 +232,11 @@ public:
     for (auto && trav_top : trav_tops) {
       traverse(trav_top);
     }
+    resumeTrav();
   }
 
   virtual void resumeTrav() {
     auto && resume_nodes = part.r_local->resume_nodes_per_part[part.thisIndex];
-    CkAssert(!resume_nodes.empty()); // nothing to resume on?
     while (!resume_nodes.empty()) {
       auto start_node = resume_nodes.front();
       resume_nodes.pop();
@@ -332,11 +332,7 @@ private:
     curr_nodes.erase(key);
     for (auto cn : curr_nodes_insertions) curr_nodes[cn.first].push_back(cn.second);
     auto && resume_nodes = part.r_local->resume_nodes_per_part[part.thisIndex];
-    bool should_resume = !new_nodes.empty() && resume_nodes.empty();
-    for (auto new_node : new_nodes) {
-      resume_nodes.push(new_node);
-    }
-    if (should_resume) part.thisProxy[part.thisIndex].goDown();
+    for (auto && new_node : new_nodes) resume_nodes.push(new_node);
   }
 };
 
