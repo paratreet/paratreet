@@ -15,6 +15,7 @@ namespace paratreet {
 
   void traversalFn(BoundingBox& universe, CProxy_Partition<CentroidData>& part, int iter) {
     part.template startUpAndDown<DensityVisitor>();
+    CkWaitQD();
     part.template startDown<PressureVisitor>();
   }
 

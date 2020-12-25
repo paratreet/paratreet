@@ -4,7 +4,10 @@
 #include "paratreet.decl.h"
 #include "common.h"
 #include "Space.h"
+#include "NeighborListCollector.h"
 #include <cmath>
+
+extern CProxy_NeighborListCollector neighbor_list_collector;
 
 struct PressureVisitor {
 public:
@@ -29,11 +32,15 @@ public:
   static void node(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {}
 
   static void leaf(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
+    auto collector = neighbor_list_collector.ckLocalBranch();
     for (int i = 0; i < target.n_particles; i++) {
       for (int j = 0; j < source.n_particles; j++) {
         Real dsq = (target.particles()[i].position - source.particles()[j].position).lengthSquared();
         Real rsq = target.data.neighbors[i][0].fKey;
-        if (dsq < rsq) target.data.fixed_ball[i].push_back(source.particles()[j]);
+        if (dsq < rsq) {
+          target.data.fixed_ball[i].push_back(source.particles()[j]);
+          collector->addNeighbor(target.particles()[i].key, source.particles()[j].key);
+        }
       }
     }
   }
