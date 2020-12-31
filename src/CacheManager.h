@@ -19,7 +19,9 @@ class CacheManager : public CBase_CacheManager<Data> {
 public:
   std::mutex local_tps_lock;
   Node<Data>* root = nullptr;
-  std::unordered_map<Key, Node<Data>*> local_tps;
+  using NodeLookup = std::unordered_map<Key, Node<Data>*>;
+  NodeLookup local_tps;
+  NodeLookup leaf_lookup;
   std::set<Key> prefetch_set;
   std::vector<std::vector<Node<Data>*>> delete_at_end;
   CProxy_Resumer<Data> r_proxy;
@@ -79,6 +81,7 @@ private:
 public:
   void destroy(bool restore) {
     local_tps.clear();
+    leaf_lookup.clear();
     prefetch_set.clear();
 
     for (auto& dae : delete_at_end) {
@@ -101,19 +104,23 @@ public:
   void startPrefetch(DPHolder<Data>, CkCallback);
   void startParentPrefetch(DPHolder<Data>, CkCallback);
   void prepPrefetch(Node<Data>*);
-  void connect(Node<Data>*, bool);
   void requestNodes(std::pair<Key, int>);
-  void makeMsgPerNode(int, std::vector<Node<Data>*>&, std::vector<Particle>&, Node<Data>*, bool);
-  void serviceRequest(Node<Data>*, int, bool);
+  void serviceRequest(Node<Data>*, int);
+  void makeSubtreeFlat(Node<Data>* node, MultiData<Data>& multidata);
   void recvStarterPack(std::pair<Key, SpatialNode<Data>>* pack, int n, CkCallback);
   void addCache(MultiData<Data>);
   void addSubtree(MultiData<Data>);
-  Node<Data>* addCacheHelper(Particle*, int, std::pair<Key, SpatialNode<Data>>*, int, int, int, bool);
   void restoreData(std::pair<Key, SpatialNode<Data>>);
+  void connect(Node<Data>*, const std::vector<Node<Data>*>&);
+
+private:
+  void makeMsgPerNode(int, std::vector<Node<Data>*>&, std::vector<Particle>&, Node<Data>*, bool);
+  Node<Data>* addCacheHelper(Particle*, int, std::pair<Key, SpatialNode<Data>>*, int, int, int, bool);
   void restoreDataHelper(std::pair<Key, SpatialNode<Data>>&, bool);
   void insertNode(Node<Data>*, bool, bool);
   void swapIn(Node<Data>*);
   void process(Key);
+  void connect(Node<Data>*, bool);
 };
 
 template <typename Data>
@@ -150,25 +157,22 @@ void CacheManager<Data>::connect(Node<Data>* node, bool should_process) {
 #if DEBUG
   CkPrintf("connecting node 0x%" PRIx64 " of type %d\n", node->key, node->type);
 #endif
-  if (node->type == Node<Data>::Type::CachedBoundary) {
-    // Invoked internally to update a cached node
-    swapIn(node);
-    if (should_process) process(node->key);
-  } else {
-    // Invoked by Subtree
-    if (this->isNodeGroup()) local_tps_lock.lock();
+  CkAssert(node->type == Node<Data>::Type::CachedBoundary);
+  // Invoked internally to update a cached node
+  swapIn(node);
+  if (should_process) process(node->key);
+}
 
-    // Store/connect the incoming Subtree's local root
-    local_tps.insert(std::make_pair(node->key, node));
-    prepPrefetch(node);
+template <typename Data>
+void CacheManager<Data>::connect(Node<Data>* node, const std::vector<Node<Data>*>& leaves) {
+  if (this->isNodeGroup()) local_tps_lock.lock();
 
-    if (this->isNodeGroup()) local_tps_lock.unlock();
+  // Store/connect the incoming Subtree's local root
+  local_tps.insert(std::make_pair(node->key, node));
+  prepPrefetch(node);
+  for (auto && leaf : leaves) leaf_lookup.emplace(leaf->key, leaf);
 
-    if (node->type == Node<Data>::Type::CachedBoundary) {
-      CkAbort("local_tps used for a non TP node!");
-    }
-  }
-
+  if (this->isNodeGroup()) local_tps_lock.unlock();
   // XXX: May need to call process() for dual tree walk
 }
 
@@ -221,25 +225,30 @@ Node<Data>* CacheManager<Data>::addCacheHelper(Particle* particles, int n_partic
     first_node_placeholder_parent = first_node_placeholder->parent;
   }
 
-  int p_index = 0;
   auto top_type = nodes[0].second.is_leaf ? Node<Data>::Type::CachedRemoteLeaf : Node<Data>::Type::CachedRemote;
-  auto first_node = treespec.ckLocalBranch()->template makeCachedNode<Data>(nodes[0].first, top_type, nodes[0].second, first_node_placeholder_parent, particles);
+  auto first_node = treespec_subtrees.ckLocalBranch()->template makeCachedNode<Data>(nodes[0].first, top_type, nodes[0].second, first_node_placeholder_parent, particles);
+  std::vector<Node<Data>*> leaves;
+  if (nodes[0].second.is_leaf) leaves.push_back(first_node);
   first_node->cm_index = cm_index;
   first_node->tp_index = tp_index;
   insertNode(first_node, false, false);
   auto branch_factor = first_node->getBranchFactor();
+  int p_index = nodes[0].second.is_leaf ? nodes[0].second.n_particles : 0;
   for (int j = 1; j < n_nodes; j++) {
     auto && new_key = nodes[j].first;
     auto && spatial_node = nodes[j].second;
     auto curr_parent = first_node->getDescendant(new_key / branch_factor);
     auto type = spatial_node.is_leaf ? Node<Data>::Type::CachedRemoteLeaf : Node<Data>::Type::CachedRemote;
-    auto node = treespec.ckLocalBranch()->template makeCachedNode<Data>(new_key, type, spatial_node, curr_parent, &particles[p_index]);
+    auto node = treespec_subtrees.ckLocalBranch()->template makeCachedNode<Data>(new_key, type, spatial_node, curr_parent, &particles[p_index]);
     node->cm_index = cm_index;
     node->tp_index = tp_index;
-    if (node->is_leaf) p_index += spatial_node.n_particles;
+    if (node->is_leaf) {
+      p_index += spatial_node.n_particles;
+      leaves.push_back(node);
+    }
     insertNode(node, false, true);
   }
-  if (add_to_tps) connect(first_node, false);
+  if (add_to_tps) connect(first_node, leaves);
   else swapIn(first_node);
   return first_node;
 }
@@ -254,7 +263,7 @@ void CacheManager<Data>::requestNodes(std::pair<Key, int> param) {
     CkPrintf("CacheManager::requestNodes: node not found for key %lu on cm %d\n", param.first, this->thisIndex);
     CkAbort("CacheManager::requestNodes: node not found");
   }
-  serviceRequest(node, param.second, false);
+  serviceRequest(node, param.second);
 }
 
 template <typename Data>
@@ -274,15 +283,22 @@ void CacheManager<Data>::makeMsgPerNode(int start_depth, std::vector<Node<Data>*
 }
 
 template <typename Data>
-void CacheManager<Data>::serviceRequest(Node<Data>* node, int cm_index, bool send_all) {
+void CacheManager<Data>::makeSubtreeFlat(Node<Data>* node, MultiData<Data>& multidata) {
+  std::vector<Node<Data>*> sending_nodes;
+  std::vector<Particle> sending_particles;
+  makeMsgPerNode(node->depth, sending_nodes, sending_particles, node, true);
+  MultiData<Data> to_swap (sending_particles.data(), sending_particles.size(), sending_nodes.data(), sending_nodes.size(), this->thisIndex, node->tp_index);
+  std::swap(multidata, to_swap);
+}
+
+template <typename Data>
+void CacheManager<Data>::serviceRequest(Node<Data>* node, int cm_index) {
   if (cm_index == this->thisIndex) return; // you'll get it later!
   std::vector<Node<Data>*> sending_nodes;
   std::vector<Particle> sending_particles;
-  int start_depth = node->depth;
-  makeMsgPerNode(node->depth, sending_nodes, sending_particles, node, send_all);
+  makeMsgPerNode(node->depth, sending_nodes, sending_particles, node, false);
   MultiData<Data> multidata (sending_particles.data(), sending_particles.size(), sending_nodes.data(), sending_nodes.size(), this->thisIndex, node->tp_index);
-  if (send_all) this->thisProxy[cm_index].addSubtree(multidata);
-  else this->thisProxy[cm_index].addCache(multidata);
+  this->thisProxy[cm_index].addCache(multidata);
 }
 
 template <typename Data>
@@ -297,7 +313,7 @@ void CacheManager<Data>::restoreDataHelper(std::pair<Key, SpatialNode<Data>>& pa
 #endif
   Key key = param.first;
   Node<Data>* parent = (key == Key(1)) ? nullptr : root->getDescendant(key / root->getBranchFactor());
-  auto node = treespec.ckLocalBranch()->template makeCachedNode<Data>(key,
+  auto node = treespec_subtrees.ckLocalBranch()->template makeCachedNode<Data>(key,
       Node<Data>::Type::CachedBoundary, param.second, parent, nullptr);
   insertNode(node, true, false);
   connect(node, should_process);

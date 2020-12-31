@@ -114,6 +114,8 @@ public:
     }
     else {
       n_partitions = treespec.ckLocalBranch()->doFindSplitters(universe, readers);
+      // partition doFindSplitters + subtree doFind do not depend on each other
+      // only dependency is: partition flush must go before subtree flush
       treespec.receiveDecomposition(CkCallbackResumeThread(),
         CkPointer<Decomposition>(treespec.ckLocalBranch()->getDecomposition()));
     }

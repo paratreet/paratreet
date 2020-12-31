@@ -42,7 +42,6 @@ public:
   CProxy_CacheManager<Data> cm_proxy;
 
   std::vector<Particle> flushed_particles; // For debugging
-  std::set<int> cm_indices_copied;
 
   Subtree(const CkCallback&, int, int, int, TCHolder<Data>,
           CProxy_Resumer<Data>, CProxy_CacheManager<Data>, DPHolder<Data>);
@@ -52,7 +51,6 @@ public:
   void populateTree();
   inline void initCache();
   void sendLeaves(CProxy_Partition<Data>);
-  void requestCopy(int);
   void requestNodes(Key, int);
   void print(Node<Data>*);
   void destroy();
@@ -162,20 +160,31 @@ void Subtree<Data>::sendLeaves(CProxy_Partition<Data> part)
     }
   }
 
+  MultiData<Data> flat_subtree; // might be used
   for (auto && part_receiver : part_idx_to_leaf) {
     std::vector<NodeWrapper> node_data;
-    std::vector<Key> all_particle_keys;
+    std::vector<Key> lookup_leaf_keys;
     for (auto && leaf : part_receiver.second) {
-      size_t n_particles_here = 0u;
+      std::vector<Particle> leaf_particles;
       for (int pi = 0; pi < leaf->n_particles; pi++) {
         if (leaf->particles()[pi].partition_idx == part_receiver.first) {
-          n_particles_here++;
-          all_particle_keys.push_back(leaf->particles()[pi].key);
+          leaf_particles.push_back(leaf->particles()[pi]);
         }
       }
-      node_data.emplace_back(leaf->key, n_particles_here, leaf->depth);
+      if (leaf_particles.size() != leaf->n_particles) {
+        node_data.emplace_back(leaf->key, std::move(leaf_particles), leaf->depth);
+      }
+      else lookup_leaf_keys.push_back(leaf->key);
     }
-    part[part_receiver.first].receiveLeaves(node_data, all_particle_keys, this->thisProxy, this->thisIndex);
+    if (part[part_receiver.first].ckLocal()) {
+      part[part_receiver.first].receiveLeaves(node_data, lookup_leaf_keys, this->thisIndex);
+    }
+    else {
+      if (flat_subtree.n_nodes == 0) { // hasnt been filled yet
+        cm_proxy.ckLocalBranch()->makeSubtreeFlat(local_root, flat_subtree);
+      }
+      part[part_receiver.first].receiveLeavesAndSubtree(flat_subtree, node_data, lookup_leaf_keys, this->thisIndex);
+    }
   }
 }
 
@@ -303,14 +312,7 @@ void Subtree<Data>::populateTree() {
 
 template <typename Data>
 void Subtree<Data>::initCache() {
-  cm_proxy.ckLocalBranch()->connect(local_root, false);
-  cm_indices_copied.insert(cm_proxy.ckLocalBranch()->thisIndex);
-}
-
-template <typename Data>
-void Subtree<Data>::requestCopy(int cm_index) {
-  if (!cm_indices_copied.emplace(cm_index).second) return;
-  cm_proxy.ckLocalBranch()->serviceRequest(local_root, cm_index, true);
+  cm_proxy.ckLocalBranch()->connect(local_root, leaves);
 }
 
 template <typename Data>
@@ -318,13 +320,12 @@ void Subtree<Data>::requestNodes(Key key, int cm_index) {
   if (cm_index == cm_proxy.ckLocalBranch()->thisIndex) return;
   Node<Data>* node = local_root->getDescendant(key);
   if (!node) CkPrintf("null found for key %lu on tp %d\n", key, this->thisIndex);
-  cm_proxy.ckLocalBranch()->serviceRequest(node, cm_index, false);
+  cm_proxy.ckLocalBranch()->serviceRequest(node, cm_index);
 }
 
 template <typename Data>
 void Subtree<Data>::reset() {
   particles.clear();
-  cm_indices_copied.clear();
 }
 
 template <typename Data>
