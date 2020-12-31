@@ -215,12 +215,7 @@ public:
     trav_tops.resize(part.leaves.size());
     for (int i = 0; i < part.leaves.size(); i++) {
       auto key = part.leaves[i]->key;
-      auto location = part.locations[i];
-      auto decomp = treespec_subtrees.ckLocalBranch()->getDecomposition();
-      auto tp_key = decomp->getTpKey(location);
-      auto it = part.cm_local->local_tps.find(tp_key);
-      if (it == part.cm_local->local_tps.end()) CkAbort("couldnt find tp key in CacheManager");
-      auto tree_leaf = it->second->getDescendant(key);
+      auto tree_leaf = part.cm_local->leaf_lookup[key];
       curr_nodes[key].push_back(i);
       trav_tops[i] = tree_leaf;
     }

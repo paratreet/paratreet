@@ -22,7 +22,6 @@ template <typename Data>
 struct Partition : public CBase_Partition<Data> {
   std::vector<Node<Data>*> leaves;
   std::vector<Node<Data>*> leaves_owned; // subset of leaves
-  std::vector<size_t> locations;
 
   std::unique_ptr<Traverser<Data>> traverser;
   int n_partitions;
@@ -127,14 +126,12 @@ void Partition<Data>::receiveLeaves(std::vector<NodeWrapper> data, std::vector<K
     node->data = Data(node->particles(), node->n_particles);
     leaves_owned.push_back(node);
     leaves.push_back(node);
-    locations.push_back(subtree_idx);
   }
   for (auto && leaf_key : lookup_leaf_keys) {
     auto && leaf_lookup = cm_proxy.ckLocalBranch()->leaf_lookup;
     auto it = leaf_lookup.find(leaf_key);
     if (it == leaf_lookup.end()) CkAbort("couldnt find leaf key");
     leaves.push_back(it->second);
-    locations.push_back(subtree_idx);
   }
   cm_local->num_buckets += lookup_leaf_keys.size() + data.size();
 }
@@ -166,7 +163,6 @@ void Partition<Data>::reset()
   }
   leaves_owned.clear();
   leaves.clear();
-  locations.clear();
   interactions.clear();
 }
 
