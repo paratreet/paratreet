@@ -39,7 +39,7 @@ public:
         Real rsq = target.data.neighbors[i][0].fKey;
         if (dsq < rsq) {
           Vector3D<Real> force_on_target = 0.; // TODO SPH math
-          collector->addNeighbor(target.particles()[i].key, source.particles()[j].key, force_on_target);
+          collector->addNeighbor(source.data.home_pe, target.particles()[i].key, source.particles()[j].key, force_on_target);
         }
       }
     }

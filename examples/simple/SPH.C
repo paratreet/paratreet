@@ -22,7 +22,8 @@ namespace paratreet {
   }
 
   void postInteractionsFn(BoundingBox& universe, CProxy_Partition<CentroidData>& part, int iter) {
-    neighbor_list_collector.share(CkCallbackResumeThread());
+    neighbor_list_collector.share();
+    CkWaitQD();
     part.callPerLeafFn(CkCallbackResumeThread());
     if (iter == 0 && verify) {
       paratreet::outputParticles(universe, part);
@@ -33,17 +34,8 @@ namespace paratreet {
     for (int i = 0; i < leaf.n_particles; i++) {
       auto key = leaf.particles()[i].key;
       auto nlc = neighbor_list_collector.ckLocalBranch();
-      auto && locals = nlc->local_neighbors[key];
-      auto && remotes = nlc->remote_neighbors[key];
-      std::set<Key> neighbors;
-      for (auto && local : locals) {
-        neighbors.insert(local.first);
-        leaf.applyAcceleration(i, local.second);
-      }
-      for (auto && remote : remotes) {
-        if (!neighbors.count(remote.first)) {
-          leaf.applyAcceleration(i, remote.second);
-        }
+      for (auto && neighbor : nlc->neighbors[key]) {
+        leaf.applyAcceleration(i, neighbor.second);
       }
     }
   }
