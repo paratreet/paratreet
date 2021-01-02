@@ -160,20 +160,23 @@ void Subtree<Data>::sendLeaves(CProxy_Partition<Data> part)
     }
   }
 
+  MultiData<Data> flat_subtree; // might be used
   for (auto && part_receiver : part_idx_to_leaf) {
-    std::vector<NodeWrapper> node_data;
-    std::vector<Key> all_particle_keys;
-    for (auto && leaf : part_receiver.second) {
-      size_t n_particles_here = 0u;
-      for (int pi = 0; pi < leaf->n_particles; pi++) {
-        if (leaf->particles()[pi].partition_idx == part_receiver.first) {
-          n_particles_here++;
-          all_particle_keys.push_back(leaf->particles()[pi].key);
-        }
-      }
-      node_data.emplace_back(leaf->key, n_particles_here, leaf->depth);
+    auto it = cm_proxy.ckLocalBranch()->partition_lookup.find(part_receiver.first);
+    if (it != cm_proxy.ckLocalBranch()->partition_lookup.end()) {
+      std::vector<Node<Data>*> leaf_ptrs (part_receiver.second.begin(), part_receiver.second.end());
+      it->second->addLeaves(leaf_ptrs, this->thisIndex);
     }
-    part[part_receiver.first].receiveLeaves(node_data, all_particle_keys, this->thisIndex);
+    else {
+      if (flat_subtree.n_nodes == 0) { // hasnt been filled yet
+        cm_proxy.ckLocalBranch()->makeSubtreeFlat(local_root, flat_subtree);
+      }
+      std::vector<Key> lookup_leaf_keys;
+      for (auto && leaf : part_receiver.second) {
+	lookup_leaf_keys.push_back(leaf->key);
+      }
+      part[part_receiver.first].receiveLeavesAndSubtree(flat_subtree, lookup_leaf_keys, this->thisIndex);
+    }
   }
 }
 
@@ -301,11 +304,12 @@ void Subtree<Data>::populateTree() {
 
 template <typename Data>
 void Subtree<Data>::initCache() {
-  cm_proxy.ckLocalBranch()->connect(local_root, false);
+  cm_proxy.ckLocalBranch()->connect(local_root);
 }
 
 template <typename Data>
 void Subtree<Data>::requestNodes(Key key, int cm_index) {
+  if (cm_index == cm_proxy.ckLocalBranch()->thisIndex) return;
   Node<Data>* node = local_root->getDescendant(key);
   if (!node) CkPrintf("null found for key %lu on tp %d\n", key, this->thisIndex);
   cm_proxy.ckLocalBranch()->serviceRequest(node, cm_index);

@@ -53,13 +53,14 @@ public:
   void process(Key key) {
     CkAssert(!resume_nodes_per_part.empty());
     auto node = cm_local->root->getDescendant(key);
+    CkAssert(node && node->key == key);
     auto it = waiting.find(key);
     if (it == waiting.end()) return;
     for (auto part_index : it->second) {
       auto && resume_nodes = resume_nodes_per_part[part_index];
       bool should_resume = resume_nodes.empty();
       resume_nodes.push(node);
-      if (should_resume) part_proxy[part_index].goDown(key);
+      if (should_resume) part_proxy[part_index].goDown();
     }
     waiting.erase(it);
   }

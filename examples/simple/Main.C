@@ -7,25 +7,8 @@
 #include "CollisionVisitor.h"
 
 /* readonly */ bool verify;
-
-namespace paratreet {
-
-  void preTraversalFn(CProxy_Driver<CentroidData>& driver, CProxy_CacheManager<CentroidData>& cache) {
-    //cache.startParentPrefetch(this->thisProxy, CkCallback::ignore); // MUST USE FOR UPND TRAVS
-    //cache.template startPrefetch<GravityVisitor>(this->thisProxy, CkCallback::ignore);
-    driver.loadCache(CkCallbackResumeThread());
-  }
-
-  void traversalFn(BoundingBox& universe, CProxy_Partition<CentroidData>& part, int iter) {
-    part.template startDown<GravityVisitor>();
-  }
-
-  void postInteractionsFn(BoundingBox& universe, CProxy_Partition<CentroidData>& part, int iter) {
-    if (iter == 0 && verify) {
-      paratreet::outputParticles(universe, part);
-    }
-  }
-}
+/* readonly */ CProxy_CountManager count_manager;
+/* readonly */ CProxy_NeighborListCollector neighbor_list_collector;
 
 class Main : public CBase_Main {
   int n_treepieces; // Cannot be a readonly because of OCT decomposition
@@ -147,6 +130,7 @@ class Main : public CBase_Main {
     CkPrintf("Maximum number of particles per leaf: %d\n\n", conf.max_particles_per_leaf);
 
     count_manager = CProxy_CountManager::ckNew(0.00001, 10000, 5);
+    neighbor_list_collector = CProxy_NeighborListCollector::ckNew();
 
     // Delegate to Driver
     CkCallback runCB(CkIndex_Main::run(), thisProxy);

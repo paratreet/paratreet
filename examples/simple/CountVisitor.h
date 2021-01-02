@@ -9,7 +9,7 @@
 #include "CountManager.h"
 #include "common.h"
 
-/* readonly */ CProxy_CountManager count_manager;
+extern CProxy_CountManager count_manager;
 
 class CountVisitor {
 public:

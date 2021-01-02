@@ -6,16 +6,16 @@
 
 struct NodeWrapper {
   Key key;
-  int n_particles;
+  std::vector<Particle> particles;
   int depth;
 
   void pup(PUP::er& p) {
     p | key;
-    p | n_particles;
+    p | particles;
     p | depth;
   }
-  NodeWrapper(Key k, int np, int d)
-  : key(k), n_particles(np), depth(d)
+  NodeWrapper(Key k, std::vector<Particle>&& p, int d)
+  : key(k), particles(std::move(p)), depth(d)
   {}
   NodeWrapper() = default;
 };

@@ -95,9 +95,6 @@ void Reader::assignPartitions(int n_total_particles, int n_partitions, CProxy_Pa
     [&](int dest, int n_particles, Particle* particles) {
       for (int i = 0; i < n_particles; ++i)
         particles[i].partition_idx = dest;
-
-      ParticleMsg* msg = new (n_particles) ParticleMsg(particles, n_particles);
-      partitions[dest].receive(msg);
     };
   int flush_count = treespec.ckLocalBranch()->getDecomposition()->flush(particles, sendParticles);
   if (flush_count != particles.size()) {
