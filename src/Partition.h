@@ -122,7 +122,6 @@ void Partition<Data>::addLeaves(const std::vector<Node<Data>*>& leaf_ptrs, int s
   tree_leaves.insert(tree_leaves.end(), leaf_ptrs.begin(), leaf_ptrs.end());
   for (auto leaf : leaf_ptrs) {
     std::vector<Particle> leaf_particles;
-    if (!leaf) CkAbort("leaf invalid");
     for (int pi = 0; pi < leaf->n_particles; pi++) {
       if (leaf->particles()[pi].partition_idx == this->thisIndex) {
         leaf_particles.push_back(leaf->particles()[pi]);
@@ -157,7 +156,9 @@ void Partition<Data>::receiveLeavesAndSubtree(MultiData<Data> multidata, std::ve
   auto && leaf_lookup = cm_proxy.ckLocalBranch()->leaf_lookup;
   std::vector<Node<Data>*> leaf_ptrs;
   for (auto && k : lookup_leaf_keys) {
-    leaf_ptrs.push_back(leaf_lookup[k]);
+    auto it = leaf_lookup.find(k);
+    CkAssert(it != leaf_lookup.end());
+    leaf_ptrs.push_back(it->second);
   }
   if (cm_proxy.ckLocalBranch()->isNodeGroup()) cm_proxy.ckLocalBranch()->maps_lock.unlock();
   addLeaves(leaf_ptrs, subtree_idx);
