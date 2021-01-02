@@ -17,11 +17,12 @@ extern CProxy_TreeSpec treespec;
 template <typename Data>
 class CacheManager : public CBase_CacheManager<Data> {
 public:
-  std::mutex local_tps_lock;
+  std::mutex maps_lock;
   Node<Data>* root = nullptr;
   using NodeLookup = std::unordered_map<Key, Node<Data>*>;
   NodeLookup local_tps;
   NodeLookup leaf_lookup;
+  std::map<int, Partition<Data>*> partition_lookup;
   std::set<Key> prefetch_set;
   std::vector<std::vector<Node<Data>*>> delete_at_end;
   CProxy_Resumer<Data> r_proxy;
@@ -111,7 +112,7 @@ public:
   void addCache(MultiData<Data>);
   void addSubtree(MultiData<Data>);
   void restoreData(std::pair<Key, SpatialNode<Data>>);
-  void connect(Node<Data>*, const std::vector<Node<Data>*>&);
+  void connect(Node<Data>*);
 
 private:
   void makeMsgPerNode(int, std::vector<Node<Data>*>&, std::vector<Particle>&, Node<Data>*, bool);
@@ -121,6 +122,7 @@ private:
   void swapIn(Node<Data>*);
   void process(Key);
   void connect(Node<Data>*, bool);
+  void connect(Node<Data>*, const std::vector<Node<Data>*>&);
 };
 
 template <typename Data>
@@ -164,23 +166,29 @@ void CacheManager<Data>::connect(Node<Data>* node, bool should_process) {
 }
 
 template <typename Data>
-void CacheManager<Data>::connect(Node<Data>* node, const std::vector<Node<Data>*>& leaves) {
-  if (this->isNodeGroup()) local_tps_lock.lock();
-
+void CacheManager<Data>::connect(Node<Data>* node) {
+  if (this->isNodeGroup()) maps_lock.lock();
   // Store/connect the incoming Subtree's local root
   local_tps.insert(std::make_pair(node->key, node));
   prepPrefetch(node);
-  for (auto && leaf : leaves) leaf_lookup.emplace(leaf->key, leaf);
-
-  if (this->isNodeGroup()) local_tps_lock.unlock();
+  if (this->isNodeGroup()) maps_lock.unlock();
   // XXX: May need to call process() for dual tree walk
+}
+
+template <typename Data>
+void CacheManager<Data>::connect(Node<Data>* node, const std::vector<Node<Data>*>& leaves) {
+  if (this->isNodeGroup()) maps_lock.lock();
+  // Store/connect the incoming Subtree's local root
+  local_tps.insert(std::make_pair(node->key, node));
+  for (auto && leaf : leaves) leaf_lookup.emplace(leaf->key, leaf);
+  if (this->isNodeGroup()) maps_lock.unlock();
 }
 
 template <typename Data>
 void CacheManager<Data>::recvStarterPack(std::pair<Key, SpatialNode<Data>>* pack, int n, CkCallback cb) {
   CkPrintf("[CacheManager %d] receiving starter pack, size = %d\n", this->thisIndex, n);
 
-  CkAssert(pack[0].first == Key(1));
+  CkAssert(n == 0 || pack[0].first == Key(1));
   for (int i = 0; i < n; i++) {
 #if DEBUG
     CkPrintf("[CM %d] receiving node %d in starter pack\n", this->thisIndex, pack[i].first);

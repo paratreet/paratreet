@@ -162,28 +162,20 @@ void Subtree<Data>::sendLeaves(CProxy_Partition<Data> part)
 
   MultiData<Data> flat_subtree; // might be used
   for (auto && part_receiver : part_idx_to_leaf) {
-    std::vector<NodeWrapper> node_data;
-    std::vector<Key> lookup_leaf_keys;
-    for (auto && leaf : part_receiver.second) {
-      std::vector<Particle> leaf_particles;
-      for (int pi = 0; pi < leaf->n_particles; pi++) {
-        if (leaf->particles()[pi].partition_idx == part_receiver.first) {
-          leaf_particles.push_back(leaf->particles()[pi]);
-        }
-      }
-      if (leaf_particles.size() != leaf->n_particles) {
-        node_data.emplace_back(leaf->key, std::move(leaf_particles), leaf->depth);
-      }
-      else lookup_leaf_keys.push_back(leaf->key);
-    }
-    if (part[part_receiver.first].ckLocal()) {
-      part[part_receiver.first].receiveLeaves(node_data, lookup_leaf_keys, this->thisIndex);
+    auto it = cm_proxy.ckLocalBranch()->partition_lookup.find(part_receiver.first);
+    if (it != cm_proxy.ckLocalBranch()->partition_lookup.end()) {
+      std::vector<Node<Data>*> leaf_ptrs (part_receiver.second.begin(), part_receiver.second.end());
+      it->second->addLeaves(leaf_ptrs, this->thisIndex);
     }
     else {
       if (flat_subtree.n_nodes == 0) { // hasnt been filled yet
         cm_proxy.ckLocalBranch()->makeSubtreeFlat(local_root, flat_subtree);
       }
-      part[part_receiver.first].receiveLeavesAndSubtree(flat_subtree, node_data, lookup_leaf_keys, this->thisIndex);
+      std::vector<Key> lookup_leaf_keys;
+      for (auto && leaf : part_receiver.second) {
+	lookup_leaf_keys.push_back(leaf->key);
+      }
+      part[part_receiver.first].receiveLeavesAndSubtree(flat_subtree, lookup_leaf_keys, this->thisIndex);
     }
   }
 }
@@ -312,7 +304,7 @@ void Subtree<Data>::populateTree() {
 
 template <typename Data>
 void Subtree<Data>::initCache() {
-  cm_proxy.ckLocalBranch()->connect(local_root, leaves);
+  cm_proxy.ckLocalBranch()->connect(local_root);
 }
 
 template <typename Data>

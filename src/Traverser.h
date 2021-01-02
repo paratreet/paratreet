@@ -214,9 +214,8 @@ public:
   UpnDTraverser(Partition<Data>& parti) : part(parti) {
     trav_tops.resize(part.leaves.size());
     for (int i = 0; i < part.leaves.size(); i++) {
-      auto key = part.leaves[i]->key;
-      auto tree_leaf = part.cm_local->leaf_lookup[key];
-      curr_nodes[key].push_back(i);
+      auto tree_leaf = part.tree_leaves[i];
+      curr_nodes[tree_leaf->key].push_back(i);
       trav_tops[i] = tree_leaf;
     }
     num_waiting = std::vector<int> (part.leaves.size(), 1);
