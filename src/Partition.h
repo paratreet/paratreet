@@ -33,6 +33,7 @@ struct Partition : public CBase_Partition<Data> {
   Resumer<Data>* r_local;
 
   Partition(int, CProxy_CacheManager<Data>, CProxy_Resumer<Data>, TCHolder<Data>);
+  Partition(CkMigrateMessage * msg){delete msg;};
 
   template<typename Visitor> void startDown();
   void goDown(Key);
@@ -47,6 +48,12 @@ struct Partition : public CBase_Partition<Data> {
   void output(CProxy_Writer w, CkCallback cb);
   void initLocalBranches();
   void pup(PUP::er& p);
+  void pauseForLB(){
+    this->AtSync();
+  }
+  void ResumeFromSync(){
+    return;
+  };
 };
 
 template <typename Data>
@@ -55,6 +62,7 @@ Partition<Data>::Partition(
   CProxy_Resumer<Data> rp, TCHolder<Data> tc_holder
   )
 {
+  this->usesAtSync = true;
   n_partitions = np;
   tc_proxy = tc_holder.proxy;
   r_proxy = rp;

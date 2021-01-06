@@ -74,6 +74,7 @@ public:
   void decompose(int iter) {
     auto config = treespec.ckLocalBranch()->getConfiguration();
     // Build universe
+    double decomp_time = CkWallTimer();
     start_time = CkWallTimer();
     CkReductionMsg* result;
     if (iter == 0) {
@@ -155,6 +156,8 @@ public:
     CkStartQD(CkCallbackResumeThread());
     CkPrintf("Flushing particles to Subtrees: %.3lf ms\n",
         (CkWallTimer() - start_time) * 1000);
+    CkPrintf("**Total Decomposition time: %.3lf ms\n",
+        (CkWallTimer() - decomp_time) * 1000);
   }
 
   // Core iterative loop of the simulation
@@ -165,15 +168,14 @@ public:
 
       // Start tree build in Subtrees
       start_time = CkWallTimer();
-      subtrees.buildTree();
+      CkCallback timeCb (CkReductionTarget(Driver<Data>, reportTime), this->thisProxy);
+      subtrees.buildTree(partitions, timeCb);
       CkWaitQD();
-      CkPrintf("Tree build: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
+      CkPrintf("Tree build and sending leaves: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
 
-      // Send leaves to Partitions
-      start_time = CkWallTimer();
-      subtrees.sendLeaves(partitions);
-      CkWaitQD();
-      CkPrintf("Sending leaves: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
+      //start_time = CkWallTimer();
+      //partitions.pauseForLB();
+      //CkWaitQD();
 
       // Prefetch into cache
       start_time = CkWallTimer();
@@ -208,7 +210,6 @@ public:
       // Meta data collections
       CkReductionMsg * msg;
       subtrees.collectMetaData(updated_timestep_size, CkCallbackResumeThread((void *&) msg));
-      CkWaitQD();
        // Parse Subtree reduction message
       int numRedn = 0;
       CkReduction::tupleElement* res = NULL;
@@ -218,7 +219,6 @@ public:
       int sumParticlesSize = *(int*)(res[2].data);
       float avgTPSize = (float) sumParticlesSize / (float) n_subtrees;
       float ratio = (float) maxParticlesSize / avgTPSize;
-
       bool complete_rebuild = (config.flush_max_avg_ratio != 0?
           (ratio > config.flush_max_avg_ratio) : // use flush_max_avg_ratio when it is not 0
           (iter % config.flush_period == config.flush_period - 1)) ;
@@ -232,12 +232,15 @@ public:
           max_universe_box_dimension = length;
       }
 
-      updated_timestep_size = max_universe_box_dimension / max_velocity;
+      updated_timestep_size = max_universe_box_dimension / max_velocity / 100.0;
       if (updated_timestep_size > config.timestep_size) updated_timestep_size = config.timestep_size;
       partitions.perturb(subtrees, updated_timestep_size, complete_rebuild); // 0.1s for example
-      subtrees.pauseForLB();
       CkWaitQD();
       CkPrintf("Perturbations: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
+      start_time = CkWallTimer();
+      partitions.pauseForLB();
+      CkWaitQD();
+      CkPrintf("Load balancing: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
 
       // Destroy subtrees and perform decomposition from scratch
       if (complete_rebuild) {
@@ -268,6 +271,9 @@ public:
   // -------------------
   // Auxiliary functions
   // -------------------
+  void reportTime(){
+    CkPrintf("Tree build: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
+  }
 
   void countInts(unsigned long long* intrn_counts) {
      CkPrintf("%llu node-particle interactions, %llu bucket-particle interactions %llu node opens, %llu node closes\n", intrn_counts[0], intrn_counts[1], intrn_counts[2], intrn_counts[3]);

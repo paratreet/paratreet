@@ -33,6 +33,7 @@ namespace paratreet {
 
         // Create centroid data related chares
         centroid_calculator = CProxy_TreeCanopy<CentroidData>::ckNew();
+        centroid_calculator.doneInserting();
         centroid_cache = CProxy_CacheManager<CentroidData>::ckNew();
         centroid_resumer = CProxy_Resumer<CentroidData>::ckNew();
         centroid_driver = CProxy_Driver<CentroidData>::ckNew(centroid_cache, CkMyPe());

@@ -45,8 +45,11 @@ public:
 
   Subtree(const CkCallback&, int, int, int, TCHolder<Data>,
           CProxy_Resumer<Data>, CProxy_CacheManager<Data>, DPHolder<Data>);
+  Subtree(CkMigrateMessage * msg){
+    delete msg;
+  };
   void receive(ParticleMsg*);
-  void buildTree();
+  void buildTree(CProxy_Partition<Data>, CkCallback);
   void recursiveBuild(Node<Data>*, Particle* node_particles, size_t);
   void populateTree();
   inline void initCache();
@@ -59,11 +62,11 @@ public:
   void pup(PUP::er& p);
   void collectMetaData(Real timestep, const CkCallback & cb);
   void pauseForLB(){
-    CkPrintf("[ST %d]  pause for LB on PE %d\n", this->thisIndex, CkMyPe());
+    //CkPrintf("[ST %d]  pause for LB on PE %d\n", this->thisIndex, CkMyPe());
     this->AtSync();
   }
   void ResumeFromSync(){
-    CkPrintf("[ST %d]  resume from sync for LB on PE %d\n", this->thisIndex, CkMyPe());
+    //CkPrintf("[ST %d]  resume from sync for LB on PE %d\n", this->thisIndex, CkMyPe());
     return;
   };
 
@@ -188,7 +191,7 @@ void Subtree<Data>::sendLeaves(CProxy_Partition<Data> part)
 }
 
 template <typename Data>
-void Subtree<Data>::buildTree() {
+void Subtree<Data>::buildTree(CProxy_Partition<Data> part, CkCallback cb) {
   // Copy over received particles
   std::swap(particles, incoming_particles);
 
@@ -213,6 +216,9 @@ void Subtree<Data>::buildTree() {
   populateTree();
   // Initialize cache
   initCache();
+
+  this->contribute(cb);
+  sendLeaves(part);
 }
 
 template <typename Data>
