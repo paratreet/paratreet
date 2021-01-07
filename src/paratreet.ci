@@ -23,6 +23,9 @@ module paratreet {
   readonly int n_readers;
   readonly CProxy_TreeCanopy<CentroidData> centroid_calculator;
   readonly CProxy_CacheManager<CentroidData> centroid_cache;
+#ifndef GROUP_CACHE
+  readonly CProxy_CacheManagerTRAM<CentroidData> centroid_cache_tram;
+#endif
   readonly CProxy_Resumer<CentroidData> centroid_resumer;
 
   message ParticleMsg {
@@ -39,7 +42,11 @@ module paratreet {
     entry void initialize(const CkCallback&);
     entry void requestNodes(std::pair<Key, int>);
     entry void recvStarterPack(std::pair<Key, SpatialNode<Data>> pack [n], int n, CkCallback);
+#ifdef GROUP_CACHE
     entry [aggregate] void addCache(MultiData<Data>);
+#else
+    entry void addCache(MultiData<Data>);
+#endif
     entry void restoreData(std::pair<Key, SpatialNode<Data>>);
     template <typename Visitor>
     entry void startPrefetch(DPHolder<Data>, CkCallback);
@@ -50,6 +57,15 @@ module paratreet {
   group CacheManager<CentroidData>;
 #else
   nodegroup CacheManager<CentroidData>;
+#endif
+
+#ifndef GROUP_CACHE
+  template <typename Data>
+  group CacheManagerTRAM {
+    entry CacheManagerTRAM(CProxy_CacheManager<Data>);
+    entry [aggregate] void addCache(MultiData<Data>);
+  };
+  group CacheManagerTRAM<CentroidData>;
 #endif
 
   template <typename Data>

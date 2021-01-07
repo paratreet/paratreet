@@ -18,6 +18,9 @@
 /* readonly */ int n_readers;
 /* readonly */ CProxy_TreeCanopy<CentroidData> centroid_calculator;
 /* readonly */ CProxy_CacheManager<CentroidData> centroid_cache;
+#ifndef GROUP_CACHE
+/* readonly */ CProxy_CacheManagerTRAM<CentroidData> centroid_cache_tram;
+#endif
 /* readonly */ CProxy_Resumer<CentroidData> centroid_resumer;
 /* readonly */ CProxy_Driver<CentroidData> centroid_driver;
 
@@ -34,6 +37,9 @@ namespace paratreet {
         // Create centroid data related chares
         centroid_calculator = CProxy_TreeCanopy<CentroidData>::ckNew();
         centroid_cache = CProxy_CacheManager<CentroidData>::ckNew();
+#ifndef GROUP_CACHE
+        centroid_cache_tram = CProxy_CacheManagerTRAM<CentroidData>::ckNew(centroid_cache);
+#endif
         centroid_resumer = CProxy_Resumer<CentroidData>::ckNew();
         centroid_driver = CProxy_Driver<CentroidData>::ckNew(centroid_cache, CkMyPe());
         // Call the driver initialization routine (performs decomposition)

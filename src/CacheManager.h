@@ -13,6 +13,9 @@
 #include <mutex>
 
 extern CProxy_TreeSpec treespec;
+#ifndef GROUP_CACHE
+extern CProxy_CacheManagerTRAM<CentroidData> cache_manager_tram;
+#endif
 
 template <typename Data>
 class CacheManager : public CBase_CacheManager<Data> {
@@ -124,6 +127,25 @@ private:
   void connect(Node<Data>*, bool);
   void connect(Node<Data>*, const std::vector<Node<Data>*>&);
 };
+
+#ifndef GROUP_CACHE
+template <typename Data>
+class CacheManagerTRAM : public CBase_CacheManagerTRAM<Data> {
+  CacheManager<Data>* local_cm;
+
+public:
+  CacheManagerTRAM(CProxy_CacheManager<Data> cm_proxy) {
+    local_cm = cm_proxy.ckLocalBranch();
+    if (local_cm == nullptr) {
+      CkAbort("Error in retrieving local cache manager");
+    }
+  }
+
+  void addCache(MultiData<Data> multidata) {
+    local_cm->addCache(multidata);
+  }
+};
+#endif
 
 template <typename Data>
 template <typename Visitor>
@@ -306,7 +328,12 @@ void CacheManager<Data>::serviceRequest(Node<Data>* node, int cm_index) {
   std::vector<Particle> sending_particles;
   makeMsgPerNode(node->depth, sending_nodes, sending_particles, node, false);
   MultiData<Data> multidata (sending_particles.data(), sending_particles.size(), sending_nodes.data(), sending_nodes.size(), this->thisIndex, node->tp_index);
+#ifdef GROUP_CACHE
   this->thisProxy[cm_index].addCache(multidata);
+#else
+  // FIXME: Which PE to send multidata? Currently send to first PE in target logical node
+  centroid_cache_tram[CmiNodeFirst(cm_index)].addCache(multidata);
+#endif
 }
 
 template <typename Data>
