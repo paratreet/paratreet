@@ -9,7 +9,9 @@
 #include <unordered_map>
 #include <vector>
 
+#ifndef GROUP_CACHE
 extern CProxy_CacheManagerTRAM<CentroidData> centroid_cache_tram;
+#endif
 
 namespace {
 
