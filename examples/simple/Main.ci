@@ -1,6 +1,9 @@
 mainmodule Main {
     extern module paratreet;
+
     readonly bool verify;
+    readonly CProxy_CountManager count_manager;
+    readonly CProxy_NeighborListCollector neighbor_list_collector;
 
     mainchare Main {
         initnode void initialize();
@@ -9,5 +12,21 @@ mainmodule Main {
         entry [reductiontarget] void checkParticlesChangedDone(bool result); // For debugging
     };
 
-    extern entry void TreePiece<CentroidData> startDown<GravityVisitor> ();
+    group CountManager {
+        entry CountManager(double min, double max, int nbins);
+        entry void sum(const CkCallback&);
+    }
+
+    group NeighborListCollector {
+        entry NeighborListCollector();
+        entry void share();
+        entry void shareNeighbors(const std::vector<Key>&, const std::vector<Key>&, const std::vector<Vector3D<Real>>&);
+        entry void reset(const CkCallback&);
+    }
+
+    extern entry void Partition<CentroidData> startDown<GravityVisitor> ();
+    extern entry void Partition<CentroidData> startUpAndDown<DensityVisitor> ();
+    extern entry void Partition<CentroidData> startDown<PressureVisitor> ();
+    extern entry void CacheManager<CentroidData> startPrefetch<GravityVisitor>(DPHolder<CentroidData>, CkCallback);
+    extern entry void Driver<CentroidData> prefetch<GravityVisitor> (CentroidData, int, CkCallback);
 }

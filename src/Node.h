@@ -36,7 +36,7 @@ public:
     if (p.isUnpacking()) {
       particles_ = nullptr;
     }
-  } 
+  }
 
 public:
   Data      data;
@@ -98,12 +98,16 @@ public:
   {
   }
 
-  virtual ~Node() = default;
+  virtual ~Node() {
+    if (type == Type::CachedRemoteLeaf) {
+      this->freeParticles();
+    }
+  }
 
 public:
-  int n_children; // TreePiece's recursiveBuild prevents the constness
+  int n_children; // Subtree's recursiveBuild prevents the constness
   Node* parent;   // CacheManager's insertNode  prevents the constness
-  Type type;      // TreePiece's recursiveBuild prevents the constness
+  Type type;      // Subtree's recursiveBuild prevents the constness
   const Key key;
 
   // this stuff gets edited:
@@ -113,6 +117,7 @@ public:
   int tp_index       = -1;
   int cm_index       = -1;
   std::atomic<bool> requested = ATOMIC_VAR_INIT(false);
+  std::atomic<size_t> num_buckets_finished = ATOMIC_VAR_INIT(0);
 
 public:
   Node<Data>* getDescendant(Key to_find) {
@@ -131,6 +136,15 @@ public:
     return node;
   }
  
+  void finish(size_t num_buckets) {
+    num_buckets_finished += num_buckets;
+  }
+
+  bool isCached() const {
+    return type == Type::CachedRemote
+        || type == Type::CachedBoundary
+        || type == Type::CachedRemoteLeaf;
+  }
 
   void triggerFree() {
     if (type == Type::Internal || type == Type::Boundary ||
@@ -143,9 +157,6 @@ public:
         delete child;
 	    exchangeChild(i, nullptr);
       }
-    }
-    else if (type == Type::CachedRemoteLeaf) {
-      this->freeParticles();
     }
   }
 

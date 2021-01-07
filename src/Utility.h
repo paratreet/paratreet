@@ -31,6 +31,26 @@ class Utility {
   }
 
   template<typename KEY_TYPE, typename OBJ_TYPE>
+  static int binarySearchComp(const KEY_TYPE &check, const OBJ_TYPE* numbers, int start, int end, std::function<bool(const OBJ_TYPE&, KEY_TYPE)> comp) {
+    int lo = start;
+    int hi = end;
+    int mid;
+
+    while (lo < hi) {
+      mid = lo + ((hi - lo) >> 1);
+      if (comp(numbers[mid],check)) {
+        hi = mid;
+      }
+      else {
+        lo = mid + 1;
+      }
+    }
+
+    return lo;
+  }
+
+
+  template<typename KEY_TYPE, typename OBJ_TYPE>
   static int binarySearchG(const KEY_TYPE &check, const OBJ_TYPE* numbers, int start, int end) {
     int lo = start;
     int hi = end;
@@ -109,6 +129,21 @@ class Utility {
     return getParticleLevelKey(k, depth, log_branch_factor);
   }
 
+  // Zeroes all bits after the first zero (in most-significant order)
+  // 0xffffff81 --> 0xffffff80
+  template <typename T>
+  static T removeTrailingBits(T t) {
+    T mask = T(1) << (sizeof(T) * 8 - 1);
+    T cumulativeMask = 0;
+    // until the first bit that is zero (most-significant order)
+    while (mask & t) {
+      // build a mask including all of the previous bits
+      cumulativeMask |= mask;
+      // move to the next bit
+      mask >>= 1;
+    }
+    return t & cumulativeMask;
+  }
 };
 
 #endif // PARATREET_UTILITY_H_

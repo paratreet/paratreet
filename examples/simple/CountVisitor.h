@@ -9,31 +9,33 @@
 #include "CountManager.h"
 #include "common.h"
 
+extern CProxy_CountManager count_manager;
+
 class CountVisitor {
 public:
   static constexpr const bool CallSelfLeaf = true;
 
 private:
-  Real dist(Vector3D<Real> p1, Vector3D<Real> p2) {
+  static Real dist(Vector3D<Real> p1, Vector3D<Real> p2) {
     return (p1-p2).length();
   }
 
-  Vector3D<Real> center(const CentroidData& data) {
+  static Vector3D<Real> center(const CentroidData& data) {
     return data.box.center();
   }
 
-  Real radius(const CentroidData& data) {
+  static Real radius(const CentroidData& data) {
     return data.box.size().length()/2;
   }
 
-  int findBin(const CentroidData& from, const CentroidData& on) {
+  static int findBin(const CentroidData& from, const CentroidData& on) {
     Real d = dist(center(from), center(on));
     Real r1 = radius(from), r2 = radius(on);
     return count_manager.ckLocalBranch()->findBin(d - r1 - r2, d + r1 + r2);
   }
 
 public:
-  bool open(const SpatialNode<CentroidData>& from, SpatialNode<CentroidData>& on) {
+  static bool open(const SpatialNode<CentroidData>& from, SpatialNode<CentroidData>& on) {
     if (from.data.count == 0 || on.data.count == 0) {
       return false;
     }
@@ -47,13 +49,13 @@ public:
     }
   }
 
-  void node(const SpatialNode<CentroidData>& from, SpatialNode<CentroidData>& on) {}
+  static void node(const SpatialNode<CentroidData>& from, SpatialNode<CentroidData>& on) {}
 
-  bool cell(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
+  static bool cell(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
     return open(source, target);
   }
 
-  void leaf(const SpatialNode<CentroidData>& from, SpatialNode<CentroidData>& on) {
+  static void leaf(const SpatialNode<CentroidData>& from, SpatialNode<CentroidData>& on) {
     CountManager* countManager = count_manager.ckLocalBranch();
     int idx = findBin(from.data, on.data);
     if (idx < 0) {

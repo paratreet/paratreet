@@ -18,19 +18,6 @@ typedef double Real;
 // Simulation domain dimensions
 #define NDIM 3
 
-// Decomposition types
-#define OCT_DECOMP 10
-#define SFC_DECOMP 11
-
-// Tree types
-#define OCT_TREE 20
-#define BINARY_TREE 21
-
-// Hyperparameters
-#define LOCAL_CACHE_SIZE 5000
-#define DECOMP_TOLERANCE 1.0
-#define BUCKET_TOLERANCE 1.0
-
 // Particle key
 typedef SFC::Key Key;
 #ifndef CHAR_BIT
@@ -39,7 +26,5 @@ typedef SFC::Key Key;
 #define KEY_BITS (sizeof(Key)*CHAR_BIT)
 #define BITS_PER_DIM (KEY_BITS/NDIM)
 #define BOXES_PER_DIM (1<<(BITS_PER_DIM))
-
-#define UP_ONLY 7
 
 #endif // PARATREET_COMMON_H_

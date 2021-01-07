@@ -9,38 +9,34 @@ class Tree {
 public:
   virtual ~Tree() = default;
   virtual int getBranchFactor() = 0;
-  virtual void buildCanopy(int tp_index, const SendProxyFn &fn) = 0;
+  virtual void buildCanopy(int tp_index, const SendProxyFn &fn);
+  virtual void prepParticles(Particle* particles, size_t n_particles, Key parent_key, size_t log_branch_factor) {};
+  // Returns start + n_particles
+  virtual int findChildsLastParticle(const Particle* particles, int start, int finish, Key child_key, size_t log_branch_factor) = 0;
 };
+
+class KdTree : public Tree {
+public:
+  virtual ~KdTree() = default;
+  virtual int getBranchFactor() override {return 2;}
+  virtual int findChildsLastParticle(const Particle* particles, int start, int finish, Key child_key, size_t log_branch_factor) override {
+    return (start + finish + 1) / 2; // heavy on the left
+  }
+  virtual void prepParticles(Particle* particles, size_t n_particles, Key parent_key, size_t log_branch_factor) override;
+};
+
 
 class OctTree : public Tree {
 public:
   virtual ~OctTree() = default;
-  virtual int getBranchFactor() override {
-    return 8;
-  }
-
-  void buildCanopy(int tp_index, const SendProxyFn &fn) override;
-
-  // Returns start + n_particles
-  template<typename Data>
-  static int findChildsLastParticle(Node<Data>* parent, int child, Key child_key, int start, int finish, size_t log_branch_factor) {
-    Key sibling_splitter = Utility::removeLeadingZeros(child_key + 1, log_branch_factor);
-
-    // Find number of particles in child
-    if (child < parent->n_children - 1) {
-      return Utility::binarySearchGE(sibling_splitter, parent->particles(), start, finish);
-    } else {
-      return finish;
-    }
-  }
+  virtual int getBranchFactor() override {return 8;}
+  virtual int findChildsLastParticle(const Particle* particles, int start, int finish, Key child_key, size_t log_branch_factor) override;
 };
 
 class BinaryTree : public OctTree {
 public:
   virtual ~BinaryTree() = default;
-  virtual int getBranchFactor() override {
-    return 2;
-  }
+  virtual int getBranchFactor() override {return 2;}
 };
 
 #endif

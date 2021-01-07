@@ -17,7 +17,7 @@ private:
   static constexpr Real theta = 0.7;
   static constexpr int  nMinParticleNode = 6;
 
-  void addGravity(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
+  static void addGravity(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
     for (int i = 0; i < target.n_particles; i++) {
       Vector3D<Real> diff = source.data.centroid - target.particles()[i].position;
       Real rsq = diff.lengthSquared();
@@ -28,12 +28,10 @@ private:
     }
   }
 
-  public:
-  GravityVisitor() {}
-
+public:
   /// @brief We've hit a leaf: N^2 interactions between all particles
   /// in the target and node.
-  void leaf(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
+  static void leaf(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
       // addGravity(source, target);
     for (int i = 0; i < target.n_particles; i++) {
       Vector3D<Real> accel(0.0);
@@ -46,12 +44,9 @@ private:
       }
       target.applyAcceleration(i, accel);
     }
-#if COUNT_INTERACTIONS
-    centroid_resumer.ckLocalBranch()->countInts(target.n_particles);
-#endif
   }
 
-  bool open(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
+  static bool open(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
     if (source.n_particles <= nMinParticleNode) return true;
     if (Space::intersect(source.data.box, target.data.box.center(), source.data.rsq))
       return true;
@@ -63,16 +58,13 @@ private:
     return false;
   }
 
-  void node(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
+  static void node(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
     if (source.data.sum_mass > 0) {
       addGravity(source, target);
-#if COUNT_INTERACTIONS
-      centroid_resumer.ckLocalBranch()->countInts(-target.n_particles);
-#endif
     }
   }
 
-  bool cell(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
+  static bool cell(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
     // find the closest particle in target to source's center
     // check all eight corners of bounding box
     // return true if one corner is within total_volume of node

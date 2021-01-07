@@ -16,7 +16,7 @@ function replace {
     fi
 }
 
-replace "void recursive_pup_impl<ArrayMeshStreamer<Key, TreePiece <" "$DECL_H" "Data" "CentroidData"
-replace "void recursive_pup_impl<ArrayMeshStreamer<Key, TreePiece <" "$DEF_H" "Data" "CentroidData"
-replace "obj->ArrayMeshStreamer<Key, TreePiece <" "$DEF_H" "Data" "CentroidData"
+replace "void recursive_pup_impl<ArrayMeshStreamer<Partition <" "$DECL_H" "Data" "CentroidData"
+replace "void recursive_pup_impl<ArrayMeshStreamer<Partition <" "$DEF_H" "Data" "CentroidData"
+replace "obj->ArrayMeshStreamer<Partition <" "$DEF_H" "Data" "CentroidData"
 replace "goDown_marshall.*TramAggregator->insertData" "$DEF_H" "<false>" " "

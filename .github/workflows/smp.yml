@@ -47,6 +47,9 @@ jobs:
         make -j4
         cd ../examples/simple
         make
-        ./charmrun +p1 ./Main -f ../../inputgen/1k.tipsy -p 100 ++ppn 1 +setcpuaffinity ++local
-        ./charmrun +p4 ./Main -f ../../inputgen/1k.tipsy -p 100 ++ppn 4 +setcpuaffinity ++local
-        ./charmrun +p4 ./Main -f ../../inputgen/1k.tipsy -p 100 ++ppn 2 +setcpuaffinity ++local
+        ./charmrun +p1 ./Gravity -f ../../inputgen/1k.tipsy -p 100 ++ppn 1 +setcpuaffinity ++local -u 2
+        ./charmrun +p4 ./Gravity -f ../../inputgen/1k.tipsy -p 100 ++ppn 4 +setcpuaffinity ++local -u 2 -t bin
+        ./charmrun +p4 ./Gravity -f ../../inputgen/1k.tipsy -p 100 ++ppn 2 +setcpuaffinity ++local -u 2 -d sfc
+        ./charmrun +p1 ./SPH     -f ../../inputgen/1k.tipsy -p 100 ++ppn 1 +setcpuaffinity ++local -u 2
+        ./charmrun +p4 ./SPH     -f ../../inputgen/1k.tipsy -p 100 ++ppn 4 +setcpuaffinity ++local -u 2 -t bin
+        ./charmrun +p4 ./SPH     -f ../../inputgen/1k.tipsy -p 100 ++ppn 2 +setcpuaffinity ++local -u 2 -d sfc
