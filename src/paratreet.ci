@@ -55,6 +55,8 @@ module paratreet {
   };
 #ifdef GROUP_CACHE
   group CacheManager<CentroidData>;
+  extern entry void CacheManager<CentroidData> requestNodes(std::pair<Key,int>);
+  extern entry void CacheManager<CentroidData> addCache(MultiData<CentroidData>);
 #else
   nodegroup CacheManager<CentroidData>;
 #endif
@@ -67,6 +69,8 @@ module paratreet {
     entry [aggregate] void addCache(MultiData<Data>);
   };
   group CacheManagerTRAM<CentroidData>;
+  extern entry void CacheManagerTRAM<CentroidData> requestNodes(std::pair<Key,int>);
+  extern entry void CacheManagerTRAM<CentroidData> addCache(MultiData<CentroidData>);
 #endif
 
   template <typename Data>
