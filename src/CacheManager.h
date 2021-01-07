@@ -14,7 +14,7 @@
 
 extern CProxy_TreeSpec treespec;
 #ifndef GROUP_CACHE
-extern CProxy_CacheManagerTRAM<CentroidData> cache_manager_tram;
+extern CProxy_CacheManagerTRAM<CentroidData> centroid_cache_tram;
 #endif
 
 template <typename Data>

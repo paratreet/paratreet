@@ -9,6 +9,8 @@
 #include <unordered_map>
 #include <vector>
 
+extern CProxy_CacheManagerTRAM<CentroidData> centroid_cache_tram;
+
 namespace {
 
 template <typename Visitor, typename Node, typename StatCollector>
@@ -167,7 +169,13 @@ public:
             }
             else {
               // The node is entirely remote, ask CacheManager for data
+#ifdef GROUP_CACHE
               part.cm_proxy[node->cm_index].requestNodes(std::make_pair(node->key, part.cm_local->thisIndex));
+#else
+              // FIXME: Always sending to first PE of the target logical node
+              centroid_cache_tram[CmiNodeFirst(node->cm_index)].requestNodes(
+                  std::make_pair(node->key, part.cm_local->thisIndex));
+#endif
             }
           }
           // Add the Partition that initiated the traversal to the waiting list
@@ -287,9 +295,17 @@ private:
               num_waiting[bucket]++;
               bool prev = node->requested.exchange(true);
               if (!prev) {
-                if (node->type == Node<Data>::Type::Boundary || node->type == Node<Data>::Type::RemoteAboveTPKey)
+                if (node->type == Node<Data>::Type::Boundary || node->type == Node<Data>::Type::RemoteAboveTPKey) {
                   part.tc_proxy[node->key].requestData(part.cm_local->thisIndex);
-                else part.cm_proxy[node->cm_index].requestNodes(std::make_pair(node->key, part.cm_local->thisIndex));
+                } else {
+#ifdef GROUP_CACHE
+                  part.cm_proxy[node->cm_index].requestNodes(std::make_pair(node->key, part.cm_local->thisIndex));
+#else
+                  // FIXME: Always sending to first PE of the target logical node
+                  centroid_cache_tram[CmiNodeFirst(node->cm_index)].requestNodes(
+                      std::make_pair(node->key, part.cm_local->thisIndex));
+#endif
+                }
               }
               std::vector<int>& list = part.r_local->waiting[node->key];
               if (!list.size() || list.back() != part.thisIndex) list.push_back(part.thisIndex);
