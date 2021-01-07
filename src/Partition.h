@@ -53,6 +53,7 @@ struct Partition : public CBase_Partition<Data> {
 
 private:
   void initLocalBranches();
+  void erasePartition();
   void copyParticles(std::vector<Particle>& particles);
   void flush(CProxy_Reader, std::vector<Particle>&);
 };
@@ -168,6 +169,7 @@ template <typename Data>
 void Partition<Data>::destroy()
 {
   reset();
+  erasePartition();
   this->thisProxy[this->thisIndex].ckDestroy();
 }
 
@@ -196,6 +198,16 @@ void Partition<Data>::pup(PUP::er& p)
   if (p.isUnpacking()) {
     initLocalBranches();
   }
+  else {
+    erasePartition();
+  }
+}
+
+template <typename Data>
+void Partition<Data>::erasePartition() {
+  if (cm_local->isNodeGroup()) cm_local->maps_lock.lock();
+  cm_local->partition_lookup.erase(this->thisIndex);
+  if (cm_local->isNodeGroup()) cm_local->maps_lock.unlock();
 }
 
 template <typename Data>
