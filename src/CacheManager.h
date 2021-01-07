@@ -108,11 +108,19 @@ public:
   void startPrefetch(DPHolder<Data>, CkCallback);
   void startParentPrefetch(DPHolder<Data>, CkCallback);
   void prepPrefetch(Node<Data>*);
+#ifdef GROUP_CACHE
   void requestNodes(std::pair<Key, int>);
+#else
+  void requestNodes(std::pair<Key, int>&);
+#endif
   void serviceRequest(Node<Data>*, int);
   void makeSubtreeFlat(Node<Data>* node, MultiData<Data>& multidata);
   void recvStarterPack(std::pair<Key, SpatialNode<Data>>* pack, int n, CkCallback);
+#ifdef GROUP_CACHE
   void addCache(MultiData<Data>);
+#else
+  void addCache(MultiData<Data>&);
+#endif
   void addSubtree(MultiData<Data>);
   void restoreData(std::pair<Key, SpatialNode<Data>>);
   void connect(Node<Data>*);
@@ -143,6 +151,10 @@ public:
 
   void addCache(MultiData<Data> multidata) {
     local_cm->addCache(multidata);
+  }
+
+  void requestNodes(std::pair<Key, int> param) {
+    local_cm->requestNodes(param);
   }
 };
 #endif
@@ -233,7 +245,11 @@ void CacheManager<Data>::addSubtree(MultiData<Data> multidata) {
 }
 
 template <typename Data>
+#ifdef GROUP_CACHE
 void CacheManager<Data>::addCache(MultiData<Data> multidata) {
+#else
+void CacheManager<Data>::addCache(MultiData<Data>& multidata) {
+#endif
   Node<Data>* top_node = addCacheHelper(multidata.particles.data(), multidata.n_particles, multidata.nodes.data(), multidata.n_nodes, multidata.cm_index, multidata.tp_index, false);
   process(top_node->key);
 }
@@ -284,7 +300,11 @@ Node<Data>* CacheManager<Data>::addCacheHelper(Particle* particles, int n_partic
 }
 
 template <typename Data>
+#ifdef GROUP_CACHE
 void CacheManager<Data>::requestNodes(std::pair<Key, int> param) {
+#else
+void CacheManager<Data>::requestNodes(std::pair<Key, int>& param) {
+#endif
   Key key = param.first;
   Key temp = key;
   while (!local_tps.count(temp)) temp /= root->getBranchFactor();

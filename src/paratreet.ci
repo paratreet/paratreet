@@ -40,12 +40,12 @@ module paratreet {
 #endif
     entry CacheManager();
     entry void initialize(const CkCallback&);
-    entry void requestNodes(std::pair<Key, int>);
+#ifdef GROUP_CACHE
+    entry [aggregate] void requestNodes(std::pair<Key, int>);
+#endif
     entry void recvStarterPack(std::pair<Key, SpatialNode<Data>> pack [n], int n, CkCallback);
 #ifdef GROUP_CACHE
     entry [aggregate] void addCache(MultiData<Data>);
-#else
-    entry void addCache(MultiData<Data>);
 #endif
     entry void restoreData(std::pair<Key, SpatialNode<Data>>);
     template <typename Visitor>
@@ -63,6 +63,7 @@ module paratreet {
   template <typename Data>
   group CacheManagerTRAM {
     entry CacheManagerTRAM(CProxy_CacheManager<Data>);
+    entry [aggregate] void requestNodes(std::pair<Key, int>);;
     entry [aggregate] void addCache(MultiData<Data>);
   };
   group CacheManagerTRAM<CentroidData>;
