@@ -22,7 +22,8 @@ public:
   using NodeLookup = std::unordered_map<Key, Node<Data>*>;
   NodeLookup local_tps;
   NodeLookup leaf_lookup;
-  std::map<int, Partition<Data>*> partition_lookup;
+  std::map<Key, std::vector<Partition<Data>*>> subtree_copy_started;
+  std::map<int, Partition<Data>*> partition_lookup; // managed by Partition
   std::set<Key> prefetch_set;
   std::vector<std::vector<Node<Data>*>> delete_at_end;
   CProxy_Resumer<Data> r_proxy;
@@ -30,6 +31,7 @@ public:
   std::atomic<size_t> num_buckets = ATOMIC_VAR_INIT(0ul);
 
   CacheManager() { }
+
   void initialize(const CkCallback& cb) {
     this->initialize();
     this->contribute(cb);
@@ -38,6 +40,13 @@ public:
   void initialize() {
     delete_at_end.resize(CkNumPes(), std::vector<Node<Data>*>(0, nullptr));
     num_buckets.store(0u);
+  }
+
+  void lockMaps() {
+    if (this->isNodeGroup()) maps_lock.lock();
+  }
+  void unlockMaps() {
+    if (this->isNodeGroup()) maps_lock.unlock();
   }
 
   ~CacheManager() {
@@ -83,6 +92,7 @@ public:
   void destroy(bool restore) {
     local_tps.clear();
     leaf_lookup.clear();
+    subtree_copy_started.clear();
     prefetch_set.clear();
 
     for (auto& dae : delete_at_end) {
@@ -107,15 +117,14 @@ public:
   void prepPrefetch(Node<Data>*);
   void requestNodes(std::pair<Key, int>);
   void serviceRequest(Node<Data>*, int);
-  void makeSubtreeFlat(Node<Data>* node, MultiData<Data>& multidata);
   void recvStarterPack(std::pair<Key, SpatialNode<Data>>* pack, int n, CkCallback);
   void addCache(MultiData<Data>);
-  void addSubtree(MultiData<Data>);
+  void receiveSubtree(MultiData<Data>);
   void restoreData(std::pair<Key, SpatialNode<Data>>);
   void connect(Node<Data>*);
 
 private:
-  void makeMsgPerNode(int, std::vector<Node<Data>*>&, std::vector<Particle>&, Node<Data>*, bool);
+  void makeMsgPerNode(int, std::vector<Node<Data>*>&, std::vector<Particle>&, Node<Data>*);
   Node<Data>* addCacheHelper(Particle*, int, std::pair<Key, SpatialNode<Data>>*, int, int, int, bool);
   void restoreDataHelper(std::pair<Key, SpatialNode<Data>>&, bool);
   void insertNode(Node<Data>*, bool, bool);
@@ -167,21 +176,21 @@ void CacheManager<Data>::connect(Node<Data>* node, bool should_process) {
 
 template <typename Data>
 void CacheManager<Data>::connect(Node<Data>* node) {
-  if (this->isNodeGroup()) maps_lock.lock();
+  lockMaps();
   // Store/connect the incoming Subtree's local root
   local_tps.insert(std::make_pair(node->key, node));
   prepPrefetch(node);
-  if (this->isNodeGroup()) maps_lock.unlock();
+  unlockMaps();
   // XXX: May need to call process() for dual tree walk
 }
 
 template <typename Data>
 void CacheManager<Data>::connect(Node<Data>* node, const std::vector<Node<Data>*>& leaves) {
-  if (this->isNodeGroup()) maps_lock.lock();
+  lockMaps();
   // Store/connect the incoming Subtree's local root
   local_tps.insert(std::make_pair(node->key, node));
   for (auto && leaf : leaves) leaf_lookup.emplace(leaf->key, leaf);
-  if (this->isNodeGroup()) maps_lock.unlock();
+  unlockMaps();
 }
 
 template <typename Data>
@@ -206,13 +215,19 @@ void CacheManager<Data>::recvStarterPack(std::pair<Key, SpatialNode<Data>>* pack
 }
 
 template <typename Data>
-void CacheManager<Data>::addSubtree(MultiData<Data> multidata) {
-  addCacheHelper(multidata.particles.data(), multidata.n_particles, multidata.nodes.data(), multidata.n_nodes, multidata.cm_index, multidata.tp_index, true);
+void CacheManager<Data>::receiveSubtree(MultiData<Data> multidata) {
+  addCacheHelper(multidata.particles.data(), multidata.particles.size(), multidata.nodes.data(), multidata.nodes.size(), multidata.cm_index, multidata.tp_index, true);
+  lockMaps();
+  auto copy_out = subtree_copy_started[multidata.tp_index];
+  unlockMaps();
+  for (auto && partition : copy_out) {
+    partition->makeLeaves(multidata.tp_index);
+  }
 }
 
 template <typename Data>
 void CacheManager<Data>::addCache(MultiData<Data> multidata) {
-  Node<Data>* top_node = addCacheHelper(multidata.particles.data(), multidata.n_particles, multidata.nodes.data(), multidata.n_nodes, multidata.cm_index, multidata.tp_index, false);
+  Node<Data>* top_node = addCacheHelper(multidata.particles.data(), multidata.particles.size(), multidata.nodes.data(), multidata.nodes.size(), multidata.cm_index, multidata.tp_index, false);
   process(top_node->key);
 }
 
@@ -275,28 +290,19 @@ void CacheManager<Data>::requestNodes(std::pair<Key, int> param) {
 }
 
 template <typename Data>
-void CacheManager<Data>::makeMsgPerNode(int start_depth, std::vector<Node<Data>*>& sending_nodes, std::vector<Particle>& sending_particles, Node<Data>* to_process, bool send_all)
+void CacheManager<Data>::makeMsgPerNode(int start_depth, std::vector<Node<Data>*>& sending_nodes, std::vector<Particle>& sending_particles, Node<Data>* to_process)
 {
   auto config = treespec.ckLocalBranch()->getConfiguration();
   sending_nodes.push_back(to_process);
   if (to_process->type == Node<Data>::Type::Leaf) {
     std::copy(to_process->particles(), to_process->particles() + to_process->n_particles, std::back_inserter(sending_particles));
   }
-  if (send_all || to_process->depth + 1 < start_depth + config.cache_share_depth) {
+  if (to_process->depth + 1 < start_depth + config.cache_share_depth) {
     for (int i = 0; i < to_process->n_children; i++) {
       Node<Data>* child = to_process->getChild(i);
-      makeMsgPerNode(start_depth, sending_nodes, sending_particles, child, send_all);
+      makeMsgPerNode(start_depth, sending_nodes, sending_particles, child);
     }
   }
-}
-
-template <typename Data>
-void CacheManager<Data>::makeSubtreeFlat(Node<Data>* node, MultiData<Data>& multidata) {
-  std::vector<Node<Data>*> sending_nodes;
-  std::vector<Particle> sending_particles;
-  makeMsgPerNode(node->depth, sending_nodes, sending_particles, node, true);
-  MultiData<Data> to_swap (sending_particles.data(), sending_particles.size(), sending_nodes.data(), sending_nodes.size(), this->thisIndex, node->tp_index);
-  std::swap(multidata, to_swap);
 }
 
 template <typename Data>
@@ -304,7 +310,7 @@ void CacheManager<Data>::serviceRequest(Node<Data>* node, int cm_index) {
   if (cm_index == this->thisIndex) return; // you'll get it later!
   std::vector<Node<Data>*> sending_nodes;
   std::vector<Particle> sending_particles;
-  makeMsgPerNode(node->depth, sending_nodes, sending_particles, node, false);
+  makeMsgPerNode(node->depth, sending_nodes, sending_particles, node);
   MultiData<Data> multidata (sending_particles.data(), sending_particles.size(), sending_nodes.data(), sending_nodes.size(), this->thisIndex, node->tp_index);
   this->thisProxy[cm_index].addCache(multidata);
 }

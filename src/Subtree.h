@@ -37,6 +37,7 @@ public:
 
   Key tp_key; // Should be a prefix of all particle keys underneath this node
   Node<Data>* local_root; // Root node of this Subtree, TreeCanopies sit above this node
+  MultiData<Data> flat_subtree;
 
   CProxy_TreeCanopy<Data> tc_proxy;
   CProxy_CacheManager<Data> cm_proxy;
@@ -52,6 +53,7 @@ public:
   inline void initCache();
   void sendLeaves(CProxy_Partition<Data>);
   void requestNodes(Key, int);
+  void requestCopy(int);
   void print(Node<Data>*);
   void destroy();
   void reset();
@@ -160,7 +162,6 @@ void Subtree<Data>::sendLeaves(CProxy_Partition<Data> part)
     }
   }
 
-  MultiData<Data> flat_subtree; // might be used
   for (auto && part_receiver : part_idx_to_leaf) {
     auto it = cm_proxy.ckLocalBranch()->partition_lookup.find(part_receiver.first);
     if (it != cm_proxy.ckLocalBranch()->partition_lookup.end()) {
@@ -168,16 +169,18 @@ void Subtree<Data>::sendLeaves(CProxy_Partition<Data> part)
       it->second->addLeaves(leaf_ptrs, this->thisIndex);
     }
     else {
-      if (flat_subtree.n_nodes == 0) { // hasnt been filled yet
-        cm_proxy.ckLocalBranch()->makeSubtreeFlat(local_root, flat_subtree);
-      }
       std::vector<Key> lookup_leaf_keys;
       for (auto && leaf : part_receiver.second) {
 	lookup_leaf_keys.push_back(leaf->key);
       }
-      part[part_receiver.first].receiveLeavesAndSubtree(flat_subtree, lookup_leaf_keys, this->thisIndex);
+      part[part_receiver.first].receiveLeaves(lookup_leaf_keys, tp_key, this->thisIndex, this->thisProxy);
     }
   }
+}
+
+template <typename Data>
+void Subtree<Data>::requestCopy(int cm_index) {
+  cm_proxy[cm_index].receiveSubtree(flat_subtree);
 }
 
 template <typename Data>
@@ -201,6 +204,10 @@ void Subtree<Data>::buildTree() {
   Key lbf = log2(local_root->getBranchFactor()); // have to use treespec_subtrees to get BF
   local_root->depth = Utility::getDepthFromKey(tp_key, lbf);
   recursiveBuild(local_root, &particles[0], lbf);
+
+  flat_subtree.tp_index  = this->thisIndex;
+  flat_subtree.cm_index  = cm_proxy.ckLocalBranch()->thisIndex;
+  flat_subtree.particles = particles;
 
   // Populate the tree structure (including TreeCanopy)
   populateTree();
@@ -230,6 +237,8 @@ void Subtree<Data>::recursiveBuild(Node<Data>* node, Particle* node_particles, s
       node->type = Node<Data>::Type::Leaf;
       leaves.push_back(node);
     }
+    SpatialNode<Data> sn (*node);
+    flat_subtree.nodes.emplace_back(node->key, sn);
     return;
   }
 
@@ -237,6 +246,8 @@ void Subtree<Data>::recursiveBuild(Node<Data>* node, Particle* node_particles, s
   node->type = Node<Data>::Type::Internal;
   node->n_children = node->wait_count = (1 << log_branch_factor);
   node->is_leaf = false;
+  SpatialNode<Data> sn (*node);
+  flat_subtree.nodes.emplace_back(node->key, sn);
   Key child_key = (node->key << log_branch_factor);
   int start = 0;
   int finish = start + node->n_particles;
@@ -318,6 +329,7 @@ void Subtree<Data>::requestNodes(Key key, int cm_index) {
 template <typename Data>
 void Subtree<Data>::reset() {
   particles.clear();
+  flat_subtree.clear();
 }
 
 template <typename Data>
