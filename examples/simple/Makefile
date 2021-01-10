@@ -6,31 +6,30 @@ OPTS = -g -I$(STRUCTURE_PATH) -I$(PARATREET_PATH) -DCOUNT_INTERACTIONS=0 -DDEBUG
 CHARMC = $(CHARM_HOME)/bin/charmc $(OPTS)
 LD_LIBS = -L$(PARATREET_PATH) -lparatreet
 
-BINARY = Main
-OBJS = Main.o
+all: Gravity SPH
+VISITORS = DensityVisitor.h PressureVisitor.h GravityVisitor.h
+OTHERS = CountManager.h NeighborListCollector.h
 
-all: $(BINARY) $(BINARY)_proj
-
-$(BINARY).decl.h: $(BINARY).ci
+Main.decl.h: Main.ci
 	$(CHARMC) $<
 
-$(BINARY): $(BINARY).decl.h $(OBJS)
-	$(CHARMC) -language charm++ -module CommonLBs -o $(BINARY) $(OBJS) $(LD_LIBS)
+Gravity: Main.decl.h Gravity.o Main.o
+	$(CHARMC) -language charm++ -module CommonLBs -o Gravity Gravity.o Main.o $(LD_LIBS)
 
-$(BINARY)_proj: $(BINARY).decl.h $(OBJS)
-	$(CHARMC) -language charm++ -tracemode projections -module CommonLBs -o $(BINARY)_proj $(OBJS) $(LD_LIBS)
+SPH: Main.decl.h SPH.o Main.o
+	$(CHARMC) -language charm++ -module CommonLBs -o SPH SPH.o Main.o $(LD_LIBS)
 
-Main.o: Main.C
+Gravity.o: Gravity.C
+	$(CHARMC) -c $<
+
+SPH.o: SPH.C
+	$(CHARMC) -c $<
+
+Main.o: Main.C $(VISITORS) $(OTHERS)
 	$(CHARMC) -c $<
 
 test: all
-	./charmrun ./$(BINARY) -f $(BASE_PATH)/inputgen/100k.tipsy +p3 ++ppn 3 +pemap 1-3 +commap 0 ++local
-
-run: all
-	./$(BINARY) -u 2  -f $(BASE_PATH)/inputgen/100k.tipsy
-
-proj: all
-	./charmrun ./$(BINARY)_proj -f $(BASE_PATH)/inputgen/100k.tipsy +p20 +setcpuaffinity
+	./charmrun ./Gravity -f $(BASE_PATH)/inputgen/100k.tipsy -d sfc +p3 ++ppn 3 +pemap 1-3 +commap 0 ++local
 
 clean:
-	rm -f *.decl.h *.def.h conv-host *.o $(BINARY) charmrun
+	rm -f *.decl.h *.def.h conv-host *.o Gravity SPH charmrun

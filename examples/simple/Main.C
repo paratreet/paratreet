@@ -7,25 +7,8 @@
 #include "CollisionVisitor.h"
 
 /* readonly */ bool verify;
-
-namespace paratreet {
-
-  void preTraversalFn(CProxy_Driver<CentroidData>& driver, CProxy_CacheManager<CentroidData>& cache) {
-    //cache.startParentPrefetch(this->thisProxy, CkCallback::ignore); // MUST USE FOR UPND TRAVS
-    //cache.template startPrefetch<GravityVisitor>(this->thisProxy, CkCallback::ignore);
-    driver.loadCache(CkCallbackResumeThread());
-  }
-
-  void traversalFn(BoundingBox& universe, CProxy_Partition<CentroidData>& part, int iter) {
-    part.template startDown<GravityVisitor>();
-  }
-
-  void postInteractionsFn(BoundingBox& universe, CProxy_Partition<CentroidData>& part, int iter) {
-    if (iter == 0 && verify) {
-      paratreet::outputParticles(universe, part);
-    }
-  }
-}
+/* readonly */ CProxy_CountManager count_manager;
+/* readonly */ CProxy_NeighborListCollector neighbor_list_collector;
 
 class Main : public CBase_Main {
   int n_treepieces; // Cannot be a readonly because of OCT decomposition
@@ -45,15 +28,15 @@ class Main : public CBase_Main {
     // Initialize readonly variables
     conf.input_file = "";
     conf.output_file = "";
-    conf.decomp_tolerance = 0.1;
     conf.max_particles_per_tp = 1000;
     conf.max_particles_per_leaf = 10;
-    conf.decomp_type = OCT_DECOMP;
-    conf.tree_type = OCT_TREE;
+    conf.decomp_type = paratreet::DecompType::eOct;
+    conf.tree_type = paratreet::TreeType::eOct;
     conf.num_iterations = 3;
     conf.num_share_nodes = 0; // 3;
     conf.cache_share_depth= 3;
     conf.flush_period = 1;
+    conf.lb_period = 5;
     conf.flush_max_avg_ratio = 0;
     conf.timestep_size = 0.1;
 
@@ -66,7 +49,7 @@ class Main : public CBase_Main {
     // Process command line arguments
     int c;
     std::string input_str;
-    while ((c = getopt(m->argc, m->argv, "f:n:p:l:d:t:i:s:u:r:v:")) != -1) {
+    while ((c = getopt(m->argc, m->argv, "f:n:p:l:d:t:i:s:u:b:r:v:")) != -1) {
       switch (c) {
         case 'f':
           conf.input_file = optarg;
@@ -83,19 +66,25 @@ class Main : public CBase_Main {
         case 'd':
           input_str = optarg;
           if (input_str.compare("oct") == 0) {
-            conf.decomp_type = OCT_DECOMP;
+            conf.decomp_type = paratreet::DecompType::eOct;
           }
           else if (input_str.compare("sfc") == 0) {
-            conf.decomp_type = SFC_DECOMP;
+            conf.decomp_type = paratreet::DecompType::eSfc;
+          }
+          else if (input_str.compare("kd") == 0) {
+            conf.decomp_type = paratreet::DecompType::eKd;
           }
           break;
         case 't':
           input_str = optarg;
           if (input_str.compare("oct") == 0) {
-            conf.tree_type = OCT_TREE;
+            conf.tree_type = paratreet::TreeType::eOct;
           }
           else if (input_str.compare("bin") == 0) {
-            conf.tree_type = BINARY_TREE;
+            conf.tree_type = paratreet::TreeType::eOctBinary;
+          }
+          else if (input_str.compare("kd") == 0) {
+            conf.tree_type = paratreet::TreeType::eKd;
           }
           break;
         case 'i':
@@ -106,6 +95,9 @@ class Main : public CBase_Main {
           break;
         case 'u':
           conf.flush_period = atoi(optarg);
+          break;
+        case 'b':
+          conf.lb_period = atoi(optarg);
           break;
         case 'r':
           conf.flush_max_avg_ratio = atoi(optarg);
@@ -121,11 +113,12 @@ class Main : public CBase_Main {
           CkPrintf("\t-n [number of treepieces]\n");
           CkPrintf("\t-p [maximum number of particles per treepiece]\n");
           CkPrintf("\t-l [maximum number of particles per leaf]\n");
-          CkPrintf("\t-d [decomposition type: oct, sfc]\n");
-          CkPrintf("\t-t [tree type: oct]\n");
+          CkPrintf("\t-d [decomposition type: oct, sfc, kd]\n");
+          CkPrintf("\t-t [tree type: oct, bin, kd]\n");
           CkPrintf("\t-i [number of iterations]\n");
           CkPrintf("\t-s [number of shared tree levels]\n");
           CkPrintf("\t-u [flush period]\n");
+          CkPrintf("\t-b [load balance period]\n");
           CkPrintf("\t-u [flush threshold for Subtree max_average ratio]\n");
           CkExit();
       }
@@ -136,12 +129,13 @@ class Main : public CBase_Main {
     CkPrintf("\n[PARATREET]\n");
     if (conf.input_file.empty()) CkAbort("Input file unspecified");
     CkPrintf("Input file: %s\n", conf.input_file.c_str());
-    CkPrintf("Decomposition type: %s\n", (conf.decomp_type == OCT_DECOMP) ? "OCT" : "SFC");
-    CkPrintf("Tree type: %s\n", (conf.tree_type == OCT_TREE) ? "OCT" : "BIN");
+    CkPrintf("Decomposition type: %s\n", paratreet::asString(conf.decomp_type).c_str());
+    CkPrintf("Tree type: %s\n", paratreet::asString(conf.tree_type).c_str());
     CkPrintf("Maximum number of particles per treepiece: %d\n", conf.max_particles_per_tp);
     CkPrintf("Maximum number of particles per leaf: %d\n\n", conf.max_particles_per_leaf);
 
     count_manager = CProxy_CountManager::ckNew(0.00001, 10000, 5);
+    neighbor_list_collector = CProxy_NeighborListCollector::ckNew();
 
     // Delegate to Driver
     CkCallback runCB(CkIndex_Main::run(), thisProxy);

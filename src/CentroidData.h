@@ -19,6 +19,7 @@ struct CentroidData {
   OrientedBox<Real> box;
   int count;
   Real rsq;
+  int home_pe = -1;
   static constexpr const double theta = 0.7;
 
   CentroidData() :
@@ -35,6 +36,7 @@ struct CentroidData {
     count += n_particles;
     fixed_ball.resize(n_particles);
     neighbors.resize(n_particles);
+    home_pe = CkMyPe();
   }
 
   const CentroidData& operator+=(const CentroidData& cd) { // needed for upward traversal
@@ -66,6 +68,7 @@ struct CentroidData {
     p | size_sm;
     p | fixed_ball;
     p | neighbors;
+    p | home_pe;
   }
 
 };

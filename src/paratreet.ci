@@ -9,11 +9,11 @@ module paratreet {
   class CProxy_Reader;
   class CProxy_TreeSpec;
   include "MultiData.h";
-  include "NodeWrapper.h";
 
   include "Decomposition.h";
   PUPable SfcDecomposition;
   PUPable OctDecomposition;
+  PUPable KdDecomposition;
 
   readonly CProxy_Reader readers;
   readonly CProxy_TreeSpec treespec;
@@ -68,16 +68,16 @@ module paratreet {
   array [1d] Partition {
     entry Partition(int, CProxy_CacheManager<Data>, CProxy_Resumer<Data>, TCHolder<Data>);
     template <typename Visitor> entry void startDown();
+    template <typename Visitor> entry void startUpAndDown();
     entry void interact(const CkCallback&);
-    entry void goDown(Key);
-    entry void receiveLeaves(std::vector<NodeWrapper>, std::vector<Key>, int);
-    entry void receive(ParticleMsg*);
+    entry void goDown();
+    entry void receiveLeavesAndSubtree(MultiData<Data>, std::vector<Key>, int);
     entry void destroy();
     entry void reset();
     entry void perturb(TPHolder<Data>, Real, bool);
-    entry void flush(CProxy_Reader);
     entry void output(CProxy_Writer w, CkCallback cb);
     entry void pauseForLB();
+    entry void callPerLeafFn(CkCallback cb);
   }
   array [1d] Partition<CentroidData>;
 
@@ -129,7 +129,8 @@ module paratreet {
     template <typename Data>
     entry void request(CProxy_Subtree<Data>, int, int);
     entry void countOct(std::vector<Key>, size_t, const CkCallback&);
-    entry void countSfc(const CkCallback&);
+    entry void getAllSfcKeys(const CkCallback&);
+    entry void getAllPositions(const CkCallback&);
     entry void pickSamples(const int, const CkCallback&);
     entry void prepMessages(const std::vector<Key>&, const CkCallback&);
     entry void redistribute();

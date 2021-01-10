@@ -115,6 +115,8 @@ public:
     }
     else {
       n_partitions = treespec.ckLocalBranch()->doFindSplitters(universe, readers);
+      // partition doFindSplitters + subtree doFind do not depend on each other
+      // only dependency is: partition flush must go before subtree flush
       treespec.receiveDecomposition(CkCallbackResumeThread(),
         CkPointer<Decomposition>(treespec.ckLocalBranch()->getDecomposition()));
     }
@@ -219,14 +221,16 @@ public:
       int sumParticlesSize = *(int*)(res[2].data);
       float avgTPSize = (float) sumParticlesSize / (float) n_subtrees;
       float ratio = (float) maxParticlesSize / avgTPSize;
+
       bool complete_rebuild = (config.flush_max_avg_ratio != 0?
           (ratio > config.flush_max_avg_ratio) : // use flush_max_avg_ratio when it is not 0
           (iter % config.flush_period == config.flush_period - 1)) ;
+
       CkPrintf("[Meta] n_subtree = %d; timestep_size = %f; maxSubtreeSize = %d; sumSubtreeSize = %d; avgSubtreeSize = %f; ratio = %f; maxVelocity = %f; rebuild = %s\n", n_subtrees, updated_timestep_size, maxParticlesSize,sumParticlesSize, avgTPSize, ratio, max_velocity, (complete_rebuild? "yes" : "no"));
       //End Subtree reduction message parsing
 
       Real max_universe_box_dimension = 0;
-      for (int dim = 0; dim < UNIVERSE_NDIM; dim ++){
+      for (int dim = 0; dim < NDIM; dim ++){
         Real length = universe.box.greater_corner[dim] - universe.box.lesser_corner[dim];
         if (length > max_universe_box_dimension)
           max_universe_box_dimension = length;
@@ -237,10 +241,12 @@ public:
       partitions.perturb(subtrees, updated_timestep_size, complete_rebuild); // 0.1s for example
       CkWaitQD();
       CkPrintf("Perturbations: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
-      start_time = CkWallTimer();
-      partitions.pauseForLB();
-      CkWaitQD();
-      CkPrintf("Load balancing: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
+      if(iter % config.lb_period == config.lb_period - 1){
+        start_time = CkWallTimer();
+        partitions.pauseForLB();
+        CkWaitQD();
+        CkPrintf("Load balancing: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
+      }
 
       // Destroy subtrees and perform decomposition from scratch
       if (complete_rebuild) {
