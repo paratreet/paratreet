@@ -39,7 +39,7 @@ module paratreet {
     entry void recvStarterPack(std::pair<Key, SpatialNode<Data>> pack [n], int n, CkCallback);
     entry void addCache(MultiData<Data>);
     entry void restoreData(std::pair<Key, SpatialNode<Data>>);
-    entry void receiveSubtree(MultiData<Data>);
+    entry void receiveSubtree(MultiData<Data>, PPHolder<Data>);
     template <typename Visitor>
     entry void startPrefetch(DPHolder<Data>, CkCallback);
     entry void startParentPrefetch(DPHolder<Data>, CkCallback);
@@ -73,6 +73,7 @@ module paratreet {
     entry void interact(const CkCallback&);
     entry void goDown();
     entry void receiveLeaves(std::vector<Key>, Key, int, TPHolder<Data>);
+    entry void makeLeaves(int);
     entry void destroy();
     entry void reset();
     entry void perturb(TPHolder<Data>, Real, bool);
@@ -87,7 +88,7 @@ module paratreet {
     entry void receive(ParticleMsg*);
     entry void buildTree();
     entry void requestNodes(Key, int);
-    entry void requestCopy(int);
+    entry void requestCopy(int, PPHolder<Data>);
     entry void destroy();
     entry void reset();
     entry void sendLeaves(CProxy_Partition<Data>);

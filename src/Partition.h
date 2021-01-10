@@ -161,15 +161,13 @@ void Partition<Data>::receiveLeaves(std::vector<Key> leaf_keys, Key tp_key, int 
     makeLeaves(leaf_keys, subtree_idx);
   }
   else {
-    receive_lock.lock();
     lookup_leaf_keys[subtree_idx] = leaf_keys;
-    receive_lock.unlock();
     auto& out = cm_local->subtree_copy_started[subtree_idx];
     bool should_request = out.empty();
-    out.push_back(this);
+    out.push_back(this->thisIndex);
     cm_local->unlockMaps();
     if (should_request) {
-      tp_holder.proxy[subtree_idx].requestCopy(cm_local->thisIndex);
+      tp_holder.proxy[subtree_idx].requestCopy(cm_local->thisIndex, this->thisProxy);
     }
   }
 }
@@ -185,14 +183,11 @@ void Partition<Data>::makeLeaves(const std::vector<Key>& keys, int subtree_idx) 
   }
   cm_local->unlockMaps();
   addLeaves(leaf_ptrs, subtree_idx);
-
 }
 
 template <typename Data>
 void Partition<Data>::makeLeaves(int subtree_idx) {
-  receive_lock.lock();
   auto keys = lookup_leaf_keys[subtree_idx];
-  receive_lock.unlock();
   makeLeaves(keys, subtree_idx);
 }
 

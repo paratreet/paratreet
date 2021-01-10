@@ -17,6 +17,19 @@ struct TPHolder {
 };
 
 template <typename Data>
+class CProxy_Partition;
+
+template <typename Data>
+struct PPHolder {
+  CProxy_Partition<Data> proxy;
+  PPHolder(CProxy_Partition<Data> proxy_) : proxy(proxy_) {}
+  PPHolder() {}
+  void pup(PUP::er& p) {
+    p | proxy;
+  }
+};
+
+template <typename Data>
 class CProxy_TreeCanopy;
 
 template <typename Data>

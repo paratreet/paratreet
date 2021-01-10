@@ -22,7 +22,7 @@ public:
   using NodeLookup = std::unordered_map<Key, Node<Data>*>;
   NodeLookup local_tps;
   NodeLookup leaf_lookup;
-  std::map<Key, std::vector<Partition<Data>*>> subtree_copy_started;
+  std::map<Key, std::vector<int>> subtree_copy_started;
   std::map<int, Partition<Data>*> partition_lookup; // managed by Partition
   std::set<Key> prefetch_set;
   std::vector<std::vector<Node<Data>*>> delete_at_end;
@@ -119,7 +119,7 @@ public:
   void serviceRequest(Node<Data>*, int);
   void recvStarterPack(std::pair<Key, SpatialNode<Data>>* pack, int n, CkCallback);
   void addCache(MultiData<Data>);
-  void receiveSubtree(MultiData<Data>);
+  void receiveSubtree(MultiData<Data>, PPHolder<Data>);
   void restoreData(std::pair<Key, SpatialNode<Data>>);
   void connect(Node<Data>*);
 
@@ -215,13 +215,13 @@ void CacheManager<Data>::recvStarterPack(std::pair<Key, SpatialNode<Data>>* pack
 }
 
 template <typename Data>
-void CacheManager<Data>::receiveSubtree(MultiData<Data> multidata) {
+void CacheManager<Data>::receiveSubtree(MultiData<Data> multidata, PPHolder<Data> pp_holder) {
   addCacheHelper(multidata.particles.data(), multidata.particles.size(), multidata.nodes.data(), multidata.nodes.size(), multidata.cm_index, multidata.tp_index, true);
   lockMaps();
   auto copy_out = subtree_copy_started[multidata.tp_index];
   unlockMaps();
   for (auto && partition : copy_out) {
-    partition->makeLeaves(multidata.tp_index);
+    pp_holder.proxy[partition].makeLeaves(multidata.tp_index);
   }
 }
 

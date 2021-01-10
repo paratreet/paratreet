@@ -53,7 +53,7 @@ public:
   inline void initCache();
   void sendLeaves(CProxy_Partition<Data>);
   void requestNodes(Key, int);
-  void requestCopy(int);
+  void requestCopy(int, PPHolder<Data>);
   void print(Node<Data>*);
   void destroy();
   void reset();
@@ -179,8 +179,8 @@ void Subtree<Data>::sendLeaves(CProxy_Partition<Data> part)
 }
 
 template <typename Data>
-void Subtree<Data>::requestCopy(int cm_index) {
-  cm_proxy[cm_index].receiveSubtree(flat_subtree);
+void Subtree<Data>::requestCopy(int cm_index, PPHolder<Data> pp_holder) {
+  cm_proxy[cm_index].receiveSubtree(flat_subtree, pp_holder);
 }
 
 template <typename Data>
