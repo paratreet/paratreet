@@ -60,6 +60,7 @@ public:
   void output(CProxy_Writer w, CkCallback cb);
   void pup(PUP::er& p);
   void collectMetaData(Real timestep, const CkCallback & cb);
+  void addNodeToFlatSubtree(Node<Data>* node);
 
   // For debugging
   void checkParticlesChanged(const CkCallback& cb) {
@@ -179,7 +180,17 @@ void Subtree<Data>::sendLeaves(CProxy_Partition<Data> part)
 }
 
 template <typename Data>
+void Subtree<Data>::addNodeToFlatSubtree(Node<Data>* node) {
+  SpatialNode<Data> sn (*node);
+  flat_subtree.nodes.emplace_back(node->key, sn);
+  for (int i = 0; i < node->n_children; i++) {
+    addNodeToFlatSubtree(node->getChild(i));
+  }
+}
+
+template <typename Data>
 void Subtree<Data>::requestCopy(int cm_index, PPHolder<Data> pp_holder) {
+  if (flat_subtree.nodes.empty()) addNodeToFlatSubtree(local_root);
   cm_proxy[cm_index].receiveSubtree(flat_subtree, pp_holder);
 }
 
@@ -237,8 +248,6 @@ void Subtree<Data>::recursiveBuild(Node<Data>* node, Particle* node_particles, s
       node->type = Node<Data>::Type::Leaf;
       leaves.push_back(node);
     }
-    SpatialNode<Data> sn (*node);
-    flat_subtree.nodes.emplace_back(node->key, sn);
     return;
   }
 
@@ -246,8 +255,6 @@ void Subtree<Data>::recursiveBuild(Node<Data>* node, Particle* node_particles, s
   node->type = Node<Data>::Type::Internal;
   node->n_children = node->wait_count = (1 << log_branch_factor);
   node->is_leaf = false;
-  SpatialNode<Data> sn (*node);
-  flat_subtree.nodes.emplace_back(node->key, sn);
   Key child_key = (node->key << log_branch_factor);
   int start = 0;
   int finish = start + node->n_particles;
