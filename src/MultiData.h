@@ -11,8 +11,6 @@
 
 template <typename Data>
 struct MultiData {
-  int n_particles = 0;
-  int n_nodes = 0;
   std::vector<Particle> particles;
   std::vector<std::pair<Key, SpatialNode<Data>>> nodes;
   int cm_index = -1;
@@ -21,15 +19,14 @@ struct MultiData {
   MultiData();
   MultiData(Particle*, int, Node<Data>**, int, int, int);
   void pup(PUP::er& p);
+  void clear();
 };
 
 template <typename Data>
 MultiData<Data>::MultiData() {}
 
 template <typename Data>
-inline MultiData<Data>::MultiData(Particle* particlesi, int n_particlesi, Node<Data>** nodesi, int n_nodesi, int cm_indexi, int tp_indexi) {
-  n_particles   = n_particlesi;
-  n_nodes       = n_nodesi;
+inline MultiData<Data>::MultiData(Particle* particlesi, int n_particles, Node<Data>** nodesi, int n_nodes, int cm_indexi, int tp_indexi) {
   cm_index      = cm_indexi;
   tp_index      = tp_indexi;
   std::copy(particlesi, particlesi + n_particles, std::back_inserter(particles));
@@ -41,13 +38,16 @@ inline MultiData<Data>::MultiData(Particle* particlesi, int n_particlesi, Node<D
 
 template <typename Data>
 void MultiData<Data>::pup(PUP::er& p) {
-  p | n_particles;
-  p | n_nodes;
   p | particles;
   p | nodes;
   p | cm_index;
   p | tp_index;
 }
 
+template <typename Data>
+void MultiData<Data>::clear() {
+  nodes.clear();
+  particles.clear();
+}
 
 #endif // PARATREET_MULTIDATA_H_
