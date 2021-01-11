@@ -91,9 +91,8 @@ public:
     std::cout << "Universal bounding box: " << universe << " with volume "
       << universe.box.volume() << std::endl;
 
-    if (universe.n_particles <= config.max_particles_per_tp) {
-      CkPrintf("WARNING: Consider using -p to lower max_particles_per_tp, only %d particles.\n",
-        universe.n_particles);
+    if (config.min_n_subtrees < CkNumPes() || config.min_n_partitions < CkNumPes()) {
+      CkPrintf("WARNING: Consider increasing min_n_subtrees and min_n_partitions to at least #pes\n");
     }
 
     // Assign keys and sort particles locally
@@ -104,7 +103,7 @@ public:
 
     // Set up splitters for decomposition
     start_time = CkWallTimer();
-    n_subtrees = treespec_subtrees.ckLocalBranch()->doFindSplitters(universe, readers);
+    n_subtrees = treespec_subtrees.ckLocalBranch()->doFindSplitters(universe, readers, config.min_n_subtrees);
     treespec_subtrees.receiveDecomposition(CkCallbackResumeThread(),
       CkPointer<Decomposition>(treespec_subtrees.ckLocalBranch()->getDecomposition()));
     auto config_subtrees = treespec_subtrees.ckLocalBranch()->getConfiguration();
@@ -114,7 +113,7 @@ public:
         CkPointer<Decomposition>(treespec_subtrees.ckLocalBranch()->getDecomposition()));
     }
     else {
-      n_partitions = treespec.ckLocalBranch()->doFindSplitters(universe, readers);
+      n_partitions = treespec.ckLocalBranch()->doFindSplitters(universe, readers, config.min_n_partitions);
       // partition doFindSplitters + subtree doFind do not depend on each other
       // only dependency is: partition flush must go before subtree flush
       treespec.receiveDecomposition(CkCallbackResumeThread(),

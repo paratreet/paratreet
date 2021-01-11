@@ -11,7 +11,6 @@
 /* readonly */ CProxy_NeighborListCollector neighbor_list_collector;
 
 class Main : public CBase_Main {
-  int n_treepieces; // Cannot be a readonly because of OCT decomposition
   int cur_iteration;
   double total_start_time;
   double start_time;
@@ -28,7 +27,8 @@ class Main : public CBase_Main {
     // Initialize readonly variables
     conf.input_file = "";
     conf.output_file = "";
-    conf.max_particles_per_tp = 1000;
+    conf.min_n_subtrees = CkNumPes() * 4;
+    conf.min_n_partitions = CkNumPes() * 4;
     conf.max_particles_per_leaf = 10;
     conf.decomp_type = paratreet::DecompType::eOct;
     conf.tree_type = paratreet::TreeType::eOct;
@@ -43,7 +43,6 @@ class Main : public CBase_Main {
     verify = false;
 
     // Initialize member variables
-    n_treepieces = 0;
     cur_iteration = 0;
 
     // Process command line arguments
@@ -55,10 +54,10 @@ class Main : public CBase_Main {
           conf.input_file = optarg;
           break;
         case 'n':
-          n_treepieces = atoi(optarg);
+          conf.min_n_subtrees = atoi(optarg);
           break;
         case 'p':
-          conf.max_particles_per_tp = atoi(optarg);
+          conf.min_n_partitions = atoi(optarg);
           break;
         case 'l':
           conf.max_particles_per_leaf = atoi(optarg);
@@ -130,7 +129,8 @@ class Main : public CBase_Main {
     CkPrintf("Input file: %s\n", conf.input_file.c_str());
     CkPrintf("Decomposition type: %s\n", paratreet::asString(conf.decomp_type).c_str());
     CkPrintf("Tree type: %s\n", paratreet::asString(conf.tree_type).c_str());
-    CkPrintf("Maximum number of particles per treepiece: %d\n", conf.max_particles_per_tp);
+    CkPrintf("Minimum number of subtrees: %d\n", conf.min_n_subtrees);
+    CkPrintf("Minimum number of partitions: %d\n", conf.min_n_partitions);
     CkPrintf("Maximum number of particles per leaf: %d\n\n", conf.max_particles_per_leaf);
 
     count_manager = CProxy_CountManager::ckNew(0.00001, 10000, 5);
@@ -160,3 +160,4 @@ class Main : public CBase_Main {
 #include "templates.h"
 
 #include "Main.def.h"
+

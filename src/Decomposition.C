@@ -41,7 +41,7 @@ int SfcDecomposition::getNumExpectedParticles(int n_total_particles, int n_parti
   return n_expected;
 }
 
-int SfcDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &readers, const paratreet::Configuration& config, int log_branch_factor) {
+int SfcDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &readers, int min_n_splitters, int log_branch_factor) {
   CkReductionMsg *msg;
   readers.getAllSfcKeys(CkCallbackResumeThread((void*&)msg));
   std::vector<Key> keys;
@@ -56,8 +56,9 @@ int SfcDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &reader
 
   int decomp_particle_sum = 0;
 
-  auto threshold = config.max_particles_per_tp;
-  for (int i = 0; i * threshold < keys.size(); ++i) {
+  int n_total_particles = keys.size();
+  int threshold = n_total_particles / min_n_splitters;
+  for (int i = 0; i < min_n_splitters; ++i) {
     Key from = keys[(int)(i * threshold)];
     Key to;
     int n_particles = (int)threshold;
@@ -161,7 +162,7 @@ int OctDecomposition::flush(std::vector<Particle> &particles, const SendParticle
 }
 
 
-int OctDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &readers, const paratreet::Configuration& config, int log_branch_factor) {
+int OctDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &readers, int min_n_splitters, int log_branch_factor) {
   BufferedVec<Key> keys;
   const int branch_factor = (1 << log_branch_factor);
 
@@ -179,19 +180,17 @@ int OctDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &reader
     readers.countOct(keys.get(), log_branch_factor, CkCallbackResumeThread((void*&)msg));
     int* counts = (int*)msg->getData();
     int n_counts = msg->getSize() / sizeof(int);
-
+    bool last = n_counts * 2 > min_n_splitters * branch_factor;
     // Check counts and create splitters if necessary
-    auto threshold = config.max_particles_per_tp;
     for (int i = 0; i < n_counts; i++) {
       Key from = keys.get(2*i);
       Key to = keys.get(2*i+1);
 
       int n_particles = counts[i];
-      if ((Real)n_particles > threshold) {
+      if (n_particles > 0 && !last) {
         // Create *branch_factor* more splitter key pairs to go one level deeper.
         // Leading zeros will be removed in Reader::count() to enable
         // comparison of splitter key and particle key
-
         for (int k = 0; k < branch_factor; k++) {
           // Add first key in pair
           keys.add(from * branch_factor + k);
@@ -267,7 +266,7 @@ int KdDecomposition::getNumExpectedParticles(int n_total_particles, int n_partit
   return 0; // not implemented yet
 }
 
-int KdDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &readers, const paratreet::Configuration& config, int log_branch_factor) {
+int KdDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &readers, int min_n_splitters, int log_branch_factor) {
   CkReductionMsg *msg;
   readers.getAllPositions(CkCallbackResumeThread((void*&)msg));
   std::vector<Vector3D<Real>> positions;
@@ -279,11 +278,10 @@ int KdDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &readers
     elem = elem->next();
   }
 
-  auto num_partitions = positions.size() / config.max_particles_per_tp;
   std::vector<std::vector<Vector3D<Real>>> bins;
   bins.emplace_back(positions);
   splitters.push_back(0); // empty space for key=0
-  for (; (1 << depth) < num_partitions; depth++) {
+  for (; (1 << depth) < min_n_splitters; depth++) {
     decltype(bins) binsCopy;
     for (auto && bin : bins) {
       static auto compX = [] (const Vector3D<Real>& a, const Vector3D<Real>& b) {return a.x < b.x;};
