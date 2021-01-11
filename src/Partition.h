@@ -10,7 +10,6 @@
 #include "paratreet.decl.h"
 
 extern CProxy_TreeSpec treespec;
-extern CProxy_TreeSpec treespec_subtrees;
 extern CProxy_Reader readers;
 
 namespace paratreet {
@@ -146,7 +145,7 @@ void Partition<Data>::addLeaves(const std::vector<Node<Data>*>& leaf_ptrs, int s
     else {
       auto particles = new Particle [leaf_particles.size()];
       std::copy(leaf_particles.begin(), leaf_particles.end(), particles);
-      auto node = treespec_subtrees.ckLocalBranch()->template makeNode<Data>(
+      auto node = treespec.ckLocalBranch()->template makeNode<Data>(
         leaf->key, leaf->depth, leaf_particles.size(), particles,
         subtree_idx, subtree_idx, true, nullptr, subtree_idx
         );
@@ -262,7 +261,7 @@ void Partition<Data>::perturb(TPHolder<Data> tp_holder, Real timestep, bool if_f
       ParticleMsg* msg = new (n_particles) ParticleMsg(particles, n_particles);
       tp_holder.proxy[dest].receive(msg);
     };
-    treespec_subtrees.ckLocalBranch()->getDecomposition()->flush(particles, sendParticles);
+    treespec.ckLocalBranch()->getSubtreeDecomposition()->flush(particles, sendParticles);
   }
 }
 

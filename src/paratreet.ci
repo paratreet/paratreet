@@ -17,7 +17,6 @@ module paratreet {
 
   readonly CProxy_Reader readers;
   readonly CProxy_TreeSpec treespec;
-  readonly CProxy_TreeSpec treespec_subtrees;
   readonly int n_readers;
   readonly CProxy_TreeCanopy<CentroidData> centroid_calculator;
   readonly CProxy_CacheManager<CentroidData> centroid_cache;
@@ -150,8 +149,9 @@ module paratreet {
     entry TreeSpec(const paratreet::Configuration&);
     entry void check(const CkCallback&);
     entry void reset();
-    entry void receiveDecomposition(const CkCallback&, CkPointer<Decomposition>);
-    entry [local] Decomposition* getDecomposition();
+    entry void receiveDecomposition(const CkCallback&, CkPointer<Decomposition>, bool);
+    entry [local] Decomposition* getSubtreeDecomposition();
+    entry [local] Decomposition* getPartitionDecomposition();
     entry void receiveConfiguration(const paratreet::Configuration&,CkCallback);
     entry [local] paratreet::Configuration& getConfiguration();
     entry [local] void setConfiguration(const paratreet::Configuration&);

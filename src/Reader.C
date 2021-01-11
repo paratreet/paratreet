@@ -114,7 +114,7 @@ void Reader::assignKeys(BoundingBox universe_, const CkCallback& cb) {
   // Generate particle keys
   universe = universe_;
 
-  treespec.ckLocalBranch()->getDecomposition()->assignKeys(universe, particles);
+  treespec.ckLocalBranch()->getPartitionDecomposition()->assignKeys(universe, particles);
 
   // Back to callee
   contribute(cb);

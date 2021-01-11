@@ -1,27 +1,37 @@
 #include "TreeSpec.h"
 
 void TreeSpec::check(const CkCallback &cb) {
-  CkAssert(this->getTree() && this->getDecomposition());
+  CkAssert(this->getTree() && this->getSubtreeDecomposition() && this->getPartitionDecomposition());
   this->contribute(cb);
 }
 
-void TreeSpec::receiveDecomposition(const CkCallback& cb, Decomposition* d) {
-  decomp.reset(d);
+void TreeSpec::receiveDecomposition(const CkCallback& cb, Decomposition* d, bool if_subtree) {
+  if (if_subtree) subtree_decomp.reset(d);
+  else partition_decomp.reset(d);
   contribute(cb);
 }
 
-Decomposition* TreeSpec::getDecomposition() {
+Decomposition* TreeSpec::getSubtreeDecomposition() {
+  auto decomp_type = paratreet::subtreeDecompForTree(config.tree_type);
+  getDecomposition(subtree_decomp, decomp_type);
+  return subtree_decomp.get();
+}
+
+Decomposition* TreeSpec::getPartitionDecomposition() {
+  getDecomposition(partition_decomp, config.decomp_type);
+  return partition_decomp.get();
+}
+
+void TreeSpec::getDecomposition(std::unique_ptr<Decomposition>& decomp, paratreet::DecompType decomp_type) {
   if (!decomp) {
-    if (config.decomp_type == paratreet::DecompType::eOct) {
+    if (decomp_type == paratreet::DecompType::eOct) {
       decomp.reset(new OctDecomposition());
-    } else if (config.decomp_type == paratreet::DecompType::eSfc) {
+    } else if (decomp_type == paratreet::DecompType::eSfc) {
       decomp.reset(new SfcDecomposition());
-    } else if (config.decomp_type == paratreet::DecompType::eKd) {
+    } else if (decomp_type == paratreet::DecompType::eKd) {
       decomp.reset(new KdDecomposition());
     }
   }
-
-  return decomp.get();
 }
 
 Tree* TreeSpec::getTree() {

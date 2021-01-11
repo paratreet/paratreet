@@ -19,7 +19,6 @@
 #include <vector>
 #include <fstream>
 
-extern CProxy_TreeSpec treespec_subtrees;
 extern CProxy_TreeSpec treespec;
 extern CProxy_Reader readers;
 #define META_TUPLE_SIZE 3
@@ -104,7 +103,7 @@ Subtree<Data>::Subtree(const CkCallback& cb, int n_total_particles_,
   tc_proxy = tc_holder.proxy;
   cm_proxy = cm_proxy_;
 
-  tp_key = treespec_subtrees.ckLocalBranch()->getDecomposition()->
+  tp_key = treespec.ckLocalBranch()->getSubtreeDecomposition()->
     getTpKey(this->thisIndex);
 
   // Create TreeCanopies and send proxies
@@ -114,7 +113,7 @@ Subtree<Data>::Subtree(const CkCallback& cb, int n_total_particles_,
                                  tp_index, cm_proxy, dp_holder);
     };
 
-  treespec_subtrees.ckLocalBranch()->getTree()->buildCanopy(this->thisIndex, sendProxy);
+  treespec.ckLocalBranch()->getTree()->buildCanopy(this->thisIndex, sendProxy);
 
   local_root = nullptr;
 
@@ -222,9 +221,9 @@ void Subtree<Data>::buildTree(CProxy_Partition<Data> part, CkCallback cb) {
 #if DEBUG
   CkPrintf("[TP %d] key: 0x%" PRIx64 " particles: %d\n", this->thisIndex, tp_key, particles.size());
 #endif
-  local_root = treespec_subtrees.ckLocalBranch()->template makeNode<Data>(tp_key, 0,
+  local_root = treespec.ckLocalBranch()->template makeNode<Data>(tp_key, 0,
         particles.size(), particles.data(), 0, n_subtrees - 1, true, nullptr, this->thisIndex);
-  Key lbf = log2(local_root->getBranchFactor()); // have to use treespec_subtrees to get BF
+  Key lbf = log2(local_root->getBranchFactor()); // have to use treespec to get BF
   local_root->depth = Utility::getDepthFromKey(tp_key, lbf);
   recursiveBuild(local_root, &particles[0], lbf);
 
@@ -283,7 +282,7 @@ void Subtree<Data>::recursiveBuild(Node<Data>* node, Particle* node_particles, s
     int n_particles = first_ge_idx - start;
 
     // Create child and store in vector
-    Node<Data>* child = treespec_subtrees.ckLocalBranch()->template makeNode<Data>(child_key, node->depth + 1,
+    Node<Data>* child = treespec.ckLocalBranch()->template makeNode<Data>(child_key, node->depth + 1,
         n_particles, node_particles + start, 0, n_subtrees - 1, true, node, this->thisIndex);
     /*
     Node<Data>* child = new Node<Data>(child_key, node->depth + 1, node->particles + start,

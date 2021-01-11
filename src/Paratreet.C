@@ -14,7 +14,6 @@
 
 /* readonly */ CProxy_Reader readers;
 /* readonly */ CProxy_TreeSpec treespec;
-/* readonly */ CProxy_TreeSpec treespec_subtrees;
 /* readonly */ int n_readers;
 /* readonly */ CProxy_TreeCanopy<CentroidData> centroid_calculator;
 /* readonly */ CProxy_CacheManager<CentroidData> centroid_cache;
@@ -27,9 +26,6 @@ namespace paratreet {
         n_readers = CkNumPes();
         readers = CProxy_Reader::ckNew();
         treespec = CProxy_TreeSpec::ckNew(conf);
-        auto conf_subtrees = conf;
-        conf_subtrees.decomp_type = subtreeDecompForTree(conf.tree_type);
-        treespec_subtrees = CProxy_TreeSpec::ckNew(conf_subtrees);
 
         // Create centroid data related chares
         centroid_calculator = CProxy_TreeCanopy<CentroidData>::ckNew();
