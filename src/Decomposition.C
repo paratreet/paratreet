@@ -58,11 +58,12 @@ int SfcDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &reader
 
   int n_total_particles = keys.size();
   int threshold = n_total_particles / min_n_splitters;
+  if (n_total_particles % min_n_splitters > 0) threshold++;
   for (int i = 0; i < min_n_splitters; ++i) {
     Key from = keys[(int)(i * threshold)];
     Key to;
     int n_particles = (int)threshold;
-    if ((i + 1) * threshold >= keys.size()) {
+    if (i + 1 == min_n_splitters) {
       to = ~Key(0);
       n_particles = keys.size() - (int)(i * threshold);
     } else to = keys[(int)((i + 1) * threshold)];
