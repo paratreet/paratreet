@@ -36,7 +36,8 @@ class Main : public CBase_Main {
     conf.num_share_nodes = 0; // 3;
     conf.cache_share_depth= 3;
     conf.flush_period = 1;
-    conf.flush_max_avg_ratio = 10.0;
+    conf.flush_max_avg_ratio = 0;
+    conf.lb_period = 5;
     conf.timestep_size = 0.1;
 
     verify = false;
@@ -48,7 +49,7 @@ class Main : public CBase_Main {
     // Process command line arguments
     int c;
     std::string input_str;
-    while ((c = getopt(m->argc, m->argv, "f:n:p:l:d:t:i:s:u:r:v:")) != -1) {
+    while ((c = getopt(m->argc, m->argv, "f:n:p:l:d:t:i:s:u:r:b:v:")) != -1) {
       switch (c) {
         case 'f':
           conf.input_file = optarg;
@@ -97,6 +98,9 @@ class Main : public CBase_Main {
           break;
         case 'r':
           conf.flush_max_avg_ratio = atoi(optarg);
+          break;
+        case 'b':
+          conf.lb_period = atoi(optarg);
           break;
         case 'v':
           verify = true;

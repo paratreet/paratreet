@@ -37,6 +37,7 @@ public:
 
   Key tp_key; // Should be a prefix of all particle keys underneath this node
   Node<Data>* local_root; // Root node of this Subtree, TreeCanopies sit above this node
+  MultiData<Data> flat_subtree;
 
   CProxy_TreeCanopy<Data> tc_proxy;
   CProxy_CacheManager<Data> cm_proxy;
@@ -45,19 +46,32 @@ public:
 
   Subtree(const CkCallback&, int, int, int, TCHolder<Data>,
           CProxy_Resumer<Data>, CProxy_CacheManager<Data>, DPHolder<Data>);
+  Subtree(CkMigrateMessage * msg){
+    delete msg;
+  };
   void receive(ParticleMsg*);
-  void buildTree();
+  void buildTree(CProxy_Partition<Data>, CkCallback);
   void recursiveBuild(Node<Data>*, Particle* node_particles, size_t);
   void populateTree();
   inline void initCache();
   void sendLeaves(CProxy_Partition<Data>);
   void requestNodes(Key, int);
+  void requestCopy(int, PPHolder<Data>);
   void print(Node<Data>*);
   void destroy();
   void reset();
   void output(CProxy_Writer w, CkCallback cb);
   void pup(PUP::er& p);
   void collectMetaData(Real timestep, const CkCallback & cb);
+  void addNodeToFlatSubtree(Node<Data>* node);
+  void pauseForLB(){
+    //CkPrintf("[ST %d]  pause for LB on PE %d\n", this->thisIndex, CkMyPe());
+    this->AtSync();
+  }
+  void ResumeFromSync(){
+    //CkPrintf("[ST %d]  resume from sync for LB on PE %d\n", this->thisIndex, CkMyPe());
+    return;
+  };
 
   // For debugging
   void checkParticlesChanged(const CkCallback& cb) {
@@ -82,6 +96,7 @@ Subtree<Data>::Subtree(const CkCallback& cb, int n_total_particles_,
                        int n_subtrees_, int n_partitions_, TCHolder<Data> tc_holder,
                        CProxy_Resumer<Data> r_proxy_,
                        CProxy_CacheManager<Data> cm_proxy_, DPHolder<Data> dp_holder) {
+  this->usesAtSync = true;
   n_total_particles = n_total_particles_;
   n_subtrees = n_subtrees_;
   n_partitions = n_partitions_;
@@ -160,7 +175,6 @@ void Subtree<Data>::sendLeaves(CProxy_Partition<Data> part)
     }
   }
 
-  MultiData<Data> flat_subtree; // might be used
   for (auto && part_receiver : part_idx_to_leaf) {
     auto it = cm_proxy.ckLocalBranch()->partition_lookup.find(part_receiver.first);
     if (it != cm_proxy.ckLocalBranch()->partition_lookup.end()) {
@@ -168,20 +182,32 @@ void Subtree<Data>::sendLeaves(CProxy_Partition<Data> part)
       it->second->addLeaves(leaf_ptrs, this->thisIndex);
     }
     else {
-      if (flat_subtree.n_nodes == 0) { // hasnt been filled yet
-        cm_proxy.ckLocalBranch()->makeSubtreeFlat(local_root, flat_subtree);
-      }
       std::vector<Key> lookup_leaf_keys;
       for (auto && leaf : part_receiver.second) {
 	lookup_leaf_keys.push_back(leaf->key);
       }
-      part[part_receiver.first].receiveLeavesAndSubtree(flat_subtree, lookup_leaf_keys, this->thisIndex);
+      part[part_receiver.first].receiveLeaves(lookup_leaf_keys, tp_key, this->thisIndex, this->thisProxy);
     }
   }
 }
 
 template <typename Data>
-void Subtree<Data>::buildTree() {
+void Subtree<Data>::addNodeToFlatSubtree(Node<Data>* node) {
+  SpatialNode<Data> sn (*node);
+  flat_subtree.nodes.emplace_back(node->key, sn);
+  for (int i = 0; i < node->n_children; i++) {
+    addNodeToFlatSubtree(node->getChild(i));
+  }
+}
+
+template <typename Data>
+void Subtree<Data>::requestCopy(int cm_index, PPHolder<Data> pp_holder) {
+  if (flat_subtree.nodes.empty()) addNodeToFlatSubtree(local_root);
+  cm_proxy[cm_index].receiveSubtree(flat_subtree, pp_holder);
+}
+
+template <typename Data>
+void Subtree<Data>::buildTree(CProxy_Partition<Data> part, CkCallback cb) {
   // Copy over received particles
   std::swap(particles, incoming_particles);
 
@@ -202,10 +228,17 @@ void Subtree<Data>::buildTree() {
   local_root->depth = Utility::getDepthFromKey(tp_key, lbf);
   recursiveBuild(local_root, &particles[0], lbf);
 
+  flat_subtree.tp_index  = this->thisIndex;
+  flat_subtree.cm_index  = cm_proxy.ckLocalBranch()->thisIndex;
+  flat_subtree.particles = particles;
+
   // Populate the tree structure (including TreeCanopy)
   populateTree();
   // Initialize cache
   initCache();
+
+  this->contribute(cb);
+  sendLeaves(part);
 }
 
 template <typename Data>
@@ -318,6 +351,7 @@ void Subtree<Data>::requestNodes(Key key, int cm_index) {
 template <typename Data>
 void Subtree<Data>::reset() {
   particles.clear();
+  flat_subtree.clear();
 }
 
 template <typename Data>

@@ -23,10 +23,14 @@ private:
   CProxy_Driver<Data> d_proxy;
 public:
   TreeCanopy() = default;
+  TreeCanopy(CkMigrateMessage * msg){
+    delete msg;
+  };
   void reset();
   void recvProxies(TPHolder<Data>, int, CProxy_CacheManager<Data>, DPHolder<Data>);
   void recvData(SpatialNode<Data>, int);
   void requestData(int);
+  void pup(PUP::er& p);
 };
 
 template <typename Data>
@@ -73,4 +77,13 @@ void TreeCanopy<Data>::requestData(int cm_index) {
   else cm_proxy[cm_index].restoreData(std::make_pair(this->thisIndex, my_sn));
 }
 
+template <typename Data>
+void TreeCanopy<Data>::pup(PUP::er& p) {
+  p | tp_proxy;
+  p | tp_index;
+  p | cm_proxy;
+  p | d_proxy;
+  p | my_sn;
+  p | recv_count;
+}
 #endif // PARATREET_TREECANOPY_H_

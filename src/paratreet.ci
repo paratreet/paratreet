@@ -39,6 +39,7 @@ module paratreet {
     entry void recvStarterPack(std::pair<Key, SpatialNode<Data>> pack [n], int n, CkCallback);
     entry void addCache(MultiData<Data>);
     entry void restoreData(std::pair<Key, SpatialNode<Data>>);
+    entry void receiveSubtree(MultiData<Data>, PPHolder<Data>);
     template <typename Visitor>
     entry void startPrefetch(DPHolder<Data>, CkCallback);
     entry void startParentPrefetch(DPHolder<Data>, CkCallback);
@@ -71,12 +72,14 @@ module paratreet {
     template <typename Visitor> entry void startUpAndDown();
     entry void interact(const CkCallback&);
     entry void goDown();
-    entry void receiveLeavesAndSubtree(MultiData<Data>, std::vector<Key>, int);
+    entry void receiveLeaves(std::vector<Key>, Key, int, TPHolder<Data>);
+    entry void makeLeaves(int);
     entry void destroy();
     entry void reset();
     entry void perturb(TPHolder<Data>, Real, bool);
     entry void output(CProxy_Writer w, CkCallback cb);
     entry void callPerLeafFn(CkCallback cb);
+    entry void pauseForLB();
   }
   array [1d] Partition<CentroidData>;
 
@@ -84,13 +87,15 @@ module paratreet {
   array [1d] Subtree {
     entry Subtree(const CkCallback&, int, int, int, TCHolder<Data>, CProxy_Resumer<Data>, CProxy_CacheManager<Data>, DPHolder<Data>);
     entry void receive(ParticleMsg*);
-    entry void buildTree();
+    entry void buildTree(CProxy_Partition<Data>, CkCallback);
     entry void requestNodes(Key, int);
+    entry void requestCopy(int, PPHolder<Data>);
     entry void destroy();
     entry void reset();
     entry void sendLeaves(CProxy_Partition<Data>);
     entry void checkParticlesChanged(const CkCallback&);
     entry void collectMetaData(Real timestep, const CkCallback & cb);
+    entry void pauseForLB();
   }
   array [1d] Subtree<CentroidData>;
 
@@ -110,6 +115,7 @@ module paratreet {
     entry [threaded] void init(CkCallback cb);
     entry [threaded] void run(CkCallback cb);
     entry [reductiontarget] void countInts(unsigned long long intrn_counts [4]);
+    entry [reductiontarget] void reportTime();
     entry void recvTC(std::pair<Key, SpatialNode<Data>>);
     entry void loadCache(CkCallback);
     template <typename Visitor>
