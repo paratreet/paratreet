@@ -79,6 +79,7 @@ module paratreet {
     entry void perturb(TPHolder<Data>, Real, bool);
     entry void output(CProxy_Writer w, CkCallback cb);
     entry void callPerLeafFn(CkCallback cb);
+    entry void pauseForLB();
   }
   array [1d] Partition<CentroidData>;
 
@@ -86,7 +87,7 @@ module paratreet {
   array [1d] Subtree {
     entry Subtree(const CkCallback&, int, int, int, TCHolder<Data>, CProxy_Resumer<Data>, CProxy_CacheManager<Data>, DPHolder<Data>);
     entry void receive(ParticleMsg*);
-    entry void buildTree();
+    entry void buildTree(CProxy_Partition<Data>, CkCallback);
     entry void requestNodes(Key, int);
     entry void requestCopy(int, PPHolder<Data>);
     entry void destroy();
@@ -94,6 +95,7 @@ module paratreet {
     entry void sendLeaves(CProxy_Partition<Data>);
     entry void checkParticlesChanged(const CkCallback&);
     entry void collectMetaData(Real timestep, const CkCallback & cb);
+    entry void pauseForLB();
   }
   array [1d] Subtree<CentroidData>;
 
@@ -113,6 +115,7 @@ module paratreet {
     entry [threaded] void init(CkCallback cb);
     entry [threaded] void run(CkCallback cb);
     entry [reductiontarget] void countInts(unsigned long long intrn_counts [4]);
+    entry [reductiontarget] void reportTime();
     entry void recvTC(std::pair<Key, SpatialNode<Data>>);
     entry void loadCache(CkCallback);
     template <typename Visitor>

@@ -38,6 +38,7 @@ struct Partition : public CBase_Partition<Data> {
   Resumer<Data>* r_local;
 
   Partition(int, CProxy_CacheManager<Data>, CProxy_Resumer<Data>, TCHolder<Data>);
+  Partition(CkMigrateMessage * msg){delete msg;};
 
   template<typename Visitor> void startDown();
   template<typename Visitor> void startUpAndDown();
@@ -53,6 +54,12 @@ struct Partition : public CBase_Partition<Data> {
   void callPerLeafFn(const CkCallback& cb);
   void pup(PUP::er& p);
   void makeLeaves(int);
+  void pauseForLB(){
+    this->AtSync();
+  }
+  void ResumeFromSync(){
+    return;
+  };
 
 private:
   void initLocalBranches();
@@ -68,6 +75,7 @@ Partition<Data>::Partition(
   CProxy_Resumer<Data> rp, TCHolder<Data> tc_holder
   )
 {
+  this->usesAtSync = true;
   n_partitions = np;
   tc_proxy = tc_holder.proxy;
   r_proxy = rp;
