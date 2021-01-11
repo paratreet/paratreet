@@ -249,7 +249,7 @@ Node<Data>* CacheManager<Data>::addCacheHelper(Particle* particles, int n_partic
   }
 
   auto top_type = nodes[0].second.is_leaf ? Node<Data>::Type::CachedRemoteLeaf : Node<Data>::Type::CachedRemote;
-  auto first_node = treespec_subtrees.ckLocalBranch()->template makeCachedNode<Data>(nodes[0].first, top_type, nodes[0].second, first_node_placeholder_parent, particles);
+  auto first_node = treespec.ckLocalBranch()->template makeCachedNode<Data>(nodes[0].first, top_type, nodes[0].second, first_node_placeholder_parent, particles);
   std::vector<Node<Data>*> leaves;
   if (nodes[0].second.is_leaf) leaves.push_back(first_node);
   first_node->cm_index = cm_index;
@@ -262,7 +262,7 @@ Node<Data>* CacheManager<Data>::addCacheHelper(Particle* particles, int n_partic
     auto && spatial_node = nodes[j].second;
     auto curr_parent = first_node->getDescendant(new_key / branch_factor);
     auto type = spatial_node.is_leaf ? Node<Data>::Type::CachedRemoteLeaf : Node<Data>::Type::CachedRemote;
-    auto node = treespec_subtrees.ckLocalBranch()->template makeCachedNode<Data>(new_key, type, spatial_node, curr_parent, &particles[p_index]);
+    auto node = treespec.ckLocalBranch()->template makeCachedNode<Data>(new_key, type, spatial_node, curr_parent, &particles[p_index]);
     node->cm_index = cm_index;
     node->tp_index = tp_index;
     if (node->is_leaf) {
@@ -327,7 +327,7 @@ void CacheManager<Data>::restoreDataHelper(std::pair<Key, SpatialNode<Data>>& pa
 #endif
   Key key = param.first;
   Node<Data>* parent = (key == Key(1)) ? nullptr : root->getDescendant(key / root->getBranchFactor());
-  auto node = treespec_subtrees.ckLocalBranch()->template makeCachedNode<Data>(key,
+  auto node = treespec.ckLocalBranch()->template makeCachedNode<Data>(key,
       Node<Data>::Type::CachedBoundary, param.second, parent, nullptr);
   insertNode(node, true, false);
   connect(node, should_process);

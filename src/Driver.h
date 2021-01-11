@@ -23,7 +23,6 @@
 
 extern CProxy_Reader readers;
 extern CProxy_TreeSpec treespec;
-extern CProxy_TreeSpec treespec_subtrees;
 extern CProxy_TreeCanopy<CentroidData> centroid_calculator;
 extern CProxy_CacheManager<CentroidData> centroid_cache;
 extern CProxy_Resumer<CentroidData> centroid_resumer;
@@ -103,21 +102,21 @@ public:
 
     // Set up splitters for decomposition
     start_time = CkWallTimer();
-    n_subtrees = treespec_subtrees.ckLocalBranch()->doFindSplitters(universe, readers, config.min_n_subtrees);
-    treespec_subtrees.receiveDecomposition(CkCallbackResumeThread(),
-      CkPointer<Decomposition>(treespec_subtrees.ckLocalBranch()->getDecomposition()));
-    auto config_subtrees = treespec_subtrees.ckLocalBranch()->getConfiguration();
-    if (config.decomp_type == config_subtrees.decomp_type) {
+    n_subtrees = treespec.ckLocalBranch()->doFindSplitters(universe, readers, true);
+    treespec.receiveDecomposition(CkCallbackResumeThread(),
+      CkPointer<Decomposition>(treespec.ckLocalBranch()->getSubtreeDecomposition()), true);
+    auto config_subtrees = treespec.ckLocalBranch()->getConfiguration();
+    if (config.decomp_type == paratreet::subtreeDecompForTree(config.tree_type)) {
       n_partitions = n_subtrees;
       treespec.receiveDecomposition(CkCallbackResumeThread(),
-        CkPointer<Decomposition>(treespec_subtrees.ckLocalBranch()->getDecomposition()));
+        CkPointer<Decomposition>(treespec.ckLocalBranch()->getSubtreeDecomposition()), false);
     }
     else {
-      n_partitions = treespec.ckLocalBranch()->doFindSplitters(universe, readers, config.min_n_partitions);
+      n_partitions = treespec.ckLocalBranch()->doFindSplitters(universe, readers, false);
       // partition doFindSplitters + subtree doFind do not depend on each other
       // only dependency is: partition flush must go before subtree flush
       treespec.receiveDecomposition(CkCallbackResumeThread(),
-        CkPointer<Decomposition>(treespec.ckLocalBranch()->getDecomposition()));
+        CkPointer<Decomposition>(treespec.ckLocalBranch()->getPartitionDecomposition()), false);
     }
     CkPrintf("Setting up splitters for particle decompositions: %.3lf ms\n",
         (CkWallTimer() - start_time) * 1000);
@@ -244,7 +243,6 @@ public:
       // Destroy subtrees and perform decomposition from scratch
       if (complete_rebuild) {
         treespec.reset();
-        treespec_subtrees.reset();
         subtrees.destroy();
         partitions.destroy();
         decompose(iter+1);

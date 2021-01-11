@@ -11,9 +11,7 @@
 #include "Modularization.h"
 
 extern int n_readers;
-extern int decomp_type;
 extern CProxy_TreeSpec treespec;
-extern CProxy_TreeSpec treespec_subtrees;
 
 class Reader : public CBase_Reader {
   BoundingBox box;
@@ -76,7 +74,7 @@ void Reader::flush(int n_total_particles, int n_subtrees,
     subtrees[dest].receive(msg);
   };
 
-  int flush_count = treespec_subtrees.ckLocalBranch()->getDecomposition()->flush(particles, sendParticles);
+  int flush_count = treespec.ckLocalBranch()->getSubtreeDecomposition()->flush(particles, sendParticles);
   if (flush_count != particles.size()) {
     CkPrintf("Reader %d failure: flushed %d out of %zu particles\n", thisIndex,
         flush_count, particles.size());
@@ -96,7 +94,7 @@ void Reader::assignPartitions(int n_total_particles, int n_partitions, CProxy_Pa
       for (int i = 0; i < n_particles; ++i)
         particles[i].partition_idx = dest;
     };
-  int flush_count = treespec.ckLocalBranch()->getDecomposition()->flush(particles, sendParticles);
+  int flush_count = treespec.ckLocalBranch()->getPartitionDecomposition()->flush(particles, sendParticles);
   if (flush_count != particles.size()) {
     CkPrintf("Reader %d failure: flushed %d out of %zu particles\n", thisIndex,
         flush_count, particles.size());

@@ -9,18 +9,21 @@ class TreeSpec : public CBase_TreeSpec {
 public:
     TreeSpec(const paratreet::Configuration& config_)
     : config(config_),
-      decomp(nullptr),
+      subtree_decomp(nullptr),
+      partition_decomp(nullptr),
       tree(nullptr) { }
 
     void check(const CkCallback &cb);
-    void receiveDecomposition(const CkCallback&, Decomposition*);
-    Decomposition* getDecomposition();
+    void receiveDecomposition(const CkCallback&, Decomposition*, bool if_subtree);
+    Decomposition* getSubtreeDecomposition();
+    Decomposition* getPartitionDecomposition();
 
     Tree* getTree();
 
-    int doFindSplitters(BoundingBox &universe, CProxy_Reader &readers, int min_n_splitters) {
+    int doFindSplitters(BoundingBox &universe, CProxy_Reader &readers, bool if_subtree) {
         int log_branch_factor = log2(getTree()->getBranchFactor());
-        return getDecomposition()->findSplitters(universe, readers, min_n_splitters, log_branch_factor);
+	if (if_subtree) getSubtreeDecomposition()->findSplitters(universe, readers, config.min_n_subtrees, log_branch_factor);
+	else getPartitionDecomposition()->findSplitters(universe, readers, config.min_n_partitions, log_branch_factor);
     }
 
     void receiveConfiguration(const paratreet::Configuration&,CkCallback);
@@ -59,13 +62,18 @@ public:
 
     void reset() {
       tree.reset();
-      decomp.reset();
+      subtree_decomp.reset();
+      partition_decomp.reset();
     }
 
 protected:
     std::unique_ptr<Tree> tree;
-    std::unique_ptr<Decomposition> decomp;
+    std::unique_ptr<Decomposition> subtree_decomp;
+    std::unique_ptr<Decomposition> partition_decomp;
     paratreet::Configuration config;
+
+private:
+  void getDecomposition(std::unique_ptr<Decomposition>& decomp, paratreet::DecompType decomp_type);
 };
 
 #endif
