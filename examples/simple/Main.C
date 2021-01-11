@@ -29,7 +29,7 @@ class Main : public CBase_Main {
     conf.output_file = "";
     conf.min_n_subtrees = CkNumPes() * 4;
     conf.min_n_partitions = CkNumPes() * 4;
-    conf.max_particles_per_leaf = 10;
+    conf.max_particles_per_leaf = 12; // default from ChaNGa
     conf.decomp_type = paratreet::DecompType::eOct;
     conf.tree_type = paratreet::TreeType::eOct;
     conf.num_iterations = 3;

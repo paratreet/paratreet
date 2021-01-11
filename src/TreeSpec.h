@@ -17,14 +17,7 @@ public:
     void receiveDecomposition(const CkCallback&, Decomposition*, bool if_subtree);
     Decomposition* getSubtreeDecomposition();
     Decomposition* getPartitionDecomposition();
-
     Tree* getTree();
-
-    int doFindSplitters(BoundingBox &universe, CProxy_Reader &readers, bool if_subtree) {
-        int log_branch_factor = log2(getTree()->getBranchFactor());
-	if (if_subtree) getSubtreeDecomposition()->findSplitters(universe, readers, config.min_n_subtrees, log_branch_factor);
-	else getPartitionDecomposition()->findSplitters(universe, readers, config.min_n_partitions, log_branch_factor);
-    }
 
     void receiveConfiguration(const paratreet::Configuration&,CkCallback);
     paratreet::Configuration& getConfiguration();

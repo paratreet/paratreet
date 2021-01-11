@@ -102,17 +102,16 @@ public:
 
     // Set up splitters for decomposition
     start_time = CkWallTimer();
-    n_subtrees = treespec.ckLocalBranch()->doFindSplitters(universe, readers, true);
+    n_subtrees = treespec.ckLocalBranch()->getSubtreeDecomposition()->findSplitters(universe, readers, config.min_n_subtrees);
     treespec.receiveDecomposition(CkCallbackResumeThread(),
       CkPointer<Decomposition>(treespec.ckLocalBranch()->getSubtreeDecomposition()), true);
-    auto config_subtrees = treespec.ckLocalBranch()->getConfiguration();
     if (config.decomp_type == paratreet::subtreeDecompForTree(config.tree_type)) {
       n_partitions = n_subtrees;
       treespec.receiveDecomposition(CkCallbackResumeThread(),
         CkPointer<Decomposition>(treespec.ckLocalBranch()->getSubtreeDecomposition()), false);
     }
     else {
-      n_partitions = treespec.ckLocalBranch()->doFindSplitters(universe, readers, false);
+      n_partitions = treespec.ckLocalBranch()->getPartitionDecomposition()->findSplitters(universe, readers, config.min_n_partitions);
       // partition doFindSplitters + subtree doFind do not depend on each other
       // only dependency is: partition flush must go before subtree flush
       treespec.receiveDecomposition(CkCallbackResumeThread(),

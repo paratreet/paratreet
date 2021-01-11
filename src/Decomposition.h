@@ -28,7 +28,7 @@ struct Decomposition: public PUP::able {
 
   virtual int getNumExpectedParticles(int n_total_particles, int n_partitions, int tp_index) = 0;
 
-  virtual int findSplitters(BoundingBox &universe, CProxy_Reader &readers, int min_n_splitters, int log_branch_factor) = 0;
+  virtual int findSplitters(BoundingBox &universe, CProxy_Reader &readers, int min_n_splitters) = 0;
 
   virtual Key getTpKey(int idx) = 0;
 
@@ -51,7 +51,7 @@ struct SfcDecomposition : public Decomposition {
   Key getTpKey(int idx) override;
   int flush(std::vector<Particle> &particles, const SendParticlesFn &fn) override;
   int getNumExpectedParticles(int n_total_particles, int n_partitions, int tp_index) override;
-  int findSplitters(BoundingBox &universe, CProxy_Reader &readers, int min_n_splitters, int log_branch_factor) override;
+  int findSplitters(BoundingBox &universe, CProxy_Reader &readers, int min_n_splitters) override;
 
   void alignSplitters(SfcDecomposition *);
   std::vector<Splitter> getSplitters();
@@ -70,7 +70,7 @@ struct OctDecomposition : public SfcDecomposition {
 
   int flush(std::vector<Particle> &particles, const SendParticlesFn &fn) override;
   int getNumExpectedParticles(int n_total_particles, int n_partitions, int tp_index) override;
-  int findSplitters(BoundingBox &universe, CProxy_Reader &readers, int min_n_splitters, int log_branch_factor) override;
+  int findSplitters(BoundingBox &universe, CProxy_Reader &readers, int min_n_splitters) override;
 };
 
 struct KdDecomposition : public Decomposition {
@@ -83,7 +83,7 @@ struct KdDecomposition : public Decomposition {
   Key getTpKey(int idx) override;
   int flush(std::vector<Particle> &particles, const SendParticlesFn &fn) override;
   int getNumExpectedParticles(int n_total_particles, int n_partitions, int tp_index) override;
-  int findSplitters(BoundingBox &universe, CProxy_Reader &readers, int min_n_splitters, int log_branch_factor) override;
+  int findSplitters(BoundingBox &universe, CProxy_Reader &readers, int min_n_splitters) override;
 
   virtual void pup(PUP::er& p) override;
 

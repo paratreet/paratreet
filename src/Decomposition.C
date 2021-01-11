@@ -41,7 +41,9 @@ int SfcDecomposition::getNumExpectedParticles(int n_total_particles, int n_parti
   return n_expected;
 }
 
-int SfcDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &readers, int min_n_splitters, int log_branch_factor) {
+int SfcDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &readers, int min_n_splitters) {
+  const int branch_factor = treespec.ckLocalBranch()->getTree()->getBranchFactor();
+  const int log_branch_factor = log2(branch_factor);
   CkReductionMsg *msg;
   readers.getAllSfcKeys(CkCallbackResumeThread((void*&)msg));
   std::vector<Key> keys;
@@ -162,11 +164,11 @@ int OctDecomposition::flush(std::vector<Particle> &particles, const SendParticle
   return flush_count;
 }
 
+int OctDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &readers, int min_n_splitters) {
+  const int branch_factor = treespec.ckLocalBranch()->getTree()->getBranchFactor();
+  const int log_branch_factor = log2(branch_factor);
 
-int OctDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &readers, int min_n_splitters, int log_branch_factor) {
   BufferedVec<Key> keys;
-  const int branch_factor = (1 << log_branch_factor);
-
   // Initial splitter keys (first and last)
   keys.add(Key(1)); // 0000...1
   keys.add(~Key(0)); // 1111...1
@@ -267,7 +269,7 @@ int KdDecomposition::getNumExpectedParticles(int n_total_particles, int n_partit
   return 0; // not implemented yet
 }
 
-int KdDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &readers, int min_n_splitters, int log_branch_factor) {
+int KdDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &readers, int min_n_splitters) {
   CkReductionMsg *msg;
   readers.getAllPositions(CkCallbackResumeThread((void*&)msg));
   std::vector<Vector3D<Real>> positions;
