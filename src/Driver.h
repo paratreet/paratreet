@@ -107,6 +107,7 @@ public:
       CkPointer<Decomposition>(treespec.ckLocalBranch()->getSubtreeDecomposition()), true);
     if (config.decomp_type == paratreet::subtreeDecompForTree(config.tree_type)) {
       n_partitions = n_subtrees;
+      CkPrintf("Using same decomposition for subtrees and partitions\n");
       treespec.receiveDecomposition(CkCallbackResumeThread(),
         CkPointer<Decomposition>(treespec.ckLocalBranch()->getSubtreeDecomposition()), false);
     }
