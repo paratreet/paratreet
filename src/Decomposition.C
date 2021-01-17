@@ -6,6 +6,25 @@
 #include "BufferedVec.h"
 #include "Reader.h"
 
+DecompArrayMap::DecompArrayMap(Decomposition* decomp, int n_total_particles, int n_splitters) {
+  int threshold = n_total_particles / CkNumPes();
+  int current_sum = 0;
+  for (int i = 0; i < n_splitters; i++) {
+    current_sum += decomp->getNumParticles(i);
+    if (current_sum >= threshold) {
+      current_sum = 0;
+      pe_intervals.push_back(i);
+    }
+  }
+}
+
+int DecompArrayMap::procNum(int, const CkArrayIndex &idx) {
+  int index = *(int *)idx.data();
+  auto it = std::lower_bound(pe_intervals.begin(), pe_intervals.end(), index);
+  auto pe = std::distance(pe_intervals.begin(), it);
+  return pe;
+}
+
 void Decomposition::assignKeys(BoundingBox &universe, std::vector<Particle> &particles) {
   for (auto & particle : particles) {
     particle.key = SFC::generateKey(particle.position, universe.box);
@@ -34,11 +53,8 @@ int SfcDecomposition::flush(std::vector<Particle> &particles, const SendParticle
   return flush_count;
 }
 
-int SfcDecomposition::getNumExpectedParticles(int n_total_particles, int n_partitions,
-                                              int tp_index) {
-  int n_expected = n_total_particles / n_partitions;
-  if (tp_index < (n_total_particles % n_partitions)) n_expected++;
-  return n_expected;
+int SfcDecomposition::getNumParticles(int tp_index) {
+  return splitters[tp_index].n_particles;
 }
 
 int SfcDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &readers, int min_n_splitters) {
@@ -89,6 +105,7 @@ int SfcDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &reader
     CkAbort("SFC Decomposition failure -- see stdout");
   }
 
+  saved_n_total_particles = universe.n_particles;
   // Sort our splitters
   std::sort(splitters.begin(), splitters.end());
 
@@ -126,15 +143,16 @@ void SfcDecomposition::alignSplitters(SfcDecomposition *decomp)
 void SfcDecomposition::pup(PUP::er& p) {
   PUP::able::pup(p);
   p | splitters;
+  p | saved_n_total_particles;
 }
 
 Key SfcDecomposition::getTpKey(int idx) {
   return splitters[idx].tp_key;
 }
 
-int OctDecomposition::getNumExpectedParticles(int n_total_particles, int n_partitions,
-                                              int tp_index) {
-  return splitters[tp_index].n_particles;
+void OctDecomposition::setArrayOpts(CkArrayOptions& opts) {
+  auto myMap = CProxy_DecompArrayMap::ckNew(this, saved_n_total_particles, splitters.size());
+  opts.setMap(myMap);
 }
 
 int OctDecomposition::flush(std::vector<Particle> &particles, const SendParticlesFn &fn) {
@@ -229,6 +247,7 @@ int OctDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &reader
              decomp_particle_sum, universe.n_particles);
     CkAbort("Decomposition failure -- see stdout");
   }
+  saved_n_total_particles = universe.n_particles;
 
   // Sort our splitters
   std::sort(splitters.begin(), splitters.end());
@@ -265,7 +284,7 @@ int KdDecomposition::flush(std::vector<Particle> &particles, const SendParticles
   return particles.size();
 }
 
-int KdDecomposition::getNumExpectedParticles(int n_total_particles, int n_partitions, int tp_index) {
+int KdDecomposition::getNumParticles(int tp_index) {
   return 0; // not implemented yet
 }
 

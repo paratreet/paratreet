@@ -15,6 +15,15 @@ namespace paratreet {
 using SendProxyFn = std::function<void(Key,int)>;
 using SendParticlesFn = std::function<void(int,int,Particle*)>;
 
+struct Decomposition;
+class DecompArrayMap : public CkArrayMap {
+public:
+  DecompArrayMap(Decomposition*, int, int);
+  int procNum(int, const CkArrayIndex &idx);
+private:
+  std::vector<size_t> pe_intervals;
+};
+
 struct Decomposition: public PUP::able {
   PUPable_abstract(Decomposition);
 
@@ -26,11 +35,13 @@ struct Decomposition: public PUP::able {
 
   virtual void assignKeys(BoundingBox &universe, std::vector<Particle> &particles);
 
-  virtual int getNumExpectedParticles(int n_total_particles, int n_partitions, int tp_index) = 0;
+  virtual int getNumParticles(int tp_index) = 0;
 
   virtual int findSplitters(BoundingBox &universe, CProxy_Reader &readers, int min_n_splitters) = 0;
 
   virtual Key getTpKey(int idx) = 0;
+
+  virtual void setArrayOpts(CkArrayOptions& opts) {}
 
   std::vector<Key> getAllTpKeys(int n_partitions) {
     std::vector<Key> tp_keys (n_partitions);
@@ -50,7 +61,7 @@ struct SfcDecomposition : public Decomposition {
 
   Key getTpKey(int idx) override;
   int flush(std::vector<Particle> &particles, const SendParticlesFn &fn) override;
-  int getNumExpectedParticles(int n_total_particles, int n_partitions, int tp_index) override;
+  int getNumParticles(int tp_index) override;
   int findSplitters(BoundingBox &universe, CProxy_Reader &readers, int min_n_splitters) override;
 
   void alignSplitters(SfcDecomposition *);
@@ -59,6 +70,7 @@ struct SfcDecomposition : public Decomposition {
 
 protected:
   std::vector<Splitter> splitters;
+  int saved_n_total_particles = 0;
 };
 
 struct OctDecomposition : public SfcDecomposition {
@@ -69,8 +81,8 @@ struct OctDecomposition : public SfcDecomposition {
   virtual ~OctDecomposition() = default;
 
   int flush(std::vector<Particle> &particles, const SendParticlesFn &fn) override;
-  int getNumExpectedParticles(int n_total_particles, int n_partitions, int tp_index) override;
   int findSplitters(BoundingBox &universe, CProxy_Reader &readers, int min_n_splitters) override;
+  void setArrayOpts(CkArrayOptions& opts) override;
 };
 
 struct KdDecomposition : public Decomposition {
@@ -82,7 +94,7 @@ struct KdDecomposition : public Decomposition {
 
   Key getTpKey(int idx) override;
   int flush(std::vector<Particle> &particles, const SendParticlesFn &fn) override;
-  int getNumExpectedParticles(int n_total_particles, int n_partitions, int tp_index) override;
+  int getNumParticles(int tp_index) override;
   int findSplitters(BoundingBox &universe, CProxy_Reader &readers, int min_n_splitters) override;
 
   virtual void pup(PUP::er& p) override;

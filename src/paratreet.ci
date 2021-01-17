@@ -157,6 +157,10 @@ module paratreet {
     entry [local] void setConfiguration(const paratreet::Configuration&);
   }
 
+  group DecompArrayMap : CkArrayMap {
+    entry DecompArrayMap(CkPointer<Decomposition>, int, int);
+  };
+
   extern entry void Reader request<CentroidData>(CProxy_Subtree<CentroidData>, int, int);
   extern entry void Reader flush<CentroidData>(int, int, CProxy_Subtree<CentroidData>);
   extern entry void Reader assignPartitions<CentroidData>(int, int, CProxy_Partition<CentroidData>);

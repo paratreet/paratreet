@@ -105,7 +105,8 @@ public:
     n_subtrees = treespec.ckLocalBranch()->getSubtreeDecomposition()->findSplitters(universe, readers, config.min_n_subtrees);
     treespec.receiveDecomposition(CkCallbackResumeThread(),
       CkPointer<Decomposition>(treespec.ckLocalBranch()->getSubtreeDecomposition()), true);
-    if (config.decomp_type == paratreet::subtreeDecompForTree(config.tree_type)) {
+    bool matching_decomps = config.decomp_type == paratreet::subtreeDecompForTree(config.tree_type);
+    if (matching_decomps) {
       n_partitions = n_subtrees;
       CkPrintf("Using same decomposition for subtrees and partitions\n");
       treespec.receiveDecomposition(CkCallbackResumeThread(),
@@ -123,22 +124,25 @@ public:
 
     // Create Subtrees
     start_time = CkWallTimer();
+    CkArrayOptions subtree_opts(n_subtrees);
+    treespec.ckLocalBranch()->getSubtreeDecomposition()->setArrayOpts(subtree_opts);
     subtrees = CProxy_Subtree<CentroidData>::ckNew(
       CkCallbackResumeThread(),
       universe.n_particles, n_subtrees, n_partitions,
       centroid_calculator, centroid_resumer,
-      centroid_cache, this->thisProxy, n_subtrees
+      centroid_cache, this->thisProxy, subtree_opts
       );
     CkPrintf("Created %d Subtrees: %.3lf ms\n", n_subtrees,
         (CkWallTimer() - start_time) * 1000);
 
     // Create Partitions
     start_time = CkWallTimer();
-    CkArrayOptions opts(n_partitions);
-    //opts.bindTo(subtrees);
+    CkArrayOptions partition_opts(n_partitions);
+    if (matching_decomps) partition_opts.bindTo(subtrees);
+    else treespec.ckLocalBranch()->getPartitionDecomposition()->setArrayOpts(partition_opts);
     partitions = CProxy_Partition<CentroidData>::ckNew(
       n_partitions, centroid_cache, centroid_resumer,
-      centroid_calculator, opts
+      centroid_calculator, partition_opts
       );
     CkPrintf("Created %d Partitions: %.3lf ms\n", n_partitions,
         (CkWallTimer() - start_time) * 1000);
