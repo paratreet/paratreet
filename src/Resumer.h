@@ -20,10 +20,13 @@ private: // stats
   unsigned long long n_node_ints = 0ull;
   unsigned long long n_opens     = 0ull;
   unsigned long long n_closes    = 0ull;
+  unsigned long long n_particles = 0ull;
 
 public:
   void collectAndResetStats(CkCallback cb) {
+     CkPrintf("%llu particles on pe %d\n", n_particles, CkMyPe());
      unsigned long long intrn_counts [4] = {n_node_ints, n_part_ints, n_opens, n_closes};
+     CkPrintf("on PE %d: %llu node-particle interactions, %llu bucket-particle interactions %llu node opens, %llu node closes\n", CkMyPe(), intrn_counts[0], intrn_counts[1], intrn_counts[2], intrn_counts[3]);
      this->contribute(4 * sizeof(unsigned long long), &intrn_counts, CkReduction::sum_ulong_long, cb);
      reset();
   }
@@ -35,7 +38,7 @@ public:
     }
     CkAssert(waiting.empty()); // should have gotten rid of them
 #endif
-    n_part_ints = n_node_ints = n_opens = n_closes = 0ull;
+    n_part_ints = n_node_ints = n_opens = n_closes = n_particles = 0ull;
   }
 
   void countLeafInts(int n_ints) {
@@ -48,6 +51,10 @@ public:
 
   void countOpen(bool should_open) {
     should_open ? n_opens++ : n_closes++;
+  }
+
+  void countParticles(int n_parts) {
+    n_particles += n_parts;
   }
 
   void process(Key key) {
