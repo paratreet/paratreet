@@ -183,7 +183,7 @@ int OctDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &reader
     readers.countOct(keys.get(), log_branch_factor, CkCallbackResumeThread((void*&)msg));
     int* counts = (int*)msg->getData();
     int n_counts = msg->getSize() / sizeof(int);
-    bool last = n_counts * 2 > min_n_splitters * branch_factor;
+    bool last = n_counts >= min_n_splitters;
     // Check counts and create splitters if necessary
     for (int i = 0; i < n_counts; i++) {
       Key from = keys.get(2*i);
