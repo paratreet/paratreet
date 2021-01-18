@@ -10,19 +10,21 @@ DecompArrayMap::DecompArrayMap(Decomposition* decomp, int n_total_particles, int
   int threshold = n_total_particles / CkNumPes();
   int current_sum = 0;
   for (int i = 0; i < n_splitters; i++) {
-    current_sum += decomp->getNumParticles(i);
-    if (current_sum >= threshold) {
+    auto np = decomp->getNumParticles(i);
+    if (current_sum + np >= threshold) {
       current_sum = 0;
       pe_intervals.push_back(i);
     }
+    current_sum += np;
   }
 }
 
 int DecompArrayMap::procNum(int, const CkArrayIndex &idx) {
   int index = *(int *)idx.data();
+  if (pe_intervals.empty()) CkAbort("using procNum but array is not prepped");
   auto it = std::lower_bound(pe_intervals.begin(), pe_intervals.end(), index);
-  auto pe = std::distance(pe_intervals.begin(), it);
-  return pe;
+  int pe = std::distance(pe_intervals.begin(), it);
+  return std::min(CkNumPes() - 1, pe);
 }
 
 void Decomposition::assignKeys(BoundingBox &universe, std::vector<Particle> &particles) {
@@ -193,7 +195,7 @@ int OctDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &reader
   keys.buffer();
 
   int decomp_particle_sum = 0; // Used to check if all particles are decomposed
-
+  int threshold = universe.n_particles / min_n_splitters;
   // Main decomposition loop
   while (keys.size() != 0) {
     // Send splitters to Readers for histogramming
@@ -201,14 +203,13 @@ int OctDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &reader
     readers.countOct(keys.get(), log_branch_factor, CkCallbackResumeThread((void*&)msg));
     int* counts = (int*)msg->getData();
     int n_counts = msg->getSize() / sizeof(int);
-    bool last = n_counts >= min_n_splitters;
     // Check counts and create splitters if necessary
     for (int i = 0; i < n_counts; i++) {
       Key from = keys.get(2*i);
       Key to = keys.get(2*i+1);
 
       int n_particles = counts[i];
-      if (n_particles > 0 && !last) {
+      if (n_particles > threshold) {
         // Create *branch_factor* more splitter key pairs to go one level deeper.
         // Leading zeros will be removed in Reader::count() to enable
         // comparison of splitter key and particle key
