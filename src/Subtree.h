@@ -19,7 +19,6 @@
 #include <vector>
 #include <fstream>
 
-extern CProxy_TreeSpec treespec_subtrees;
 extern CProxy_TreeSpec treespec;
 extern CProxy_Reader readers;
 #define META_TUPLE_SIZE 3
@@ -37,6 +36,7 @@ public:
 
   Key tp_key; // Should be a prefix of all particle keys underneath this node
   Node<Data>* local_root; // Root node of this Subtree, TreeCanopies sit above this node
+  MultiData<Data> flat_subtree;
 
   CProxy_TreeCanopy<Data> tc_proxy;
   CProxy_CacheManager<Data> cm_proxy;
@@ -45,19 +45,32 @@ public:
 
   Subtree(const CkCallback&, int, int, int, TCHolder<Data>,
           CProxy_Resumer<Data>, CProxy_CacheManager<Data>, DPHolder<Data>);
+  Subtree(CkMigrateMessage * msg){
+    delete msg;
+  };
   void receive(ParticleMsg*);
-  void buildTree();
+  void buildTree(CProxy_Partition<Data>, CkCallback);
   void recursiveBuild(Node<Data>*, Particle* node_particles, size_t);
   void populateTree();
   inline void initCache();
   void sendLeaves(CProxy_Partition<Data>);
   void requestNodes(Key, int);
+  void requestCopy(int, PPHolder<Data>);
   void print(Node<Data>*);
   void destroy();
   void reset();
   void output(CProxy_Writer w, CkCallback cb);
   void pup(PUP::er& p);
   void collectMetaData(Real timestep, const CkCallback & cb);
+  void addNodeToFlatSubtree(Node<Data>* node);
+  void pauseForLB(){
+    //CkPrintf("[ST %d]  pause for LB on PE %d\n", this->thisIndex, CkMyPe());
+    this->AtSync();
+  }
+  void ResumeFromSync(){
+    //CkPrintf("[ST %d]  resume from sync for LB on PE %d\n", this->thisIndex, CkMyPe());
+    return;
+  };
 
   // For debugging
   void checkParticlesChanged(const CkCallback& cb) {
@@ -82,6 +95,7 @@ Subtree<Data>::Subtree(const CkCallback& cb, int n_total_particles_,
                        int n_subtrees_, int n_partitions_, TCHolder<Data> tc_holder,
                        CProxy_Resumer<Data> r_proxy_,
                        CProxy_CacheManager<Data> cm_proxy_, DPHolder<Data> dp_holder) {
+  this->usesAtSync = true;
   n_total_particles = n_total_particles_;
   n_subtrees = n_subtrees_;
   n_partitions = n_partitions_;
@@ -89,7 +103,7 @@ Subtree<Data>::Subtree(const CkCallback& cb, int n_total_particles_,
   tc_proxy = tc_holder.proxy;
   cm_proxy = cm_proxy_;
 
-  tp_key = treespec_subtrees.ckLocalBranch()->getDecomposition()->
+  tp_key = treespec.ckLocalBranch()->getSubtreeDecomposition()->
     getTpKey(this->thisIndex);
 
   // Create TreeCanopies and send proxies
@@ -99,7 +113,7 @@ Subtree<Data>::Subtree(const CkCallback& cb, int n_total_particles_,
                                  tp_index, cm_proxy, dp_holder);
     };
 
-  treespec_subtrees.ckLocalBranch()->getTree()->buildCanopy(this->thisIndex, sendProxy);
+  treespec.ckLocalBranch()->getTree()->buildCanopy(this->thisIndex, sendProxy);
 
   local_root = nullptr;
 
@@ -160,7 +174,6 @@ void Subtree<Data>::sendLeaves(CProxy_Partition<Data> part)
     }
   }
 
-  MultiData<Data> flat_subtree; // might be used
   for (auto && part_receiver : part_idx_to_leaf) {
     auto it = cm_proxy.ckLocalBranch()->partition_lookup.find(part_receiver.first);
     if (it != cm_proxy.ckLocalBranch()->partition_lookup.end()) {
@@ -168,20 +181,32 @@ void Subtree<Data>::sendLeaves(CProxy_Partition<Data> part)
       it->second->addLeaves(leaf_ptrs, this->thisIndex);
     }
     else {
-      if (flat_subtree.n_nodes == 0) { // hasnt been filled yet
-        cm_proxy.ckLocalBranch()->makeSubtreeFlat(local_root, flat_subtree);
-      }
       std::vector<Key> lookup_leaf_keys;
       for (auto && leaf : part_receiver.second) {
 	lookup_leaf_keys.push_back(leaf->key);
       }
-      part[part_receiver.first].receiveLeavesAndSubtree(flat_subtree, lookup_leaf_keys, this->thisIndex);
+      part[part_receiver.first].receiveLeaves(lookup_leaf_keys, tp_key, this->thisIndex, this->thisProxy);
     }
   }
 }
 
 template <typename Data>
-void Subtree<Data>::buildTree() {
+void Subtree<Data>::addNodeToFlatSubtree(Node<Data>* node) {
+  SpatialNode<Data> sn (*node);
+  flat_subtree.nodes.emplace_back(node->key, sn);
+  for (int i = 0; i < node->n_children; i++) {
+    addNodeToFlatSubtree(node->getChild(i));
+  }
+}
+
+template <typename Data>
+void Subtree<Data>::requestCopy(int cm_index, PPHolder<Data> pp_holder) {
+  if (flat_subtree.nodes.empty()) addNodeToFlatSubtree(local_root);
+  cm_proxy[cm_index].receiveSubtree(flat_subtree, pp_holder);
+}
+
+template <typename Data>
+void Subtree<Data>::buildTree(CProxy_Partition<Data> part, CkCallback cb) {
   // Copy over received particles
   std::swap(particles, incoming_particles);
 
@@ -196,16 +221,23 @@ void Subtree<Data>::buildTree() {
 #if DEBUG
   CkPrintf("[TP %d] key: 0x%" PRIx64 " particles: %d\n", this->thisIndex, tp_key, particles.size());
 #endif
-  local_root = treespec_subtrees.ckLocalBranch()->template makeNode<Data>(tp_key, 0,
+  local_root = treespec.ckLocalBranch()->template makeNode<Data>(tp_key, 0,
         particles.size(), particles.data(), 0, n_subtrees - 1, true, nullptr, this->thisIndex);
-  Key lbf = log2(local_root->getBranchFactor()); // have to use treespec_subtrees to get BF
+  Key lbf = log2(local_root->getBranchFactor()); // have to use treespec to get BF
   local_root->depth = Utility::getDepthFromKey(tp_key, lbf);
   recursiveBuild(local_root, &particles[0], lbf);
+
+  flat_subtree.tp_index  = this->thisIndex;
+  flat_subtree.cm_index  = cm_proxy.ckLocalBranch()->thisIndex;
+  flat_subtree.particles = particles;
 
   // Populate the tree structure (including TreeCanopy)
   populateTree();
   // Initialize cache
   initCache();
+
+  this->contribute(cb);
+  sendLeaves(part);
 }
 
 template <typename Data>
@@ -250,7 +282,7 @@ void Subtree<Data>::recursiveBuild(Node<Data>* node, Particle* node_particles, s
     int n_particles = first_ge_idx - start;
 
     // Create child and store in vector
-    Node<Data>* child = treespec_subtrees.ckLocalBranch()->template makeNode<Data>(child_key, node->depth + 1,
+    Node<Data>* child = treespec.ckLocalBranch()->template makeNode<Data>(child_key, node->depth + 1,
         n_particles, node_particles + start, 0, n_subtrees - 1, true, node, this->thisIndex);
     /*
     Node<Data>* child = new Node<Data>(child_key, node->depth + 1, node->particles + start,
@@ -318,6 +350,7 @@ void Subtree<Data>::requestNodes(Key key, int cm_index) {
 template <typename Data>
 void Subtree<Data>::reset() {
   particles.clear();
+  flat_subtree.clear();
 }
 
 template <typename Data>

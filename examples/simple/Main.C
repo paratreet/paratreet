@@ -11,7 +11,6 @@
 /* readonly */ CProxy_NeighborListCollector neighbor_list_collector;
 
 class Main : public CBase_Main {
-  int n_treepieces; // Cannot be a readonly because of OCT decomposition
   int cur_iteration;
   double total_start_time;
   double start_time;
@@ -28,36 +27,37 @@ class Main : public CBase_Main {
     // Initialize readonly variables
     conf.input_file = "";
     conf.output_file = "";
-    conf.max_particles_per_tp = 1000;
-    conf.max_particles_per_leaf = 10;
+    conf.min_n_subtrees = CkNumPes() * 4;
+    conf.min_n_partitions = CkNumPes() * 4;
+    conf.max_particles_per_leaf = 12; // default from ChaNGa
     conf.decomp_type = paratreet::DecompType::eOct;
     conf.tree_type = paratreet::TreeType::eOct;
     conf.num_iterations = 3;
     conf.num_share_nodes = 0; // 3;
     conf.cache_share_depth= 3;
     conf.flush_period = 1;
-    conf.flush_max_avg_ratio = 10.0;
+    conf.flush_max_avg_ratio = 0;
+    conf.lb_period = 5;
     conf.timestep_size = 0.1;
 
     verify = false;
 
     // Initialize member variables
-    n_treepieces = 0;
     cur_iteration = 0;
 
     // Process command line arguments
     int c;
     std::string input_str;
-    while ((c = getopt(m->argc, m->argv, "f:n:p:l:d:t:i:s:u:r:v:")) != -1) {
+    while ((c = getopt(m->argc, m->argv, "f:n:p:l:d:t:i:s:u:r:b:v:")) != -1) {
       switch (c) {
         case 'f':
           conf.input_file = optarg;
           break;
         case 'n':
-          n_treepieces = atoi(optarg);
+          conf.min_n_subtrees = atoi(optarg);
           break;
         case 'p':
-          conf.max_particles_per_tp = atoi(optarg);
+          conf.min_n_partitions = atoi(optarg);
           break;
         case 'l':
           conf.max_particles_per_leaf = atoi(optarg);
@@ -98,6 +98,9 @@ class Main : public CBase_Main {
         case 'r':
           conf.flush_max_avg_ratio = atoi(optarg);
           break;
+        case 'b':
+          conf.lb_period = atoi(optarg);
+          break;
         case 'v':
           verify = true;
           conf.output_file = optarg;
@@ -126,7 +129,8 @@ class Main : public CBase_Main {
     CkPrintf("Input file: %s\n", conf.input_file.c_str());
     CkPrintf("Decomposition type: %s\n", paratreet::asString(conf.decomp_type).c_str());
     CkPrintf("Tree type: %s\n", paratreet::asString(conf.tree_type).c_str());
-    CkPrintf("Maximum number of particles per treepiece: %d\n", conf.max_particles_per_tp);
+    CkPrintf("Minimum number of subtrees: %d\n", conf.min_n_subtrees);
+    CkPrintf("Minimum number of partitions: %d\n", conf.min_n_partitions);
     CkPrintf("Maximum number of particles per leaf: %d\n\n", conf.max_particles_per_leaf);
 
     count_manager = CProxy_CountManager::ckNew(0.00001, 10000, 5);
@@ -156,3 +160,4 @@ class Main : public CBase_Main {
 #include "templates.h"
 
 #include "Main.def.h"
+
