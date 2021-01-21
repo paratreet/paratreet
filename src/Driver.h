@@ -169,6 +169,7 @@ public:
     auto config = treespec.ckLocalBranch()->getConfiguration();
     for (int iter = 0; iter < config.num_iterations; iter++) {
       CkPrintf("\n* Iteration %d\n", iter);
+      double iter_time = CkWallTimer();
 
       // Start tree build in Subtrees
       start_time = CkWallTimer();
@@ -264,6 +265,8 @@ public:
       storage.clear();
       storage_sorted = false;
       CkWaitQD();
+      CkPrintf("Iteration time: %.3lf ms\n", (CkWallTimer() - iter_time) * 1000);
+
     }
 
     cb.send();

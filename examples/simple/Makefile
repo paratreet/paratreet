@@ -6,7 +6,7 @@ OPTS = -g -I$(STRUCTURE_PATH) -I$(PARATREET_PATH) -DCOUNT_INTERACTIONS=0 -DDEBUG
 CHARMC = $(CHARM_HOME)/bin/charmc $(OPTS)
 LD_LIBS = -L$(PARATREET_PATH) -lparatreet
 
-all: Gravity SPH
+all: Gravity SPH Gravity_proj SPH_proj
 VISITORS = DensityVisitor.h PressureVisitor.h GravityVisitor.h
 OTHERS = CountManager.h NeighborListCollector.h
 
@@ -18,6 +18,12 @@ Gravity: Main.decl.h Gravity.o Main.o
 
 SPH: Main.decl.h SPH.o Main.o
 	$(CHARMC) -language charm++ -module CommonLBs -o SPH SPH.o Main.o $(LD_LIBS)
+
+Gravity_proj: Main.decl.h Gravity.o Main.o
+	$(CHARMC) -language charm++ -module CommonLBs -tracemode projections -o Gravity_proj Gravity.o Main.o $(LD_LIBS)
+
+SPH_proj: Main.decl.h SPH.o Main.o
+	$(CHARMC) -language charm++ -module CommonLBs -tracemode projections -o SPH_proj SPH.o Main.o $(LD_LIBS)
 
 Gravity.o: Gravity.C
 	$(CHARMC) -c $<
