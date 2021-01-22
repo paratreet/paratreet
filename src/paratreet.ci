@@ -40,11 +40,14 @@ module paratreet {
     entry CacheManager();
     entry void initialize(const CkCallback&);
 #ifdef GROUP_CACHE
-    entry [aggregate] void requestNodes(std::pair<Key, int>);
+    //entry [aggregate] void requestNodes(std::pair<Key, int>);
+    entry void requestNodes(std::pair<Key, int>);
 #endif
+    entry [aggregate] void test(int);
     entry void recvStarterPack(std::pair<Key, SpatialNode<Data>> pack [n], int n, CkCallback);
 #ifdef GROUP_CACHE
-    entry [aggregate] void addCache(MultiData<Data>);
+    //entry [aggregate] void addCache(MultiData<Data>);
+    entry void addCache(MultiData<Data>);
 #endif
     entry void restoreData(std::pair<Key, SpatialNode<Data>>);
     entry void receiveSubtree(MultiData<Data>, PPHolder<Data>);
@@ -55,11 +58,12 @@ module paratreet {
   };
 #ifdef GROUP_CACHE
   group CacheManager<CentroidData>;
-  extern entry void CacheManager<CentroidData> requestNodes(std::pair<Key,int>);
-  extern entry void CacheManager<CentroidData> addCache(MultiData<CentroidData>);
+  //extern entry void CacheManager<CentroidData> requestNodes(std::pair<Key,int>);
+  //extern entry void CacheManager<CentroidData> addCache(MultiData<CentroidData>);
 #else
   nodegroup CacheManager<CentroidData>;
 #endif
+  extern entry void CacheManager<CentroidData> test(int);
 
 #ifndef GROUP_CACHE
   template <typename Data>

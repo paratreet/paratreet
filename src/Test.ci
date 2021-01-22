@@ -1,0 +1,10 @@
+mainmodule Test {
+  extern module paratreet;
+
+  mainchare Main {
+    entry Main(CkArgMsg* m);
+    entry void run();
+  };
+
+  extern entry void CacheManager<CentroidData> test(int);
+}
