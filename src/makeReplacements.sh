@@ -16,17 +16,12 @@ function replace {
     fi
 }
 
-replace "void recursive_pup_impl<GroupMeshStreamer<int" "$DECL_H" "<Data>" "<CentroidData>"
-replace "void recursive_pup_impl<GroupMeshStreamer<int" "$DEF_H" "<Data>" "<CentroidData>"
-replace "obj->GroupMeshStreamer<int" "$DEF_H" "<Data>" "<CentroidData>"
-replace "test_marshall.*TramAggregator->insertData" "$DEF_H" "<false>" " "
+replace "void recursive_pup_impl<GroupMeshStreamer<std::pair<Key,int>" "$DECL_H" "<Data>" "<CentroidData>"
+replace "void recursive_pup_impl<GroupMeshStreamer<std::pair<Key,int>" "$DEF_H" "<Data>" "<CentroidData>"
+replace "obj->GroupMeshStreamer<std::pair<Key,int>" "$DEF_H" "<Data>" "<CentroidData>"
+replace "requestNodes_marshall.*TramAggregator->insertData" "$DEF_H" "<false>" " "
 
-#replace "void recursive_pup_impl<GroupMeshStreamer<std::pair<Key,int>" "$DECL_H" "<Data>" "<CentroidData>"
-#replace "void recursive_pup_impl<GroupMeshStreamer<std::pair<Key,int>" "$DEF_H" "<Data>" "<CentroidData>"
-#replace "obj->GroupMeshStreamer<std::pair<Key,int>" "$DEF_H" "<Data>" "<CentroidData>"
-#replace "requestNodes_marshall.*TramAggregator->insertData" "$DEF_H" "<false>" " "
-
-#replace "void recursive_pup_impl<GroupMeshStreamer<MultiData" "$DECL_H" "<Data>" "<CentroidData>"
-#replace "void recursive_pup_impl<GroupMeshStreamer<MultiData" "$DEF_H" "<Data>" "<CentroidData>"
-#replace "obj->GroupMeshStreamer<MultiData" "$DEF_H" "<Data>" "<CentroidData>"
-#replace "addCache_marshall.*TramAggregator->insertData" "$DEF_H" "<false>" " "
+replace "void recursive_pup_impl<GroupMeshStreamer<MultiData" "$DECL_H" "<Data>" "<CentroidData>"
+replace "void recursive_pup_impl<GroupMeshStreamer<MultiData" "$DEF_H" "<Data>" "<CentroidData>"
+replace "obj->GroupMeshStreamer<MultiData" "$DEF_H" "<Data>" "<CentroidData>"
+replace "addCache_marshall.*TramAggregator->insertData" "$DEF_H" "<false>" " "

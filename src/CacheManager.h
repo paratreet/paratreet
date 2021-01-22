@@ -123,7 +123,6 @@ public:
 #else
   void requestNodes(std::pair<Key, int>&);
 #endif
-  void test(int);
   void serviceRequest(Node<Data>*, int);
   void recvStarterPack(std::pair<Key, SpatialNode<Data>>* pack, int n, CkCallback);
 #ifdef GROUP_CACHE
@@ -330,10 +329,6 @@ void CacheManager<Data>::requestNodes(std::pair<Key, int>& param) {
     CkAbort("CacheManager::requestNodes: node not found");
   }
   serviceRequest(node, param.second);
-}
-
-template <typename Data>
-void CacheManager<Data>::test(int a) {
 }
 
 template <typename Data>
