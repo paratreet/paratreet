@@ -76,9 +76,9 @@ int SfcDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &reader
 
   int decomp_particle_sum = 0;
 
-  int n_total_particles = keys.size();
-  int threshold = n_total_particles / min_n_splitters;
-  if (n_total_particles % min_n_splitters > 0) threshold++;
+  saved_n_total_particles = universe.n_particles;
+  int threshold = saved_n_total_particles / min_n_splitters;
+  if (saved_n_total_particles % min_n_splitters > 0) threshold++;
   for (int i = 0; i < min_n_splitters; ++i) {
     Key from = keys[(int)(i * threshold)];
     Key to;
@@ -248,7 +248,6 @@ int OctDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &reader
              decomp_particle_sum, universe.n_particles);
     CkAbort("Decomposition failure -- see stdout");
   }
-  saved_n_total_particles = universe.n_particles;
 
   // Sort our splitters
   std::sort(splitters.begin(), splitters.end());
