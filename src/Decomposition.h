@@ -106,5 +106,22 @@ private:
 
 };
 
+struct CoMDecomposition : public Decomposition {
+  PUPable_decl(CoMDecomposition);
+
+  CoMDecomposition() = default;
+  CoMDecomposition(CkMigrateMessage *m) : Decomposition(m) { }
+  virtual ~CoMDecomposition() = default;
+
+  Key getTpKey(int idx) override;
+  int flush(std::vector<Particle> &particles, const SendParticlesFn &fn) override;
+  int getNumExpectedParticles(int n_total_particles, int n_partitions, int tp_index) override;
+  int findSplitters(BoundingBox &universe, CProxy_Reader &readers, int min_n_splitters) override;
+
+  virtual void pup(PUP::er& p) override;
+
+private:
+  // splitters
+};
 
 #endif

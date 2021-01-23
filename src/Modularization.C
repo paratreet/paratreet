@@ -31,3 +31,14 @@ int OctTree::findChildsLastParticle(const Particle* particles, int start, int fi
   // Find number of particles in child
   return Utility::binarySearchComp(sibling_splitter, particles, start, finish, compGE);
 }
+
+void CoMTree::prepParticles(Particle* particles, size_t n_particles, Key parent_key, size_t log_branch_factor) {
+  // map splitter to Vector3dreal
+  splitter[parent_key] = CoM(particles);
+  for each particle; make a 2by2 key and store the key. so we have a map of particle keys to adjusted particle keys; then use those keys to sort. then use the Octtree method
+}
+
+int CoMTree::findChildsLastParticle(const Particle* particles, int start, int finish, Key child_key, size_t log_branch_factor) {
+  // make vector of particles using map. dont need to delete those entries, well just overwrite them
+}
+ 

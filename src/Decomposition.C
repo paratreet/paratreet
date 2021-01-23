@@ -330,3 +330,20 @@ void KdDecomposition::pup(PUP::er& p) {
   p | splitters;
   p | depth;
 }
+
+Key CoMDecomposition::getTpKey(int idx) {
+}
+
+int CoMDecomposition::flush(std::vector<Particle> &particles, const SendParticlesFn &fn) {
+}
+
+int CoMDecomposition::getNumExpectedParticles(int n_total_particles, int n_partitions, int tp_index) {
+  return 0; // not implemented yet
+}
+
+int CoMDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &readers, int min_n_splitters) {
+}
+
+void CoMDecomposition::pup(PUP::er& p) {
+  PUP::able::pup(p);
+}

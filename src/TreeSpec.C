@@ -30,6 +30,8 @@ void TreeSpec::getDecomposition(std::unique_ptr<Decomposition>& decomp, paratree
       decomp.reset(new SfcDecomposition());
     } else if (decomp_type == paratreet::DecompType::eKd) {
       decomp.reset(new KdDecomposition());
+    } else if (decomp_type == paratreet::DecompType::eCoM) {
+      decomp.reset(new CoMDecomposition());
     }
   }
 }
@@ -42,6 +44,8 @@ Tree* TreeSpec::getTree() {
       tree.reset(new BinaryTree());
     } else if (config.tree_type == paratreet::TreeType::eKd) {
       tree.reset(new KdTree());
+    } else if (config.tree_type == paratreet::TreeType::eCoM) {
+      tree.reset(new CoMTree());
     }
   }
 

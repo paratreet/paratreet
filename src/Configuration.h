@@ -14,6 +14,7 @@ namespace paratreet {
       eOct = 0,
       eSfc,
       eKd,
+      eCoM,
       eInvalid = 100
     };
 
@@ -21,6 +22,7 @@ namespace paratreet {
       eOct = 0,
       eOctBinary,
       eKd,
+      eCoM,
       eInvalid = 100
     };
 
@@ -68,6 +70,8 @@ namespace paratreet {
           return "OctBinaryTree";
         case TreeType::eKd:
           return "KdTree";
+        case TreeType::eCoM:
+          return "CenterOfMassTree";
         default:
           return "InvalidTreeType";
       }
@@ -81,6 +85,8 @@ namespace paratreet {
           return "SfcDecomp";
         case DecompType::eKd:
           return "KdDecomp";
+        case DecompType::eCoM:
+          return "CenterOfMassDecomp";
         default:
          return "InvalidDecompType";
       }
@@ -93,6 +99,8 @@ namespace paratreet {
           return DecompType::eOct;
         case TreeType::eKd:
           return DecompType::eKd;
+        case TreeType::eCoM:
+          return DecompType::eCoM;
         default:
           return DecompType::eInvalid;
       }
