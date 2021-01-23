@@ -71,6 +71,10 @@ module paratreet {
   group CacheManagerTRAM<CentroidData>;
   extern entry void CacheManagerTRAM<CentroidData> requestNodes(std::pair<Key,int>);
   extern entry void CacheManagerTRAM<CentroidData> addCache(MultiData<CentroidData>);
+  group GroupMeshStreamer<std::pair<Key, int>, CacheManager<CentroidData>, SimpleMeshRouter, __REQUEST_NODES_PLACEHOLDER__>;
+  group GroupMeshStreamer<MultiData<CentroidData>, CacheManager<CentroidData>, SimpleMeshRouter, __ADD_CACHE_PLACEHOLDER__>;
+  group MeshStreamer<std::pair<unsigned long, int>, SimpleMeshRouter>;
+  group MeshStreamer<MultiData<CentroidData>, SimpleMeshRouter>;
 #endif
 
   template <typename Data>
