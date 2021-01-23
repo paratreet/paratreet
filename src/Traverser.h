@@ -24,7 +24,7 @@ template <typename Visitor, typename Node, typename StatCollector>
 inline void doLeaf(Node* source, Node* target, StatCollector* stats) {
   Visitor::leaf(*source, *target);
 #if COUNT_INTERACTIONS
-  stats->countLeafInts(target->n_particles);
+  stats->countLeafInts(source->n_particles * target->n_particles);
 #endif
 }
 

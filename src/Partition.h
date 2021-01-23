@@ -249,6 +249,7 @@ void Partition<Data>::perturb(TPHolder<Data> tp_holder, Real timestep, bool if_f
 {
   std::vector<Particle> particles;
   copyParticles(particles);
+  r_local->countParticles(particles.size());
   for (auto && p : particles) {
     p.perturb(timestep, readers.ckLocalBranch()->universe.box);
   }

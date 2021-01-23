@@ -6,6 +6,27 @@
 #include "BufferedVec.h"
 #include "Reader.h"
 
+DecompArrayMap::DecompArrayMap(Decomposition* decomp, int n_total_particles, int n_splitters) {
+  int threshold = n_total_particles / CkNumPes();
+  int current_sum = 0;
+  for (int i = 0; i < n_splitters; i++) {
+    auto np = decomp->getNumParticles(i);
+    if (current_sum + np >= threshold) {
+      current_sum = 0;
+      pe_intervals.push_back(i);
+    }
+    current_sum += np;
+  }
+}
+
+int DecompArrayMap::procNum(int, const CkArrayIndex &idx) {
+  int index = *(int *)idx.data();
+  if (pe_intervals.empty()) CkAbort("using procNum but array is not prepped");
+  auto it = std::lower_bound(pe_intervals.begin(), pe_intervals.end(), index);
+  int pe = std::distance(pe_intervals.begin(), it);
+  return std::min(CkNumPes() - 1, pe);
+}
+
 void Decomposition::assignKeys(BoundingBox &universe, std::vector<Particle> &particles) {
   for (auto & particle : particles) {
     particle.key = SFC::generateKey(particle.position, universe.box);
@@ -34,11 +55,8 @@ int SfcDecomposition::flush(std::vector<Particle> &particles, const SendParticle
   return flush_count;
 }
 
-int SfcDecomposition::getNumExpectedParticles(int n_total_particles, int n_partitions,
-                                              int tp_index) {
-  int n_expected = n_total_particles / n_partitions;
-  if (tp_index < (n_total_particles % n_partitions)) n_expected++;
-  return n_expected;
+int SfcDecomposition::getNumParticles(int tp_index) {
+  return splitters[tp_index].n_particles;
 }
 
 int SfcDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &readers, int min_n_splitters) {
@@ -58,28 +76,25 @@ int SfcDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &reader
 
   int decomp_particle_sum = 0;
 
-  int n_total_particles = keys.size();
-  int threshold = n_total_particles / min_n_splitters;
-  if (n_total_particles % min_n_splitters > 0) threshold++;
-  for (int i = 0; i < min_n_splitters; ++i) {
-    Key from = keys[(int)(i * threshold)];
-    Key to;
-    int n_particles = (int)threshold;
-    if (i + 1 == min_n_splitters) {
-      to = ~Key(0);
-      n_particles = keys.size() - (int)(i * threshold);
-    } else to = keys[(int)((i + 1) * threshold)];
-
+  saved_n_total_particles = universe.n_particles;
+  int threshold = saved_n_total_particles / min_n_splitters;
+  int remainder = saved_n_total_particles % min_n_splitters;
+  for (int i = 0, ki = 0; i < min_n_splitters; ++i) {
+    Key from = keys[ki], to;
+    int ki_next = ki + threshold;
+    if (i < remainder) ki_next++;
+    if (ki_next >= saved_n_total_particles) to = ~Key(0);
+    else to = keys[ki_next];
     // Inverse bitwise-xor is used as a bitwise equality test, in conjunction with
     // `removeTrailingBits` forms a mask that zeroes off all bits after the first
     // differing bit between `from` and `to`
     Key prefixMask = Utility::removeTrailingBits(~(from ^ (to - 1)));
     Key prefix = prefixMask & from;
     Splitter sp(Utility::removeLeadingZeros(from, log_branch_factor),
-                Utility::removeLeadingZeros(to, log_branch_factor), prefix, n_particles);
+                Utility::removeLeadingZeros(to, log_branch_factor), prefix, ki_next - ki);
     splitters.push_back(sp);
-
-    decomp_particle_sum += n_particles;
+    decomp_particle_sum += (ki_next - ki);
+    ki = ki_next;
   }
 
   // Check if decomposition is correct
@@ -126,15 +141,16 @@ void SfcDecomposition::alignSplitters(SfcDecomposition *decomp)
 void SfcDecomposition::pup(PUP::er& p) {
   PUP::able::pup(p);
   p | splitters;
+  p | saved_n_total_particles;
 }
 
 Key SfcDecomposition::getTpKey(int idx) {
   return splitters[idx].tp_key;
 }
 
-int OctDecomposition::getNumExpectedParticles(int n_total_particles, int n_partitions,
-                                              int tp_index) {
-  return splitters[tp_index].n_particles;
+void OctDecomposition::setArrayOpts(CkArrayOptions& opts) {
+  auto myMap = CProxy_DecompArrayMap::ckNew(this, saved_n_total_particles, splitters.size());
+  opts.setMap(myMap);
 }
 
 int OctDecomposition::flush(std::vector<Particle> &particles, const SendParticlesFn &fn) {
@@ -175,7 +191,7 @@ int OctDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &reader
   keys.buffer();
 
   int decomp_particle_sum = 0; // Used to check if all particles are decomposed
-
+  int threshold = universe.n_particles / min_n_splitters;
   // Main decomposition loop
   while (keys.size() != 0) {
     // Send splitters to Readers for histogramming
@@ -183,14 +199,13 @@ int OctDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &reader
     readers.countOct(keys.get(), log_branch_factor, CkCallbackResumeThread((void*&)msg));
     int* counts = (int*)msg->getData();
     int n_counts = msg->getSize() / sizeof(int);
-    bool last = n_counts >= min_n_splitters;
     // Check counts and create splitters if necessary
     for (int i = 0; i < n_counts; i++) {
       Key from = keys.get(2*i);
       Key to = keys.get(2*i+1);
 
       int n_particles = counts[i];
-      if (n_particles > 0 && !last) {
+      if (n_particles > threshold) {
         // Create *branch_factor* more splitter key pairs to go one level deeper.
         // Leading zeros will be removed in Reader::count() to enable
         // comparison of splitter key and particle key
@@ -232,6 +247,7 @@ int OctDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &reader
 
   // Sort our splitters
   std::sort(splitters.begin(), splitters.end());
+  saved_n_total_particles = universe.n_particles;
 
   // Return the number of TreePieces
   return splitters.size();
@@ -265,7 +281,7 @@ int KdDecomposition::flush(std::vector<Particle> &particles, const SendParticles
   return particles.size();
 }
 
-int KdDecomposition::getNumExpectedParticles(int n_total_particles, int n_partitions, int tp_index) {
+int KdDecomposition::getNumParticles(int tp_index) {
   return 0; // not implemented yet
 }
 
