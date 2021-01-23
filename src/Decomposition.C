@@ -247,6 +247,7 @@ int OctDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &reader
 
   // Sort our splitters
   std::sort(splitters.begin(), splitters.end());
+  saved_n_total_particles = universe.n_particles;
 
   // Return the number of TreePieces
   return splitters.size();
