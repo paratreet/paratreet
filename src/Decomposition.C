@@ -78,16 +78,17 @@ int SfcDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &reader
 
   saved_n_total_particles = universe.n_particles;
   int threshold = saved_n_total_particles / min_n_splitters;
+  int n_splitters = min_n_splitters - 1;
   if (saved_n_total_particles % min_n_splitters > 0) threshold++;
-  for (int i = 0; i < min_n_splitters; ++i) {
+  else n_splitters++;
+  for (int i = 0; i < n_splitters; ++i) {
     Key from = keys[(int)(i * threshold)];
     Key to;
     int n_particles = (int)threshold;
-    if (i + 1 == min_n_splitters) {
+    if ((i + 1) * threshold >= saved_n_total_particles) {
       to = ~Key(0);
       n_particles = keys.size() - (int)(i * threshold);
     } else to = keys[(int)((i + 1) * threshold)];
-
     // Inverse bitwise-xor is used as a bitwise equality test, in conjunction with
     // `removeTrailingBits` forms a mask that zeroes off all bits after the first
     // differing bit between `from` and `to`
@@ -107,7 +108,6 @@ int SfcDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &reader
     CkAbort("SFC Decomposition failure -- see stdout");
   }
 
-  saved_n_total_particles = universe.n_particles;
   // Sort our splitters
   std::sort(splitters.begin(), splitters.end());
 
