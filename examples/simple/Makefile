@@ -29,7 +29,7 @@ Main.o: Main.C $(VISITORS) $(OTHERS)
 	$(CHARMC) -c $<
 
 test: all
-	./charmrun ./Gravity -f $(BASE_PATH)/inputgen/100k.tipsy -d sfc +p3 ++ppn 3 +pemap 1-3 +commap 0 ++local
+	./charmrun ++local ./Gravity +auto-provision -f ../../inputgen/100k.tipsy -t bin -d sfc -n 512 -p 512
 
 clean:
 	rm -f *.decl.h *.def.h conv-host *.o Gravity SPH charmrun
