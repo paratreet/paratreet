@@ -19,6 +19,7 @@ struct Particle {
   Vector3D<Real> position;
   Vector3D<Real> acceleration;
   Vector3D<Real> velocity;
+  Vector3D<Real> velocity_predicted;
 
   Particle();
 
@@ -39,8 +40,10 @@ struct Particle {
       }
     }
     velocity += (acceleration * timestep);
+    velocity_predicted = velocity + (acceleration * timestep);
     key = SFC::generateKey(position, universe);
     key |= (Key)1 << (KEY_BITS-1); // Add placeholder bit
+    density = 0;
   }
 
   bool operator==(const Particle&) const;

@@ -198,15 +198,7 @@ public:
       start_time = CkWallTimer();
       paratreet::traversalFn(universe, partitions, iter);
       CkWaitQD();
-#if DELAYLOCAL
-      //subtrees.processLocal(CkCallbackResumeThread());
-#endif
       CkPrintf("Tree traversal: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
-
-      // Perform interactions
-      start_time = CkWallTimer();
-      partitions.interact(CkCallbackResumeThread());
-      CkPrintf("Interactions: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
 
       // Call user's post-interaction function, which may for example:
       // Output particle accelerations for verification
