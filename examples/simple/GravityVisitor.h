@@ -48,14 +48,7 @@ public:
 
   static bool open(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
     if (source.n_particles <= nMinParticleNode) return true;
-    if (Space::intersect(source.data.box, target.data.box.center(), source.data.rsq))
-      return true;
-    // Check if any of the target balls intersect the source volume
-    /*for (int i = 0; i < target.n_particles; i++) {
-      if(intersect(source.data.box, target.particles()[i].position, source.data.rsq))
-        return true;
-    }*/
-    return false;
+    return Space::intersect(target.data.box, source.data.centroid, source.data.rsq);
   }
 
   static void node(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
