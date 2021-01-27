@@ -42,8 +42,6 @@ struct Decomposition: public PUP::able {
   virtual Key getTpKey(int idx) = 0;
 
   virtual void setArrayOpts(CkArrayOptions& opts) {
-    CProxy_DefaultArrayMap myMap = CProxy_DefaultArrayMap::ckNew();
-    opts.setMap(myMap);
   }
 
   std::vector<Key> getAllTpKeys(int n_partitions) {

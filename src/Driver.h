@@ -87,6 +87,15 @@ public:
     universe = *((BoundingBox*)result->getData());
     delete result;
 
+    Vector3D<Real> bsize = universe.box.size();
+    Real max = (bsize.x > bsize.y) ? bsize.x : bsize.y;
+    max = (max > bsize.z) ? max : bsize.z;
+    Vector3D<Real> bcenter = universe.box.center();
+    // The magic number below is approximately 2^(-19)
+    const Real fEps = 1.0 + 1.91e-6;  // slop to ensure keys fall between 0 and 1.
+    bsize = Vector3D<Real>(fEps*0.5*max);
+    universe.box = OrientedBox<Real>(bcenter-bsize, bcenter+bsize);
+
     std::cout << "Universal bounding box: " << universe << " with volume "
       << universe.box.volume() << std::endl;
 
