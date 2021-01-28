@@ -11,7 +11,6 @@ struct Particle {
 
   Real mass;
   Real density;
-  Real pressure;
   Real potential;
   Real ball;
   Real deltaT;
