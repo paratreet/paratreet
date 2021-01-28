@@ -20,7 +20,7 @@ mainmodule Main {
     group NeighborListCollector {
         entry NeighborListCollector();
         entry void share();
-        entry void shareNeighbors(const std::vector<Key>&, const std::vector<Key>&, const std::vector<Vector3D<Real>>&);
+        entry void shareNeighbors(const std::vector<Key>&, const std::vector<Key>&, const std::vector<Real>&);
         entry void reset(const CkCallback&);
     }
 
