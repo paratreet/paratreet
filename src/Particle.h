@@ -11,7 +11,6 @@ struct Particle {
 
   Real mass;
   Real density;
-  Real pressure;
   Real potential;
   Real ball;
   Real deltaT;
@@ -19,6 +18,9 @@ struct Particle {
   Vector3D<Real> position;
   Vector3D<Real> acceleration;
   Vector3D<Real> velocity;
+  Vector3D<Real> velocity_predicted;
+  Real pressure_dVolume;
+  Real potential_predicted;
 
   Particle();
 
@@ -39,8 +41,13 @@ struct Particle {
       }
     }
     velocity += (acceleration * timestep);
+    velocity_predicted = velocity + (acceleration * timestep);
+    Real uDelta = 0.5e-7 * timestep;
+    potential -= pressure_dVolume * uDelta; // for adiabatic, dU = -p dV
+    potential_predicted = potential - pressure_dVolume * uDelta;
     key = SFC::generateKey(position, universe);
     key |= (Key)1 << (KEY_BITS-1); // Add placeholder bit
+    density = 0;
   }
 
   bool operator==(const Particle&) const;

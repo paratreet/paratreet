@@ -23,6 +23,12 @@ public:
   void applyAcceleration(int index, Vector3D<Real> accel) {
     particles_[index].acceleration += accel;
   }
+  void setDensity(int index, Real density) { // these are NOT general enough!
+    particles_[index].density = density;
+  }
+  void applyGasWork(int index, Real work) {
+    particles_[index].pressure_dVolume += work;
+  }
   void freeParticles() {
     if (n_particles > 0) {
       delete[] particles_;
