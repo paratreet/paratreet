@@ -13,15 +13,14 @@ public:
   static constexpr const bool CallSelfLeaf = true;
 
 private:
-  // note gconst = 1
-  static constexpr Real visc = 0.;
-  static constexpr Real fDivv_Corrector = 1.; // corrects bias wrt the divergence of velocities // RTFORCE
-  static constexpr Real rNorm = 0.;
-  static constexpr Real aFac = 1.; // both of these are cosmology
-  static constexpr Real vFac = 1.;
-  static constexpr Real a = 1.;  // scale factor of the universe
-  static constexpr Real H = 1.; // hubble constant //expansion of the universe, dont need it
-  static constexpr Real gammam1 = 5.0 / 3.0 - 1.0;
+  static constexpr const Real visc = 0.;
+  static constexpr const Real fDivv_Corrector = 1.; // corrects bias wrt the divergence of velocities // RTFORCE
+  static constexpr const Real rNorm = 0.;
+  static constexpr const Real aFac = 1.; // both of these are cosmology
+  static constexpr const Real vFac = 1.;
+  static constexpr const Real a = 1.;  // scale factor of the universe
+  static constexpr const Real H = 1.; // hubble constant //expansion of the universe, dont need it
+  static constexpr const Real gammam1 = 5.0/3.0 - 1.;
 
   // poverrho2 = gammam1 / fDensity^2;
   // poverrho2 is pressure over density^2.
@@ -77,9 +76,9 @@ public:
           auto dx = b.position - a.position; // points from us to our neighbor
           auto dv = b.velocity_predicted - a.velocity_predicted;
           Real dvdotdr = vFac * dot(dv, dx) + dsq * H;
-          Real PoverRho2 = gammam1 / (a.density * a.density);
-          Real acc = rNorm * dvdotdr * (PoverRho2 + visc * 0.5);
-          collector->addNeighbor(source.data.home_pe, a.key, b.key, acc);
+          Real PoverRho2 = a.potential_predicted * gammam1 / (a.density * a.density);
+          Real work = rNorm * dvdotdr * (PoverRho2 + visc * 0.5);
+          collector->addNeighbor(source.data.home_pe, a.key, b.key, work);
         }
       }
     }

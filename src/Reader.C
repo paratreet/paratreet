@@ -59,6 +59,7 @@ void Reader::load(std::string input_file, const CkCallback& cb) {
       particles[i].soft = gp.hsmooth;
       particles[i].position = gp.pos;
       particles[i].velocity = gp.vel;
+      particles[i].potential = gp.temp * gasConstant / gammam1 / meanMolWeight;
     }
     else if (start_particle + i < (unsigned int)n_sph + (unsigned int)n_dark) {
       if (!r.getNextDarkParticle(dp)) {
@@ -77,8 +78,8 @@ void Reader::load(std::string input_file, const CkCallback& cb) {
       particles[i].velocity = sp.vel;
     }
     particles[i].order = start_particle + i;
-    particles[i].potential = 0.0;
-
+    particles[i].velocity_predicted = particles[i].velocity;
+    particles[i].potential_predicted = particles[i].potential;
     box.grow(particles[i].position);
     box.mass += particles[i].mass;
     box.ke += particles[i].mass * particles[i].velocity.lengthSquared();
