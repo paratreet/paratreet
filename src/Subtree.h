@@ -128,6 +128,7 @@ void Subtree<Data>::pup(PUP::er& p) {
   p | tp_key;
   p | tc_proxy;
   p | cm_proxy;
+  p | incoming_particles;
 }
 
 template <typename Data>
