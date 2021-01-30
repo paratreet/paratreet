@@ -52,7 +52,7 @@ public:
   }
 
   static void node(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
-    if (source.data.sum_mass > 0) {
+    if (source.n_particles > 0) {
       addGravity(source, target);
     }
   }
