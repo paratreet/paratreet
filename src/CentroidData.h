@@ -20,7 +20,8 @@ struct CentroidData {
   int count;
   Real rsq;
   int home_pe = -1;
-  static constexpr const double theta = 0.7;
+  static constexpr const Real opening_geometry_factor_squared = 4.0 / 3.0;
+  static constexpr const Real theta = 0.7;
 
   CentroidData() :
   moment(Vector3D<Real> (0,0,0)), sum_mass(0), count(0), rsq(0.) {}
@@ -32,11 +33,21 @@ struct CentroidData {
       box.grow(particles[i].position);
     }
     centroid = moment / sum_mass;
-    size_sm = 0.5*(box.size()).length();
+    getRadius();
     count += n_particles;
     fixed_ball.resize(n_particles);
     neighbors.resize(n_particles);
     home_pe = CkMyPe();
+  }
+
+  void getRadius() {
+    Vector3D<Real> delta1 = centroid - box.lesser_corner;
+    Vector3D<Real> delta2 = box.greater_corner - centroid;
+    delta1.x = (delta1.x > delta2.x ? delta1.x : delta2.x);
+    delta1.y = (delta1.y > delta2.y ? delta1.y : delta2.y);
+    delta1.z = (delta1.z > delta2.z ? delta1.z : delta2.z);
+    rsq = delta1.lengthSquared() * opening_geometry_factor_squared / (theta * theta);
+    size_sm = 0.5*(box.size()).length();
   }
 
   const CentroidData& operator+=(const CentroidData& cd) { // needed for upward traversal
@@ -44,13 +55,7 @@ struct CentroidData {
     sum_mass += cd.sum_mass;
     centroid = moment / sum_mass;
     box.grow(cd.box);
-    Vector3D<Real> delta1 = centroid - box.lesser_corner;
-    Vector3D<Real> delta2 = box.greater_corner - centroid;
-    delta1.x = (delta1.x > delta2.x ? delta1.x : delta2.x);
-    delta1.y = (delta1.y > delta2.y ? delta1.y : delta2.y);
-    delta1.z = (delta1.z > delta2.z ? delta1.z : delta2.z);
-    rsq = delta1.lengthSquared() / theta;
-    size_sm = 0.5*(box.size()).length();
+    getRadius();
     count += cd.count;
     return *this;
   }
