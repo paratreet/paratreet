@@ -47,7 +47,8 @@ namespace paratreet {
         auto key = leaf.particles()[i].key;
         auto nlc = neighbor_list_collector.ckLocalBranch();
         for (auto && neighbor : nlc->neighbors[key]) {
-          leaf.applyGasWork(i, neighbor.second);
+          leaf.applyGasWork(i, neighbor.second.first);
+          leaf.applyAcceleration(i, neighbor.second.second);
         }
       }
     }

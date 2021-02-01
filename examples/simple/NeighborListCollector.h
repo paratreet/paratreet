@@ -13,9 +13,10 @@ struct NeighborListCollector : public CBase_NeighborListCollector {
     std::vector<Key> keys_sources;
     std::vector<Key> keys_targets;
     std::vector<Real> works;
+    std::vector<Vector3D<Real>> accs;
   };
   std::map<int, ToShare> to_send;
-  using Neighborhood = std::map<Key, Real>;
+  using Neighborhood = std::map<Key, std::pair<Real, Vector3D<Real>>>;
   using NeighborhoodMap = std::map<Key, Neighborhood>;
   NeighborhoodMap neighbors;
 
@@ -24,16 +25,17 @@ struct NeighborListCollector : public CBase_NeighborListCollector {
     for (auto && pe_send : to_send) {
       auto && s = pe_send.second;
       this->thisProxy[pe_send.first].shareNeighbors(
-        s.keys_sources, s.keys_targets, s.works);
+        s.keys_sources, s.keys_targets, s.works, s.accs);
     }
     to_send.clear();
   }
 
-  void shareNeighbors(std::vector<Key> keys_sources,
-       std::vector<Key> keys_targets, std::vector<Real> works)
+  void shareNeighbors(const std::vector<Key>& keys_sources, const std::vector<Key>& keys_targets,
+        const std::vector<Real>& works, const std::vector<Vector3D<Real>>& accs)
   {
     for (int i = 0; i < keys_sources.size(); i++) {
-      neighbors[keys_sources[i]].emplace(keys_targets[i], works[i]);
+      auto adjustment = std::make_pair(works[i], accs[i]);
+      neighbors[keys_sources[i]].emplace(keys_targets[i], adjustment);
     }
   }
   void reset(const CkCallback& cb) {
@@ -41,13 +43,15 @@ struct NeighborListCollector : public CBase_NeighborListCollector {
     this->contribute(cb);
   }
 
-  void addNeighbor(int home_pe, Key target, Key source, Real work) {
-    neighbors[target].emplace(source, work);
+  void addNeighbor(int home_pe, Key target, Key source, Real work, Vector3D<Real> acc) {
+    auto adjustment = std::make_pair(work, acc);
+    neighbors[target].emplace(source, adjustment);
     if (home_pe != CkMyPe()) {
       auto && to_share = to_send[home_pe];
       to_share.keys_sources.push_back(source);
       to_share.keys_targets.push_back(target);
       to_share.works.push_back(work);
+      to_share.accs.push_back(acc);
     }
   } 
 

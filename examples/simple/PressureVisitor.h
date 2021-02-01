@@ -76,9 +76,13 @@ public:
           auto dx = b.position - a.position; // points from us to our neighbor
           auto dv = b.velocity_predicted - a.velocity_predicted;
           Real dvdotdr = vFac * dot(dv, dx) + dsq * H;
-          Real PoverRho2 = a.potential_predicted * gammam1 / (a.density * a.density);
-          Real work = rNorm * dvdotdr * (PoverRho2 + visc * 0.5);
-          collector->addNeighbor(source.data.home_pe, a.key, b.key, work);
+          Real shared_density = gammam1 / (a.density * b.density);
+          Real PoverRho2a = a.potential_predicted * gammam1 / (a.density * a.density);
+          Real PoverRho2Avg = shared_density * (a.potential_predicted + b.potential_predicted);
+          Real work = rNorm * dvdotdr * (PoverRho2a + visc * 0.5);
+          auto && accSignless = rNorm * aFac * (PoverRho2Avg + visc) * dx;
+          auto acc = accSignless * (a.key == b.key ? 1 : -1);
+          collector->addNeighbor(source.data.home_pe, a.key, b.key, work, -acc);
         }
       }
     }
