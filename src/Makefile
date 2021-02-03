@@ -22,7 +22,9 @@ paratreet.decl.h: paratreet.ci
 	$(CHARMC) $<
 	./makeReplacements.sh
 
-Paratreet.o: $(UTILITY_HEADERS) $(CORE_HEADERS) $(IMPL_HEADERS) paratreet.decl.h
+paratreet.def.h: paratreet.ci
+
+Paratreet.o: $(UTILITY_HEADERS) $(CORE_HEADERS) $(IMPL_HEADERS) paratreet.decl.h paratreet.def.h
 	$(CHARMC) -c Paratreet.C
 
 %.o: %.C %.h paratreet.decl.h

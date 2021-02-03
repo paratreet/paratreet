@@ -141,7 +141,7 @@ module paratreet {
     entry [threaded] void init(CkCallback cb);
     entry [threaded] void run(CkCallback cb);
     entry [reductiontarget] void countInts(unsigned long long intrn_counts [4]);
-    entry [reductiontarget] void reportTime();
+    entry void reportTime();
     entry void recvTC(std::pair<Key, SpatialNode<Data>>);
     entry void loadCache(CkCallback);
     template <typename Visitor>
