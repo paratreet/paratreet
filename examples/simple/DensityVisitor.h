@@ -4,9 +4,12 @@
 #include "paratreet.decl.h"
 #include "common.h"
 #include "Space.h"
+#include "NeighborListCollector.h"
 #include <cmath>
 #include <vector>
 #include <queue>
+
+extern CProxy_NeighborListCollector neighbor_list_collector;
 
 struct DensityVisitor {
 public:
@@ -32,22 +35,30 @@ public:
   static void node(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {}
 
   static void leaf(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
+    bool local = CkNodeOf(source.data.home_pe) == CkMyNode();
+    auto nlc = neighbor_list_collector.ckLocalBranch();
     for (int i = 0; i < target.n_particles; i++) {
       CkVec<pqSmoothNode> &Q = target.data.neighbors[i];
       for (int j = 0; j < source.n_particles; j++) {
-        Vector3D<Real> dr = target.particles()[i].position - source.particles()[j].position;
+        const auto& sp = source.particles()[j]; //source particle
+        Vector3D<Real> dr = target.particles()[i].position - sp.position;
         // Remove the most distant neighbor if this one is closer and the list is full
         if (Q.size() == k) {
           if (Q[0].fKey > dr.lengthSquared()) {
             std::pop_heap(&(Q[0]) + 0, &(Q)[0] + k);
-            Q.resize(Q.size()-1);
+            Q.resize(Q.size()-1); // pop off last
           }
         }
         // Add the particle to the neighbor list if it isnt filled up
         if (Q.size() < k) {
+          if (!local) {
+            nlc->makeRequest(source.data.home_pe, sp.key);
+          }
           pqSmoothNode pqNew;
-          pqNew.mass = source.particles()[j].mass;
+          pqNew.mass = sp.mass;
           pqNew.fKey = dr.lengthSquared();
+          pqNew.pKey = sp.key;
+          if (local) pqNew.pPtr = &sp;
           Q.push_back(pqNew);
           std::push_heap(&(Q)[0] + 0, &(Q)[0] + Q.size());
 
