@@ -46,7 +46,7 @@ public:
         // Add the particle to the neighbor list if it isnt filled up
         if (Q.size() < k) {
           pqSmoothNode pqNew;
-          pqNew.pl = source.particles()[j];
+          pqNew.mass = source.particles()[j].mass;
           pqNew.fKey = dr.lengthSquared();
           Q.push_back(pqNew);
           std::push_heap(&(Q)[0] + 0, &(Q)[0] + Q.size());

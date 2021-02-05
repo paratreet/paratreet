@@ -67,13 +67,13 @@ public:
       Real ih2 = 4. / (rsq * rsq); // invH2 in changa
       Real fNorm1 = 0.5 * M_1_PI * ih2 * ih2 / ph; // 1 over sum of all weights
       for (int j = 0; j < source.n_particles; j++) {
-        Real dsq = (target.particles()[i].position - source.particles()[j].position).lengthSquared();
         const Particle& a = target.particles()[i], b = source.particles()[j];
+        auto dx = b.position - a.position; // points from us to our neighbor
+        Real dsq = dx.lengthSquared();
         if (dsq < rsq) { // if within search radius
           // divvnorm is a factor that you have to weight
           Real rs1 = dkernelM4(dsq * ih2) * fNorm1 * fDivv_Corrector; // rsq / density
           Real rNorm = rs1 * b.mass; // normalized kernel value
-          auto dx = b.position - a.position; // points from us to our neighbor
           auto dv = b.velocity_predicted - a.velocity_predicted;
           Real dvdotdr = vFac * dot(dv, dx) + dsq * H;
           Real shared_density = gammam1 / (a.density * b.density);

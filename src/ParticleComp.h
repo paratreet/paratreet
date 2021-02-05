@@ -5,7 +5,7 @@
 
 struct pqSmoothNode {
     Real fKey;    // distance^2 -> place in priority queue
-    Particle pl; // particle data
+    Real mass;
 
     inline bool operator<(const pqSmoothNode& n) const {
       return fKey < n.fKey;
@@ -13,7 +13,7 @@ struct pqSmoothNode {
 
     void pup(PUP::er& p) {
       p|fKey;
-      p|pl;
+      p|mass;
   }
 };
 

@@ -37,7 +37,7 @@ namespace paratreet {
       if (leaf.particles()[i].density == 0) { // sum up the density. requires 0ing of densities
         CkVec<pqSmoothNode> &Q = leaf.data.neighbors[i];
         Real density = 0.;
-        for (int i = 0; i < Q.size(); i++) density += Q[i].pl.mass;
+        for (int i = 0; i < Q.size(); i++) density += Q[i].mass;
         auto& rsq = leaf.data.neighbors[i][0].fKey;
         Real rsq_cubed = rsq * rsq * rsq;
         density /= (4.0 / 3.0 * M_PI * rsq_cubed);
