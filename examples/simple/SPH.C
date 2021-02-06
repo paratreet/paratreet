@@ -39,7 +39,8 @@ namespace paratreet {
         auto& nlc_neighbors = nlc->our_neighbors[part.key];
         for (int i = 0; i < Q.size(); i++) {
           density += Q[i].mass;
-          nlc_neighbors.emplace(Q[i].pKey, Q[i].pPtr);
+          nlc_neighbors.emplace(Q[i].pKey, nullptr); //Q[i].pPtr
+          // Q[i].pPtr points to the leaf-based particle not the partition-based particle
           nlc->our_neighbors[Q[i].pKey].emplace(part.key, &part);
         }
         Q.resize(1); // we moved the memory to nlc

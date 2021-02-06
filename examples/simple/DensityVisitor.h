@@ -35,7 +35,6 @@ public:
   static void node(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {}
 
   static void leaf(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
-    bool local = CkNodeOf(source.data.home_pe) == CkMyNode();
     auto nlc = neighbor_list_collector.ckLocalBranch();
     for (int i = 0; i < target.n_particles; i++) {
       CkVec<pqSmoothNode> &Q = target.data.neighbors[i];
@@ -51,14 +50,12 @@ public:
         }
         // Add the particle to the neighbor list if it isnt filled up
         if (Q.size() < k) {
-          if (!local) {
-            nlc->makeRequest(source.data.home_pe, sp.key);
-          }
+          nlc->makeRequest(source.data.home_pe, sp.key);
           pqSmoothNode pqNew;
           pqNew.mass = sp.mass;
           pqNew.fKey = dr.lengthSquared();
           pqNew.pKey = sp.key;
-          if (local) pqNew.pPtr = &sp;
+          pqNew.pPtr = &sp;
           Q.push_back(pqNew);
           std::push_heap(&(Q)[0] + 0, &(Q)[0] + Q.size());
 

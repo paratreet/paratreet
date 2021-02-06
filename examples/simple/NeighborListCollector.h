@@ -23,8 +23,9 @@ struct NeighborListCollector : public CBase_NeighborListCollector {
   }
 
   void makeRequest(int pe, Key key) {
-    if (already_requested.insert(key).second) {
+    if (pe != thisIndex && already_requested.insert(key).second) {
       thisProxy[pe].addRequest(thisIndex, key);
+      requested_to[key].push_back(pe);
     }
   }
 
@@ -34,6 +35,7 @@ struct NeighborListCollector : public CBase_NeighborListCollector {
 
   void fillRequest(const SpatialNode<CentroidData>& leaf, int pi) {
     auto & part = leaf.particles()[pi];
+    remote_particles.emplace(part.key, part);
     auto && pes_requested = requested_to[part.key];
     if (pes_requested.empty()) return;
     std::vector<Key> nbrs (leaf.data.neighbors[pi].size());
