@@ -54,8 +54,8 @@ namespace paratreet {
         auto nlc = neighbor_list_collector.ckLocalBranch();
         for (auto && neighbor : nlc->our_neighbors[key]) {
           if (neighbor.second == nullptr) {
-            auto nbrIt = nlc->remote_particles.find(key);
-            CkAssert(nbrIt == nlc->remote_particles.end());
+            auto nbrIt = nlc->remote_particles.find(neighbor.first);
+            CkAssert(nbrIt != nlc->remote_particles.end());
             neighbor.second = &nbrIt->second;
           }
           doSPHCalc(leaf, pi, *neighbor.second);
