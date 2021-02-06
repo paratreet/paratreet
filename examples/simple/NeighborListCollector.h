@@ -46,8 +46,14 @@ struct NeighborListCollector : public CBase_NeighborListCollector {
       thisProxy[pe].fillRequest(part, nbrs);
       // send density, send neighbor list
     }
+    pes_requested.clear();
   }
   void fillRequest(Particle part, const std::vector<Key>& neighbors) {
+    auto && pes_requested = requested_to[part.key];
+    for (auto && forward_pe : pes_requested) {
+      thisProxy[forward_pe].fillRequest(part, neighbors);
+    }
+    pes_requested.clear();
     auto pPart = &(remote_particles.emplace(part.key, part).first->second);
     for (auto n : neighbors) {
       our_neighbors[n].emplace(part.key, pPart);
