@@ -14,7 +14,7 @@ struct CentroidData {
   Vector3D<Real> centroid; // too slow to compute this on the fly
   Real max_rad = 0.0;
   Real size_sm;
-  std::vector< CkVec<pqSmoothNode> > neighbors; // Neighbor list for knn search
+  std::vector< std::vector<pqSmoothNode> > neighbors; // Neighbor list for knn search
   std::vector< CkVec<Particle> > fixed_ball; // Neighbor list for fixed ball search
   OrientedBox<Real> box;
   int count;

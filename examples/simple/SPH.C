@@ -33,22 +33,21 @@ namespace paratreet {
     auto nlc = neighbor_list_collector.ckLocalBranch();
     for (int pi = 0; pi < leaf.n_particles; pi++) {
       if (leaf.particles()[pi].density == 0) { // sum up the density. requires 0ing of densities
-        CkVec<pqSmoothNode> &Q = leaf.data.neighbors[pi];
+        auto& Q = leaf.data.neighbors[pi];
         Real density = 0.;
         auto& part = leaf.particles()[pi];
         auto& nlc_neighbors = nlc->our_neighbors[part.key];
         for (int i = 0; i < Q.size(); i++) {
           density += Q[i].mass;
-          nlc_neighbors.emplace(Q[i].pKey, nullptr); //Q[i].pPtr
-          // Q[i].pPtr points to the leaf-based particle not the partition-based particle
+          nlc_neighbors.emplace(Q[i].pKey, nullptr);
           nlc->our_neighbors[Q[i].pKey].emplace(part.key, &part);
         }
-        Q.resize(1); // we moved the memory to nlc
-        auto& rsq = Q[0].fKey;
+        auto& rsq = Q.front().fKey;
         Real r_cubed = rsq * sqrt(rsq);
         density /= (4.0 / 3.0 * M_PI * r_cubed);
         leaf.setDensity(pi, density);
-        nlc->fillRequest(leaf, pi);
+        nlc->densityFinished(leaf, pi);
+        Q.resize(1); // we moved the memory to nlc
       }
       else {
         auto key = leaf.particles()[pi].key;

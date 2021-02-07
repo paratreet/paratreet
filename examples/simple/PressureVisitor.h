@@ -25,10 +25,6 @@ public:
 
 public:
   static bool open(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
-    Real r_bucket = target.data.size_sm + target.data.max_rad;
-    if (!Space::intersect(source.data.box, target.data.box.center(), r_bucket*r_bucket))
-      return false;
-
     // Check if any of the target balls intersect the source volume
     // Ball size is set by furthest neighbor found during density calculation
     for (int i = 0; i < target.n_particles; i++) {

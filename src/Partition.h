@@ -150,6 +150,7 @@ void Partition<Data>::addLeaves(const std::vector<Node<Data>*>& leaf_ptrs, int s
         subtree_idx, subtree_idx, true, nullptr, subtree_idx
         );
       node->type = Node<Data>::Type::Leaf;
+      node->home_pe = leaf->home_pe;
       node->data = Data(node->particles(), node->n_particles);
       leaves.push_back(node);
     }

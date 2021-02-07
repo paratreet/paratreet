@@ -11,11 +11,11 @@ class SpatialNode
 public:
   SpatialNode() = default;
   SpatialNode(const Data& _data, int _n_particles, bool _is_leaf, Particle* _particles, int _depth)
-    : data(_data), n_particles(_n_particles), is_leaf(_is_leaf), particles_(_particles), depth(_depth)
+    : data(_data), n_particles(_n_particles), is_leaf(_is_leaf), particles_(_particles), depth(_depth), home_pe(CkMyPe())
   {
   }
   SpatialNode(const SpatialNode<Data>& other, Particle* _particles)
-    : data(other.data), n_particles(other.n_particles), is_leaf(other.is_leaf), particles_(_particles), depth(other.depth)
+    : data(other.data), n_particles(other.n_particles), is_leaf(other.is_leaf), particles_(_particles), depth(other.depth), home_pe(other.home_pe)
   {
   }
   virtual ~SpatialNode() = default;
@@ -39,6 +39,7 @@ public:
     p | data;
     p | n_particles;
     p | is_leaf;
+    p | home_pe;
     if (p.isUnpacking()) {
       particles_ = nullptr;
     }
@@ -49,6 +50,7 @@ public:
   int       n_particles = 0;
   bool      is_leaf     = false;
   int       depth       = 0;
+  int       home_pe     = -1;
   inline const Particle* particles() const {return particles_;}
 
 private:
