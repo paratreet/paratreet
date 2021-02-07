@@ -20,6 +20,7 @@ void Particle::pup(PUP::er &p) {
 }
 
 void Particle::reset() {
+  pressure_dVolume = 0.0;
   density       = 0.0;
   acceleration  = Vector3D<Real> (0.0, 0.0, 0.0);
   deltaT        = 0.01570796326; // Is there some way to make config.timestep_size accessible here?

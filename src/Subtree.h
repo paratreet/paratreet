@@ -95,7 +95,7 @@ Subtree<Data>::Subtree(const CkCallback& cb, int n_total_particles_,
                        int n_subtrees_, int n_partitions_, TCHolder<Data> tc_holder,
                        CProxy_Resumer<Data> r_proxy_,
                        CProxy_CacheManager<Data> cm_proxy_, DPHolder<Data> dp_holder) {
-  this->usesAtSync = true;
+  //this->usesAtSync = true;
   n_total_particles = n_total_particles_;
   n_subtrees = n_subtrees_;
   n_partitions = n_partitions_;

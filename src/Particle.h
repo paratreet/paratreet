@@ -19,7 +19,7 @@ struct Particle {
   Vector3D<Real> acceleration;
   Vector3D<Real> velocity;
   Vector3D<Real> velocity_predicted;
-  Real pressure_dVolume;
+  Real pressure_dVolume = 0.;
   Real potential_predicted;
 
   Particle();
@@ -33,6 +33,7 @@ struct Particle {
     position += (velocity * timestep);
     position += (acceleration * timestep * timestep / 2);
     for (int dim = 0; dim < 3; dim++) {
+      CkAssert(std::isfinite(position[dim]));
       while (position[dim] < universe.lesser_corner[dim]) {
         position[dim] += universe.greater_corner[dim] - universe.lesser_corner[dim];
       }
@@ -48,6 +49,7 @@ struct Particle {
     key = SFC::generateKey(position, universe);
     key |= (Key)1 << (KEY_BITS-1); // Add placeholder bit
     density = 0;
+    pressure_dVolume = 0.;
   }
 
   bool operator==(const Particle&) const;
