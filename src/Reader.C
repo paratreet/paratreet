@@ -51,6 +51,7 @@ void Reader::load(std::string input_file, const CkCallback& cb) {
   Tipsy::star_particle sp;
 
   for (unsigned int i = 0; i < n_particles; i++) {
+    particles[i].potential = particles[i].soft = 0u;
     if (start_particle + i < (unsigned int)n_sph) {
       if (!r.getNextGasParticle(gp)) {
         CkAbort("Could not read gas particle\n");
