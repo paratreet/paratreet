@@ -33,6 +33,7 @@ struct Particle {
     position += (velocity * timestep);
     position += (acceleration * timestep * timestep / 2);
     for (int dim = 0; dim < 3; dim++) {
+      CkAssert(std::isfinite(position[dim]));
       while (position[dim] < universe.lesser_corner[dim]) {
         position[dim] += universe.greater_corner[dim] - universe.lesser_corner[dim];
       }
