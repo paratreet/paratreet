@@ -226,14 +226,8 @@ public:
       CkPrintf("[Meta] n_subtree = %d; timestep_size = %f; maxSubtreeSize = %d; sumSubtreeSize = %d; avgSubtreeSize = %f; ratio = %f; maxVelocity = %f; rebuild = %s\n", n_subtrees, updated_timestep_size, maxParticlesSize,sumParticlesSize, avgTPSize, ratio, max_velocity, (complete_rebuild? "yes" : "no"));
       //End Subtree reduction message parsing
 
-      Real max_universe_box_dimension = 0;
-      for (int dim = 0; dim < NDIM; dim ++){
-        Real length = universe.box.greater_corner[dim] - universe.box.lesser_corner[dim];
-        if (length > max_universe_box_dimension)
-          max_universe_box_dimension = length;
-      }
-
-      updated_timestep_size = max_universe_box_dimension / max_velocity / 100.0;
+      Real universe_box_len = universe.box.greater_corner.x - universe.box.lesser_corner.x;
+      updated_timestep_size = universe_box_len / max_velocity / 100.0;
       if (updated_timestep_size > config.timestep_size) updated_timestep_size = config.timestep_size;
       partitions.perturb(subtrees, updated_timestep_size, complete_rebuild); // 0.1s for example
       CkWaitQD();

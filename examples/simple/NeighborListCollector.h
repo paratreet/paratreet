@@ -9,47 +9,52 @@
 #include <cmath>
 
 struct NeighborListCollector : public CBase_NeighborListCollector {
-  struct ToShare {
-    std::vector<Key> keys_sources;
-    std::vector<Key> keys_targets;
-    std::vector<Real> works;
-  };
-  std::map<int, ToShare> to_send;
-  using Neighborhood = std::map<Key, Real>;
-  using NeighborhoodMap = std::map<Key, Neighborhood>;
-  NeighborhoodMap neighbors;
+  std::unordered_set<Key> already_requested;
+  std::unordered_map<Key, std::vector<int>> requested_to;
+  std::unordered_map<Key, std::map<Key, const Particle*>> our_neighbors;
+  std::unordered_map<Key, Particle> remote_particles;
 
-  void share() {
-    // copy local neighbors to remote neighbors
-    for (auto && pe_send : to_send) {
-      auto && s = pe_send.second;
-      this->thisProxy[pe_send.first].shareNeighbors(
-        s.keys_sources, s.keys_targets, s.works);
-    }
-    to_send.clear();
-  }
-
-  void shareNeighbors(std::vector<Key> keys_sources,
-       std::vector<Key> keys_targets, std::vector<Real> works)
-  {
-    for (int i = 0; i < keys_sources.size(); i++) {
-      neighbors[keys_sources[i]].emplace(keys_targets[i], works[i]);
-    }
-  }
   void reset(const CkCallback& cb) {
-    neighbors.clear();
+    already_requested.clear();
+    requested_to.clear();
+    our_neighbors.clear();
+    remote_particles.clear();
     this->contribute(cb);
   }
 
-  void addNeighbor(int home_pe, Key target, Key source, Real work) {
-    neighbors[target].emplace(source, work);
-    if (home_pe != CkMyPe()) {
-      auto && to_share = to_send[home_pe];
-      to_share.keys_sources.push_back(source);
-      to_share.keys_targets.push_back(target);
-      to_share.works.push_back(work);
+  void makeRequest(int pe, Key key) {
+    if (already_requested.insert(key).second) {
+      thisProxy[pe].addRequest(thisIndex, key);
     }
-  } 
+  }
+
+  void addRequest(int pe, Key key) {
+    requested_to[key].push_back(pe);
+  }
+
+  void densityFinished(const SpatialNode<CentroidData>& leaf, int pi) {
+    auto & part = leaf.particles()[pi];
+    remote_particles.emplace(part.key, part); // partitions-subtrees differ
+    std::vector<Key> nbrs (leaf.data.neighbors[pi].size());
+    for (int i = 0; i < leaf.data.neighbors[pi].size(); i++) {
+      nbrs[i] = leaf.data.neighbors[pi][i].pKey;
+    }
+    thisProxy[leaf.home_pe].forwardRequest(part, nbrs);
+    // send density, send neighbor list
+  }
+  void forwardRequest(Particle part, const std::vector<Key>& neighbors) {
+    auto && pes_requested = requested_to[part.key];
+    for (auto && forward_pe : pes_requested) {
+      thisProxy[forward_pe].fillRequest(part, neighbors);
+    }
+  }
+  void fillRequest(Particle part, const std::vector<Key>& neighbors) {
+    auto pPart = &(remote_particles.emplace(part.key, part).first->second);
+    for (auto n : neighbors) {
+      our_neighbors[n].emplace(part.key, pPart);
+    }
+    // update density, augment neighborhood of key
+  }
 
 };
 

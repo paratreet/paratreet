@@ -11,6 +11,7 @@ void Particle::pup(PUP::er &p) {
   p|mass;
   p|density;
   p|potential;
+  p|potential_predicted;
   p|position;
   p|acceleration;
   p|velocity;

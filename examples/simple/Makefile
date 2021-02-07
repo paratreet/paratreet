@@ -8,7 +8,7 @@ LD_LIBS = -L$(PARATREET_PATH) -lparatreet
 
 all: Gravity SPH
 VISITORS = DensityVisitor.h PressureVisitor.h GravityVisitor.h
-OTHERS = CountManager.h NeighborListCollector.h
+OTHERS = CountManager.h SPHUtils.h NeighborListCollector.h
 
 Main.decl.h: Main.ci
 	$(CHARMC) $<
