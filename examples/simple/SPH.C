@@ -21,9 +21,13 @@ namespace paratreet {
 
   void postInteractionsFn(BoundingBox& universe, CProxy_Partition<CentroidData>& part, int iter) {
     // by now, all density requests have gone out
+    double start_time = CkWallTimer();
     part.callPerLeafFn(CkCallbackResumeThread()); // calculates density, fills requests
     CkWaitQD();
+    CkPrintf("Density calculations and sharing: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
+    start_time = CkWallTimer();
     part.callPerLeafFn(CkCallbackResumeThread()); // calculates pressure
+    CkPrintf("Pressure calculations: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
     if (iter == 0 && verify) {
       paratreet::outputParticles(universe, part);
     }
