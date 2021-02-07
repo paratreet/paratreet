@@ -19,7 +19,6 @@ struct CentroidData {
   OrientedBox<Real> box;
   int count;
   Real rsq;
-  int home_pe = -1;
   static constexpr const Real opening_geometry_factor_squared = 4.0 / 3.0;
   static constexpr const Real theta = 0.7;
 
@@ -37,7 +36,6 @@ struct CentroidData {
     count += n_particles;
     fixed_ball.resize(n_particles);
     neighbors.resize(n_particles);
-    home_pe = CkMyPe();
   }
 
   void getRadius() {
@@ -73,7 +71,6 @@ struct CentroidData {
     p | size_sm;
     p | fixed_ball;
     p | neighbors;
-    p | home_pe;
   }
 
 };
