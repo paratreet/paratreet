@@ -234,7 +234,7 @@ public:
       CkPrintf("Perturbations: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
       if(iter == 0 || (iter % config.lb_period == config.lb_period - 1)){
         start_time = CkWallTimer();
-        subtrees.pauseForLB();
+        //subtrees.pauseForLB(); // move them later
         partitions.pauseForLB();
         CkWaitQD();
         CkPrintf("Load balancing: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);

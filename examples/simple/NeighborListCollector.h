@@ -39,7 +39,12 @@ struct NeighborListCollector : public CBase_NeighborListCollector {
     for (int i = 0; i < leaf.data.neighbors[pi].size(); i++) {
       nbrs[i] = leaf.data.neighbors[pi][i].pKey;
     }
-    thisProxy[leaf.home_pe].forwardRequest(part, nbrs);
+    if (leaf.home_pe != thisIndex) {
+      thisProxy[leaf.home_pe].forwardRequest(part, nbrs);
+    }
+    else {
+      forwardRequest(part, nbrs);
+    }
     // send density, send neighbor list
   }
   void forwardRequest(Particle part, const std::vector<Key>& neighbors) {
