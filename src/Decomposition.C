@@ -9,14 +9,17 @@
 DecompArrayMap::DecompArrayMap(Decomposition* decomp, int n_total_particles, int n_splitters) {
   int threshold = n_total_particles / CkNumPes();
   int current_sum = 0;
+  int current_pe = 0;
+  int pe_sum = threshold;
   for (int i = 0; i < n_splitters; i++) {
-    auto np = decomp->getNumParticles(i);
-    if (current_sum + np >= threshold) {
-      current_sum = 0;
-      pe_intervals.push_back(i);
+    current_sum += decomp->getNumParticles(i);
+    if (current_sum > pe_sum) {
+      pe_intervals.push_back(i - 1);
+      current_pe ++;
+      pe_sum += threshold;
     }
-    current_sum += np;
   }
+  pe_intervals.push_back(n_splitters - 1);
 }
 
 int DecompArrayMap::procNum(int, const CkArrayIndex &idx) {
