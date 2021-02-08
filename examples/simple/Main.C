@@ -142,7 +142,8 @@ class Main : public CBase_Main {
   }
 
   void run() {
-    paratreet::run(CkCallbackResumeThread());
+    CkPrintf("!!! run\n");
+    //paratreet::run(CkCallbackResumeThread());
 
     CkExit();
   }

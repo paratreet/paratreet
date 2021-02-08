@@ -2,9 +2,9 @@ CHARM_HOME ?= $(HOME)/charm-paratreet
 BASE_PATH=$(shell realpath "$(shell pwd)/../..")
 PARATREET_PATH = $(BASE_PATH)/src
 STRUCTURE_PATH = $(BASE_PATH)/utility/structures
-OPTS = -g -I$(STRUCTURE_PATH) -I$(PARATREET_PATH) -DCOUNT_INTERACTIONS=0 -DDEBUG=0 $(MAKE_OPTS)
+OPTS = -g -O0 -I$(STRUCTURE_PATH) -I$(PARATREET_PATH) -DCOUNT_INTERACTIONS=0 -DDEBUG=0 $(MAKE_OPTS)
 CHARMC = $(CHARM_HOME)/bin/charmc $(OPTS)
-LD_LIBS = -L$(PARATREET_PATH) -lparatreet
+LD_LIBS = -L$(PARATREET_PATH) -lparatreet -lSegFault
 
 all: Gravity SPH
 VISITORS = DensityVisitor.h PressureVisitor.h GravityVisitor.h

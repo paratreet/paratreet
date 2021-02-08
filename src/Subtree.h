@@ -236,7 +236,7 @@ void Subtree<Data>::buildTree(CProxy_Partition<Data> part, CkCallback cb) {
   // Initialize cache
   initCache();
 
-  cb.send();
+  this->contribute(cb);
   sendLeaves(part);
 }
 

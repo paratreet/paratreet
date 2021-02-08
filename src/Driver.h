@@ -168,12 +168,11 @@ public:
 
       // Start tree build in Subtrees
       start_time = CkWallTimer();
-      CkCallback timeCb(CkIndex_Driver<Data>::reportTime(), this->thisProxy);
+      CkCallback timeCb(CkReductionTarget(Driver<Data>, reportTime), this->thisProxy);
       subtrees.buildTree(partitions, timeCb);
-      //CkWaitQD(); FIXME: This causes a segfault
+      CkWaitQD();
       CkPrintf("Tree build and sending leaves: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
 
-      /*
       // Prefetch into cache
       start_time = CkWallTimer();
       // use exactly one of these three commands to load the software cache
@@ -261,7 +260,6 @@ public:
       storage.clear();
       storage_sorted = false;
       CkWaitQD();
-      */
     }
 
     cb.send();
