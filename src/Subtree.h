@@ -176,10 +176,10 @@ void Subtree<Data>::sendLeaves(CProxy_Partition<Data> part)
   }
 
   for (auto && part_receiver : part_idx_to_leaf) {
-    auto it = cm_proxy.ckLocalBranch()->partition_lookup.find(part_receiver.first);
-    if (it != cm_proxy.ckLocalBranch()->partition_lookup.end()) {
+    auto search = static_cast<Partition<Data>*>(ckNodeAwareLocal(part, part_receiver.first));
+    if (search != nullptr) {
       std::vector<Node<Data>*> leaf_ptrs (part_receiver.second.begin(), part_receiver.second.end());
-      it->second->addLeaves(leaf_ptrs, this->thisIndex);
+      search->addLeaves(leaf_ptrs, this->thisIndex);
     }
     else {
       std::vector<Key> lookup_leaf_keys;

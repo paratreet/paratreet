@@ -27,4 +27,15 @@ typedef SFC::Key Key;
 #define BITS_PER_DIM (KEY_BITS/NDIM)
 #define BOXES_PER_DIM (1<<(BITS_PER_DIM))
 
+template<typename T>
+void* ckNodeAwareLocal(T& thisProxy, int idx_) {
+  auto idx = thisProxy[idx_].ckGetIndex();
+  int lastPe = thisProxy.ckLocalBranch()->lastKnown(idx);
+  if (CkMyNode() == CkNodeOf(lastPe)) {
+    return thisProxy.ckLocalBranchOther(CkRankOf(lastPe))->lookup(idx);
+  } else {
+    return nullptr;
+  }
+}
+
 #endif // PARATREET_COMMON_H_

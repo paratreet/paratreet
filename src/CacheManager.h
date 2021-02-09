@@ -23,7 +23,6 @@ public:
   NodeLookup local_tps;
   NodeLookup leaf_lookup;
   std::map<Key, std::vector<int>> subtree_copy_started;
-  std::map<int, Partition<Data>*> partition_lookup; // managed by Partition
   std::set<Key> prefetch_set;
   std::vector<std::vector<Node<Data>*>> delete_at_end;
   CProxy_Resumer<Data> r_proxy;
