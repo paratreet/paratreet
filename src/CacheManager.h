@@ -45,7 +45,7 @@ public:
 #else
           true
 #endif
-          ));
+          , CcdPERIODIC_10ms));
   }
 
   void initialize(const CkCallback& cb) {
