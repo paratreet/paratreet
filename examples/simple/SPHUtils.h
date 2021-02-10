@@ -14,7 +14,7 @@ namespace paratreet {
     return adk;
   }
 
-  static void doSPHCalc(SpatialNode<CentroidData>& leaf, int pi, const Particle& b) {
+  static void doSPHCalc(SpatialNode<CentroidData>& leaf, int pi, Real fBall, const Particle& b) {
     auto& a = leaf.particles()[pi];
     static constexpr const Real visc = 0.;
     static constexpr const Real fDivv_Corrector = 1.; // corrects bias wrt the divergence of velocities // RTFORCE
@@ -31,9 +31,8 @@ namespace paratreet {
     // does density use the merged neighbor list -> no
     // absMu = measure of how quickly particles are approaching each other
 
-    auto rsq = leaf.data.neighbors[pi][0].fKey;
-    Real ph = 0.5 * rsq; // fBall is the smoothing length and also the search radius
-    Real ih2 = 4. / (rsq * rsq); // invH2 in changa
+    Real ph = 0.5 * fBall; // fBall is the smoothing length and also the search radius
+    Real ih2 = 4. / (fBall * fBall); // invH2 in changa
     Real fNorm1 = 0.5 * M_1_PI * ih2 * ih2 / ph; // 1 over sum of all weights
     auto dx = b.position - a.position; // points from us to our neighbor
     Real dsq = dx.lengthSquared();

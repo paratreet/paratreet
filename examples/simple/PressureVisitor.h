@@ -41,12 +41,13 @@ public:
     auto collector = neighbor_list_collector.ckLocalBranch();
     for (int i = 0; i < target.n_particles; i++) {
       Real rsq = target.data.neighbors[i][0].fKey; // farthest distance, ball radius
+      Real fBall = std::sqrt(rsq);
       for (int j = 0; j < source.n_particles; j++) {
         const Particle& a = target.particles()[i], b = source.particles()[j];
         auto dx = b.position - a.position; // points from us to our neighbor
         Real dsq = dx.lengthSquared();
         if (dsq < rsq) { // if within search radius
-          doSPHCalc(target, i, b);
+          doSPHCalc(target, i, fBall, b);
         }
       }
     }

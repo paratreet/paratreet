@@ -56,13 +56,14 @@ namespace paratreet {
       else {
         auto key = leaf.particles()[pi].key;
         auto nlc = neighbor_list_collector.ckLocalBranch();
+        Real fBall = std::sqrt(leaf.data.neighbors[pi][0].fKey);
         for (auto && neighbor : nlc->our_neighbors[key]) {
           if (neighbor.second == nullptr) {
             auto nbrIt = nlc->remote_particles.find(neighbor.first);
             CkAssert(nbrIt != nlc->remote_particles.end());
             neighbor.second = &nbrIt->second;
           }
-          doSPHCalc(leaf, pi, *neighbor.second);
+          doSPHCalc(leaf, pi, fBall, *neighbor.second);
         }
       }
     }
