@@ -11,7 +11,6 @@
 #include "Resumer.h"
 
 #include "Paratreet.h"
-#include <hypercomm/registration.hpp>
 
 #include <hypercomm/registration.hpp>
 
