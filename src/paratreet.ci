@@ -161,7 +161,6 @@ module paratreet {
     entry DecompArrayMap(CkPointer<Decomposition>, int, int);
   };
 
-  include "hypercomm/registration.hpp";
   namespace aggregation {
     initproc void initialize(void);
   }
