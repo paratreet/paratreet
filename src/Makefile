@@ -1,6 +1,7 @@
 CHARM_HOME ?= $(HOME)/charm-paratreet
 STRUCTURE_PATH = ../utility/structures
-OPTS = -g -I$(STRUCTURE_PATH) -DCOUNT_INTERACTIONS=0 -DDEBUG=0 $(MAKE_OPTS)
+HYPERCOMM_PATH = ../hypercomm-aggregation
+OPTS = -g -I$(STRUCTURE_PATH) -I$(HYPERCOMM_PATH)/include -DCOUNT_INTERACTIONS=0 -DDEBUG=0 $(MAKE_OPTS)
 CHARMC = $(CHARM_HOME)/bin/charmc $(OPTS)
 
 OBJS = Paratreet.o Reader.o Writer.o Particle.o BoundingBox.o Decomposition.o Modularization.o TreeSpec.o

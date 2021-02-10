@@ -1,6 +1,6 @@
-[submodule "psortingV"]
-	path = psortingV
-	url = charmgit:users/vipulharsh/psortingV
 [submodule "utility"]
 	path = utility
 	url = https://github.com/N-BodyShop/utility.git
+[submodule "hypercomm-aggregation"]
+	path = hypercomm-aggregation
+	url = git@github.com:Wingpad/hypercomm-aggregation.git

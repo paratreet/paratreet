@@ -12,6 +12,8 @@
 #include <vector>
 #include <mutex>
 
+#include <hypercomm/aggregation.hpp>
+
 extern CProxy_TreeSpec treespec;
 
 template <typename Data>
@@ -29,8 +31,22 @@ public:
   CProxy_Resumer<Data> r_proxy;
   Data nodewide_data;
   std::atomic<size_t> num_buckets = ATOMIC_VAR_INIT(0ul);
+  using addCache_aggregator_t = aggregation::aggregator<MultiData<Data>>;
+  std::unique_ptr<addCache_aggregator_t> addCache_aggregator;
 
-  CacheManager() { }
+  CacheManager() {
+    CkCallback addCache_cb(CkIndex_CacheManager<Data>::addCache(MultiData<Data>()),
+        this->thisProxy[this->thisIndex]);
+    addCache_aggregator = std::unique_ptr<addCache_aggregator_t>(
+        new addCache_aggregator_t(1000, 0.1,
+          [addCache_cb](void* msg) { addCache_cb.send(msg); },
+#ifdef GROUP_CACHE
+          false
+#else
+          true
+#endif
+          ));
+  }
 
   void initialize(const CkCallback& cb) {
     this->initialize();
@@ -312,7 +328,7 @@ void CacheManager<Data>::serviceRequest(Node<Data>* node, int cm_index) {
   std::vector<Particle> sending_particles;
   makeMsgPerNode(node->depth, sending_nodes, sending_particles, node);
   MultiData<Data> multidata (sending_particles.data(), sending_particles.size(), sending_nodes.data(), sending_nodes.size(), this->thisIndex, node->tp_index);
-  this->thisProxy[cm_index].addCache(multidata);
+  addCache_aggregator->send(cm_index, multidata);
 }
 
 template <typename Data>
