@@ -3,4 +3,4 @@
 	url = https://github.com/N-BodyShop/utility.git
 [submodule "hypercomm-aggregation"]
 	path = hypercomm-aggregation
-	url = git@github.com:Wingpad/hypercomm-aggregation.git
+	url = https://github.com/Wingpad/hypercomm-aggregation.git
