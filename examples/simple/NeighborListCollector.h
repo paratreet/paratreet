@@ -52,8 +52,9 @@ struct NeighborListCollector : public CBase_NeighborListCollector {
   }
   void shareAccelerations() {
     for (auto && remote_part : remote_particles) {
-      if (remote_part.second.first != thisIndex) {
-        addAcceleration(remote_part.second.second);
+      auto pe_home = remote_part.second.first;
+      if (pe_home != thisIndex) {
+        thisProxy[pe_home].addAcceleration(remote_part.second.second);
       }
       // give it to someone else
       // then += all the remote contributions
