@@ -41,14 +41,18 @@ namespace paratreet {
         Real density = 0.;
         auto& part = leaf.particles()[pi];
         auto& nlc_neighbors = nlc->our_neighbors[part.key];
+        auto& rsq = Q.front().fKey;
+        auto ih2 = 4.0/rsq;  // 1/h^2
         for (int i = 0; i < Q.size(); i++) {
-          density += Q[i].mass;
+          auto& fDist2 = Q[i].fKey;
+          auto r2 = fDist2*ih2;
+          auto rs = kernelM4(r2);
+          density += rs*Q[i].mass;
           nlc_neighbors.emplace(Q[i].pKey, nullptr);
           nlc->our_neighbors[Q[i].pKey].emplace(part.key, &part);
         }
-        auto& rsq = Q.front().fKey;
         Real r_cubed = rsq * sqrt(rsq);
-        density /= (4.0 / 3.0 * M_PI * r_cubed);
+        density /= (0.125 * M_PI * r_cubed);
         leaf.setDensity(pi, density);
         nlc->densityFinished(leaf, pi);
         Q.resize(1); // we moved the memory to nlc
