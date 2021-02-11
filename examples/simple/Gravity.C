@@ -22,5 +22,5 @@ namespace paratreet {
     }
   }
 
-  void perLeafFn(SpatialNode<CentroidData>& leaf) {}
+  void perLeafFn(int indicator, SpatialNode<CentroidData>& leaf) {}
 }
