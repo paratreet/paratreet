@@ -14,10 +14,10 @@ Main.decl.h: Main.ci
 	$(CHARMC) $<
 
 Gravity: Main.decl.h Gravity.o Main.o
-	$(CHARMC) -language charm++ -module CommonLBs -o Gravity Gravity.o Main.o $(LD_LIBS)
+	$(CHARMC) -language charm++ -module CommonLBs -module PrefixLB -o Gravity Gravity.o Main.o $(LD_LIBS)
 
 SPH: Main.decl.h SPH.o Main.o
-	$(CHARMC) -language charm++ -module CommonLBs -o SPH SPH.o Main.o $(LD_LIBS)
+	$(CHARMC) -language charm++ -module CommonLBs -module PrefixLB -o SPH SPH.o Main.o $(LD_LIBS)
 
 Gravity.o: Gravity.C
 	$(CHARMC) -c $<
