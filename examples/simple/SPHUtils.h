@@ -14,7 +14,7 @@ namespace paratreet {
     return adk;
   }
 
-  static void doSPHCalc(SpatialNode<CentroidData>& leaf, int pi, Real fBall, const Particle& b) {
+  static void doSPHCalc(SpatialNode<CentroidData>& leaf, int pi, Real fBall, Particle& b) {
     auto& a = leaf.particles()[pi];
     static constexpr const Real visc = 0.;
     static constexpr const Real fDivv_Corrector = 1.; // corrects bias wrt the divergence of velocities // RTFORCE
@@ -46,9 +46,11 @@ namespace paratreet {
     Real PoverRho2Avg = shared_density * (a.potential_predicted + b.potential_predicted);
     Real work = rNorm * dvdotdr * (PoverRho2a + visc * 0.5);
     leaf.applyGasWork(pi, work);
+    b.pressure_dVolume -= work;
     auto && accSignless = rNorm * aFac * (PoverRho2Avg + visc) * dx;
     auto acc = accSignless * (a.key == b.key ? 1 : -1);
     leaf.applyAcceleration(pi, acc);
+    b.acceleration -= acc;
   }
 
 }

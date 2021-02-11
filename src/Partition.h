@@ -13,7 +13,7 @@ extern CProxy_TreeSpec treespec;
 extern CProxy_Reader readers;
 
 namespace paratreet {
-  extern void perLeafFn(SpatialNode<CentroidData>&);
+  extern void perLeafFn(int indicator, SpatialNode<CentroidData>&);
 }
 
 template <typename Data>
@@ -50,7 +50,7 @@ struct Partition : public CBase_Partition<Data> {
   void reset();
   void perturb(TPHolder<Data>, Real, bool);
   void output(CProxy_Writer w, CkCallback cb);
-  void callPerLeafFn(const CkCallback& cb);
+  void callPerLeafFn(int indicator, const CkCallback& cb);
   void pup(PUP::er& p);
   void makeLeaves(int);
   void pauseForLB(){
@@ -277,10 +277,10 @@ void Partition<Data>::flush(CProxy_Reader readers, std::vector<Particle>& partic
 }
 
 template <typename Data>
-void Partition<Data>::callPerLeafFn(const CkCallback& cb)
+void Partition<Data>::callPerLeafFn(int indicator, const CkCallback& cb)
 {
   for (auto && leaf : leaves) {
-    paratreet::perLeafFn(*leaf);
+    paratreet::perLeafFn(indicator, *leaf);
   }
   this->contribute(cb);
 }
