@@ -34,6 +34,13 @@ $ cd src
 $ make -j
 ```
 
+3. Build example applications.
+```
+$ cd ../examples/simple
+$ make test
+```
+
+
 ## Execution
 
 To run a miniscule test simulation with 1000 particles split into TreePieces of at most 100 particles each, on 4 PEs (SMP mode, 1 comm thread):
