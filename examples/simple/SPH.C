@@ -46,11 +46,15 @@ namespace paratreet {
       auto rsq = Q.front().fKey, fBall = std::sqrt(rsq);
       if (indicator == 0) { // sum up the density. requires 0ing of densities
         Real density = 0.;
+        auto ih2 = 4.0/rsq;  // 1/h^2
         for (int i = 0; i < Q.size(); i++) {
-          density += Q[i].mass;
+          auto& fDist2 = Q[i].fKey;
+          auto r2 = fDist2*ih2;
+          auto rs = kernelM4(r2);
+          density += rs*Q[i].mass;
         }
-        Real r_cubed = fBall * rsq;
-        density /= (4.0 / 3.0 * M_PI * r_cubed);
+        Real r_cubed = rsq * fBall;
+        density /= (0.125 * M_PI * r_cubed);
         leaf.setDensity(pi, density);
         nlc->densityFinished(part, leaf);
       }
