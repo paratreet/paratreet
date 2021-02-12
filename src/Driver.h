@@ -178,7 +178,7 @@ public:
     auto config = treespec.ckLocalBranch()->getConfiguration();
     for (int iter = 0; iter < config.num_iterations; iter++) {
       CkPrintf("\n* Iteration %d\n", iter);
-
+      double iter_time = CkWallTimer();
       // Start tree build in Subtrees
       start_time = CkWallTimer();
       CkCallback timeCb (CkReductionTarget(Driver<Data>, reportTime), this->thisProxy);
@@ -202,12 +202,13 @@ public:
       centroid_resumer.collectMetaData(CkCallbackResumeThread((void *&) msg2));
       msg2->toTuple(&res2, &numRedn2);
       int maxPESize = *(int*)(res2[0].data);
+      int sumPESize = *(int*)(res2[1].data);
       float avgPESize = (float) universe.n_particles / (float) CkNumPes();
       float ratio = (float) maxPESize / avgPESize;
       bool complete_rebuild = (config.flush_period == 0) ?
           (ratio > config.flush_max_avg_ratio) :
           (iter % config.flush_period == config.flush_period - 1) ;
-      CkPrintf("[Meta] n_subtree = %d; timestep_size = %f; maxPESize = %d, avgPESize = %f; ratio = %f; maxVelocity = %f; rebuild = %s\n", n_subtrees, updated_timestep_size, maxPESize, avgPESize, ratio, max_velocity, (complete_rebuild? "yes" : "no"));
+      CkPrintf("[Meta] n_subtree = %d; timestep_size = %f; sumPESize = %d; maxPESize = %d, avgPESize = %f; ratio = %f; maxVelocity = %f; rebuild = %s\n", n_subtrees, updated_timestep_size, sumPESize, maxPESize, avgPESize, ratio, max_velocity, (complete_rebuild? "yes" : "no"));
       //End Subtree reduction message parsing
 
       // Prefetch into cache
@@ -241,7 +242,7 @@ public:
         CkWaitQD();
         CkPrintf("Perturbations: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
       }
-      if(iter == 0 || (iter % config.lb_period == config.lb_period - 1)){
+      if (iter % config.lb_period == config.lb_period - 1){
         start_time = CkWallTimer();
         //subtrees.pauseForLB(); // move them later
         partitions.pauseForLB();
@@ -266,6 +267,7 @@ public:
       storage.clear();
       storage_sorted = false;
       CkWaitQD();
+      CkPrintf("Iteration %d time: %.3lf ms\n", iter, (CkWallTimer() - iter_time) * 1000);
     }
 
     cb.send();
