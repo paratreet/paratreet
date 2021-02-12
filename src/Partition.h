@@ -9,11 +9,12 @@
 #include "MultiData.h"
 #include "paratreet.decl.h"
 
+CkpvExtern(int, _lb_obj_index);
 extern CProxy_TreeSpec treespec;
 extern CProxy_Reader readers;
 
 namespace paratreet {
-  extern void perLeafFn(SpatialNode<CentroidData>&);
+  extern void perLeafFn(int indicator, SpatialNode<CentroidData>&);
 }
 
 template <typename Data>
@@ -50,7 +51,7 @@ struct Partition : public CBase_Partition<Data> {
   void reset();
   void perturb(TPHolder<Data>, Real, bool);
   void output(CProxy_Writer w, CkCallback cb);
-  void callPerLeafFn(const CkCallback& cb);
+  void callPerLeafFn(int indicator, const CkCallback& cb);
   void pup(PUP::er& p);
   void makeLeaves(int);
   void pauseForLB(){
@@ -61,11 +62,21 @@ struct Partition : public CBase_Partition<Data> {
   };
 
 private:
+  struct PerturbRequest {
+    bool waiting = false;
+    TPHolder<Data> tp_holder;
+    Real timestep = 0.;
+    bool if_flush = false;
+  };
+  PerturbRequest saved_perturb;
+
+private:
   void initLocalBranches();
   void erasePartition();
   void copyParticles(std::vector<Particle>& particles);
   void flush(CProxy_Reader, std::vector<Particle>&);
   void makeLeaves(const std::vector<Key>&, int);
+  void doPerturb();
 };
 
 template <typename Data>
@@ -119,6 +130,9 @@ template <typename Data>
 void Partition<Data>::goDown()
 {
   traverser->resumeTrav();
+  if (saved_perturb.waiting && traverser->isFinished()) {
+    doPerturb();
+  }
 }
 
 template <typename Data>
@@ -210,6 +224,7 @@ void Partition<Data>::destroy()
 template <typename Data>
 void Partition<Data>::reset()
 {
+  if (saved_perturb.waiting) CkAbort("never did the perturb");
   traverser.reset();
   for (int i = 0; i < leaves.size(); i++) {
     if (leaves[i] != tree_leaves[i]) {
@@ -248,20 +263,40 @@ void Partition<Data>::erasePartition() {
 template <typename Data>
 void Partition<Data>::perturb(TPHolder<Data> tp_holder, Real timestep, bool if_flush)
 {
+  saved_perturb.tp_holder = tp_holder;
+  saved_perturb.timestep = timestep;
+  saved_perturb.if_flush = if_flush;
+  if (traverser && !traverser->isFinished()) {
+    saved_perturb.waiting = true;
+  }
+  else doPerturb();
+}
+
+template <typename Data>
+void Partition<Data>::doPerturb()
+{
+  saved_perturb.waiting = false;
   std::vector<Particle> particles;
   copyParticles(particles);
-  r_local->countParticles(particles.size());
+  r_local->countPartitionParticles(particles.size());
+  #if CMK_LB_USER_DATA
+  if (CkpvAccess(_lb_obj_index) != -1) {
+    void *data = getObjUserData(CkpvAccess(_lb_obj_index));
+    *(Int *) data = particles.size();
+    CkPrintf("[Partition] send user data\n");
+  }
+  #endif
   for (auto && p : particles) {
-    p.perturb(timestep, readers.ckLocalBranch()->universe.box);
+    p.perturb(saved_perturb.timestep, readers.ckLocalBranch()->universe.box);
   }
 
-  if (if_flush) {
+  if (saved_perturb.if_flush) {
     flush(readers, particles);
   }
   else {
     auto sendParticles = [&](int dest, int n_particles, Particle* particles) {
       ParticleMsg* msg = new (n_particles) ParticleMsg(particles, n_particles);
-      tp_holder.proxy[dest].receive(msg);
+      saved_perturb.tp_holder.proxy[dest].receive(msg);
     };
     treespec.ckLocalBranch()->getSubtreeDecomposition()->flush(particles, sendParticles);
   }
@@ -277,10 +312,10 @@ void Partition<Data>::flush(CProxy_Reader readers, std::vector<Particle>& partic
 }
 
 template <typename Data>
-void Partition<Data>::callPerLeafFn(const CkCallback& cb)
+void Partition<Data>::callPerLeafFn(int indicator, const CkCallback& cb)
 {
   for (auto && leaf : leaves) {
-    paratreet::perLeafFn(*leaf);
+    paratreet::perLeafFn(indicator, *leaf);
   }
   this->contribute(cb);
 }

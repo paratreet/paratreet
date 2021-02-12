@@ -30,7 +30,7 @@ extern CProxy_Resumer<CentroidData> centroid_resumer;
 namespace paratreet {
   extern void preTraversalFn(CProxy_Driver<CentroidData>&, CProxy_CacheManager<CentroidData>& cache);
   extern void traversalFn(BoundingBox&,CProxy_Partition<CentroidData>&,int);
-  extern void postInteractionsFn(BoundingBox&,CProxy_Partition<CentroidData>&,int);
+  extern void postTraversalFn(BoundingBox&,CProxy_Partition<CentroidData>&,int);
 }
 
 template <typename Data>
@@ -178,13 +178,38 @@ public:
     auto config = treespec.ckLocalBranch()->getConfiguration();
     for (int iter = 0; iter < config.num_iterations; iter++) {
       CkPrintf("\n* Iteration %d\n", iter);
-
+      double iter_time = CkWallTimer();
       // Start tree build in Subtrees
       start_time = CkWallTimer();
       CkCallback timeCb (CkReductionTarget(Driver<Data>, reportTime), this->thisProxy);
       subtrees.buildTree(partitions, timeCb);
       CkWaitQD();
       CkPrintf("Tree build and sending leaves: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
+
+      // Meta data collections, first for max velo
+      CkReductionMsg * msg, *msg2;
+      subtrees.collectMetaData(CkCallbackResumeThread((void *&) msg));
+      // Parse Subtree reduction message
+      int numRedn = 0, numRedn2 = 0;
+      CkReduction::tupleElement* res = nullptr, *res2 = nullptr;
+      msg->toTuple(&res, &numRedn);
+      max_velocity = *(Real*)(res[0].data); // avoid max_velocity = 0.0
+      Real universe_box_len = universe.box.greater_corner.x - universe.box.lesser_corner.x;
+      updated_timestep_size = universe_box_len / max_velocity / 100.0;
+      if (updated_timestep_size > config.timestep_size) updated_timestep_size = config.timestep_size;
+
+      // Now track PE imbalance for memory reasons
+      centroid_resumer.collectMetaData(CkCallbackResumeThread((void *&) msg2));
+      msg2->toTuple(&res2, &numRedn2);
+      int maxPESize = *(int*)(res2[0].data);
+      int sumPESize = *(int*)(res2[1].data);
+      float avgPESize = (float) universe.n_particles / (float) CkNumPes();
+      float ratio = (float) maxPESize / avgPESize;
+      bool complete_rebuild = (config.flush_period == 0) ?
+          (ratio > config.flush_max_avg_ratio) :
+          (iter % config.flush_period == config.flush_period - 1) ;
+      CkPrintf("[Meta] n_subtree = %d; timestep_size = %f; sumPESize = %d; maxPESize = %d, avgPESize = %f; ratio = %f; maxVelocity = %f; rebuild = %s\n", n_subtrees, updated_timestep_size, sumPESize, maxPESize, avgPESize, ratio, max_velocity, (complete_rebuild? "yes" : "no"));
+      //End Subtree reduction message parsing
 
       // Prefetch into cache
       start_time = CkWallTimer();
@@ -197,42 +222,27 @@ public:
       // Perform traversals
       start_time = CkWallTimer();
       paratreet::traversalFn(universe, partitions, iter);
+      if (config.perturb_no_barrier) {
+        partitions.perturb(subtrees, updated_timestep_size, complete_rebuild); // 0.1s for example
+      }
       CkWaitQD();
       CkPrintf("Tree traversal: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
 
       // Call user's post-interaction function, which may for example:
       // Output particle accelerations for verification
       // TODO: Initial force interactions similar to ChaNGa
-      paratreet::postInteractionsFn(universe, partitions, iter);
+      paratreet::postTraversalFn(universe, partitions, iter);
 
       // Move the particles in Partitions
       start_time = CkWallTimer();
 
-      // Meta data collections
-      CkReductionMsg * msg;
-      subtrees.collectMetaData(updated_timestep_size, CkCallbackResumeThread((void *&) msg));
-       // Parse Subtree reduction message
-      int numRedn = 0;
-      CkReduction::tupleElement* res = NULL;
-      msg->toTuple(&res, &numRedn);
-      max_velocity = *(Real*)(res[0].data); // avoid max_velocity = 0.0
-      int maxParticlesSize = *(int*)(res[1].data);
-      int sumParticlesSize = *(int*)(res[2].data);
-      float avgTPSize = (float) sumParticlesSize / (float) n_subtrees;
-      float ratio = (float) maxParticlesSize / avgTPSize;
-      bool complete_rebuild = (config.flush_max_avg_ratio != 0?
-          (ratio > config.flush_max_avg_ratio) : // use flush_max_avg_ratio when it is not 0
-          (iter % config.flush_period == config.flush_period - 1)) ;
-      CkPrintf("[Meta] n_subtree = %d; timestep_size = %f; maxSubtreeSize = %d; sumSubtreeSize = %d; avgSubtreeSize = %f; ratio = %f; maxVelocity = %f; rebuild = %s\n", n_subtrees, updated_timestep_size, maxParticlesSize,sumParticlesSize, avgTPSize, ratio, max_velocity, (complete_rebuild? "yes" : "no"));
-      //End Subtree reduction message parsing
-
-      Real universe_box_len = universe.box.greater_corner.x - universe.box.lesser_corner.x;
-      updated_timestep_size = universe_box_len / max_velocity / 100.0;
-      if (updated_timestep_size > config.timestep_size) updated_timestep_size = config.timestep_size;
-      partitions.perturb(subtrees, updated_timestep_size, complete_rebuild); // 0.1s for example
       CkWaitQD();
-      CkPrintf("Perturbations: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
-      if(iter == 0 || (iter % config.lb_period == config.lb_period - 1)){
+      if (!config.perturb_no_barrier) {
+        partitions.perturb(subtrees, updated_timestep_size, complete_rebuild); // 0.1s for example
+        CkWaitQD();
+        CkPrintf("Perturbations: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
+      }
+      if (iter % config.lb_period == config.lb_period - 1){
         start_time = CkWallTimer();
         //subtrees.pauseForLB(); // move them later
         partitions.pauseForLB();
@@ -252,13 +262,12 @@ public:
 
       // Clear cache and other storages used in this iteration
       centroid_cache.destroy(true);
-#if COUNT_INTERACTIONS
       CkCallback statsCb (CkReductionTarget(Driver<Data>, countInts), this->thisProxy);
       centroid_resumer.collectAndResetStats(statsCb);
-#endif
       storage.clear();
       storage_sorted = false;
       CkWaitQD();
+      CkPrintf("Iteration %d time: %.3lf ms\n", iter, (CkWallTimer() - iter_time) * 1000);
     }
 
     cb.send();

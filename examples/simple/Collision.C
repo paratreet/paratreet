@@ -1,6 +1,6 @@
 #include "Main.decl.h"
 #include "Paratreet.h"
-#include "GravityVisitor.h"
+#include "CollisionVisitor.h"
 
 extern bool verify;
 
@@ -13,14 +13,9 @@ namespace paratreet {
   }
 
   void traversalFn(BoundingBox& universe, CProxy_Partition<CentroidData>& part, int iter) {
-    part.template startDown<GravityVisitor>();
+    part.template startDown<CollisionVisitor>();
   }
 
-  void postTraversalFn(BoundingBox& universe, CProxy_Partition<CentroidData>& part, int iter) {
-    if (iter == 0 && verify) {
-      paratreet::outputParticles(universe, part);
-    }
-  }
-
+  void postTraversalFn(BoundingBox& universe, CProxy_Partition<CentroidData>& part, int iter) {}
   void perLeafFn(int indicator, SpatialNode<CentroidData>& leaf) {}
 }

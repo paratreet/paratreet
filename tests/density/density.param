@@ -1,0 +1,12 @@
+#
+# GASOLINE/PKDGRAV parameter file for density test
+# 
+nSteps = 0
+# bPeriodic = 1
+dPeriod = 1
+bDoGravity = 0
+bDoDensity = 1
+achInFile = adiabtophat_glass_28721.bin
+bStandard = 1
+achOutName = changa_test
+nSmooth = 32

@@ -20,12 +20,15 @@ mainmodule Main {
     group NeighborListCollector {
         entry NeighborListCollector();
         entry void addRequest(int, Key);
-        entry void forwardRequest(Particle part, const std::vector<Key>& neighbors);
-        entry void fillRequest(Particle part, const std::vector<Key>& neighbors);
+        entry void forwardRequest(int, Particle);
+        entry void fillRequest(int, Particle);
+        entry void shareAccelerations();
+        entry void addAcceleration(Particle);
         entry void reset(const CkCallback&);
     }
 
     extern entry void Partition<CentroidData> startDown<GravityVisitor> ();
+    extern entry void Partition<CentroidData> startDown<CollisionVisitor> ();
     extern entry void Partition<CentroidData> startUpAndDown<DensityVisitor> ();
     //extern entry void Partition<CentroidData> startDown<PressureVisitor> ();
     extern entry void CacheManager<CentroidData> startPrefetch<GravityVisitor>(DPHolder<CentroidData>, CkCallback);

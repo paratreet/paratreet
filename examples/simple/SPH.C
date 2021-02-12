@@ -19,51 +19,61 @@ namespace paratreet {
     part.template startUpAndDown<DensityVisitor>();
   }
 
-  void postInteractionsFn(BoundingBox& universe, CProxy_Partition<CentroidData>& part, int iter) {
+  void postTraversalFn(BoundingBox& universe, CProxy_Partition<CentroidData>& part, int iter) {
     // by now, all density requests have gone out
     double start_time = CkWallTimer();
-    part.callPerLeafFn(CkCallbackResumeThread()); // calculates density, fills requests
+    part.callPerLeafFn(0, CkCallbackResumeThread()); // calculates density, fills requests
     CkWaitQD();
     CkPrintf("Density calculations and sharing: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
     start_time = CkWallTimer();
-    part.callPerLeafFn(CkCallbackResumeThread()); // calculates pressure
+    part.callPerLeafFn(1, CkCallbackResumeThread()); // calculates pressure
     CkPrintf("Pressure calculations: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
+    start_time = CkWallTimer();
+    neighbor_list_collector.shareAccelerations();
+    CkWaitQD();
+    part.callPerLeafFn(2, CkCallbackResumeThread()); // averages pressure
+    CkPrintf("Averaging pressures: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
     if (iter == 0 && verify) {
       paratreet::outputParticles(universe, part);
     }
   }
 
-  void perLeafFn(SpatialNode<CentroidData>& leaf) {
+  void perLeafFn(int indicator, SpatialNode<CentroidData>& leaf) {
     auto nlc = neighbor_list_collector.ckLocalBranch();
     for (int pi = 0; pi < leaf.n_particles; pi++) {
-      if (leaf.particles()[pi].density == 0) { // sum up the density. requires 0ing of densities
-        auto& Q = leaf.data.neighbors[pi];
+      auto& part = leaf.particles()[pi];
+      auto& Q = leaf.data.neighbors[pi];
+      auto rsq = Q.front().fKey, fBall = std::sqrt(rsq);
+      if (indicator == 0) { // sum up the density. requires 0ing of densities
         Real density = 0.;
-        auto& part = leaf.particles()[pi];
-        auto& nlc_neighbors = nlc->our_neighbors[part.key];
+        auto ih2 = 4.0/rsq;  // 1/h^2
         for (int i = 0; i < Q.size(); i++) {
-          density += Q[i].mass;
-          nlc_neighbors.emplace(Q[i].pKey, nullptr);
-          nlc->our_neighbors[Q[i].pKey].emplace(part.key, &part);
+          auto& fDist2 = Q[i].fKey;
+          auto r2 = fDist2*ih2;
+          auto rs = kernelM4(r2);
+          density += rs*Q[i].mass;
         }
-        auto& rsq = Q.front().fKey;
-        Real r_cubed = rsq * sqrt(rsq);
-        density /= (4.0 / 3.0 * M_PI * r_cubed);
+        Real r_cubed = rsq * fBall;
+        density /= (0.125 * M_PI * r_cubed);
         leaf.setDensity(pi, density);
-        nlc->densityFinished(leaf, pi);
-        Q.resize(1); // we moved the memory to nlc
+        nlc->densityFinished(part, leaf);
+      }
+      else if (indicator == 1) {
+        for (int i = 0; i < Q.size(); i++) {
+          auto nbrIt = nlc->remote_particles.find(Q[i].pKey);
+          CkAssert(nbrIt != nlc->remote_particles.end());
+          doSPHCalc(leaf, pi, fBall, nbrIt->second.second);
+        }
       }
       else {
-        auto key = leaf.particles()[pi].key;
-        auto nlc = neighbor_list_collector.ckLocalBranch();
-        for (auto && neighbor : nlc->our_neighbors[key]) {
-          if (neighbor.second == nullptr) {
-            auto nbrIt = nlc->remote_particles.find(neighbor.first);
-            CkAssert(nbrIt != nlc->remote_particles.end());
-            neighbor.second = &nbrIt->second;
-          }
-          doSPHCalc(leaf, pi, *neighbor.second);
-        }
+        auto it = nlc->remote_particles.find(part.key);
+        CkAssert(it != nlc->remote_particles.end());
+        auto && otherAcc = it->second.second.acceleration;
+        auto newAcc = (otherAcc + part.acceleration) / 2;
+        leaf.setAcceleration(pi, newAcc);
+        auto otherWork = it->second.second.pressure_dVolume;
+        auto newWork = (otherWork + part.pressure_dVolume) / 2;
+        leaf.setGasWork(pi, newWork);
       }
     }
   }

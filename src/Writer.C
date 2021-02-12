@@ -46,11 +46,18 @@ void Writer::do_write()
 {
   // Write particle accelerations to output file
   FILE *fp;
+  FILE *fpDen;
   if (thisIndex == 0 && cur_dim == 0) {
-    fp = CmiFopen(output_file.c_str(), "w");
+    fp = CmiFopen((output_file+".acc").c_str(), "w");
     fprintf(fp, "%d\n", total_particles);
-  } else fp = CmiFopen(output_file.c_str(), "a");
+    fpDen = CmiFopen((output_file+".den").c_str(), "w");
+    fprintf(fpDen, "%d\n", total_particles);
+  } else {
+      fp = CmiFopen(output_file.c_str(), "a");
+      fpDen = CmiFopen((output_file+".den").c_str(), "a");
+  }
   CkAssert(fp);
+  CkAssert(fpDen);
 
   for (const auto& particle : particles) {
     Real outval;
@@ -58,8 +65,13 @@ void Writer::do_write()
     else if (cur_dim == 1) outval = particle.acceleration.y;
     else if (cur_dim == 2) outval = particle.acceleration.z;
     fprintf(fp, "%.14g\n", outval);
+    if (cur_dim == 0) {
+        fprintf(fpDen, "%.14g\n", particle.density);
+    }
   }
 
   int result = CmiFclose(fp);
+  CkAssert(result == 0);
+  result = CmiFclose(fpDen);
   CkAssert(result == 0);
 }

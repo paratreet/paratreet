@@ -21,7 +21,6 @@
 
 extern CProxy_TreeSpec treespec;
 extern CProxy_Reader readers;
-#define META_TUPLE_SIZE 3
 
 template <typename Data>
 class Subtree : public CBase_Subtree<Data> {
@@ -40,6 +39,7 @@ public:
 
   CProxy_TreeCanopy<Data> tc_proxy;
   CProxy_CacheManager<Data> cm_proxy;
+  CProxy_Resumer<Data> r_proxy;
 
   std::vector<Particle> flushed_particles; // For debugging
 
@@ -61,7 +61,7 @@ public:
   void reset();
   void output(CProxy_Writer w, CkCallback cb);
   void pup(PUP::er& p);
-  void collectMetaData(Real timestep, const CkCallback & cb);
+  void collectMetaData(const CkCallback & cb);
   void addNodeToFlatSubtree(Node<Data>* node);
   void pauseForLB(){
     //CkPrintf("[ST %d]  pause for LB on PE %d\n", this->thisIndex, CkMyPe());
@@ -102,6 +102,7 @@ Subtree<Data>::Subtree(const CkCallback& cb, int n_total_particles_,
 
   tc_proxy = tc_holder.proxy;
   cm_proxy = cm_proxy_;
+  r_proxy  = r_proxy_;
 
   tp_key = treespec.ckLocalBranch()->getSubtreeDecomposition()->
     getTpKey(this->thisIndex);
@@ -128,6 +129,7 @@ void Subtree<Data>::pup(PUP::er& p) {
   p | tp_key;
   p | tc_proxy;
   p | cm_proxy;
+  p | r_proxy;
   p | incoming_particles;
 }
 
@@ -144,22 +146,20 @@ void Subtree<Data>::receive(ParticleMsg* msg) {
 }
 
 template <typename Data>
-void Subtree<Data>::collectMetaData (Real timestep, const CkCallback & cb) {
+void Subtree<Data>::collectMetaData (const CkCallback & cb) {
   Real maxVelocity = 0.0;
-  int particlesSize = particles.size();
-
   for (auto& particle : particles){
-    if (particle.velocity.length() > maxVelocity)
-      maxVelocity = particle.velocity.length();
+    if (particle.velocity.lengthSquared() > maxVelocity)
+      maxVelocity = particle.velocity.lengthSquared();
   }
+  maxVelocity = std::sqrt(maxVelocity);
 
+  const size_t numTuples = 1;
   CkReduction::tupleElement tupleRedn[] = {
-    CkReduction::tupleElement(sizeof(Real), &maxVelocity, CkReduction::max_float),
-    CkReduction::tupleElement(sizeof(int), &particlesSize, CkReduction::max_int),
-    CkReduction::tupleElement(sizeof(int), &particlesSize, CkReduction::sum_int),
+    CkReduction::tupleElement(sizeof(Real), &maxVelocity, CkReduction::max_float)
   };
 
-  CkReductionMsg * msg = CkReductionMsg::buildFromTuple(tupleRedn, META_TUPLE_SIZE);
+  CkReductionMsg * msg = CkReductionMsg::buildFromTuple(tupleRedn, numTuples);
   msg->setCallback(cb);
   this->contribute(msg);
 };
@@ -234,7 +234,7 @@ void Subtree<Data>::buildTree(CProxy_Partition<Data> part, CkCallback cb) {
 
   // Populate the tree structure (including TreeCanopy)
   populateTree();
-  // Initialize cache
+  r_proxy.ckLocalBranch()->countSubtreeParticles(particles.size());
   initCache();
 
   this->contribute(cb);
