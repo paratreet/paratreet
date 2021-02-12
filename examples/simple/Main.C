@@ -121,7 +121,9 @@ class Main : public CBase_Main {
           CkPrintf("\t-i [number of iterations]\n");
           CkPrintf("\t-s [number of shared tree levels]\n");
           CkPrintf("\t-u [flush period]\n");
-          CkPrintf("\t-u [flush threshold for Subtree max_average ratio]\n");
+          CkPrintf("\t-r [flush threshold for Subtree max_average ratio]\n");
+          CkPrintf("\t-b [load balancing period]\n");
+          CkPrintf("\t-v [filename prefix]\n");
           CkExit();
       }
     }

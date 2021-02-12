@@ -223,7 +223,7 @@ void Partition<Data>::destroy()
 template <typename Data>
 void Partition<Data>::reset()
 {
-  saved_perturb.waiting = false;
+  if (saved_perturb.waiting) CkAbort("never did the perturb");
   traverser.reset();
   for (int i = 0; i < leaves.size(); i++) {
     if (leaves[i] != tree_leaves[i]) {
@@ -274,6 +274,7 @@ void Partition<Data>::perturb(TPHolder<Data> tp_holder, Real timestep, bool if_f
 template <typename Data>
 void Partition<Data>::doPerturb()
 {
+  saved_perturb.waiting = false;
   std::vector<Particle> particles;
   copyParticles(particles);
   r_local->countParticles(particles.size());
