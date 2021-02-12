@@ -48,7 +48,7 @@ void Writer::do_write()
   FILE *fp;
   FILE *fpDen;
   if (thisIndex == 0 && cur_dim == 0) {
-    fp = CmiFopen(output_file.c_str()+".acc", "w");
+    fp = CmiFopen((output_file+".acc").c_str(), "w");
     fprintf(fp, "%d\n", total_particles);
     fpDen = CmiFopen((output_file+".den").c_str(), "w");
     fprintf(fpDen, "%d\n", total_particles);
