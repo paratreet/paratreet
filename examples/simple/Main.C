@@ -38,6 +38,7 @@ class Main : public CBase_Main {
     conf.flush_period = 1;
     conf.flush_max_avg_ratio = 0;
     conf.lb_period = 5;
+    conf.perturb_no_barrier = false;
     conf.timestep_size = 0.1;
 
     verify = false;
@@ -48,7 +49,7 @@ class Main : public CBase_Main {
     // Process command line arguments
     int c;
     std::string input_str;
-    while ((c = getopt(m->argc, m->argv, "f:n:p:l:d:t:i:s:u:r:b:v:")) != -1) {
+    while ((c = getopt(m->argc, m->argv, "f:n:p:l:d:t:i:s:u:r:b:v:a")) != -1) {
       switch (c) {
         case 'f':
           conf.input_file = optarg;
@@ -106,6 +107,9 @@ class Main : public CBase_Main {
           conf.output_file = optarg;
           if (conf.output_file.empty()) CkAbort("output file unspecified");
           break;
+        case 'a':
+          conf.perturb_no_barrier = true;
+          break;
         default:
           CkPrintf("Usage: %s\n", m->argv[0]);
           CkPrintf("\t-f [input file]\n");
@@ -117,7 +121,9 @@ class Main : public CBase_Main {
           CkPrintf("\t-i [number of iterations]\n");
           CkPrintf("\t-s [number of shared tree levels]\n");
           CkPrintf("\t-u [flush period]\n");
-          CkPrintf("\t-u [flush threshold for Subtree max_average ratio]\n");
+          CkPrintf("\t-r [flush threshold for Subtree max_average ratio]\n");
+          CkPrintf("\t-b [load balancing period]\n");
+          CkPrintf("\t-v [filename prefix]\n");
           CkExit();
       }
     }
