@@ -186,25 +186,29 @@ public:
       CkWaitQD();
       CkPrintf("Tree build and sending leaves: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
 
-      // Meta data collections
-      CkReductionMsg * msg;
-      subtrees.collectMetaData(updated_timestep_size, CkCallbackResumeThread((void *&) msg));
+      // Meta data collections, first for max velo
+      CkReductionMsg * msg, *msg2;
+      subtrees.collectMetaData(CkCallbackResumeThread((void *&) msg));
       // Parse Subtree reduction message
-      int numRedn = 0;
-      CkReduction::tupleElement* res = NULL;
+      int numRedn = 0, numRedn2 = 0;
+      CkReduction::tupleElement* res = nullptr, *res2 = nullptr;
       msg->toTuple(&res, &numRedn);
       max_velocity = *(Real*)(res[0].data); // avoid max_velocity = 0.0
-      int maxParticlesSize = *(int*)(res[1].data);
-      int sumParticlesSize = *(int*)(res[2].data);
-      float avgTPSize = (float) sumParticlesSize / (float) n_subtrees;
-      float ratio = (float) maxParticlesSize / avgTPSize;
-      bool complete_rebuild = (config.flush_max_avg_ratio != 0?
-          (ratio > config.flush_max_avg_ratio) : // use flush_max_avg_ratio when it is not 0
-          (iter % config.flush_period == config.flush_period - 1)) ;
       Real universe_box_len = universe.box.greater_corner.x - universe.box.lesser_corner.x;
       updated_timestep_size = universe_box_len / max_velocity / 100.0;
       if (updated_timestep_size > config.timestep_size) updated_timestep_size = config.timestep_size;
-      CkPrintf("[Meta] n_subtree = %d; timestep_size = %f; maxSubtreeSize = %d; sumSubtreeSize = %d; avgSubtreeSize = %f; ratio = %f; maxVelocity = %f; rebuild = %s\n", n_subtrees, updated_timestep_size, maxParticlesSize,sumParticlesSize, avgTPSize, ratio, max_velocity, (complete_rebuild? "yes" : "no"));
+
+      // Now track PE imbalance for memory reasons
+      centroid_resumer.collectMetaData(CkCallbackResumeThread((void *&) msg2));
+      msg2->toTuple(&res2, &numRedn2);
+      int maxPESize = *(int*)(res2[0].data);
+      std::cout << maxPESize << std::endl;
+      float avgPESize = (float) universe.n_particles / (float) CkNumPes();
+      float ratio = (float) maxPESize / avgPESize;
+      bool complete_rebuild = (config.flush_period == 0) ?
+          (ratio > config.flush_max_avg_ratio) :
+          (iter % config.flush_period == config.flush_period - 1) ;
+      CkPrintf("[Meta] n_subtree = %d; timestep_size = %f; maxPESize = %d, avgPESize = %f; ratio = %f; maxVelocity = %f; rebuild = %s\n", n_subtrees, updated_timestep_size, maxPESize, avgPESize, ratio, max_velocity, (complete_rebuild? "yes" : "no"));
       //End Subtree reduction message parsing
 
       // Prefetch into cache
@@ -258,10 +262,8 @@ public:
 
       // Clear cache and other storages used in this iteration
       centroid_cache.destroy(true);
-#if COUNT_INTERACTIONS
       CkCallback statsCb (CkReductionTarget(Driver<Data>, countInts), this->thisProxy);
       centroid_resumer.collectAndResetStats(statsCb);
-#endif
       storage.clear();
       storage_sorted = false;
       CkWaitQD();
