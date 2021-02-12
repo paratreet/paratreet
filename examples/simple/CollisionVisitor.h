@@ -35,7 +35,7 @@ public:
       for (int j = 0; j < source.n_particles; j++) {
         Real dsq = (target.particles()[i].position - source.particles()[j].position).lengthSquared();
         Real rsq = target.particles()[i].ball*target.particles()[i].ball;
-        if (dsq < rsq) target.data.fixed_ball[i].push_back(source.particles()[j]);
+        if (dsq < rsq) target.data.fixed_ball[i].push_back(&(source.particles()[j]));
       }
     }
   }

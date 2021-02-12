@@ -202,7 +202,6 @@ public:
       centroid_resumer.collectMetaData(CkCallbackResumeThread((void *&) msg2));
       msg2->toTuple(&res2, &numRedn2);
       int maxPESize = *(int*)(res2[0].data);
-      std::cout << maxPESize << std::endl;
       float avgPESize = (float) universe.n_particles / (float) CkNumPes();
       float ratio = (float) maxPESize / avgPESize;
       bool complete_rebuild = (config.flush_period == 0) ?
