@@ -35,8 +35,8 @@ class Main : public CBase_Main {
     conf.num_iterations = 3;
     conf.num_share_nodes = 0; // 3;
     conf.cache_share_depth= 3;
-    conf.flush_period = 1;
-    conf.flush_max_avg_ratio = 0;
+    conf.flush_period = 0;
+    conf.flush_max_avg_ratio = 10.;
     conf.lb_period = 5;
     conf.perturb_no_barrier = false;
     conf.timestep_size = 0.1;

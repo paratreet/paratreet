@@ -277,7 +277,7 @@ void Partition<Data>::doPerturb()
   saved_perturb.waiting = false;
   std::vector<Particle> particles;
   copyParticles(particles);
-  r_local->countParticles(particles.size());
+  r_local->countPartitionParticles(particles.size());
   for (auto && p : particles) {
     p.perturb(saved_perturb.timestep, readers.ckLocalBranch()->universe.box);
   }
