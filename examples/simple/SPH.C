@@ -19,7 +19,7 @@ namespace paratreet {
     part.template startUpAndDown<DensityVisitor>();
   }
 
-  void postInteractionsFn(BoundingBox& universe, CProxy_Partition<CentroidData>& part, int iter) {
+  void postTraversalFn(BoundingBox& universe, CProxy_Partition<CentroidData>& part, int iter) {
     // by now, all density requests have gone out
     double start_time = CkWallTimer();
     part.callPerLeafFn(0, CkCallbackResumeThread()); // calculates density, fills requests
