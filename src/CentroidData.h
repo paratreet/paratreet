@@ -69,6 +69,8 @@ struct CentroidData {
     p | rsq;
     p | max_rad;
     p | size_sm;
+    p | fixed_ball;
+    p | neighbors;
   }
 
 };
