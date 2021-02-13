@@ -167,7 +167,8 @@ public:
             }
             else {
               // The node is entirely remote, ask CacheManager for data
-              part.cm_proxy[node->cm_index].requestNodes(std::make_pair(node->key, part.cm_local->thisIndex));
+              auto& aggregator = part.cm_proxy.ckLocalBranch()->reqNodes_aggregator;
+              aggregator->send(node->cm_index, std::make_pair(node->key, part.cm_local->thisIndex));
             }
           }
           // Add the Partition that initiated the traversal to the waiting list
@@ -289,7 +290,10 @@ private:
               if (!prev) {
                 if (node->type == Node<Data>::Type::Boundary || node->type == Node<Data>::Type::RemoteAboveTPKey)
                   part.tc_proxy[node->key].requestData(part.cm_local->thisIndex);
-                else part.cm_proxy[node->cm_index].requestNodes(std::make_pair(node->key, part.cm_local->thisIndex));
+                else {
+                  auto& aggregator = part.cm_proxy.ckLocalBranch()->reqNodes_aggregator;
+                  aggregator->send(node->cm_index, std::make_pair(node->key, part.cm_local->thisIndex));
+                }
               }
               std::vector<int>& list = part.r_local->waiting[node->key];
               if (!list.size() || list.back() != part.thisIndex) list.push_back(part.thisIndex);

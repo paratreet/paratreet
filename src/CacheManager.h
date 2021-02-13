@@ -12,6 +12,7 @@
 #include <vector>
 #include <mutex>
 
+#include <hypercomm/routing.hpp>
 #include <hypercomm/aggregation.hpp>
 
 extern CProxy_TreeSpec treespec;
@@ -31,8 +32,14 @@ public:
   CProxy_Resumer<Data> r_proxy;
   Data nodewide_data;
   std::atomic<size_t> num_buckets = ATOMIC_VAR_INIT(0ul);
-  using addCache_aggregator_t = aggregation::aggregator<aggregation::dynamic_buffer, MultiData<Data>>;
+
+  using buffer_t = aggregation::dynamic_buffer;
+  using router_t = aggregation::routing::mesh<2>;
+  using addCache_aggregator_t = aggregation::aggregator<buffer_t, router_t, MultiData<Data>>;
+  using reqNodes_aggregator_t = aggregation::aggregator<buffer_t, router_t, std::pair<Key, int>>;
+
   std::unique_ptr<addCache_aggregator_t> addCache_aggregator;
+  std::unique_ptr<reqNodes_aggregator_t> reqNodes_aggregator;
 
   CacheManager() {
     CkCallback addCache_cb(CkIndex_CacheManager<Data>::addCache(MultiData<Data>()),
@@ -40,6 +47,18 @@ public:
     addCache_aggregator = std::unique_ptr<addCache_aggregator_t>(
         new addCache_aggregator_t(1000, 1.0, 0.1,
           aggregation::copy2msg([addCache_cb](void* msg) { addCache_cb.send(msg); }),
+#ifdef GROUP_CACHE
+          false
+#else
+          true
+#endif
+          , CcdPERIODIC_10ms));
+
+    CkCallback reqNodes_cb(CkIndex_CacheManager<Data>::requestNodes(std::pair<Key, int>()),
+        this->thisProxy[this->thisIndex]);
+    reqNodes_aggregator = std::unique_ptr<reqNodes_aggregator_t>(
+        new reqNodes_aggregator_t(1000, 1.0, 0.1,
+          aggregation::copy2msg([reqNodes_cb](void* msg) { reqNodes_cb.send(msg); }),
 #ifdef GROUP_CACHE
           false
 #else
