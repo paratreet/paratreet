@@ -195,6 +195,9 @@ void CacheManager<Data>::connect(Node<Data>* node, const std::vector<Node<Data>*
 
 template <typename Data>
 void CacheManager<Data>::recvStarterPack(std::pair<Key, SpatialNode<Data>>* pack, int n, CkCallback cb) {
+#if !DEBUG
+  if (this->thisIndex == 0)
+#endif
   CkPrintf("[CacheManager %d] receiving starter pack, size = %d\n", this->thisIndex, n);
 
   CkAssert(n == 0 || pack[0].first == Key(1));

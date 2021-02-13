@@ -109,6 +109,7 @@ class Main : public CBase_Main {
           break;
         case 'a':
           conf.perturb_no_barrier = true;
+          CkPrintf("You are skipping the perturb barrier. This only works for Gravity.\n");
           break;
         default:
           CkPrintf("Usage: %s\n", m->argv[0]);
