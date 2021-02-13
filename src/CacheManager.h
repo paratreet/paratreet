@@ -15,6 +15,12 @@
 #include <hypercomm/routing.hpp>
 #include <hypercomm/aggregation.hpp>
 
+#ifdef GROUP_CACHE
+constexpr bool kGroupCache = true;
+#else
+constexpr bool kGroupCache = false;
+#endif
+
 extern CProxy_TreeSpec treespec;
 
 template <typename Data>
@@ -42,29 +48,21 @@ public:
   std::unique_ptr<reqNodes_aggregator_t> reqNodes_aggregator;
 
   CacheManager() {
-    CkCallback addCache_cb(CkIndex_CacheManager<Data>::addCache(MultiData<Data>()),
-        this->thisProxy[this->thisIndex]);
     addCache_aggregator = std::unique_ptr<addCache_aggregator_t>(
-        new addCache_aggregator_t(1000, 1.0, 0.1,
-          aggregation::copy2msg([addCache_cb](void* msg) { addCache_cb.send(msg); }),
-#ifdef GROUP_CACHE
-          false
-#else
-          true
-#endif
-          , CcdPERIODIC_10ms));
+        new addCache_aggregator_t(250, 0.5, 0.01,
+          [this](const aggregation::msg_size_t& size, char* data) {
+            PUP::detail::TemporaryObjectHolder<MultiData<Data>> t;
+            PUP::fromMemBuf(t, data, size);
+            this->addCache(t.t);
+          }, !kGroupCache, CcdPROCESSOR_STILL_IDLE));
 
-    CkCallback reqNodes_cb(CkIndex_CacheManager<Data>::requestNodes(std::pair<Key, int>()),
-        this->thisProxy[this->thisIndex]);
     reqNodes_aggregator = std::unique_ptr<reqNodes_aggregator_t>(
-        new reqNodes_aggregator_t(1000, 1.0, 0.1,
-          aggregation::copy2msg([reqNodes_cb](void* msg) { reqNodes_cb.send(msg); }),
-#ifdef GROUP_CACHE
-          false
-#else
-          true
-#endif
-          , CcdPERIODIC_10ms));
+        new reqNodes_aggregator_t(250, 0.5, 0.01,
+          [this](const aggregation::msg_size_t& size, char* data) {
+            PUP::detail::TemporaryObjectHolder<std::pair<Key, int>> t;
+            PUP::fromMemBuf(t, data, size);
+            this->requestNodes(t.t);
+          }, !kGroupCache, CcdPROCESSOR_STILL_IDLE));
   }
 
   void initialize(const CkCallback& cb) {
