@@ -28,6 +28,7 @@ mainmodule Main {
     }
 
     extern entry void Partition<CentroidData> startDown<GravityVisitor> ();
+    extern entry void Partition<CentroidData> startDown<CollisionVisitor> ();
     extern entry void Partition<CentroidData> startUpAndDown<DensityVisitor> ();
     //extern entry void Partition<CentroidData> startDown<PressureVisitor> ();
     extern entry void CacheManager<CentroidData> startPrefetch<GravityVisitor>(DPHolder<CentroidData>, CkCallback);

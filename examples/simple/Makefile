@@ -7,23 +7,29 @@ OPTS = -g -Ofast -I$(STRUCTURE_PATH) -I$(PARATREET_PATH) -I$(HYPERCOMM_PATH)/inc
 CHARMC = $(CHARM_HOME)/bin/charmc $(OPTS)
 LD_LIBS = -L$(PARATREET_PATH) -lparatreet
 
-all: Gravity SPH
-VISITORS = DensityVisitor.h PressureVisitor.h GravityVisitor.h
-OTHERS = CountManager.h SPHUtils.h NeighborListCollector.h
+all: Gravity SPH Collision
+VISITORS = DensityVisitor.h PressureVisitor.h GravityVisitor.h CollisionVisitor.h
+OTHERS = CountManager.h
 
 Main.decl.h: Main.ci
 	$(CHARMC) $<
 
-Gravity: Main.decl.h Gravity.o Main.o
+Gravity: Main.decl.h Main.o Gravity.o
 	$(CHARMC) -language charm++ -module CommonLBs -o Gravity Gravity.o Main.o $(LD_LIBS)
 
-SPH: Main.decl.h SPH.o Main.o
+Collision: Main.decl.h Main.o Collision.o
+	$(CHARMC) -language charm++ -module CommonLBs -o Collision Collision.o Main.o $(LD_LIBS)
+
+SPH: Main.decl.h Main.o SPH.o
 	$(CHARMC) -language charm++ -module CommonLBs -o SPH SPH.o Main.o $(LD_LIBS)
 
 Gravity.o: Gravity.C
 	$(CHARMC) -c $<
 
-SPH.o: SPH.C
+Collision.o: Collision.C
+	$(CHARMC) -c $<
+
+SPH.o: SPH.C SPHUtils.h NeighborListCollector.h
 	$(CHARMC) -c $<
 
 Main.o: Main.C $(VISITORS) $(OTHERS)
@@ -33,4 +39,4 @@ test: all
 	./charmrun ./Gravity -f $(BASE_PATH)/inputgen/100k.tipsy -d sfc +p3 ++ppn 3 +pemap 1-3 +commap 0 ++local
 
 clean:
-	rm -f *.decl.h *.def.h conv-host *.o Gravity SPH charmrun
+	rm -f *.decl.h *.def.h conv-host *.o Gravity SPH Collision charmrun

@@ -54,6 +54,7 @@ module paratreet {
   group Resumer {
     entry Resumer();
     entry void collectAndResetStats(CkCallback cb);
+    entry void collectMetaData(const CkCallback & cb);
     entry [expedited] void process(Key);
   };
   group Resumer<CentroidData>;
@@ -93,7 +94,7 @@ module paratreet {
     entry void reset();
     entry void sendLeaves(CProxy_Partition<Data>);
     entry void checkParticlesChanged(const CkCallback&);
-    entry void collectMetaData(Real timestep, const CkCallback & cb);
+    entry void collectMetaData(const CkCallback & cb);
     entry void pauseForLB();
   }
   array [1d] Subtree<CentroidData>;

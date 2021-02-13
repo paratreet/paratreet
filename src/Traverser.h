@@ -45,6 +45,7 @@ public:
   virtual void resumeTrav() = 0;
   virtual void interact() = 0;
   virtual void start() = 0;
+  virtual bool isFinished() = 0;
 
 protected:
   template <typename Visitor>
@@ -88,9 +89,6 @@ protected:
   std::unordered_map<Key, std::vector<int>> curr_nodes;
   const bool delay_leaf;
 
-public:
-  bool isFinished() {return curr_nodes.empty();}
-
 protected:
   void startTrav(Node<Data>* new_payload) {
     std::vector<int> all_leaves;
@@ -103,6 +101,7 @@ public:
     : leaves(leavesi), part(parti), delay_leaf(delay_leafi)
   { }
   virtual ~DownTraverser() = default;
+  virtual bool isFinished() override {return curr_nodes.empty();}
   virtual void start() override {
     // Initialize with global root key and leaves
     startTrav(part.cm_local->root);
@@ -222,7 +221,7 @@ public:
     num_waiting = std::vector<int> (part.leaves.size(), 1);
   }
   virtual void interact() override {}
-
+  virtual bool isFinished() override {return curr_nodes.empty();}
   virtual void start() override {
     for (auto && trav_top : trav_tops) {
       traverse(trav_top);
