@@ -39,7 +39,6 @@ class Main : public CBase_Main {
     conf.flush_max_avg_ratio = 10.;
     conf.lb_period = 5;
     conf.perturb_no_barrier = false;
-    conf.timestep_size = 0.1;
 
     verify = false;
 
