@@ -51,7 +51,9 @@ jobs:
         ./charmrun +p4 ./Gravity -f ../../inputgen/1k.tipsy ++local -u 2
         ./charmrun +p4 ./Gravity -f ../../inputgen/1k.tipsy ++local -d sfc -u 2
         ./charmrun +p4 ./Gravity -f ../../inputgen/1k.tipsy ++local -d kd -t kd -u 2
+        ./charmrun +p4 ./Gravity -f ../../inputgen/1k.tipsy ++local -d longest -t longest -u 2
         ./charmrun +p1 ./SPH     -f ../../inputgen/1k.tipsy ++local -u 2
         ./charmrun +p4 ./SPH     -f ../../inputgen/1k.tipsy ++local -u 2
         ./charmrun +p4 ./SPH     -f ../../inputgen/1k.tipsy ++local -d sfc -u 2
         ./charmrun +p4 ./SPH     -f ../../inputgen/1k.tipsy ++local -d kd -t kd -u 2
+        ./charmrun +p4 ./SPH     -f ../../inputgen/1k.tipsy ++local -d longest -t longest -u 2
