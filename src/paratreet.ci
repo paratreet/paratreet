@@ -14,6 +14,7 @@ module paratreet {
   PUPable SfcDecomposition;
   PUPable OctDecomposition;
   PUPable KdDecomposition;
+  PUPable LongestDimDecomposition;
 
   readonly CProxy_Reader readers;
   readonly CProxy_TreeSpec treespec;

@@ -74,6 +74,9 @@ class Main : public CBase_Main {
           else if (input_str.compare("kd") == 0) {
             conf.decomp_type = paratreet::DecompType::eKd;
           }
+          else if (input_str.compare("longest") == 0) {
+            conf.decomp_type = paratreet::DecompType::eLongest;
+          }
           break;
         case 't':
           input_str = optarg;
@@ -85,6 +88,9 @@ class Main : public CBase_Main {
           }
           else if (input_str.compare("kd") == 0) {
             conf.tree_type = paratreet::TreeType::eKd;
+          }
+          else if (input_str.compare("longest") == 0) {
+            conf.tree_type = paratreet::TreeType::eLongest;
           }
           break;
         case 'i':

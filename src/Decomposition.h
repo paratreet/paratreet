@@ -86,12 +86,10 @@ struct OctDecomposition : public SfcDecomposition {
   void setArrayOpts(CkArrayOptions& opts) override;
 };
 
-struct KdDecomposition : public Decomposition {
-  PUPable_decl(KdDecomposition);
-
-  KdDecomposition() = default;
-  KdDecomposition(CkMigrateMessage *m) : Decomposition(m) { }
-  virtual ~KdDecomposition() = default;
+struct BinaryDecomposition : public Decomposition {
+  BinaryDecomposition() = default;
+  BinaryDecomposition(CkMigrateMessage *m) : Decomposition(m) { }
+  virtual ~BinaryDecomposition() = default;
 
   Key getTpKey(int idx) override;
   int flush(std::vector<Particle> &particles, const SendParticlesFn &fn) override;
@@ -100,10 +98,37 @@ struct KdDecomposition : public Decomposition {
 
   virtual void pup(PUP::er& p) override;
 
-private:
-  std::vector<Real> splitters;
-  size_t depth = 0;
+  using Bin = std::vector<Vector3D<Real>>;
+  using BinarySplit = std::pair<int, Real>;
+  virtual BinarySplit sortAndGetSplitter(int depth, Bin& bin) = 0;
+  virtual void assign(Bin& parent, Bin& left, Bin& right, std::pair<int, Real> split) = 0;
 
+protected:
+  std::vector<BinarySplit> splitters; //dim, splitter value
+  size_t depth = 0;
+  int saved_n_total_particles = 0;
+  std::vector<size_t> n_particles;
+};
+
+struct KdDecomposition : public BinaryDecomposition {
+  PUPable_decl(KdDecomposition);
+  KdDecomposition() = default;
+  KdDecomposition(CkMigrateMessage *m) : BinaryDecomposition(m) { }
+
+  virtual void pup(PUP::er& p) override;
+  virtual BinarySplit sortAndGetSplitter(int depth, Bin& bin) override;
+  virtual void assign(Bin& parent, Bin& left, Bin& right, std::pair<int, Real> split) override;
+};
+
+struct LongestDimDecomposition : public BinaryDecomposition {
+  PUPable_decl(LongestDimDecomposition);
+  LongestDimDecomposition() = default;
+  LongestDimDecomposition(CkMigrateMessage *m) : BinaryDecomposition(m) { }
+
+  virtual void pup(PUP::er& p) override;
+  virtual BinarySplit sortAndGetSplitter(int depth, Bin& bin) override;
+  virtual void assign(Bin& parent, Bin& left, Bin& right, std::pair<int, Real> split) override;
+  void setArrayOpts(CkArrayOptions& opts) override;
 };
 
 

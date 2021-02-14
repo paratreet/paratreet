@@ -30,6 +30,8 @@ void TreeSpec::getDecomposition(std::unique_ptr<Decomposition>& decomp, paratree
       decomp.reset(new SfcDecomposition());
     } else if (decomp_type == paratreet::DecompType::eKd) {
       decomp.reset(new KdDecomposition());
+    } else if (decomp_type == paratreet::DecompType::eLongest) {
+      decomp.reset(new LongestDimDecomposition());
     }
   }
 }
@@ -42,9 +44,10 @@ Tree* TreeSpec::getTree() {
       tree.reset(new BinaryTree());
     } else if (config.tree_type == paratreet::TreeType::eKd) {
       tree.reset(new KdTree());
+    } else if (config.tree_type == paratreet::TreeType::eLongest) {
+      tree.reset(new LongestDimTree());
     }
   }
-
   return tree.get();
 }
 
