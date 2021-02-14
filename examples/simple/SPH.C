@@ -55,7 +55,9 @@ namespace paratreet {
         }
         Real r_cubed = rsq * fBall;
         density /= (0.125 * M_PI * r_cubed);
-        leaf.setDensity(pi, density);
+        auto copy_part = part;
+        copy_part.density = density;
+        leaf.changeParticle(pi, copy_part);
         nlc->densityFinished(part, leaf);
       }
       else if (indicator == 1) {
@@ -68,12 +70,12 @@ namespace paratreet {
       else {
         auto it = nlc->remote_particles.find(part.key);
         CkAssert(it != nlc->remote_particles.end());
+        auto copy_part = part;
         auto && otherAcc = it->second.second.acceleration;
-        auto newAcc = (otherAcc + part.acceleration) / 2;
-        leaf.setAcceleration(pi, newAcc);
+        copy_part.acceleration = (otherAcc + part.acceleration) / 2;
         auto otherWork = it->second.second.pressure_dVolume;
-        auto newWork = (otherWork + part.pressure_dVolume) / 2;
-        leaf.setGasWork(pi, newWork);
+        copy_part.pressure_dVolume = (otherWork + part.pressure_dVolume) / 2;
+        leaf.changeParticle(pi, copy_part);
       }
     }
   }
