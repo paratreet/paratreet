@@ -39,7 +39,7 @@ public:
   Data nodewide_data;
   std::atomic<size_t> num_buckets = ATOMIC_VAR_INIT(0ul);
 
-  using buffer_t = aggregation::dynamic_buffer;
+  using buffer_t = aggregation::direct_buffer;
   using router_t = aggregation::routing::mesh<2>;
   using addCache_aggregator_t = aggregation::aggregator<buffer_t, router_t, MultiData<Data>>;
   using reqNodes_aggregator_t = aggregation::aggregator<buffer_t, router_t, std::pair<Key, int>>;
@@ -48,8 +48,12 @@ public:
   std::unique_ptr<reqNodes_aggregator_t> reqNodes_aggregator;
 
   CacheManager() {
+    auto roughCapacity = 225;
+    auto roughTimeout = 0.05;
+    auto roughUtil = 1 - 0.05;
+
     addCache_aggregator = std::unique_ptr<addCache_aggregator_t>(
-        new addCache_aggregator_t(250, 0.5, 0.01,
+        new addCache_aggregator_t(roughCapacity * 384, roughUtil, roughTimeout * 1.5,
           [this](const aggregation::msg_size_t& size, char* data) {
             PUP::detail::TemporaryObjectHolder<MultiData<Data>> t;
             PUP::fromMemBuf(t, data, size);
@@ -57,7 +61,7 @@ public:
           }, !kGroupCache, CcdPROCESSOR_STILL_IDLE));
 
     reqNodes_aggregator = std::unique_ptr<reqNodes_aggregator_t>(
-        new reqNodes_aggregator_t(250, 0.5, 0.01,
+        new reqNodes_aggregator_t(roughCapacity * 6, roughUtil, roughTimeout,
           [this](const aggregation::msg_size_t& size, char* data) {
             PUP::detail::TemporaryObjectHolder<std::pair<Key, int>> t;
             PUP::fromMemBuf(t, data, size);
