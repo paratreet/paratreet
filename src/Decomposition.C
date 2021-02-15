@@ -256,16 +256,16 @@ int OctDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &reader
   return splitters.size();
 }
 
-Key KdDecomposition::getTpKey(int idx) {
+Key BinaryDecomposition::getTpKey(int idx) {
   return idx + (1 << depth);
 }
 
-int KdDecomposition::flush(std::vector<Particle> &particles, const SendParticlesFn &fn) {
+int BinaryDecomposition::flush(std::vector<Particle> &particles, const SendParticlesFn &fn) {
   std::vector<std::vector<Particle>> out_particles (1 << depth);
   for (auto && particle : particles) {
     int index = 1;
     for (int cdepth = 0; cdepth < depth; cdepth++) {
-      if (particle.position[cdepth % NDIM] > splitters[index]) {
+      if (particle.position[splitters[index].first] > splitters[index].second) {
         index = index * 2 + 1;
       }
       else {
@@ -284,52 +284,108 @@ int KdDecomposition::flush(std::vector<Particle> &particles, const SendParticles
   return particles.size();
 }
 
-int KdDecomposition::getNumParticles(int tp_index) {
-  return 0; // not implemented yet
+int BinaryDecomposition::getNumParticles(int tp_index) {
+  return n_particles[tp_index];
 }
 
-int KdDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &readers, int min_n_splitters) {
+int BinaryDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &readers, int min_n_splitters) {
   CkReductionMsg *msg;
   readers.getAllPositions(CkCallbackResumeThread((void*&)msg));
-  std::vector<Vector3D<Real>> positions;
+  std::vector<Bin> bins (1);
   CkReduction::setElement *elem = (CkReduction::setElement *)msg->getData();
   while (elem != NULL) {
     Vector3D<Real> *elemPos = (Vector3D<Real> *)&elem->data;
     int n_pos = elem->dataSize / sizeof(Vector3D<Real>);
-    positions.insert(positions.end(), elemPos, elemPos + n_pos);
+    bins.front().insert(bins.front().end(), elemPos, elemPos + n_pos);
     elem = elem->next();
   }
 
-  std::vector<std::vector<Vector3D<Real>>> bins;
-  bins.emplace_back(positions);
-  splitters.push_back(0); // empty space for key=0
+  saved_n_total_particles = universe.n_particles;
+  splitters.emplace_back(0, 0); // empty space for key=0
   for (; (1 << depth) < min_n_splitters; depth++) {
-    decltype(bins) binsCopy;
-    for (auto && bin : bins) {
-      static auto compX = [] (const Vector3D<Real>& a, const Vector3D<Real>& b) {return a.x < b.x;};
-      static auto compY = [] (const Vector3D<Real>& a, const Vector3D<Real>& b) {return a.y < b.y;};
-      static auto compZ = [] (const Vector3D<Real>& a, const Vector3D<Real>& b) {return a.z < b.z;};
-      int dim = depth % NDIM;
-      if (dim == 0)      std::sort(bin.begin(), bin.end(), compX);
-      else if (dim == 1) std::sort(bin.begin(), bin.end(), compY);
-      else if (dim == 2) std::sort(bin.begin(), bin.end(), compZ);
-      size_t medianIndex = (bin.size() + 1) / 2;
-      auto median = bin[medianIndex][dim]; // not average?
-      splitters.push_back(median);
-      binsCopy.emplace_back();
-      auto && left = binsCopy.back();
-      left.insert(left.end(), bin.begin(), bin.begin() + medianIndex);
-      binsCopy.emplace_back();
-      auto && right = binsCopy.back();
-      right.insert(right.end(), bin.begin() + medianIndex, bin.end());
+    decltype(bins) binsCopy (bins.size() * 2);
+    for (size_t i = 0u; i < bins.size(); i++) {
+      auto& bin = bins[i];
+      auto split = this->sortAndGetSplitter(depth, bin);
+#if DEBUG
+      std::cout << "splitting at depth " << depth << " on index " << splitters.size() << " with dim ";
+      std::cout << split.first << " at " << split.second << std::endl;
+#endif
+      splitters.push_back(split);
+      this->assign(bin, binsCopy[2 * i], binsCopy[2 * i + 1], split);
     }
-    bins = std::move(binsCopy);
+    std::swap(bins, binsCopy);
+  }
+  for (auto && bin : bins) {
+    n_particles.push_back(bin.size());
   }
   return (1 << depth);
 }
 
-void KdDecomposition::pup(PUP::er& p) {
-  PUP::able::pup(p);
+void BinaryDecomposition::pup(PUP::er& p) {
   p | splitters;
   p | depth;
+  p | saved_n_total_particles;
+  p | n_particles;
+}
+
+void KdDecomposition::assign(Bin& parent, Bin& left, Bin& right, BinarySplit split) {
+  size_t medianIndex = (parent.size() + 1) / 2;
+  left.insert(left.end(), parent.begin(), parent.begin() + medianIndex);
+  right.insert(right.end(), parent.begin() + medianIndex, parent.end());
+}
+
+std::pair<int, Real> KdDecomposition::sortAndGetSplitter(int depth, Bin& bin) {
+  static auto compX = [] (const Vector3D<Real>& a, const Vector3D<Real>& b) {return a.x < b.x;};
+  static auto compY = [] (const Vector3D<Real>& a, const Vector3D<Real>& b) {return a.y < b.y;};
+  static auto compZ = [] (const Vector3D<Real>& a, const Vector3D<Real>& b) {return a.z < b.z;};
+  int dim = depth % NDIM;
+  if (dim == 0)      std::sort(bin.begin(), bin.end(), compX);
+  else if (dim == 1) std::sort(bin.begin(), bin.end(), compY);
+  else if (dim == 2) std::sort(bin.begin(), bin.end(), compZ);
+  size_t medianIndex = (bin.size() + 1) / 2;
+  auto median = bin[medianIndex][dim]; // not average?
+  return {dim, median};
+}
+
+void KdDecomposition::pup(PUP::er& p) {
+  PUP::able::pup(p);
+  BinaryDecomposition::pup(p);
+}
+
+void LongestDimDecomposition::assign(Bin& parent, Bin& left, Bin& right, BinarySplit split) {
+  for (auto && pos : parent) {
+    if (pos[split.first] > split.second) right.push_back(pos);
+    else left.push_back(pos);
+  }
+}
+
+std::pair<int, Real> LongestDimDecomposition::sortAndGetSplitter(int depth, Bin& bin) {
+  OrientedBox<Real> box;
+  Vector3D<Real> unweighted_center;
+  for (auto && pos : bin) {
+    box.grow(pos);
+    unweighted_center += pos;
+  }
+  unweighted_center /= bin.size();
+  auto dims = box.greater_corner - box.lesser_corner;
+  int best_dim = 0;
+  Real max_dim = 0;
+  for (int d = 0; d < NDIM; d++) {
+    if (dims[d] > max_dim) {
+      max_dim = dims[d];
+      best_dim = d;
+    }
+  }
+  return {best_dim, unweighted_center[best_dim]};
+}
+
+void LongestDimDecomposition::pup(PUP::er& p) {
+  PUP::able::pup(p);
+  BinaryDecomposition::pup(p);
+}
+
+void LongestDimDecomposition::setArrayOpts(CkArrayOptions& opts) {
+  auto myMap = CProxy_DecompArrayMap::ckNew(this, saved_n_total_particles, splitters.size());
+  opts.setMap(myMap);
 }

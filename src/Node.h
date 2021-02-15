@@ -20,20 +20,14 @@ public:
   }
   virtual ~SpatialNode() = default;
 
+  void changeParticle(int index, Particle& part) {
+    particles_[index] = part;
+  }
   void applyAcceleration(int index, Vector3D<Real> accel) {
     particles_[index].acceleration += accel;
   }
   void applyGasWork(int index, Real work) {
     particles_[index].pressure_dVolume += work;
-  }
-  void setDensity(int index, Real density) { // these are NOT general enough!
-    particles_[index].density = density;
-  }
-  void setAcceleration(int index, Vector3D<Real> accel) {
-    particles_[index].acceleration = accel;
-  }
-  void setGasWork(int index, Real work) {
-    particles_[index].pressure_dVolume = work;
   }
   void freeParticles() {
     if (n_particles > 0) {

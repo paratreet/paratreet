@@ -39,7 +39,6 @@ class Main : public CBase_Main {
     conf.flush_max_avg_ratio = 10.;
     conf.lb_period = 5;
     conf.perturb_no_barrier = false;
-    conf.timestep_size = 0.1;
 
     verify = false;
 
@@ -74,6 +73,9 @@ class Main : public CBase_Main {
           else if (input_str.compare("kd") == 0) {
             conf.decomp_type = paratreet::DecompType::eKd;
           }
+          else if (input_str.compare("longest") == 0) {
+            conf.decomp_type = paratreet::DecompType::eLongest;
+          }
           break;
         case 't':
           input_str = optarg;
@@ -85,6 +87,9 @@ class Main : public CBase_Main {
           }
           else if (input_str.compare("kd") == 0) {
             conf.tree_type = paratreet::TreeType::eKd;
+          }
+          else if (input_str.compare("longest") == 0) {
+            conf.tree_type = paratreet::TreeType::eLongest;
           }
           break;
         case 'i':
@@ -109,6 +114,7 @@ class Main : public CBase_Main {
           break;
         case 'a':
           conf.perturb_no_barrier = true;
+          CkPrintf("You are skipping the perturb barrier. This only works for Gravity.\n");
           break;
         default:
           CkPrintf("Usage: %s\n", m->argv[0]);

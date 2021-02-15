@@ -31,6 +31,7 @@ namespace paratreet {
   extern void preTraversalFn(CProxy_Driver<CentroidData>&, CProxy_CacheManager<CentroidData>& cache);
   extern void traversalFn(BoundingBox&,CProxy_Partition<CentroidData>&,int);
   extern void postTraversalFn(BoundingBox&,CProxy_Partition<CentroidData>&,int);
+  extern Real getTimestep(BoundingBox&, Real);
 }
 
 template <typename Data>
@@ -47,8 +48,6 @@ public:
   int n_subtrees;
   int n_partitions;
   double start_time;
-  Real max_velocity;
-  Real updated_timestep_size = 0.1;
 
   Driver(CProxy_CacheManager<Data> cache_manager_) :
     cache_manager(cache_manager_), storage_sorted(false) {}
@@ -193,10 +192,8 @@ public:
       int numRedn = 0, numRedn2 = 0;
       CkReduction::tupleElement* res = nullptr, *res2 = nullptr;
       msg->toTuple(&res, &numRedn);
-      max_velocity = *(Real*)(res[0].data); // avoid max_velocity = 0.0
-      Real universe_box_len = universe.box.greater_corner.x - universe.box.lesser_corner.x;
-      updated_timestep_size = universe_box_len / max_velocity / 100.0;
-      if (updated_timestep_size > config.timestep_size) updated_timestep_size = config.timestep_size;
+      Real max_velocity = *(Real*)(res[0].data); // avoid max_velocity = 0.0
+      Real timestep_size = paratreet::getTimestep(universe, max_velocity);
 
       // Now track PE imbalance for memory reasons
       centroid_resumer.collectMetaData(CkCallbackResumeThread((void *&) msg2));
@@ -208,7 +205,7 @@ public:
       bool complete_rebuild = (config.flush_period == 0) ?
           (ratio > config.flush_max_avg_ratio) :
           (iter % config.flush_period == config.flush_period - 1) ;
-      CkPrintf("[Meta] n_subtree = %d; timestep_size = %f; sumPESize = %d; maxPESize = %d, avgPESize = %f; ratio = %f; maxVelocity = %f; rebuild = %s\n", n_subtrees, updated_timestep_size, sumPESize, maxPESize, avgPESize, ratio, max_velocity, (complete_rebuild? "yes" : "no"));
+      CkPrintf("[Meta] n_subtree = %d; timestep_size = %f; sumPESize = %d; maxPESize = %d, avgPESize = %f; ratio = %f; maxVelocity = %f; rebuild = %s\n", n_subtrees, timestep_size, sumPESize, maxPESize, avgPESize, ratio, max_velocity, (complete_rebuild? "yes" : "no"));
       //End Subtree reduction message parsing
 
       // Prefetch into cache
@@ -223,7 +220,7 @@ public:
       start_time = CkWallTimer();
       paratreet::traversalFn(universe, partitions, iter);
       if (config.perturb_no_barrier) {
-        partitions.perturb(subtrees, updated_timestep_size, complete_rebuild); // 0.1s for example
+        partitions.perturb(subtrees, timestep_size, complete_rebuild); // 0.1s for example
       }
       CkWaitQD();
       CkPrintf("Tree traversal: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
@@ -238,7 +235,7 @@ public:
 
       CkWaitQD();
       if (!config.perturb_no_barrier) {
-        partitions.perturb(subtrees, updated_timestep_size, complete_rebuild); // 0.1s for example
+        partitions.perturb(subtrees, timestep_size, complete_rebuild); // 0.1s for example
         CkWaitQD();
         CkPrintf("Perturbations: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
       }

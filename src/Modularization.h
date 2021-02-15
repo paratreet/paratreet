@@ -25,6 +25,14 @@ public:
   virtual void prepParticles(Particle* particles, size_t n_particles, Key parent_key, size_t log_branch_factor) override;
 };
 
+class LongestDimTree : public Tree {
+public:
+  virtual ~LongestDimTree() = default;
+  virtual int getBranchFactor() override {return 2;}
+  virtual int findChildsLastParticle(const Particle* particles, int start, int finish, Key child_key, size_t log_branch_factor) override;
+  virtual void prepParticles(Particle* particles, size_t n_particles, Key parent_key, size_t log_branch_factor) override;
+  int split_idx = 0;
+};
 
 class OctTree : public Tree {
 public:

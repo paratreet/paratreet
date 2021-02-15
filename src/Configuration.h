@@ -14,6 +14,7 @@ namespace paratreet {
       eOct = 0,
       eSfc,
       eKd,
+      eLongest,
       eInvalid = 100
     };
 
@@ -21,6 +22,7 @@ namespace paratreet {
       eOct = 0,
       eOctBinary,
       eKd,
+      eLongest,
       eInvalid = 100
     };
 
@@ -37,7 +39,6 @@ namespace paratreet {
         int flush_max_avg_ratio;
         int lb_period;
         bool perturb_no_barrier;
-        Real timestep_size;
         std::string input_file;
         std::string output_file;
 #ifdef __CHARMC__
@@ -57,7 +58,6 @@ namespace paratreet {
             p | perturb_no_barrier;
             p | input_file;
             p | output_file;
-            p | timestep_size;
         }
 #endif //__CHARMC__
     };
@@ -70,6 +70,8 @@ namespace paratreet {
           return "OctBinaryTree";
         case TreeType::eKd:
           return "KdTree";
+        case TreeType::eLongest:
+          return "LongestDimTree";
         default:
           return "InvalidTreeType";
       }
@@ -83,6 +85,8 @@ namespace paratreet {
           return "SfcDecomp";
         case DecompType::eKd:
           return "KdDecomp";
+	case DecompType::eLongest:
+          return "LongestDimDecomp";
         default:
          return "InvalidDecompType";
       }
@@ -95,6 +99,8 @@ namespace paratreet {
           return DecompType::eOct;
         case TreeType::eKd:
           return DecompType::eKd;
+        case TreeType::eLongest:
+          return DecompType::eLongest;
         default:
           return DecompType::eInvalid;
       }
