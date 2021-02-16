@@ -64,10 +64,13 @@ struct SfcDecomposition : public Decomposition {
   int flush(std::vector<Particle> &particles, const SendParticlesFn &fn) override;
   int getNumParticles(int tp_index) override;
   int findSplitters(BoundingBox &universe, CProxy_Reader &readers, int min_n_splitters) override;
-
   void alignSplitters(SfcDecomposition *);
   std::vector<Splitter> getSplitters();
   virtual void pup(PUP::er& p) override;
+
+private:
+  int parallelFindSplitters(BoundingBox &universe, CProxy_Reader &readers, int min_n_splitters);
+  int serialFindSplitters(BoundingBox &universe, CProxy_Reader &readers, int min_n_splitters);
 
 protected:
   std::vector<Splitter> splitters;

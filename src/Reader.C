@@ -122,6 +122,20 @@ void Reader::assignKeys(BoundingBox universe_, const CkCallback& cb) {
   contribute(cb);
 }
 
+void Reader::countSfc(const std::vector<QuickSelectSFCState>& states, size_t log_branch_factor, const CkCallback& cb) {
+  std::vector<int> counts (states.size(), 0);
+  std::function<bool(const Particle&, Key)> compGE = [] (const Particle& a, Key b) {return a.key >= b;};
+  if (particles.size() > 0) {
+    for (size_t i = 0u; i < states.size(); i++) {
+      if (!states[i].pending) continue;
+      int begin = Utility::binarySearchComp(states[i].start_range, &particles[0], 0, particles.size(), compGE);
+      int found = Utility::binarySearchComp(states[i].compare_to(), &particles[0], begin, particles.size(), compGE);
+      counts[i] = found - begin;
+    }
+  }
+  contribute(sizeof(int) * counts.size(), &counts[0], CkReduction::sum_int, cb);
+}
+
 void Reader::countOct(std::vector<Key> splitter_keys, size_t log_branch_factor, const CkCallback& cb) {
   std::vector<int> counts (splitter_keys.size()/2, 0);
   for (int i = 0; i < splitter_keys.size(); i++) {
@@ -135,7 +149,6 @@ void Reader::countOct(std::vector<Key> splitter_keys, size_t log_branch_factor, 
   int finish = particles.size();
   Key from, to;
   std::function<bool(const Particle&, Key)> compGE = [] (const Particle& a, Key b) {return a.key >= b;};
-  std::sort(particles.begin(), particles.end());
   if (particles.size() > 0) {
     for (int i = 0; i < counts.size(); i++) {
       from = splitter_keys[2*i];
