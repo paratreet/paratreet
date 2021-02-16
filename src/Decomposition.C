@@ -63,6 +63,71 @@ int SfcDecomposition::getNumParticles(int tp_index) {
 }
 
 int SfcDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &readers, int min_n_splitters) {
+  return parallelFindSplitters(universe, readers, min_n_splitters);
+}
+
+int SfcDecomposition::parallelFindSplitters(BoundingBox &universe, CProxy_Reader &readers, int min_n_splitters) {
+  const int branch_factor = treespec.ckLocalBranch()->getTree()->getBranchFactor();
+  const int log_branch_factor = log2(branch_factor);
+
+  readers.localSort(CkCallbackResumeThread());
+  std::vector<QuickSelectSFCState> states (min_n_splitters);
+  int ki = 0;
+  saved_n_total_particles = universe.n_particles;
+  int threshold = saved_n_total_particles / min_n_splitters;
+  int remainder = saved_n_total_particles % min_n_splitters;
+  for (size_t i = 0u; i < states.size(); i++) {
+    states[i].start_range = Utility::removeLeadingZeros(Key(1), log_branch_factor);
+    states[i].goal_rank = ki + threshold;
+    if (i < remainder) states[i].goal_rank++;
+    ki = states[i].goal_rank;
+#if DEBUG
+    CkPrintf("goal rank %d is %d\n", i, ki);
+#endif
+  }
+
+  int n_pending = states.size();
+  while (n_pending > 0) {
+    CkReductionMsg *msg;
+    readers.countSfc(states, log_branch_factor, CkCallbackResumeThread((void*&)msg));
+    int* counts = (int*)msg->getData();
+    for (int i = 0; i < states.size(); i++) {
+      auto&& count = counts[i];
+      auto&& state = states[i];
+      if (!state.pending) continue;
+      Key mid = Utility::removeLeadingZeros(state.compare_to(), log_branch_factor);
+#if DEBUG
+      CkPrintf("count %d is %d for start_range %" PRIx64 " end_range %" PRIx64 " compare_to %" PRIx64 "\n", i, counts[i], state.start_range, state.end_range, state.compare_to());
+#endif
+      if (count < state.goal_rank) {
+        state.start_range = state.compare_to();
+        state.goal_rank -= count;
+      }
+      else if (count > state.goal_rank) {
+         state.end_range = state.compare_to();
+      }
+      else {
+        state.pending = false;
+        n_pending--;
+      }
+    }
+  }
+  Key from (0), to;
+  int prev = 0;
+  for (auto && state : states) {
+    to = state.compare_to();
+    Key prefixMask = Utility::removeTrailingBits(~(from ^ (to - 1)));
+    Key prefix = prefixMask & from;
+    Splitter sp(Utility::removeLeadingZeros(from, log_branch_factor),
+                Utility::removeLeadingZeros(to, log_branch_factor), prefix, state.goal_rank - prev);
+    splitters.push_back(sp);
+    prev = state.goal_rank;
+    from = to;
+  }
+  return splitters.size();
+}
+
+int SfcDecomposition::serialFindSplitters(BoundingBox &universe, CProxy_Reader &readers, int min_n_splitters) {
   const int branch_factor = treespec.ckLocalBranch()->getTree()->getBranchFactor();
   const int log_branch_factor = log2(branch_factor);
   CkReductionMsg *msg;
@@ -193,6 +258,7 @@ int OctDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &reader
   keys.add(~Key(0)); // 1111...1
   keys.buffer();
 
+  readers.localSort(CkCallbackResumeThread());
   int decomp_particle_sum = 0; // Used to check if all particles are decomposed
   int threshold = universe.n_particles / min_n_splitters;
   // Main decomposition loop

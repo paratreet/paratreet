@@ -35,7 +35,22 @@ struct Splitter {
   bool operator<(const Splitter& other) const {
     return !(*this >= other);
   }
-
 };
+
+struct QuickSelectSFCState {
+  Key start_range = Key(0);
+  Key end_range = (~Key(0));
+  Key compare_to() const {return start_range + (end_range - start_range) / 2;}
+  int goal_rank;
+  // std::vector<bool> active; only needed for KD
+  bool pending = true;
+  void pup(PUP::er &p) {
+    p | start_range;
+    p | end_range;
+    p | goal_rank;
+    p | pending;
+  }
+};
+
 
 #endif // PARATREET_SPLITTER_H_
