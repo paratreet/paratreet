@@ -53,7 +53,7 @@ void PrefixLB::work(LDStats* stats)
   int migratable_obj_ct = 0, nonmig_obj_ct = 0;
   std::vector<LDObjStats> objMap;
 
-  for (int obj_idx = 0; obj_idx < stats->n_objs; obj_idx++){
+  for (int obj_idx = 0; obj_idx < stats->objData.size(); obj_idx++){
     LDObjData &oData = stats->objData[obj_idx];
     #if CMK_LB_USER_DATA
     int particle_size = *(int *)oData.getUserData(CkpvAccess(_lb_obj_index));
@@ -89,7 +89,7 @@ void PrefixLB::work(LDStats* stats)
   }
 
 
-  CkPrintf("[%d] PrefixLB strategy moved %d objs\n n_pes = %d; n_objs = %d; n_migrateobjs = %d\n total migratable ct= %d load =  %f; total nonmig ct = %d load = %f\n",CkMyPe(),  migrate_ct, n_pes, stats->n_objs, stats->n_migrateobjs, migratable_obj_ct, total_load, nonmig_obj_ct, total_nonmig_load);
+  CkPrintf("[%d] PrefixLB strategy moved %d objs\n n_pes = %d; n_objs = %d; n_migrateobjs = %d\n total migratable ct= %d load =  %f; total nonmig ct = %d load = %f\n",CkMyPe(),  migrate_ct, n_pes, stats->objData.size(), stats->n_migrateobjs, migratable_obj_ct, total_load, nonmig_obj_ct, total_nonmig_load);
 
 }
 
