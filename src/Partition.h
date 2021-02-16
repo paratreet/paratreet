@@ -281,8 +281,8 @@ void Partition<Data>::doPerturb()
   r_local->countPartitionParticles(particles.size());
   #if CMK_LB_USER_DATA
   if (CkpvAccess(_lb_obj_index) != -1) {
-    void *data = getObjUserData(CkpvAccess(_lb_obj_index));
-    *(Int *) data = particles.size();
+    void *data = this->getObjUserData(CkpvAccess(_lb_obj_index));
+    *((int*)data) = particles.size();
     CkPrintf("[Partition] send user data\n");
   }
   #endif
