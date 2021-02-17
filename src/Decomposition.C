@@ -410,17 +410,18 @@ int BinaryDecomposition::serialFindSplitters(BoundingBox &universe, CProxy_Reade
   return (1 << depth);
 }
 
+void BinaryDecomposition::assign(Bin& parent, Bin& left, Bin& right, BinarySplit split) {
+  for (auto && pos : parent) {
+    if (pos[split.first] > split.second) right.push_back(pos);
+    else left.push_back(pos);
+  }
+}
+
 void BinaryDecomposition::pup(PUP::er& p) {
   p | splitters;
   p | depth;
   p | saved_n_total_particles;
   p | bins_sizes;
-}
-
-void KdDecomposition::assign(Bin& parent, Bin& left, Bin& right, BinarySplit split) {
-  size_t medianIndex = (parent.size() + 1) / 2;
-  left.insert(left.end(), parent.begin(), parent.begin() + medianIndex);
-  right.insert(right.end(), parent.begin() + medianIndex, parent.end());
 }
 
 std::vector<BinaryDecomposition::BinarySplit> KdDecomposition::sortAndGetSplitters(BoundingBox &universe, CProxy_Reader &readers) {
@@ -478,13 +479,6 @@ std::pair<int, Real> KdDecomposition::sortAndGetSplitter(int depth, Bin& bin) {
 void KdDecomposition::pup(PUP::er& p) {
   PUP::able::pup(p);
   BinaryDecomposition::pup(p);
-}
-
-void LongestDimDecomposition::assign(Bin& parent, Bin& left, Bin& right, BinarySplit split) {
-  for (auto && pos : parent) {
-    if (pos[split.first] > split.second) right.push_back(pos);
-    else left.push_back(pos);
-  }
 }
 
 std::pair<int, Real> LongestDimDecomposition::sortAndGetSplitter(int depth, Bin& bin) {
