@@ -145,6 +145,7 @@ void Reader::countKd(const std::vector<QuickSelectKDState>& states, const CkCall
   std::vector<int> counts (states.size(), 0);
   for (int i = 0; i < states.size(); i++) {
     auto && state = states[i];
+    if (!state.pending) continue;
     auto && bin = bins[i];
     for (auto && pos : bin) {
       if (pos[state.dim] > state.start_range &&
@@ -160,12 +161,31 @@ void Reader::countLongestDim(const CkCallback& cb) {
     for (auto && particle : particles) bins.back().push_back(particle.position);
   }
   std::vector<Vector3D<Real>> centers (bins.size(), (0,0,0));
+  std::vector<int> counts (bins.size(), 0);
+  std::vector<Vector3D<Real>> lesser_corner (bins.size());
+  std::vector<Vector3D<Real>> greater_corner (bins.size());
   for (int i = 0; i < bins.size(); i++) {
     auto && bin = bins[i];
-    for (auto && pos : bin) centers[i] += pos;
-    centers[i] /= bin.size();
+    OrientedBox<Real> box;
+    for (auto && pos : bin) {
+      centers[i] += pos;
+      box.grow(pos);
+    }
+    counts[i] = bin.size();
+    lesser_corner[i] = box.lesser_corner;
+    greater_corner[i] = box.greater_corner;
   }
-  contribute(sizeof(Vector3D<Real>) * centers.size(), &centers[0], CkReduction::sum_float, cb);
+
+  const size_t numTuples = 4;
+  CkReduction::tupleElement tupleRedn[] = {
+    CkReduction::tupleElement(sizeof(Vector3D<Real>) * centers.size(), &centers[0], CkReduction::sum_float),
+    CkReduction::tupleElement(sizeof(int) * counts.size(), &counts[0], CkReduction::sum_int),
+    CkReduction::tupleElement(sizeof(Vector3D<Real>) * lesser_corner.size(), &lesser_corner[0], CkReduction::min_float),
+    CkReduction::tupleElement(sizeof(Vector3D<Real>) * greater_corner.size(), &greater_corner[0], CkReduction::max_float)
+  };
+  CkReductionMsg * msg = CkReductionMsg::buildFromTuple(tupleRedn, numTuples);
+  msg->setCallback(cb);
+  this->contribute(msg);
 }
 
 void Reader::doBinarySplit(const std::vector<std::pair<int, Real>>& splits, const CkCallback& cb) {

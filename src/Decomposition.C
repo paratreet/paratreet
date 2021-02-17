@@ -359,6 +359,8 @@ int BinaryDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &rea
 
 int BinaryDecomposition::parallelFindSplitters(BoundingBox &universe, CProxy_Reader &readers, int min_n_splitters) {
   bins_sizes = std::vector<int>(1, universe.n_particles);
+  splitters.emplace_back(0, 0); // empty space for key=0
+  saved_n_total_particles = universe.n_particles;
   for (; (1 << depth) < min_n_splitters; depth++) {
     auto && level_splitters = this->sortAndGetSplitters(universe, readers);
     CkReductionMsg *msg;
@@ -506,10 +508,32 @@ std::pair<int, Real> LongestDimDecomposition::sortAndGetSplitter(int depth, Bin&
 }
 
 std::vector<BinaryDecomposition::BinarySplit> LongestDimDecomposition::sortAndGetSplitters(BoundingBox &universe, CProxy_Reader &readers) {
-  CkAbort("not implemented yet");
   CkReductionMsg *msg;
   readers.countLongestDim(CkCallbackResumeThread((void*&)msg));
-  return {};
+  CkReduction::tupleElement* res = nullptr;
+  int numRedn = 0;
+  msg->toTuple(&res, &numRedn);
+  Vector3D<Real>* centers = (Vector3D<Real>*)(res[0].data);
+  int* counts = (int*)(res[1].data);
+  Vector3D<Real>* lesser_corners = (Vector3D<Real>*)(res[2].data);
+  Vector3D<Real>* greater_corners = (Vector3D<Real>*)(res[3].data);
+
+  std::vector<BinarySplit> level_splitters;
+  int n_bins = (1 << depth);
+  for (int i = 0; i < n_bins; i++) {
+    auto dims = greater_corners[i] - lesser_corners[i];
+    int best_dim = 0;
+    Real max_dim = 0;
+    for (int d = 0; d < NDIM; d++) {
+      if (dims[d] > max_dim) {
+        max_dim = dims[d];
+        best_dim = d;
+      }
+    }
+    auto unweighted_center = centers[i] / counts[i];
+    level_splitters.emplace_back(best_dim, unweighted_center[best_dim]);
+  }
+  return level_splitters;
 }
 
 void LongestDimDecomposition::pup(PUP::er& p) {
