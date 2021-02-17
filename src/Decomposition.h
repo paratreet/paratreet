@@ -105,12 +105,17 @@ struct BinaryDecomposition : public Decomposition {
   using BinarySplit = std::pair<int, Real>;
   virtual BinarySplit sortAndGetSplitter(int depth, Bin& bin) = 0;
   virtual void assign(Bin& parent, Bin& left, Bin& right, std::pair<int, Real> split) = 0;
+  virtual std::vector<BinarySplit> sortAndGetSplitters(BoundingBox &universe, CProxy_Reader &readers) = 0;
+
+private:
+  int serialFindSplitters(BoundingBox &universe, CProxy_Reader &readers, int min_n_splitters);
+  int parallelFindSplitters(BoundingBox &universe, CProxy_Reader &readers, int min_n_splitters);
 
 protected:
   std::vector<BinarySplit> splitters; //dim, splitter value
   size_t depth = 0;
   int saved_n_total_particles = 0;
-  std::vector<size_t> n_particles;
+  std::vector<int> bins_sizes;
 };
 
 struct KdDecomposition : public BinaryDecomposition {
@@ -121,6 +126,7 @@ struct KdDecomposition : public BinaryDecomposition {
   virtual void pup(PUP::er& p) override;
   virtual BinarySplit sortAndGetSplitter(int depth, Bin& bin) override;
   virtual void assign(Bin& parent, Bin& left, Bin& right, std::pair<int, Real> split) override;
+  virtual std::vector<BinarySplit> sortAndGetSplitters(BoundingBox &universe, CProxy_Reader &readers) override;
 };
 
 struct LongestDimDecomposition : public BinaryDecomposition {
@@ -131,6 +137,7 @@ struct LongestDimDecomposition : public BinaryDecomposition {
   virtual void pup(PUP::er& p) override;
   virtual BinarySplit sortAndGetSplitter(int depth, Bin& bin) override;
   virtual void assign(Bin& parent, Bin& left, Bin& right, std::pair<int, Real> split) override;
+  virtual std::vector<BinarySplit> sortAndGetSplitters(BoundingBox &universe, CProxy_Reader &readers) override;
   void setArrayOpts(CkArrayOptions& opts) override;
 };
 

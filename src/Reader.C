@@ -136,6 +136,58 @@ void Reader::countSfc(const std::vector<QuickSelectSFCState>& states, size_t log
   contribute(sizeof(int) * counts.size(), &counts[0], CkReduction::sum_int, cb);
 }
 
+void Reader::countKd(const std::vector<QuickSelectKDState>& states, const CkCallback& cb) {
+  if (bins.empty()) {
+    bins.emplace_back();
+    for (auto && particle : particles) bins.back().push_back(particle.position);
+  }
+  CkAssert(states.size() == bins.size());
+  std::vector<int> counts (states.size(), 0);
+  for (int i = 0; i < states.size(); i++) {
+    auto && state = states[i];
+    auto && bin = bins[i];
+    for (auto && pos : bin) {
+      if (pos[state.dim] > state.start_range &&
+          pos[state.dim] < state.compare_to()) counts[i]++;
+    }
+  }
+  contribute(sizeof(int) * counts.size(), &counts[0], CkReduction::sum_int, cb);
+}
+
+void Reader::countLongestDim(const CkCallback& cb) {
+  if (bins.empty()) {
+    bins.emplace_back();
+    for (auto && particle : particles) bins.back().push_back(particle.position);
+  }
+  std::vector<Vector3D<Real>> centers (bins.size(), (0,0,0));
+  for (int i = 0; i < bins.size(); i++) {
+    auto && bin = bins[i];
+    for (auto && pos : bin) centers[i] += pos;
+    centers[i] /= bin.size();
+  }
+  contribute(sizeof(Vector3D<Real>) * centers.size(), &centers[0], CkReduction::sum_float, cb);
+}
+
+void Reader::doBinarySplit(const std::vector<std::pair<int, Real>>& splits, const CkCallback& cb) {
+  CkAssert(bins.size() == splits.size());
+  decltype(bins) binsCopy (2 * bins.size());
+  for (int i = 0; i < bins.size(); i++) {
+    std::vector<Vector3D<Real>> left, right;
+    for (auto && pos : bins[i]) {
+      if (pos[splits[i].first] > splits[i].second) {
+        binsCopy[2 * i + 1].push_back(pos);
+      }
+      else {
+        binsCopy[2 * i].push_back(pos); // left heavy
+      }
+    }
+  }
+  bins = binsCopy;
+  std::vector<int> counts (bins.size(), 0);
+  for (int i = 0; i < counts.size(); i++) counts[i] = bins[i].size();
+  contribute(sizeof(int) * counts.size(), &counts[0], CkReduction::sum_int, cb);
+}
+
 void Reader::countOct(std::vector<Key> splitter_keys, size_t log_branch_factor, const CkCallback& cb) {
   std::vector<int> counts (splitter_keys.size()/2, 0);
   for (int i = 0; i < splitter_keys.size(); i++) {
