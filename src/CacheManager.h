@@ -48,12 +48,12 @@ public:
   std::unique_ptr<reqNodes_aggregator_t> reqNodes_aggregator;
 
   CacheManager() {
-    auto roughCapacity = 225;
-    auto roughTimeout = 0.05;
+    auto roughCapacity = 3 * 225;
+    auto roughTimeout = 0.0625;
     auto roughUtil = 1 - 0.05;
 
     addCache_aggregator = std::unique_ptr<addCache_aggregator_t>(
-        new addCache_aggregator_t(roughCapacity * 384, roughUtil, roughTimeout * 1.5,
+        new addCache_aggregator_t(roughCapacity * 384 * 2, roughUtil, roughTimeout * 1.5,
           [this](const aggregation::msg_size_t& size, char* data) {
             PUP::detail::TemporaryObjectHolder<MultiData<Data>> t;
             PUP::fromMemBuf(t, data, size);
