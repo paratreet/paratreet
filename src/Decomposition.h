@@ -104,7 +104,7 @@ struct BinaryDecomposition : public Decomposition {
   using Bin = std::vector<Vector3D<Real>>;
   using BinarySplit = std::pair<int, Real>;
   virtual BinarySplit sortAndGetSplitter(int depth, Bin& bin) = 0;
-  virtual void assign(Bin& parent, Bin& left, Bin& right, std::pair<int, Real> split);
+  virtual void assign(Bin& parent, Bin& left, Bin& right, std::pair<int, Real> split) = 0;
   virtual std::vector<BinarySplit> sortAndGetSplitters(BoundingBox &universe, CProxy_Reader &readers) = 0;
 
 private:
@@ -125,6 +125,7 @@ struct KdDecomposition : public BinaryDecomposition {
 
   virtual void pup(PUP::er& p) override;
   virtual BinarySplit sortAndGetSplitter(int depth, Bin& bin) override;
+  virtual void assign(Bin& parent, Bin& left, Bin& right, std::pair<int, Real> split) override;
   virtual std::vector<BinarySplit> sortAndGetSplitters(BoundingBox &universe, CProxy_Reader &readers) override;
 };
 
@@ -135,6 +136,7 @@ struct LongestDimDecomposition : public BinaryDecomposition {
 
   virtual void pup(PUP::er& p) override;
   virtual BinarySplit sortAndGetSplitter(int depth, Bin& bin) override;
+  virtual void assign(Bin& parent, Bin& left, Bin& right, std::pair<int, Real> split) override;
   virtual std::vector<BinarySplit> sortAndGetSplitters(BoundingBox &universe, CProxy_Reader &readers) override;
   void setArrayOpts(CkArrayOptions& opts) override;
 };
