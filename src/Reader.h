@@ -16,6 +16,7 @@ extern CProxy_TreeSpec treespec;
 class Reader : public CBase_Reader {
   BoundingBox box;
   std::vector<Particle> particles;
+  std::vector<std::vector<Vector3D<Real>>> bins;
   std::vector<ParticleMsg*> particle_messages;
   int particle_index;
   static constexpr const Real gasConstant = 1.0;
@@ -33,8 +34,11 @@ class Reader : public CBase_Reader {
     void computeUniverseBoundingBox(const CkCallback& cb);
     void assignKeys(BoundingBox, const CkCallback&);
 
-    // OCT decomposition
+    void countSfc(const std::vector<QuickSelectSFCState>& states, size_t, const CkCallback& cb);
+    void countKd(const std::vector<QuickSelectKDState>&, const CkCallback&);
+    void countLongestDim(const CkCallback&);
     void countOct(std::vector<Key>, size_t, const CkCallback&);
+    void doBinarySplit(const std::vector<std::pair<int, Real>>&, const CkCallback&);
 
     // SFC decomposition
     void getAllSfcKeys(const CkCallback& cb);
@@ -85,6 +89,7 @@ void Reader::flush(int n_total_particles, int n_subtrees,
   }
 
   // Clean up
+  bins.clear();
   particles.clear();
   particle_index = 0;
 }
