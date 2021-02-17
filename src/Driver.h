@@ -113,7 +113,10 @@ public:
     n_subtrees = treespec.ckLocalBranch()->getSubtreeDecomposition()->findSplitters(universe, readers, config.min_n_subtrees);
     treespec.receiveDecomposition(CkCallbackResumeThread(),
       CkPointer<Decomposition>(treespec.ckLocalBranch()->getSubtreeDecomposition()), true);
+    CkPrintf("Setting up splitters for subtree decompositions: %.3lf ms\n",
+        (CkWallTimer() - start_time) * 1000);
     bool matching_decomps = config.decomp_type == paratreet::subtreeDecompForTree(config.tree_type);
+    start_time = CkWallTimer();
     if (matching_decomps) {
       n_partitions = n_subtrees;
       CkPrintf("Using same decomposition for subtrees and partitions\n");
