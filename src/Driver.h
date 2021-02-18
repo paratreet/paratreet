@@ -244,7 +244,6 @@ public:
       }
       if (iter % config.lb_period == config.lb_period - 1){
         start_time = CkWallTimer();
-        //subtrees.pauseForLB(); // move them later
         partitions.pauseForLB();
         CkWaitQD();
         CkPrintf("Load balancing: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);

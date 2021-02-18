@@ -46,6 +46,7 @@ public:
   Subtree(const CkCallback&, int, int, int, TCHolder<Data>,
           CProxy_Resumer<Data>, CProxy_CacheManager<Data>, DPHolder<Data>);
   Subtree(CkMigrateMessage * msg){
+    this->setMigratable(false);
     delete msg;
   };
   void receive(ParticleMsg*);
@@ -95,7 +96,6 @@ Subtree<Data>::Subtree(const CkCallback& cb, int n_total_particles_,
                        int n_subtrees_, int n_partitions_, TCHolder<Data> tc_holder,
                        CProxy_Resumer<Data> r_proxy_,
                        CProxy_CacheManager<Data> cm_proxy_, DPHolder<Data> dp_holder) {
-  //this->usesAtSync = true;
   n_total_particles = n_total_particles_;
   n_subtrees = n_subtrees_;
   n_partitions = n_partitions_;
@@ -103,6 +103,8 @@ Subtree<Data>::Subtree(const CkCallback& cb, int n_total_particles_,
   tc_proxy = tc_holder.proxy;
   cm_proxy = cm_proxy_;
   r_proxy  = r_proxy_;
+
+  this->setMigratable(false);
 
   tp_key = treespec.ckLocalBranch()->getSubtreeDecomposition()->
     getTpKey(this->thisIndex);

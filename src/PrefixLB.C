@@ -6,6 +6,7 @@
 #include "elements.h"
 #include "ckheap.h"
 #include "PrefixLB.h"
+#include "LBCommon.h"
 
 extern int quietModeRequested;
 CkpvExtern(int, _lb_obj_index);
@@ -18,7 +19,8 @@ PrefixLB::PrefixLB(const CkLBOptions &opt): CBase_PrefixLB(opt)
   if (CkMyPe() == 0 && !quietModeRequested)
     CkPrintf("CharmLB> PrefixLB created.\n");
   #if CMK_LB_USER_DATA
-  CkpvAccess(_lb_obj_index) = LBRegisterObjUserData(sizeof(int));
+  if (CkpvAccess(_lb_obj_index) == -1)
+    CkpvAccess(_lb_obj_index) = LBRegisterObjUserData(sizeof(LBUserData));
   #endif
 }
 
@@ -53,14 +55,16 @@ void PrefixLB::work(LDStats* stats)
   int migratable_obj_ct = 0, nonmig_obj_ct = 0;
   std::vector<LDObjStats> objMap;
 
-  for (int obj_idx = 0; obj_idx < stats->n_objs; obj_idx++){
+  for (int obj_idx = 0; obj_idx < stats->objData.size(); obj_idx++){
     LDObjData &oData = stats->objData[obj_idx];
-    #if CMK_LB_USER_DATA
-    int particle_size = *(int *)oData.getUserData(CkpvAccess(_lb_obj_index));
-    CkPrintf("Obj %d, size = %d\n", obj_idx, particle_size);
-    #endif
     int pe = stats->from_proc[obj_idx];
     objMap.push_back(LDObjStats{obj_idx, oData, pe, pe});
+
+    #if CMK_LB_USER_DATA
+    int idx = CkpvAccess(_lb_obj_index);
+    LBUserData usr_data = *(LBUserData *)oData.getUserData(CkpvAccess(_lb_obj_index));
+    CkPrintf("%s CkpvAccess idx = %d, Obj %d, usr_data.chare_idx %d , getElementID_idx %d, size = %d\n", (oData.migratable? "M" : "N"), idx, obj_idx, usr_data.chare_idx , ck::ObjID(oData.id()).getElementID(), usr_data.particle_size);
+    #endif
 
     if(!oData.migratable){
       nonmig_obj_ct ++;
@@ -89,7 +93,7 @@ void PrefixLB::work(LDStats* stats)
   }
 
 
-  CkPrintf("[%d] PrefixLB strategy moved %d objs\n n_pes = %d; n_objs = %d; n_migrateobjs = %d\n total migratable ct= %d load =  %f; total nonmig ct = %d load = %f\n",CkMyPe(),  migrate_ct, n_pes, stats->n_objs, stats->n_migrateobjs, migratable_obj_ct, total_load, nonmig_obj_ct, total_nonmig_load);
+  CkPrintf("[%d] PrefixLB strategy moved %d objs\n n_pes = %d; n_objs = %d; n_migrateobjs = %d\n total migratable ct= %d load =  %f; total nonmig ct = %d load = %f\n",CkMyPe(),  migrate_ct, n_pes, stats->objData.size(), stats->n_migrateobjs, migratable_obj_ct, total_load, nonmig_obj_ct, total_nonmig_load);
 
 }
 

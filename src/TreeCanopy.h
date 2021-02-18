@@ -47,6 +47,7 @@ void TreeCanopy<Data>::recvProxies(TPHolder<Data> tp_holder, int tp_index_,
   tp_index = tp_index_;
   cm_proxy = cm_proxy_;
   d_proxy = dp_holder.proxy;
+  //this->setMigratable(false);
 }
 
 template <typename Data>
