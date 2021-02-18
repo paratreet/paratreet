@@ -1,0 +1,397 @@
+Charmrun> scalable start enabled. 
+Charmrun> started all node programs in 1.304 seconds.
+Charm++> Running in SMP mode: 4 processes, 1 worker threads (PEs) + 1 comm threads per process, 4 PEs total
+Charm++> The comm. thread both sends and receives messages
+Converse/Charm++ Commit ID: v6.11.0-beta1-124-ga294931
+Charm++ built without optimization.
+Do not use for performance benchmarking (build with --with-production to do so).
+Charm++ built with internal error checking enabled.
+Do not use for performance benchmarking (build without --enable-error-checking to do so).
+Isomalloc> Synchronized global address space.
+Charm++> scheduler running in netpoll mode.
+CharmLB> Verbose level 1, load balancing period: -1 seconds
+CharmLB> Load balancer assumes all CPUs are same.
+Charm++> Running on 1 hosts (2 sockets x 20 cores x 1 PUs = 40-way SMP)
+Charm++> cpu topology info is gathered in 0.002 seconds.
+CharmLB> PrefixLB created.
+
+[PARATREET]
+Input file: /home/simengl2/School/paratreet/inputgen/500k.tipsy
+Decomposition type: OctDecomp
+Tree type: Octree
+Minimum number of subtrees: 16
+Minimum number of partitions: 16
+Maximum number of particles per leaf: 12
+
+* Validating tree specifications.
+* Initializing cache managers.
+* Initialization
+Loading Tipsy data and building universe: 19.933 ms
+Universal bounding box: <500000, 0.999, 6.107, {(-17.606 -17.746 -17.777),(17.866 17.726 17.695)}> with volume 44633.730
+Assigning keys and sorting particles: 7.320 ms
+Using same decomposition for subtrees and partitions
+Setting up splitters for particle decompositions: 45.052 ms
+Created 50 Subtrees: 0.902 ms
+Created 50 Partitions: 0.210 ms
+Assigning particles to Partitions: 17.511 ms
+Flushing particles to Subtrees: 73.101 ms
+**Total Decomposition time: 164.553 ms
+
+* Iteration 0
+Tree build: 79.732 ms
+Tree build and sending leaves: 83.003 ms
+[Meta] n_subtree = 50; timestep_size = 0.081408; sumPESize = 500000; maxPESize = 143676, avgPESize = 125000.000000; ratio = 1.149408; maxVelocity = 4.357328; rebuild = no
+Received data from 7 TreeCanopies
+Broadcasting every tree canopy because num_share_nodes is unset
+TreeCanopy cache loading: 0.409 ms
+[P 49] size 17
+[P 0] size 12
+[P 1] size 103
+[P 2] size 107
+[P 4] size 107
+[P 48] size 120
+[P 7] size 616
+[P 5] size 855
+[P 6] size 838
+[P 3] size 873
+[P 8] size 1749
+[P 9] size 1681
+[P 14] size 12625
+[P 15] size 17230
+[P 16] size 16550
+[P 46] size 806
+[P 47] size 109
+[P 35] size 11101
+[P 42] size 564
+[P 43] size 864
+[P 45] size 110
+[P 44] size 905
+[P 11] size 1602
+[P 34] size 13763
+[P 12] size 8063
+[P 41] size 1563
+[P 13] size 7615
+[P 18] size 14070
+[P 10] size 9035
+[P 17] size 23054
+[P 19] size 19123
+[P 20] size 18574
+[P 21] size 26221
+[P 32] size 17817
+[P 33] size 14113
+[P 27] size 22010
+[P 39] size 7110
+[P 40] size 1567
+[P 22] size 24682
+[P 25] size 21133
+[P 23] size 24234
+[P 28] size 28877
+[P 29] size 22317
+[P 24] size 26108
+[P 26] size 23231
+[P 30] size 21503
+[P 36] size 8121
+[P 31] size 16773
+[P 38] size 1724
+[P 37] size 8055
+Tree traversal: 2527.392 ms
+
+CharmLB> PrefixLB: PE [0] step 0 starting at 2.806310 Memory: 107.602081 MB
+CharmLB> PrefixLB: PE [0] strategy starting at 2.807052
+N CkpvAccess idx = 0, Obj 0, usr_data.chare_idx 0 , getElementID_idx 0, size = 12
+M CkpvAccess idx = 0, Obj 1, usr_data.chare_idx 0 , getElementID_idx 1, size = 0
+N CkpvAccess idx = 0, Obj 2, usr_data.chare_idx 1 , getElementID_idx 1, size = 103
+M CkpvAccess idx = 0, Obj 3, usr_data.chare_idx -152025144 , getElementID_idx 2, size = 32767
+N CkpvAccess idx = 0, Obj 4, usr_data.chare_idx 2 , getElementID_idx 2, size = 107
+N CkpvAccess idx = 0, Obj 5, usr_data.chare_idx 3 , getElementID_idx 3, size = 873
+N CkpvAccess idx = 0, Obj 6, usr_data.chare_idx 4 , getElementID_idx 4, size = 107
+N CkpvAccess idx = 0, Obj 7, usr_data.chare_idx 5 , getElementID_idx 5, size = 855
+M CkpvAccess idx = 0, Obj 8, usr_data.chare_idx 92549536 , getElementID_idx 3, size = 0
+N CkpvAccess idx = 0, Obj 9, usr_data.chare_idx 6 , getElementID_idx 6, size = 838
+N CkpvAccess idx = 0, Obj 10, usr_data.chare_idx 7 , getElementID_idx 7, size = 616
+N CkpvAccess idx = 0, Obj 11, usr_data.chare_idx 8 , getElementID_idx 8, size = 1749
+M CkpvAccess idx = 0, Obj 12, usr_data.chare_idx -152025144 , getElementID_idx 4, size = 32767
+N CkpvAccess idx = 0, Obj 13, usr_data.chare_idx 9 , getElementID_idx 9, size = 1681
+N CkpvAccess idx = 0, Obj 14, usr_data.chare_idx 10 , getElementID_idx 10, size = 9035
+N CkpvAccess idx = 0, Obj 15, usr_data.chare_idx 11 , getElementID_idx 11, size = 1602
+N CkpvAccess idx = 0, Obj 16, usr_data.chare_idx 12 , getElementID_idx 12, size = 8063
+M CkpvAccess idx = 0, Obj 17, usr_data.chare_idx -152025144 , getElementID_idx 5, size = 32767
+N CkpvAccess idx = 0, Obj 18, usr_data.chare_idx 13 , getElementID_idx 13, size = 7615
+N CkpvAccess idx = 0, Obj 19, usr_data.chare_idx 14 , getElementID_idx 14, size = 12625
+M CkpvAccess idx = 0, Obj 20, usr_data.chare_idx -152025144 , getElementID_idx 6, size = 32767
+N CkpvAccess idx = 0, Obj 21, usr_data.chare_idx 15 , getElementID_idx 15, size = 17230
+N CkpvAccess idx = 0, Obj 22, usr_data.chare_idx 16 , getElementID_idx 16, size = 16550
+N CkpvAccess idx = 0, Obj 23, usr_data.chare_idx 17 , getElementID_idx 17, size = 23054
+N CkpvAccess idx = 0, Obj 24, usr_data.chare_idx 18 , getElementID_idx 18, size = 14070
+M CkpvAccess idx = 0, Obj 25, usr_data.chare_idx -152025128 , getElementID_idx 7, size = 32767
+M CkpvAccess idx = 0, Obj 26, usr_data.chare_idx -152025128 , getElementID_idx 16777219, size = 32767
+M CkpvAccess idx = 0, Obj 27, usr_data.chare_idx -152025128 , getElementID_idx 16777222, size = 32767
+M CkpvAccess idx = 0, Obj 28, usr_data.chare_idx -152025128 , getElementID_idx 33554437, size = 32767
+M CkpvAccess idx = 0, Obj 29, usr_data.chare_idx -152025128 , getElementID_idx 16777225, size = 32767
+M CkpvAccess idx = 0, Obj 30, usr_data.chare_idx -152025128 , getElementID_idx 33554439, size = 32767
+M CkpvAccess idx = 0, Obj 31, usr_data.chare_idx -152025128 , getElementID_idx 16777227, size = 32767
+M CkpvAccess idx = 0, Obj 32, usr_data.chare_idx -152025128 , getElementID_idx 16777228, size = 32767
+M CkpvAccess idx = 0, Obj 33, usr_data.chare_idx -152025128 , getElementID_idx 33554441, size = 32767
+M CkpvAccess idx = 0, Obj 34, usr_data.chare_idx -152025128 , getElementID_idx 50331654, size = 32767
+M CkpvAccess idx = 0, Obj 35, usr_data.chare_idx -152025128 , getElementID_idx 33554443, size = 32767
+M CkpvAccess idx = 0, Obj 36, usr_data.chare_idx -152025128 , getElementID_idx 33554444, size = 32767
+M CkpvAccess idx = 0, Obj 37, usr_data.chare_idx -152025128 , getElementID_idx 50331655, size = 32767
+M CkpvAccess idx = 0, Obj 38, usr_data.chare_idx -152025128 , getElementID_idx 50331657, size = 32767
+M CkpvAccess idx = 0, Obj 39, usr_data.chare_idx -152025128 , getElementID_idx 50331660, size = 32767
+M CkpvAccess idx = 0, Obj 40, usr_data.chare_idx -152025128 , getElementID_idx 50331661, size = 32767
+M CkpvAccess idx = 0, Obj 41, usr_data.chare_idx -152025128 , getElementID_idx 50331662, size = 32767
+N CkpvAccess idx = 0, Obj 42, usr_data.chare_idx 24 , getElementID_idx 24, size = 26108
+M CkpvAccess idx = 0, Obj 43, usr_data.chare_idx -152025128 , getElementID_idx 33554433, size = 32767
+N CkpvAccess idx = 0, Obj 44, usr_data.chare_idx 25 , getElementID_idx 25, size = 21133
+N CkpvAccess idx = 0, Obj 45, usr_data.chare_idx 26 , getElementID_idx 26, size = 23231
+N CkpvAccess idx = 0, Obj 46, usr_data.chare_idx 27 , getElementID_idx 27, size = 22010
+N CkpvAccess idx = 0, Obj 47, usr_data.chare_idx 28 , getElementID_idx 28, size = 28877
+M CkpvAccess idx = 0, Obj 48, usr_data.chare_idx -152025128 , getElementID_idx 33554434, size = 32767
+N CkpvAccess idx = 0, Obj 49, usr_data.chare_idx 29 , getElementID_idx 29, size = 22317
+M CkpvAccess idx = 0, Obj 50, usr_data.chare_idx -152025128 , getElementID_idx 16777220, size = 32767
+M CkpvAccess idx = 0, Obj 51, usr_data.chare_idx -152025128 , getElementID_idx 16777224, size = 32767
+M CkpvAccess idx = 0, Obj 52, usr_data.chare_idx -152025128 , getElementID_idx 9, size = 32767
+M CkpvAccess idx = 0, Obj 53, usr_data.chare_idx -152025128 , getElementID_idx 50331658, size = 32767
+M CkpvAccess idx = 0, Obj 54, usr_data.chare_idx -152025128 , getElementID_idx 11, size = 32767
+M CkpvAccess idx = 0, Obj 55, usr_data.chare_idx -152025128 , getElementID_idx 12, size = 32767
+M CkpvAccess idx = 0, Obj 56, usr_data.chare_idx -152025128 , getElementID_idx 50331659, size = 32767
+N CkpvAccess idx = 0, Obj 57, usr_data.chare_idx 19 , getElementID_idx 19, size = 19123
+M CkpvAccess idx = 0, Obj 58, usr_data.chare_idx -152025128 , getElementID_idx 16777217, size = 32767
+N CkpvAccess idx = 0, Obj 59, usr_data.chare_idx 20 , getElementID_idx 20, size = 18574
+N CkpvAccess idx = 0, Obj 60, usr_data.chare_idx 21 , getElementID_idx 21, size = 26221
+N CkpvAccess idx = 0, Obj 61, usr_data.chare_idx 22 , getElementID_idx 22, size = 24682
+N CkpvAccess idx = 0, Obj 62, usr_data.chare_idx 23 , getElementID_idx 23, size = 24234
+M CkpvAccess idx = 0, Obj 63, usr_data.chare_idx -152025128 , getElementID_idx 16777218, size = 32767
+M CkpvAccess idx = 0, Obj 64, usr_data.chare_idx -152025128 , getElementID_idx 33554436, size = 32767
+M CkpvAccess idx = 0, Obj 65, usr_data.chare_idx -152025128 , getElementID_idx 8, size = 32767
+M CkpvAccess idx = 0, Obj 66, usr_data.chare_idx -152025128 , getElementID_idx 50331656, size = 32767
+N CkpvAccess idx = 0, Obj 67, usr_data.chare_idx 30 , getElementID_idx 30, size = 21503
+N CkpvAccess idx = 0, Obj 68, usr_data.chare_idx 31 , getElementID_idx 31, size = 16773
+M CkpvAccess idx = 0, Obj 69, usr_data.chare_idx -152025128 , getElementID_idx 50331649, size = 32767
+N CkpvAccess idx = 0, Obj 70, usr_data.chare_idx 32 , getElementID_idx 32, size = 17817
+N CkpvAccess idx = 0, Obj 71, usr_data.chare_idx 33 , getElementID_idx 33, size = 14113
+N CkpvAccess idx = 0, Obj 72, usr_data.chare_idx 34 , getElementID_idx 34, size = 13763
+N CkpvAccess idx = 0, Obj 73, usr_data.chare_idx 35 , getElementID_idx 35, size = 11101
+M CkpvAccess idx = 0, Obj 74, usr_data.chare_idx -152025128 , getElementID_idx 50331650, size = 32767
+N CkpvAccess idx = 0, Obj 75, usr_data.chare_idx 36 , getElementID_idx 36, size = 8121
+N CkpvAccess idx = 0, Obj 76, usr_data.chare_idx 37 , getElementID_idx 37, size = 8055
+N CkpvAccess idx = 0, Obj 77, usr_data.chare_idx 38 , getElementID_idx 38, size = 1724
+M CkpvAccess idx = 0, Obj 78, usr_data.chare_idx -152025128 , getElementID_idx 50331651, size = 32767
+N CkpvAccess idx = 0, Obj 79, usr_data.chare_idx 39 , getElementID_idx 39, size = 7110
+N CkpvAccess idx = 0, Obj 80, usr_data.chare_idx 40 , getElementID_idx 40, size = 1567
+N CkpvAccess idx = 0, Obj 81, usr_data.chare_idx 41 , getElementID_idx 41, size = 1563
+N CkpvAccess idx = 0, Obj 82, usr_data.chare_idx 42 , getElementID_idx 42, size = 564
+M CkpvAccess idx = 0, Obj 83, usr_data.chare_idx -152025128 , getElementID_idx 50331652, size = 32767
+N CkpvAccess idx = 0, Obj 84, usr_data.chare_idx 43 , getElementID_idx 43, size = 864
+N CkpvAccess idx = 0, Obj 85, usr_data.chare_idx 44 , getElementID_idx 44, size = 905
+N CkpvAccess idx = 0, Obj 86, usr_data.chare_idx 45 , getElementID_idx 45, size = 110
+N CkpvAccess idx = 0, Obj 87, usr_data.chare_idx 46 , getElementID_idx 46, size = 806
+M CkpvAccess idx = 0, Obj 88, usr_data.chare_idx -152025128 , getElementID_idx 50331653, size = 32767
+N CkpvAccess idx = 0, Obj 89, usr_data.chare_idx 47 , getElementID_idx 47, size = 109
+N CkpvAccess idx = 0, Obj 90, usr_data.chare_idx 48 , getElementID_idx 48, size = 120
+N CkpvAccess idx = 0, Obj 91, usr_data.chare_idx 49 , getElementID_idx 49, size = 17
+M CkpvAccess idx = 0, Obj 92, usr_data.chare_idx -152025128 , getElementID_idx 16777221, size = 32767
+M CkpvAccess idx = 0, Obj 93, usr_data.chare_idx -152025128 , getElementID_idx 33554435, size = 32767
+M CkpvAccess idx = 0, Obj 94, usr_data.chare_idx -152025128 , getElementID_idx 16777223, size = 32767
+M CkpvAccess idx = 0, Obj 95, usr_data.chare_idx -152025128 , getElementID_idx 33554438, size = 32767
+M CkpvAccess idx = 0, Obj 96, usr_data.chare_idx -152025128 , getElementID_idx 16777226, size = 32767
+M CkpvAccess idx = 0, Obj 97, usr_data.chare_idx -152025128 , getElementID_idx 33554440, size = 32767
+M CkpvAccess idx = 0, Obj 98, usr_data.chare_idx -152025128 , getElementID_idx 10, size = 32767
+M CkpvAccess idx = 0, Obj 99, usr_data.chare_idx -152025128 , getElementID_idx 13, size = 32767
+M CkpvAccess idx = 0, Obj 100, usr_data.chare_idx -152025128 , getElementID_idx 14, size = 32767
+M CkpvAccess idx = 0, Obj 101, usr_data.chare_idx -152025128 , getElementID_idx 15, size = 32767
+M CkpvAccess idx = 0, Obj 102, usr_data.chare_idx -152025128 , getElementID_idx 16777229, size = 32767
+M CkpvAccess idx = 0, Obj 103, usr_data.chare_idx -152025128 , getElementID_idx 16777230, size = 32767
+M CkpvAccess idx = 0, Obj 104, usr_data.chare_idx -152025128 , getElementID_idx 33554442, size = 32767
+M CkpvAccess idx = 0, Obj 105, usr_data.chare_idx -152025128 , getElementID_idx 33554445, size = 32767
+M CkpvAccess idx = 0, Obj 106, usr_data.chare_idx -152025128 , getElementID_idx 33554446, size = 32767
+[0] PrefixLB strategy moved 67 objs
+ n_pes = 4; n_objs = 107; n_migrateobjs = 57
+ total migratable ct= 57 load =  0.000670; total nonmig ct = 50 load = 8.165530
+CharmLB> PrefixLB: PE [0] Memory: LBManager: 40 KB CentralLB: 59 KB
+CharmLB> PrefixLB: PE [0] #Objects migrating: 67, LBMigrateMsg size: 0.00 MB
+CharmLB> PrefixLB: PE [0] strategy finished at 2.808387 duration 0.001335 s
+CharmLB> PrefixLB: PE [0] step 0 finished at 2.831238 duration 0.024927 s
+
+Load balancing: 177.848 ms
+Iteration 0 time: 2814.904 ms
+
+* Iteration 1
+Tree build: 293.702 ms
+Tree build and sending leaves: 297.942 ms
+[Meta] n_subtree = 50; timestep_size = 0.081443; sumPESize = 500000; maxPESize = 500000, avgPESize = 125000.000000; ratio = 4.000000; maxVelocity = 4.355463; rebuild = no
+Received data from 7 TreeCanopies
+Broadcasting every tree canopy because num_share_nodes is unset
+TreeCanopy cache loading: 0.458 ms
+[P 30] size 21503
+[P 31] size 16773
+[P 32] size 17817
+[P 33] size 14113
+[P 34] size 13763
+[P 35] size 11101
+[P 36] size 8121
+[P 37] size 8055
+[P 38] size 1724
+[P 39] size 7110
+[P 40] size 1567
+[P 41] size 1563
+[P 42] size 564
+[P 43] size 864
+[P 44] size 905
+[P 45] size 110
+[P 46] size 806
+[P 47] size 109
+[P 48] size 120
+[P 49] size 17
+[P 0] size 12
+[P 1] size 103
+[P 2] size 107
+[P 3] size 873
+[P 4] size 107
+[P 5] size 855
+[P 6] size 838
+[P 7] size 616
+[P 8] size 1749
+[P 9] size 1681
+[P 10] size 9035
+[P 11] size 1602
+[P 19] size 19123
+[P 12] size 8063
+[P 24] size 26108
+[P 13] size 7615
+[P 20] size 18574
+[P 14] size 12625
+[P 25] size 21133
+[P 21] size 26221
+[P 15] size 17230
+[P 26] size 23231
+[P 22] size 24682
+[P 16] size 16550
+[P 27] size 22010
+[P 23] size 24234
+[P 17] size 23054
+[P 18] size 14070
+[P 28] size 28877
+[P 29] size 22317
+Tree traversal: 8186.798 ms
+
+CharmLB> PrefixLB: PE [0] step 1 starting at 11.501985 Memory: 11.445312 MB
+CharmLB> PrefixLB: PE [0] strategy starting at 11.502829
+N CkpvAccess idx = 0, Obj 0, usr_data.chare_idx 30 , getElementID_idx 30, size = 21503
+N CkpvAccess idx = 0, Obj 1, usr_data.chare_idx 31 , getElementID_idx 31, size = 16773
+M CkpvAccess idx = 0, Obj 2, usr_data.chare_idx 15141600 , getElementID_idx 50331649, size = 0
+N CkpvAccess idx = 0, Obj 3, usr_data.chare_idx 32 , getElementID_idx 32, size = 17817
+N CkpvAccess idx = 0, Obj 4, usr_data.chare_idx 33 , getElementID_idx 33, size = 14113
+N CkpvAccess idx = 0, Obj 5, usr_data.chare_idx 34 , getElementID_idx 34, size = 13763
+N CkpvAccess idx = 0, Obj 6, usr_data.chare_idx 35 , getElementID_idx 35, size = 11101
+M CkpvAccess idx = 0, Obj 7, usr_data.chare_idx -152025144 , getElementID_idx 50331650, size = 32767
+N CkpvAccess idx = 0, Obj 8, usr_data.chare_idx 36 , getElementID_idx 36, size = 8121
+N CkpvAccess idx = 0, Obj 9, usr_data.chare_idx 37 , getElementID_idx 37, size = 8055
+N CkpvAccess idx = 0, Obj 10, usr_data.chare_idx 38 , getElementID_idx 38, size = 1724
+M CkpvAccess idx = 0, Obj 11, usr_data.chare_idx -152025144 , getElementID_idx 50331651, size = 32767
+N CkpvAccess idx = 0, Obj 12, usr_data.chare_idx 39 , getElementID_idx 39, size = 7110
+N CkpvAccess idx = 0, Obj 13, usr_data.chare_idx 40 , getElementID_idx 40, size = 1567
+N CkpvAccess idx = 0, Obj 14, usr_data.chare_idx 41 , getElementID_idx 41, size = 1563
+N CkpvAccess idx = 0, Obj 15, usr_data.chare_idx 42 , getElementID_idx 42, size = 564
+M CkpvAccess idx = 0, Obj 16, usr_data.chare_idx 15136528 , getElementID_idx 50331652, size = 0
+N CkpvAccess idx = 0, Obj 17, usr_data.chare_idx 43 , getElementID_idx 43, size = 864
+N CkpvAccess idx = 0, Obj 18, usr_data.chare_idx 44 , getElementID_idx 44, size = 905
+N CkpvAccess idx = 0, Obj 19, usr_data.chare_idx 45 , getElementID_idx 45, size = 110
+N CkpvAccess idx = 0, Obj 20, usr_data.chare_idx 46 , getElementID_idx 46, size = 806
+M CkpvAccess idx = 0, Obj 21, usr_data.chare_idx -152025144 , getElementID_idx 50331653, size = 32767
+N CkpvAccess idx = 0, Obj 22, usr_data.chare_idx 47 , getElementID_idx 47, size = 109
+N CkpvAccess idx = 0, Obj 23, usr_data.chare_idx 48 , getElementID_idx 48, size = 120
+N CkpvAccess idx = 0, Obj 24, usr_data.chare_idx 49 , getElementID_idx 49, size = 17
+M CkpvAccess idx = 0, Obj 25, usr_data.chare_idx -152025144 , getElementID_idx 16777221, size = 32767
+M CkpvAccess idx = 0, Obj 26, usr_data.chare_idx -152025144 , getElementID_idx 33554435, size = 32767
+M CkpvAccess idx = 0, Obj 27, usr_data.chare_idx -152025144 , getElementID_idx 16777223, size = 32767
+M CkpvAccess idx = 0, Obj 28, usr_data.chare_idx -152025144 , getElementID_idx 33554438, size = 32767
+M CkpvAccess idx = 0, Obj 29, usr_data.chare_idx -152025128 , getElementID_idx 16777226, size = 32767
+M CkpvAccess idx = 0, Obj 30, usr_data.chare_idx -152025128 , getElementID_idx 33554440, size = 32767
+M CkpvAccess idx = 0, Obj 31, usr_data.chare_idx -152025128 , getElementID_idx 10, size = 32767
+M CkpvAccess idx = 0, Obj 32, usr_data.chare_idx 15136528 , getElementID_idx 13, size = 0
+M CkpvAccess idx = 0, Obj 33, usr_data.chare_idx -152025144 , getElementID_idx 14, size = 32767
+M CkpvAccess idx = 0, Obj 34, usr_data.chare_idx -152025144 , getElementID_idx 15, size = 32767
+M CkpvAccess idx = 0, Obj 35, usr_data.chare_idx -152025144 , getElementID_idx 16777229, size = 32767
+M CkpvAccess idx = 0, Obj 36, usr_data.chare_idx -152025144 , getElementID_idx 16777230, size = 32767
+M CkpvAccess idx = 0, Obj 37, usr_data.chare_idx -152025144 , getElementID_idx 33554442, size = 32767
+M CkpvAccess idx = 0, Obj 38, usr_data.chare_idx -152025144 , getElementID_idx 33554445, size = 32767
+M CkpvAccess idx = 0, Obj 39, usr_data.chare_idx -152025144 , getElementID_idx 33554446, size = 32767
+N CkpvAccess idx = 0, Obj 40, usr_data.chare_idx 0 , getElementID_idx 0, size = 12
+M CkpvAccess idx = 0, Obj 41, usr_data.chare_idx -152025144 , getElementID_idx 1, size = 32767
+N CkpvAccess idx = 0, Obj 42, usr_data.chare_idx 1 , getElementID_idx 1, size = 103
+M CkpvAccess idx = 0, Obj 43, usr_data.chare_idx -152025144 , getElementID_idx 2, size = 32767
+N CkpvAccess idx = 0, Obj 44, usr_data.chare_idx 2 , getElementID_idx 2, size = 107
+N CkpvAccess idx = 0, Obj 45, usr_data.chare_idx 3 , getElementID_idx 3, size = 873
+N CkpvAccess idx = 0, Obj 46, usr_data.chare_idx 4 , getElementID_idx 4, size = 107
+N CkpvAccess idx = 0, Obj 47, usr_data.chare_idx 5 , getElementID_idx 5, size = 855
+M CkpvAccess idx = 0, Obj 48, usr_data.chare_idx -152025144 , getElementID_idx 3, size = 32767
+N CkpvAccess idx = 0, Obj 49, usr_data.chare_idx 6 , getElementID_idx 6, size = 838
+N CkpvAccess idx = 0, Obj 50, usr_data.chare_idx 7 , getElementID_idx 7, size = 616
+N CkpvAccess idx = 0, Obj 51, usr_data.chare_idx 8 , getElementID_idx 8, size = 1749
+M CkpvAccess idx = 0, Obj 52, usr_data.chare_idx -152025144 , getElementID_idx 4, size = 32767
+N CkpvAccess idx = 0, Obj 53, usr_data.chare_idx 9 , getElementID_idx 9, size = 1681
+N CkpvAccess idx = 0, Obj 54, usr_data.chare_idx 10 , getElementID_idx 10, size = 9035
+N CkpvAccess idx = 0, Obj 55, usr_data.chare_idx 11 , getElementID_idx 11, size = 1602
+N CkpvAccess idx = 0, Obj 56, usr_data.chare_idx 19 , getElementID_idx 19, size = 19123
+M CkpvAccess idx = 0, Obj 57, usr_data.chare_idx -152025144 , getElementID_idx 16777217, size = 32767
+N CkpvAccess idx = 0, Obj 58, usr_data.chare_idx 12 , getElementID_idx 12, size = 8063
+M CkpvAccess idx = 0, Obj 59, usr_data.chare_idx -152025144 , getElementID_idx 5, size = 32767
+N CkpvAccess idx = 0, Obj 60, usr_data.chare_idx 24 , getElementID_idx 24, size = 26108
+M CkpvAccess idx = 0, Obj 61, usr_data.chare_idx -152025144 , getElementID_idx 33554433, size = 32767
+N CkpvAccess idx = 0, Obj 62, usr_data.chare_idx 13 , getElementID_idx 13, size = 7615
+N CkpvAccess idx = 0, Obj 63, usr_data.chare_idx 20 , getElementID_idx 20, size = 18574
+N CkpvAccess idx = 0, Obj 64, usr_data.chare_idx 14 , getElementID_idx 14, size = 12625
+M CkpvAccess idx = 0, Obj 65, usr_data.chare_idx -152025144 , getElementID_idx 6, size = 32767
+N CkpvAccess idx = 0, Obj 66, usr_data.chare_idx 25 , getElementID_idx 25, size = 21133
+N CkpvAccess idx = 0, Obj 67, usr_data.chare_idx 21 , getElementID_idx 21, size = 26221
+N CkpvAccess idx = 0, Obj 68, usr_data.chare_idx 15 , getElementID_idx 15, size = 17230
+N CkpvAccess idx = 0, Obj 69, usr_data.chare_idx 26 , getElementID_idx 26, size = 23231
+N CkpvAccess idx = 0, Obj 70, usr_data.chare_idx 22 , getElementID_idx 22, size = 24682
+N CkpvAccess idx = 0, Obj 71, usr_data.chare_idx 16 , getElementID_idx 16, size = 16550
+N CkpvAccess idx = 0, Obj 72, usr_data.chare_idx 27 , getElementID_idx 27, size = 22010
+N CkpvAccess idx = 0, Obj 73, usr_data.chare_idx 23 , getElementID_idx 23, size = 24234
+M CkpvAccess idx = 0, Obj 74, usr_data.chare_idx -152025144 , getElementID_idx 16777218, size = 32767
+M CkpvAccess idx = 0, Obj 75, usr_data.chare_idx -152025128 , getElementID_idx 33554436, size = 32767
+M CkpvAccess idx = 0, Obj 76, usr_data.chare_idx -152025128 , getElementID_idx 8, size = 32767
+M CkpvAccess idx = 0, Obj 77, usr_data.chare_idx -152025128 , getElementID_idx 50331656, size = 32767
+N CkpvAccess idx = 0, Obj 78, usr_data.chare_idx 17 , getElementID_idx 17, size = 23054
+N CkpvAccess idx = 0, Obj 79, usr_data.chare_idx 18 , getElementID_idx 18, size = 14070
+M CkpvAccess idx = 0, Obj 80, usr_data.chare_idx -152025128 , getElementID_idx 7, size = 32767
+M CkpvAccess idx = 0, Obj 81, usr_data.chare_idx -152025128 , getElementID_idx 16777219, size = 32767
+M CkpvAccess idx = 0, Obj 82, usr_data.chare_idx -152025128 , getElementID_idx 16777222, size = 32767
+M CkpvAccess idx = 0, Obj 83, usr_data.chare_idx -152025128 , getElementID_idx 33554437, size = 32767
+M CkpvAccess idx = 0, Obj 84, usr_data.chare_idx -152025128 , getElementID_idx 16777225, size = 32767
+M CkpvAccess idx = 0, Obj 85, usr_data.chare_idx -152025128 , getElementID_idx 33554439, size = 32767
+M CkpvAccess idx = 0, Obj 86, usr_data.chare_idx -152025128 , getElementID_idx 16777227, size = 32767
+M CkpvAccess idx = 0, Obj 87, usr_data.chare_idx -152025128 , getElementID_idx 16777228, size = 32767
+M CkpvAccess idx = 0, Obj 88, usr_data.chare_idx -152025128 , getElementID_idx 33554441, size = 32767
+M CkpvAccess idx = 0, Obj 89, usr_data.chare_idx -152025128 , getElementID_idx 50331654, size = 32767
+M CkpvAccess idx = 0, Obj 90, usr_data.chare_idx -152025128 , getElementID_idx 33554443, size = 32767
+M CkpvAccess idx = 0, Obj 91, usr_data.chare_idx -152025128 , getElementID_idx 33554444, size = 32767
+M CkpvAccess idx = 0, Obj 92, usr_data.chare_idx -152025128 , getElementID_idx 50331655, size = 32767
+M CkpvAccess idx = 0, Obj 93, usr_data.chare_idx -152025128 , getElementID_idx 50331657, size = 32767
+M CkpvAccess idx = 0, Obj 94, usr_data.chare_idx -152025128 , getElementID_idx 50331660, size = 32767
+M CkpvAccess idx = 0, Obj 95, usr_data.chare_idx -152025128 , getElementID_idx 50331661, size = 32767
+M CkpvAccess idx = 0, Obj 96, usr_data.chare_idx -152025112 , getElementID_idx 50331662, size = 32767
+N CkpvAccess idx = 0, Obj 97, usr_data.chare_idx 28 , getElementID_idx 28, size = 28877
+M CkpvAccess idx = 0, Obj 98, usr_data.chare_idx -152025144 , getElementID_idx 33554434, size = 32767
+N CkpvAccess idx = 0, Obj 99, usr_data.chare_idx 29 , getElementID_idx 29, size = 22317
+M CkpvAccess idx = 0, Obj 100, usr_data.chare_idx -152025144 , getElementID_idx 16777220, size = 32767
+M CkpvAccess idx = 0, Obj 101, usr_data.chare_idx -152025128 , getElementID_idx 16777224, size = 32767
+M CkpvAccess idx = 0, Obj 102, usr_data.chare_idx -152025080 , getElementID_idx 9, size = 32767
+M CkpvAccess idx = 0, Obj 103, usr_data.chare_idx -152025112 , getElementID_idx 50331658, size = 32767
+M CkpvAccess idx = 0, Obj 104, usr_data.chare_idx -152025144 , getElementID_idx 11, size = 32767
+M CkpvAccess idx = 0, Obj 105, usr_data.chare_idx -152025048 , getElementID_idx 12, size = 32767
+M CkpvAccess idx = 0, Obj 106, usr_data.chare_idx -152025080 , getElementID_idx 50331659, size = 32767
+[0] PrefixLB strategy moved 0 objs
+ n_pes = 4; n_objs = 107; n_migrateobjs = 57
+ total migratable ct= 57 load =  0.000097; total nonmig ct = 50 load = 8.491299
+CharmLB> PrefixLB: PE [0] Memory: LBManager: 37 KB CentralLB: 29 KB
+CharmLB> PrefixLB: PE [0] #Objects migrating: 0, LBMigrateMsg size: 0.00 MB
+CharmLB> PrefixLB: PE [0] strategy finished at 11.504874 duration 0.002045 s
+CharmLB> PrefixLB: PE [0] step 1 finished at 11.505031 duration 0.003045 s
+
+Load balancing: 3.398 ms
+Iteration 1 time: 8531.736 ms
+[Partition 0][Node 0] End of program
