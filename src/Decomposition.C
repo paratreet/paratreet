@@ -444,7 +444,7 @@ std::vector<BinaryDecomposition::BinarySplit> KdDecomposition::sortAndGetSplitte
 #if DEBUG
       CkPrintf("count %d is %d for goal_rank %d start_range %f end_range %f compare_to %f\n", i, counts[i], state.goal_rank, state.start_range, state.end_range, state.compare_to());
 #endif
-      bool identical = (state.end_range - state.start_range) <= std::numeric_limits<double>::epsilon();
+      bool identical = (state.end_range - state.start_range) <= std::numeric_limits<Real>::epsilon();
       if (count == state.goal_rank || identical) {
         state.pending = false;
         n_pending--;
