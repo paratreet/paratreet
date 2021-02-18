@@ -444,7 +444,8 @@ std::vector<BinaryDecomposition::BinarySplit> KdDecomposition::sortAndGetSplitte
 #if DEBUG
       CkPrintf("count %d is %d for goal_rank %d start_range %f end_range %f compare_to %f\n", i, counts[i], state.goal_rank, state.start_range, state.end_range, state.compare_to());
 #endif
-      if (count == state.goal_rank || state.start_range == state.end_range) {
+      bool identical = (state.end_range - state.start_range) <= std::numeric_limits<double>::epsilon();
+      if (count == state.goal_rank || identical) {
         state.pending = false;
         n_pending--;
       }
@@ -467,10 +468,10 @@ std::pair<int, Real> KdDecomposition::sortAndGetSplitter(int depth, Bin& bin) {
   static auto compY = [] (const Vector3D<Real>& a, const Vector3D<Real>& b) {return a.y < b.y;};
   static auto compZ = [] (const Vector3D<Real>& a, const Vector3D<Real>& b) {return a.z < b.z;};
   int dim = depth % NDIM;
-  if (dim == 0)      std::sort(bin.begin(), bin.end(), compX);
-  else if (dim == 1) std::sort(bin.begin(), bin.end(), compY);
-  else if (dim == 2) std::sort(bin.begin(), bin.end(), compZ);
   size_t medianIndex = (bin.size() + 1) / 2;
+  if (dim == 0)      std::nth_element(bin.begin(), bin.begin()+medianIndex, bin.end(), compX);
+  else if (dim == 1) std::nth_element(bin.begin(), bin.begin()+medianIndex, bin.end(), compY);
+  else if (dim == 2) std::nth_element(bin.begin(), bin.begin()+medianIndex, bin.end(), compZ);
   auto median = bin[medianIndex][dim]; // not average?
   return {dim, median};
 }
