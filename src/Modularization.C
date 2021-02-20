@@ -3,6 +3,24 @@
 
 extern CProxy_TreeSpec treespec;
 
+namespace {
+void partialSort(Particle* particles, int n_particles, int dim) {
+  static auto compX = [] (const Particle& a, const Particle& b) {return a.position.x < b.position.x;};
+  static auto compY = [] (const Particle& a, const Particle& b) {return a.position.y < b.position.y;};
+  static auto compZ = [] (const Particle& a, const Particle& b) {return a.position.z < b.position.z;};
+  int split_idx = (n_particles + 1) / 2;
+  if (dim == 0) {
+    std::nth_element(particles, particles + split_idx, particles + n_particles, compX);
+  }
+  else if (dim == 1) {
+    std::nth_element(particles, particles + split_idx, particles + n_particles, compY);
+  }
+  else if (dim == 2) {
+    std::nth_element(particles, particles + split_idx, particles + n_particles, compZ);
+  }
+}
+}
+
 void Tree::buildCanopy(int tp_index, const SendProxyFn &fn) {
     Key tp_key = treespec.ckLocalBranch()->getSubtreeDecomposition()->getTpKey(tp_index);
     Key temp_key = tp_key;
@@ -30,25 +48,7 @@ void LongestDimTree::prepParticles(Particle* particles, size_t n_particles, Key 
       best_dim = d;
     }
   }
-  static auto compX = [] (const Particle& a, const Particle& b) {return a.position.x < b.position.x;};
-  static auto compY = [] (const Particle& a, const Particle& b) {return a.position.y < b.position.y;};
-  static auto compZ = [] (const Particle& a, const Particle& b) {return a.position.z < b.position.z;};
-  Particle fake, *iter = nullptr;
-  fake.position = unweighted_center;
-  if (best_dim == 0) {
-    std::sort(particles, particles + n_particles, compX);
-    iter = std::lower_bound(particles, particles + n_particles, fake, compX);
-  }
-  else if (best_dim == 1) {
-    std::sort(particles, particles + n_particles, compY);
-    iter = std::lower_bound(particles, particles + n_particles, fake, compY);
-  }
-  else if (best_dim == 2) {
-    std::sort(particles, particles + n_particles, compZ);
-    iter = std::lower_bound(particles, particles + n_particles, fake, compZ);
-  }
-  CkAssert(iter);
-  split_idx = std::distance(particles, iter);
+  partialSort(particles, n_particles, best_dim);
 }
 
 int LongestDimTree::findChildsLastParticle(const Particle* particles, int start, int finish, Key child_key, size_t log_branch_factor) {
@@ -59,12 +59,7 @@ void KdTree::prepParticles(Particle* particles, size_t n_particles, Key parent_k
   // sort by key
   int depth = Utility::getDepthFromKey(parent_key, log_branch_factor);
   int dim = depth % NDIM;
-  static auto compX = [] (const Particle& a, const Particle& b) {return a.position.x < b.position.x;};
-  static auto compY = [] (const Particle& a, const Particle& b) {return a.position.y < b.position.y;};
-  static auto compZ = [] (const Particle& a, const Particle& b) {return a.position.z < b.position.z;};
-  if (dim == 0)      std::sort(particles, particles + n_particles, compX);
-  else if (dim == 1) std::sort(particles, particles + n_particles, compY);
-  else if (dim == 2) std::sort(particles, particles + n_particles, compZ);
+  partialSort(particles, n_particles, dim);
 }
 
 int OctTree::findChildsLastParticle(const Particle* particles, int start, int finish, Key child_key, size_t log_branch_factor) {
