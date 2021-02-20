@@ -214,6 +214,7 @@ class FullNode : public Node<Data>
 {
 public:
   FullNode() = default;
+  virtual ~FullNode() = default;
 
   FullNode(Key _key, typename Node<Data>::Type _type, bool _is_leaf, const SpatialNode<Data>& _spatial_node, Particle* _particles, Node<Data>* _parent) // for cached non boundary nodes
   : Node<Data>(_key, _type, _is_leaf ? 0 : BRANCH_FACTOR, _spatial_node, _particles, _parent)
@@ -230,15 +231,14 @@ public:
   void initChildren() {
     for (auto && child : children) child.store(nullptr);
   }
-  virtual ~FullNode() = default;
  
   virtual Node<Data>* getChild(int child_idx) const override {
     CkAssert(child_idx < this->n_children);
-    return children[child_idx].load();
+    return children[child_idx].load(std::memory_order_relaxed);
   }
   virtual Node<Data>* exchangeChild(int child_idx, Node<Data>* child) override {
     CkAssert(child_idx < this->n_children);
-    return children[child_idx].exchange(child);
+    return children[child_idx].exchange(child, std::memory_order_relaxed);
   }
   virtual size_t getBranchFactor() const override {
     return BRANCH_FACTOR;
