@@ -51,10 +51,6 @@ void LongestDimTree::prepParticles(Particle* particles, size_t n_particles, Key 
   partialSort(particles, n_particles, best_dim);
 }
 
-int LongestDimTree::findChildsLastParticle(const Particle* particles, int start, int finish, Key child_key, size_t log_branch_factor) {
-  return split_idx;
-}
-
 void KdTree::prepParticles(Particle* particles, size_t n_particles, Key parent_key, size_t log_branch_factor) {
   // sort by key
   int depth = Utility::getDepthFromKey(parent_key, log_branch_factor);
