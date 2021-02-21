@@ -205,12 +205,9 @@ void CacheManager<Data>::recvStarterPack(std::pair<Key, SpatialNode<Data>>* pack
 #if DEBUG
     CkPrintf("[CM %d] receiving node %d in starter pack\n", this->thisIndex, pack[i].first);
 #endif
-    // Restore received data as a tree node in the cache
-    // XXX: Can the key ever be equal to a local TP?
-    //      If not, the conditional is unnecessary
-    if (!local_tps.count(pack[i].first)) {
-      restoreDataHelper(pack[i], false);
-    }
+    // uncomment conditional if prefetch() is ever restored
+    // if (!local_tps.count(pack[i].first))
+    restoreDataHelper(pack[i], false);
   }
   if (n == 0) root = local_tps[1];
   CkAssert(root);
