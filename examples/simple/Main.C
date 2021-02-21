@@ -27,8 +27,8 @@ class Main : public CBase_Main {
     // Initialize readonly variables
     conf.input_file = "";
     conf.output_file = "";
-    conf.min_n_subtrees = CkNumPes() * 4;
-    conf.min_n_partitions = CkNumPes() * 4;
+    conf.min_n_subtrees = CkNumPes() * 8; // default from ChaNGa
+    conf.min_n_partitions = CkNumPes() * 8;
     conf.max_particles_per_leaf = 12; // default from ChaNGa
     conf.decomp_type = paratreet::DecompType::eOct;
     conf.tree_type = paratreet::TreeType::eOct;
