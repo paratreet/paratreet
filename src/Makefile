@@ -12,7 +12,7 @@ IMPL_HEADERS = CacheManager.h Configuration.h Driver.h Partition.h Reader.h Resu
 
 all: lib
 
-lib: $(OBJS) PrefixLB
+lib: $(OBJS) PrefixLB DistributedPrefixLB
 	ar x $(STRUCTURE_PATH)/libTipsy.a
 	ar cr libparatreet.a $(OBJS) $(TIPSY_OBJS)
 	rm -f $(TIPSY_OBJS)
@@ -24,6 +24,12 @@ PrefixLB: PrefixLB.C PrefixLB.decl.h
 PrefixLB.decl.h: PrefixLB.ci
 	$(CHARMC) PrefixLB.ci
 
+DistributedPrefixLB: DistributedPrefixLB.C DistributedPrefixLB.decl.h
+	$(CHARMC) -o libmoduleDistributedPrefixLB.a DistributedPrefixLB.C
+
+DistributedPrefixLB.decl.h: DistributedPrefixLB.ci
+	$(CHARMC) DistributedPrefixLB.ci
+
 paratreet.decl.h: paratreet.ci
 	$(CHARMC) $<
 
@@ -34,4 +40,4 @@ Paratreet.o: $(UTILITY_HEADERS) $(CORE_HEADERS) $(IMPL_HEADERS) paratreet.decl.h
 	$(CHARMC) -c $<
 
 clean:
-	rm -f *.decl.h *.def.h conv-host *.o libmodulePrefixLB.a libparatreet.a charmrun
+	rm -f *.decl.h *.def.h conv-host *.o libmodulePrefixLB.a libmoduleDistributedPrefixLB.a libparatreet.a charmrun

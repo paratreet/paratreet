@@ -2,7 +2,7 @@ CHARM_HOME ?= $(HOME)/charm-paratreet
 BASE_PATH=$(shell realpath "$(shell pwd)/../..")
 PARATREET_PATH = $(BASE_PATH)/src
 STRUCTURE_PATH = $(BASE_PATH)/utility/structures
-OPTS = -g -Ofast -I$(STRUCTURE_PATH) -I$(PARATREET_PATH) -DCOUNT_INTERACTIONS=0 -DDEBUG=0 -DCMK_LB_USER_DATA $(MAKE_OPTS)
+OPTS = -g -Ofast -I$(STRUCTURE_PATH) -I$(PARATREET_PATH) -DCOUNT_INTERACTIONS=0 -DDEBUG=0 $(MAKE_OPTS)
 CHARMC = $(CHARM_HOME)/bin/charmc $(OPTS)
 LD_LIBS = -L$(PARATREET_PATH) -lparatreet
 
@@ -14,13 +14,13 @@ Main.decl.h: Main.ci
 	$(CHARMC) $<
 
 Gravity: Main.decl.h Gravity.o Main.o
-	$(CHARMC) -language charm++ -module CommonLBs -module PrefixLB -o Gravity Gravity.o Main.o $(LD_LIBS)
+	$(CHARMC) -language charm++ -module CommonLBs -module PrefixLB -module DistributedPrefixLB -o Gravity Gravity.o Main.o $(LD_LIBS)
 
 Collision: Main.decl.h Main.o Collision.o
-	$(CHARMC) -language charm++ -module CommonLBs -module PrefixLB -o Collision Collision.o Main.o $(LD_LIBS)
+	$(CHARMC) -language charm++ -module CommonLBs -module PrefixLB -module DistributedPrefixLB -o Collision Collision.o Main.o $(LD_LIBS)
 
 SPH: Main.decl.h SPH.o Main.o
-	$(CHARMC) -language charm++ -module CommonLBs -module PrefixLB -o SPH SPH.o Main.o $(LD_LIBS)
+	$(CHARMC) -language charm++ -module CommonLBs -module PrefixLB -module DistributedPrefixLB -o SPH SPH.o Main.o $(LD_LIBS)
 
 Gravity.o: Gravity.C
 	$(CHARMC) -c $<
