@@ -1,10 +1,10 @@
-module DistributedLB {
+module DistributedPrefixLB {
 
 extern module DistBaseLB;
 initnode void lbinit(void);
 
-group [migratable] DistributedLB : DistBaseLB {
-  entry void DistributedLB(const CkLBOptions &);  
+group [migratable] DistributedPrefixLB : DistBaseLB {
+  entry void DistributedPrefixLB(const CkLBOptions &);
   initnode void initnodeFn();
 
   entry void GossipLoadInfo(int pe, int n, int pe_no[n], double load[n]);

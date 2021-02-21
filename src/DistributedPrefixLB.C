@@ -3,7 +3,7 @@
  * A distributed load balancer.
 */
 
-#include "DistributedLB.h"
+#include "DistributedPrefixLB.h"
 
 #include "elements.h"
 
@@ -11,31 +11,31 @@ extern int quietModeRequested;
 
 static void lbinit()
 {
-  LBRegisterBalancer<DistributedLB>("DistributedLB", "The distributed load balancer");
+  LBRegisterBalancer<DistributedPrefixLB>("DistributedPrefixLB", "The distributed load balancer");
 }
 
 using std::vector;
 
-DistributedLB::DistributedLB(CkMigrateMessage *m) : CBase_DistributedLB(m) {
+DistributedPrefixLB::DistributedPrefixLB(CkMigrateMessage *m) : CBase_DistributedPrefixLB(m) {
 }
 
-DistributedLB::DistributedLB(const CkLBOptions &opt) : CBase_DistributedLB(opt) {
-  lbname = "DistributedLB";
+DistributedPrefixLB::DistributedPrefixLB(const CkLBOptions &opt) : CBase_DistributedPrefixLB(opt) {
+  lbname = "DistributedPrefixLB";
   if (CkMyPe() == 0 && !quietModeRequested) {
-    CkPrintf("CharmLB> DistributedLB created: threshold %lf, max phases %i\n",
+    CkPrintf("CharmLB> DistributedPrefixLB created: threshold %lf, max phases %i\n",
         kTargetRatio, kMaxPhases);
   }
   InitLB(opt);
 }
 
-void DistributedLB::initnodeFn()
+void DistributedPrefixLB::initnodeFn()
 {
   _registerCommandLineOpt("+DistLBTargetRatio");
   _registerCommandLineOpt("+DistLBMaxPhases");
 }
 
-void DistributedLB::InitLB(const CkLBOptions &opt) {
-  thisProxy = CProxy_DistributedLB(thisgroup);
+void DistributedPrefixLB::InitLB(const CkLBOptions &opt) {
+  thisProxy = CProxy_DistributedPrefixLB(thisgroup);
   if (opt.getSeqNo() > 0 || (_lb_args.metaLbOn() && _lb_args.metaLbModelDir() != nullptr))
     turnOff();
 
@@ -46,10 +46,10 @@ void DistributedLB::InitLB(const CkLBOptions &opt) {
   kTargetRatio = _lb_args.targetRatio();
 }
 
-void DistributedLB::Strategy(const DistBaseLB::LDStats* const stats) {
+void DistributedPrefixLB::Strategy(const DistBaseLB::LDStats* const stats) {
   if (CkMyPe() == 0 && _lb_args.debug() >= 1) {
     start_time = CmiWallTimer();
-    CkPrintf("In DistributedLB strategy at %lf\n", start_time);
+    CkPrintf("In DistributedPrefixLB strategy at %lf\n", start_time);
   }
 
   // Set constants for this iteration (these depend on CkNumPes() or number of
@@ -67,7 +67,7 @@ void DistributedLB::Strategy(const DistBaseLB::LDStats* const stats) {
 
 	my_load = 0.0;
 	for (int i = 0; i < my_stats->n_objs; i++) {
-		my_load += my_stats->objData[i].wallTime; 
+		my_load += my_stats->objData[i].wallTime;
   }
   init_load = my_load;
   b_load = my_stats->total_walltime - (my_stats->idletime + my_load);
@@ -90,7 +90,7 @@ void DistributedLB::Strategy(const DistBaseLB::LDStats* const stats) {
     CkReduction::tupleElement(sizeof(double), &my_load, CkReduction::max_double)
   };
   CkReductionMsg* msg = CkReductionMsg::buildFromTuple(tupleRedn, 2);
-  CkCallback cb(CkIndex_DistributedLB::LoadReduction(NULL), thisProxy);
+  CkCallback cb(CkIndex_DistributedPrefixLB::LoadReduction(NULL), thisProxy);
   msg->setCallback(cb);
   contribute(msg);
 }
@@ -100,7 +100,7 @@ void DistributedLB::Strategy(const DistBaseLB::LDStats* const stats) {
 * gossiping starts. Only the underloaded processors gossip.
 * Termination of gossip is via QD and callback is DoneGossip.
 */
-void DistributedLB::LoadReduction(CkReductionMsg* redn_msg) {
+void DistributedPrefixLB::LoadReduction(CkReductionMsg* redn_msg) {
   int count;
   CkReduction::tupleElement* results;
   redn_msg->toTuple(&results, &count);
@@ -112,14 +112,14 @@ void DistributedLB::LoadReduction(CkReductionMsg* redn_msg) {
   load_ratio = max_load / avg_load;
 
   if (CkMyPe() == 0 && _lb_args.debug() >= 1) {
-    CkPrintf("DistributedLB>>>Before LB: max = %lf, avg = %lf, ratio = %lf\n",
+    CkPrintf("DistributedPrefixLB>>>Before LB: max = %lf, avg = %lf, ratio = %lf\n",
         max_load, avg_load, load_ratio);
   }
 
   // If there are no overloaded processors, immediately terminate
   if (load_ratio <= kTargetRatio) {
     if (CkMyPe() == 0 && _lb_args.debug() >= 1) {
-      CkPrintf("DistributedLB>>>Load ratio already within the target of %lf, ending early.\n",
+      CkPrintf("DistributedPrefixLB>>>Load ratio already within the target of %lf, ending early.\n",
           kTargetRatio);
     }
     PackAndSendMigrateMsgs();
@@ -147,7 +147,7 @@ void DistributedLB::LoadReduction(CkReductionMsg* redn_msg) {
 
   // Start quiescence detection at PE 0.
   if (CkMyPe() == 0) {
-    CkCallback cb(CkIndex_DistributedLB::DoneGossip(), thisProxy);
+    CkCallback cb(CkIndex_DistributedPrefixLB::DoneGossip(), thisProxy);
     CkStartQD(cb);
   }
   delete [] results;
@@ -156,9 +156,9 @@ void DistributedLB::LoadReduction(CkReductionMsg* redn_msg) {
 /*
 * Gossip load information between peers. Receive the gossip message.
 */
-void DistributedLB::GossipLoadInfo(int from_pe, int n,
+void DistributedPrefixLB::GossipLoadInfo(int from_pe, int n,
     int remote_pe_no[], double remote_loads[]) {
-  // Placeholder temp vectors for the sorted pe and their load 
+  // Placeholder temp vectors for the sorted pe and their load
   vector<int> p_no;
   vector<double> l;
 
@@ -168,7 +168,7 @@ void DistributedLB::GossipLoadInfo(int from_pe, int n,
 
   // Merge (using merge sort) information received with the information at hand
   // Since the initial list is sorted, the merging is linear in the size of the
-  // list. 
+  // list.
   while (i < m && j < n) {
     if (pe_no[i] < remote_pe_no[j]) {
       p_no.push_back(pe_no[i]);
@@ -208,7 +208,7 @@ void DistributedLB::GossipLoadInfo(int from_pe, int n,
 /*
 * Construct the gossip message and send to peers
 */
-void DistributedLB::SendLoadInfo() {
+void DistributedPrefixLB::SendLoadInfo() {
   // TODO: Keep it 0.8*log
   // This PE has already sent the maximum set threshold for gossip messages.
   // Hence don't send out any more messages. This is to prevent flooding.
@@ -253,10 +253,10 @@ void DistributedLB::SendLoadInfo() {
 /*
 * Callback invoked when gossip is done and QD is detected
 */
-void DistributedLB::DoneGossip() {
+void DistributedPrefixLB::DoneGossip() {
   if (CkMyPe() == 0 && _lb_args.debug() >= 1) {
     double end_time = CmiWallTimer();
-    CkPrintf("DistributedLB>>>Gossip finished at %lf (%lf elapsed)\n",
+    CkPrintf("DistributedPrefixLB>>>Gossip finished at %lf (%lf elapsed)\n",
         end_time, end_time - start_time);
   }
   // Set a new transfer threshold for the actual load balancing phase. It starts
@@ -270,7 +270,7 @@ void DistributedLB::DoneGossip() {
   StartNextLBPhase();
 }
 
-void DistributedLB::StartNextLBPhase() {
+void DistributedPrefixLB::StartNextLBPhase() {
   if (underloaded_pe_count == 0 || my_load <= transfer_threshold || underloaded) {
     // If this PE has no information about underloaded processors, or it has
     // no objects to donate to underloaded processors then do nothing.
@@ -281,7 +281,7 @@ void DistributedLB::StartNextLBPhase() {
   }
 }
 
-void DistributedLB::DoneWithLBPhase() {
+void DistributedPrefixLB::DoneWithLBPhase() {
   phase_number++;
 
   int count = 1;
@@ -292,12 +292,12 @@ void DistributedLB::DoneWithLBPhase() {
     CkReduction::tupleElement(sizeof(double), &negack_count, CkReduction::max_int)
   };
   CkReductionMsg* msg = CkReductionMsg::buildFromTuple(tupleRedn, count);
-  CkCallback cb(CkIndex_DistributedLB::AfterLBReduction(NULL), thisProxy);
+  CkCallback cb(CkIndex_DistributedPrefixLB::AfterLBReduction(NULL), thisProxy);
   msg->setCallback(cb);
   contribute(msg);
 }
 
-void DistributedLB::AfterLBReduction(CkReductionMsg* redn_msg) {
+void DistributedPrefixLB::AfterLBReduction(CkReductionMsg* redn_msg) {
   int count, migrations, max_nacks;
   CkReduction::tupleElement* results;
   redn_msg->toTuple(&results, &count);
@@ -311,7 +311,7 @@ void DistributedLB::AfterLBReduction(CkReductionMsg* redn_msg) {
   if (count > 2) max_nacks = *(int*)results[2].data;
 
   if (CkMyPe() == 0 && _lb_args.debug() >= 1) {
-    CkPrintf("DistributedLB>>>After phase %i: max = %lf, avg = %lf, ratio = %lf\n",
+    CkPrintf("DistributedPrefixLB>>>After phase %i: max = %lf, avg = %lf, ratio = %lf\n",
         phase_number, max_load, avg_load, load_ratio);
   }
 
@@ -338,9 +338,9 @@ void DistributedLB::AfterLBReduction(CkReductionMsg* redn_msg) {
   } else {
     if (CkMyPe() == 0 && _lb_args.debug() >= 1) {
       double end_time = CmiWallTimer();
-      CkPrintf("DistributedLB>>>Balancing completed at %lf (%lf elapsed)\n",
+      CkPrintf("DistributedPrefixLB>>>Balancing completed at %lf (%lf elapsed)\n",
           end_time, end_time - start_time);
-      CkPrintf("DistributedLB>>>%i total migrations with %i negative ack max\n",
+      CkPrintf("DistributedPrefixLB>>>%i total migrations with %i negative ack max\n",
           migrations, max_nacks);
     }
     Cleanup();
@@ -355,7 +355,7 @@ void DistributedLB::AfterLBReduction(CkReductionMsg* redn_msg) {
 * Perform load balancing based on the partial information obtained from the
 * information propagation stage (gossip).
 */
-void DistributedLB::LoadBalance() {
+void DistributedPrefixLB::LoadBalance() {
   vector<int> obj_no;
   vector<int> obj_pe_no;
 
@@ -371,7 +371,7 @@ void DistributedLB::LoadBalance() {
 	}
 }
 
-void DistributedLB::Setup() {
+void DistributedPrefixLB::Setup() {
   objs_count = 0;
   double avg_objload = 0.0;
   double max_objload = 0.0;
@@ -382,7 +382,7 @@ void DistributedLB::Setup() {
       objs_count++;
     }
   }
- 
+
   // Create a min heap of objs. The idea is to transfer smaller objs. The reason
   // is that since we are making probabilistic transfer of load, sending small
   // objs will result in better load balance.
@@ -402,7 +402,7 @@ void DistributedLB::Setup() {
 	CalculateCumulateDistribution();
 }
 
-void DistributedLB::Cleanup() {
+void DistributedPrefixLB::Cleanup() {
 
   // Delete the object records from the heap
   InfoRecord* obj;
@@ -417,7 +417,7 @@ void DistributedLB::Cleanup() {
 * can be transferred and finds suitable receiver PEs. The mapping is stored in
 * obj_no and the corresponding entry in obj_pe_no indicates the receiver PE.
 */
-void DistributedLB::MapObjsToPe(minHeap *objs, vector<int> &obj_no,
+void DistributedPrefixLB::MapObjsToPe(minHeap *objs, vector<int> &obj_no,
                                 vector<int> &obj_pe_no) {
   int p_id;
   double p_load;
@@ -477,7 +477,7 @@ void DistributedLB::MapObjsToPe(minHeap *objs, vector<int> &obj_no,
 
 /*
 * Receive information about inbound object including the id, from_pe and its
-* load. 
+* load.
 *
 * obj_id is the index of the object in the original PE.
 * from_pe is the originating PE
@@ -485,10 +485,10 @@ void DistributedLB::MapObjsToPe(minHeap *objs, vector<int> &obj_no,
 * force flag indicates that this PE is forced to accept the object after
 * multiple trials and ack should not be sent.
 */
-void DistributedLB::InformMigration(int obj_id, int from_pe, double obj_load,
+void DistributedPrefixLB::InformMigration(int obj_id, int from_pe, double obj_load,
     bool force) {
   // If not using ack based scheme or adding this obj does not make this PE
-  // overloaded, then accept the migrated obj and return. 
+  // overloaded, then accept the migrated obj and return.
   if (!kUseAck || my_load + obj_load <= transfer_threshold) {
     migrates_expected++;
     // add to my load and reply true
@@ -505,7 +505,7 @@ void DistributedLB::InformMigration(int obj_id, int from_pe, double obj_load,
     // add to my load and reply with positive ack
     my_load += obj_load;
   } else {
-    // If my_load + obj_load is > threshold, then reply with negative ack 
+    // If my_load + obj_load is > threshold, then reply with negative ack
     //CkPrintf("[%d] Cannot accept obj with load %lf my_load %lf and init_load %lf migrates_expected %d\n", CkMyPe(), obj_load, my_load, init_load, migrates_expected);
     thisProxy[from_pe].RecvAck(obj_id, CkMyPe(), false);
   }
@@ -516,7 +516,7 @@ void DistributedLB::InformMigration(int obj_id, int from_pe, double obj_load,
 * assigned or not. If all the acks have been received, then create migration
 * message.
 */
-void DistributedLB::RecvAck(int obj_id, int assigned_pe, bool can_accept) {
+void DistributedPrefixLB::RecvAck(int obj_id, int assigned_pe, bool can_accept) {
   total_migrates_ack--;
 
   // If it is a positive ack, then create a migrate msg for that object
@@ -570,7 +570,7 @@ void DistributedLB::RecvAck(int obj_id, int assigned_pe, bool can_accept) {
   }
 }
 
-void DistributedLB::PackAndSendMigrateMsgs() {
+void DistributedPrefixLB::PackAndSendMigrateMsgs() {
   LBMigrateMsg* msg = new(total_migrates,CkNumPes(),CkNumPes(),0) LBMigrateMsg;
   msg->n_moves = total_migrates;
   for(int i=0; i < total_migrates; i++) {
@@ -586,7 +586,7 @@ void DistributedLB::PackAndSendMigrateMsgs() {
 /*
 * Pick a random PE based on the probability distribution.
 */
-int DistributedLB::PickRandReceiverPeIdx() const {
+int DistributedPrefixLB::PickRandReceiverPeIdx() const {
   // The min loaded PEs have probabilities inversely proportional to their load.
   // A cumulative distribution is calculated and a PE is randomly selected based
   // on the cdf.
@@ -605,7 +605,7 @@ int DistributedLB::PickRandReceiverPeIdx() const {
 * The PEs have probabilities inversely proportional to their load. Construct a
 * CDF based on this.
 */
-void DistributedLB::CalculateCumulateDistribution() {
+void DistributedPrefixLB::CalculateCumulateDistribution() {
   // The min loaded PEs have probabilities inversely proportional to their load.
 	double cumulative = 0.0;
 	for (int i = 0; i < underloaded_pe_count; i++) {
@@ -618,4 +618,4 @@ void DistributedLB::CalculateCumulateDistribution() {
   }
 }
 
-#include "DistributedLB.def.h"
+#include "DistributedPrefixLB.def.h"
