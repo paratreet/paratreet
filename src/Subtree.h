@@ -175,6 +175,7 @@ void Subtree<Data>::sendLeaves(CProxy_Partition<Data> part)
 {
   // When Subtree and Partition have the same decomp type
   // there is a consistant 1-on-1 mapping
+  // partical.partition_idx is ignored
   if(matching_decomps){
     auto it = cm_proxy.ckLocalBranch()->partition_lookup.find(this->thisIndex);
     it->second->addLeaves(leaves, this->thisIndex);

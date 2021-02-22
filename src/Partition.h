@@ -150,6 +150,9 @@ void Partition<Data>::addLeaves(const std::vector<Node<Data>*>& leaf_ptrs, int s
   tree_leaves.insert(tree_leaves.end(), leaf_ptrs.begin(), leaf_ptrs.end());
   for (auto leaf : leaf_ptrs) {
     if(matching_decomps){
+      // When Subtree and Partition have the same decomp type
+      // the tree structures will be identical
+      // reuse leaf without checks and modifications
       leaves.push_back(leaf);
     }else{
       std::vector<Particle> leaf_particles;
