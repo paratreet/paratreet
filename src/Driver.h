@@ -141,7 +141,7 @@ public:
       CkCallbackResumeThread(),
       universe.n_particles, n_subtrees, n_partitions,
       centroid_calculator, centroid_resumer,
-      centroid_cache, this->thisProxy, subtree_opts
+      centroid_cache, this->thisProxy, matching_decomps, subtree_opts
       );
     CkPrintf("Created %d Subtrees: %.3lf ms\n", n_subtrees,
         (CkWallTimer() - start_time) * 1000);
@@ -153,7 +153,7 @@ public:
     else treespec.ckLocalBranch()->getPartitionDecomposition()->setArrayOpts(partition_opts);
     partitions = CProxy_Partition<CentroidData>::ckNew(
       n_partitions, centroid_cache, centroid_resumer,
-      centroid_calculator, partition_opts
+      centroid_calculator, matching_decomps, partition_opts
       );
     CkPrintf("Created %d Partitions: %.3lf ms\n", n_partitions,
         (CkWallTimer() - start_time) * 1000);
