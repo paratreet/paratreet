@@ -21,6 +21,7 @@ struct Partition : public CBase_Partition<Data> {
   std::mutex receive_lock;
   std::vector<Node<Data>*> leaves;
   std::vector<Node<Data>*> tree_leaves;
+  bool matching_decomps;
 
   std::unique_ptr<Traverser<Data>> traverser;
   int n_partitions;
@@ -36,7 +37,7 @@ struct Partition : public CBase_Partition<Data> {
   CProxy_Resumer<Data> r_proxy;
   Resumer<Data>* r_local;
 
-  Partition(int, CProxy_CacheManager<Data>, CProxy_Resumer<Data>, TCHolder<Data>);
+  Partition(int, CProxy_CacheManager<Data>, CProxy_Resumer<Data>, TCHolder<Data>, bool);
   Partition(CkMigrateMessage * msg){delete msg;};
 
   template<typename Visitor> void startDown();
@@ -81,7 +82,8 @@ private:
 template <typename Data>
 Partition<Data>::Partition(
   int np, CProxy_CacheManager<Data> cm,
-  CProxy_Resumer<Data> rp, TCHolder<Data> tc_holder
+  CProxy_Resumer<Data> rp, TCHolder<Data> tc_holder,
+  bool matching_decomps_
   )
 {
   this->usesAtSync = true;
@@ -89,6 +91,7 @@ Partition<Data>::Partition(
   tc_proxy = tc_holder.proxy;
   r_proxy = rp;
   cm_proxy = cm;
+  matching_decomps = matching_decomps_;
   initLocalBranches();
 }
 
@@ -146,26 +149,30 @@ void Partition<Data>::addLeaves(const std::vector<Node<Data>*>& leaf_ptrs, int s
   receive_lock.lock();
   tree_leaves.insert(tree_leaves.end(), leaf_ptrs.begin(), leaf_ptrs.end());
   for (auto leaf : leaf_ptrs) {
-    std::vector<Particle> leaf_particles;
-    for (int pi = 0; pi < leaf->n_particles; pi++) {
-      if (leaf->particles()[pi].partition_idx == this->thisIndex) {
-        leaf_particles.push_back(leaf->particles()[pi]);
-      }
-    }
-    if (leaf_particles.size() == leaf->n_particles) {
+    if(matching_decomps){
       leaves.push_back(leaf);
-    }
-    else {
-      auto particles = new Particle [leaf_particles.size()];
-      std::copy(leaf_particles.begin(), leaf_particles.end(), particles);
-      auto node = treespec.ckLocalBranch()->template makeNode<Data>(
-        leaf->key, leaf->depth, leaf_particles.size(), particles,
-        subtree_idx, subtree_idx, true, nullptr, subtree_idx
-        );
-      node->type = Node<Data>::Type::Leaf;
-      node->home_pe = leaf->home_pe;
-      node->data = Data(node->particles(), node->n_particles);
-      leaves.push_back(node);
+    }else{
+      std::vector<Particle> leaf_particles;
+      for (int pi = 0; pi < leaf->n_particles; pi++) {
+        if (leaf->particles()[pi].partition_idx == this->thisIndex) {
+          leaf_particles.push_back(leaf->particles()[pi]);
+        }
+      }
+      if (leaf_particles.size() == leaf->n_particles) {
+        leaves.push_back(leaf);
+      }
+      else {
+        auto particles = new Particle [leaf_particles.size()];
+        std::copy(leaf_particles.begin(), leaf_particles.end(), particles);
+        auto node = treespec.ckLocalBranch()->template makeNode<Data>(
+          leaf->key, leaf->depth, leaf_particles.size(), particles,
+          subtree_idx, subtree_idx, true, nullptr, subtree_idx
+          );
+        node->type = Node<Data>::Type::Leaf;
+        node->home_pe = leaf->home_pe;
+        node->data = Data(node->particles(), node->n_particles);
+        leaves.push_back(node);
+      }
     }
   }
   receive_lock.unlock();
@@ -244,6 +251,7 @@ void Partition<Data>::pup(PUP::er& p)
   p | tc_proxy;
   p | cm_proxy;
   p | r_proxy;
+  p | matching_decomps;
   if (p.isUnpacking()) {
     initLocalBranches();
   }
