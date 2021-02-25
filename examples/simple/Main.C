@@ -7,6 +7,7 @@
 #include "CollisionVisitor.h"
 
 /* readonly */ bool verify;
+/* readonly */ int peanoKey;
 /* readonly */ CProxy_CountManager count_manager;
 /* readonly */ CProxy_NeighborListCollector neighbor_list_collector;
 
@@ -41,6 +42,7 @@ class Main : public CBase_Main {
     conf.perturb_no_barrier = false;
 
     verify = false;
+    peanoKey = 3;
 
     // Initialize member variables
     cur_iteration = 0;
@@ -48,7 +50,7 @@ class Main : public CBase_Main {
     // Process command line arguments
     int c;
     std::string input_str;
-    while ((c = getopt(m->argc, m->argv, "f:n:p:l:d:t:i:s:u:r:b:v:a")) != -1) {
+    while ((c = getopt(m->argc, m->argv, "f:n:p:l:d:t:i:s:u:r:b:v:am")) != -1) {
       switch (c) {
         case 'f':
           conf.input_file = optarg;
@@ -116,6 +118,9 @@ class Main : public CBase_Main {
           conf.perturb_no_barrier = true;
           CkPrintf("You are skipping the perturb barrier. This only works for Gravity.\n");
           break;
+	case 'm':
+	  peanoKey = 0; // morton
+	  break;
         default:
           CkPrintf("Usage: %s\n", m->argv[0]);
           CkPrintf("\t-f [input file]\n");
