@@ -98,16 +98,17 @@ int SfcDecomposition::parallelFindSplitters(BoundingBox &universe, CProxy_Reader
 #if DEBUG
       CkPrintf("count %d is %d for start_range %" PRIx64 " end_range %" PRIx64 " compare_to %" PRIx64 "\n", i, counts[i], state.start_range, state.end_range, state.compare_to());
 #endif
-      if (count < state.goal_rank) {
+      bool identical = state.end_range - state.start_range <= 1;
+      if (count == state.goal_rank || identical) {
+        state.pending = false;
+        n_pending--;
+      }
+      else if (count < state.goal_rank) {
         state.start_range = state.compare_to();
         state.goal_rank -= count;
       }
-      else if (count > state.goal_rank) {
-         state.end_range = state.compare_to();
-      }
       else {
-        state.pending = false;
-        n_pending--;
+        state.end_range = state.compare_to();
       }
     }
   }
