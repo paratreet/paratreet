@@ -27,8 +27,8 @@ namespace paratreet {
     };
 
     struct Configuration {
-	int min_n_subtrees;
-	int min_n_partitions;
+        int min_n_subtrees;
+        int min_n_partitions;
         int max_particles_per_leaf; // For local tree build
         DecompType decomp_type;
         TreeType tree_type;
