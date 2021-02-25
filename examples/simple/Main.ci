@@ -2,6 +2,7 @@ mainmodule Main {
     extern module paratreet;
 
     readonly bool verify;
+    readonly int peanoKey;
     readonly CProxy_CountManager count_manager;
     readonly CProxy_NeighborListCollector neighbor_list_collector;
 
