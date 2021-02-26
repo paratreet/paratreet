@@ -52,6 +52,7 @@ class Reader : public CBase_Reader {
     void checkSort(const Key, const CkCallback&);
     template <typename Data>
     void request(CProxy_Subtree<Data>, int, int);
+    void initBinarySplit(const CkCallback&);
 
     // Sending particles to home Partitions and Subtrees
     template <typename Data>
@@ -89,7 +90,6 @@ void Reader::flush(int n_total_particles, int n_subtrees,
   }
 
   // Clean up
-  bins.clear();
   particles.clear();
   particle_index = 0;
 }

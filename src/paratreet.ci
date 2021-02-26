@@ -136,6 +136,7 @@ module paratreet {
     entry void countSfc(const std::vector<QuickSelectSFCState>&, size_t, const CkCallback&);
     entry void countKd(const std::vector<QuickSelectKDState>&, const CkCallback&);
     entry void countLongestDim(const CkCallback&);
+    entry void initBinarySplit(const CkCallback&);
     entry void doBinarySplit(const std::vector<std::pair<int, Real>>&, const CkCallback&);
     entry void getAllSfcKeys(const CkCallback&);
     entry void getAllPositions(const CkCallback&);

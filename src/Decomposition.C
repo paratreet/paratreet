@@ -362,6 +362,7 @@ int BinaryDecomposition::parallelFindSplitters(BoundingBox &universe, CProxy_Rea
   bins_sizes = std::vector<int>(1, universe.n_particles);
   splitters.emplace_back(0, 0); // empty space for key=0
   saved_n_total_particles = universe.n_particles;
+  readers.initBinarySplit(CkCallbackResumeThread());
   for (; (1 << depth) < min_n_splitters; depth++) {
     auto && level_splitters = this->sortAndGetSplitters(universe, readers);
     CkReductionMsg *msg;
