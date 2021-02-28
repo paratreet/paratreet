@@ -118,13 +118,14 @@ class Main : public CBase_Main {
           break;
         case 'a':
           conf.perturb_no_barrier = true;
-          CkPrintf("You are skipping the perturb barrier. This only works for Gravity.\n");
+          CkPrintf("You are skipping the perturb barrier. This only works for nlogn Gravity.\n");
           break;
 	case 'm':
 	  peanoKey = 0; // morton
 	  break;
         case 'e':
           dual_tree = true;
+          CkPrintf("You are doing a dual-tree traversal. Make sure you have matching decomps.\n");
           break;
         default:
           CkPrintf("Usage: %s\n", m->argv[0]);
