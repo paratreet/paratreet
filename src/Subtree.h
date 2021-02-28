@@ -42,6 +42,10 @@ public:
   CProxy_TreeCanopy<Data> tc_proxy;
   CProxy_CacheManager<Data> cm_proxy;
   CProxy_Resumer<Data> r_proxy;
+  Resumer<Data>* r_local = nullptr;
+  CacheManager<Data>* cm_local = nullptr;
+
+  std::unique_ptr<Traverser<Data>> traverser;
 
   std::vector<Particle> flushed_particles; // For debugging
 
@@ -56,6 +60,7 @@ public:
   void populateTree();
   inline void initCache();
   void sendLeaves(CProxy_Partition<Data>);
+  template <typename Visitor> void startDual();
   void requestNodes(Key, int);
   void requestCopy(int, PPHolder<Data>);
   void print(Node<Data>*);
@@ -176,7 +181,7 @@ void Subtree<Data>::sendLeaves(CProxy_Partition<Data> part)
   // When Subtree and Partition have the same decomp type
   // there is a consistant 1-on-1 mapping
   // partical.partition_idx is ignored
-  if(matching_decomps){
+  if (matching_decomps) {
     auto it = cm_proxy.ckLocalBranch()->partition_lookup.find(this->thisIndex);
     it->second->addLeaves(leaves, this->thisIndex);
     return;
@@ -206,6 +211,17 @@ void Subtree<Data>::sendLeaves(CProxy_Partition<Data> part)
       part[part_receiver.first].receiveLeaves(lookup_leaf_keys, tp_key, this->thisIndex, this->thisProxy);
     }
   }
+}
+
+template <typename Data>
+template <typename Visitor>
+void Subtree<Data>::startDual() {
+  r_local = r_proxy.ckLocalBranch();
+  r_local->resume_nodes_per_part.resize(n_subtrees);
+  cm_local = cm_proxy.ckLocalBranch();
+  auto && tp_keys = treespec.ckLocalBranch()->getSubtreeDecomposition()->getAllTpKeys(n_subtrees);
+  traverser.reset(new DualTraverser<Data, Visitor>(*this, tp_keys));
+  traverser->start();
 }
 
 template <typename Data>

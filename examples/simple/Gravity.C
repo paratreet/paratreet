@@ -3,6 +3,7 @@
 #include "GravityVisitor.h"
 
 extern bool verify;
+extern bool dual_tree;
 
 namespace paratreet {
 
@@ -12,8 +13,9 @@ namespace paratreet {
     driver.loadCache(CkCallbackResumeThread());
   }
 
-  void traversalFn(BoundingBox& universe, CProxy_Partition<CentroidData>& part, int iter) {
-    part.template startDown<GravityVisitor>();
+  void traversalFn(BoundingBox& universe, CProxy_Partition<CentroidData>& part, CProxy_Subtree<CentroidData>& subtree, int iter) {
+    if (dual_tree) subtree.startDual<GravityVisitor>();
+    else part.template startDown<GravityVisitor>();
   }
 
   void postTraversalFn(BoundingBox& universe, CProxy_Partition<CentroidData>& part, int iter) {

@@ -12,7 +12,7 @@ namespace paratreet {
     driver.loadCache(CkCallbackResumeThread());
   }
 
-  void traversalFn(BoundingBox& universe, CProxy_Partition<CentroidData>& part, int iter) {
+  void traversalFn(BoundingBox& universe, CProxy_Partition<CentroidData>& part, CProxy_Subtree<CentroidData>&, int iter) {
     part.template startDown<CollisionVisitor>();
   }
 
