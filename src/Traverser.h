@@ -383,7 +383,6 @@ public:
       if (curr_payload->type == Node<Data>::Type::EmptyLeaf) {
         continue;
       }
-      CkAssert(curr_payload->type == Node<Data>::Type::Internal);
       switch (node->type) {
         case Node<Data>::Type::Leaf:
         case Node<Data>::Type::CachedRemoteLeaf:
