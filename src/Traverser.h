@@ -54,25 +54,6 @@ public:
   virtual void start() = 0;
   virtual bool isFinished() = 0;
 
-protected:
-  template <typename Visitor, typename PartOrSubtree>
-  void runSimpleTraversal(PartOrSubtree& part, Node<Data>* source_node, int leaf_index)
-  {
-    std::stack<Node<Data>*> nodes;
-    nodes.push(source_node);
-    while (!nodes.empty()) {
-      Node<Data>* node = nodes.top();
-      nodes.pop();
-      if (doOpen<Visitor>(node, part.leaves[leaf_index], part.r_local)) {
-        for (int j = 0; j < node->n_children; j++) {
-          nodes.push(node->getChild(j));
-        }
-      } else {
-        doNode<Visitor>(node, part.leaves[leaf_index], part.r_local);
-      }
-    }
-  }
-
   template <typename Visitor>
   void interactBase(Partition<Data>& part)
   {
@@ -394,7 +375,7 @@ public:
     for (auto && np : now_ready) nodes.emplace(start_node, np);
     while (!nodes.empty()) {
       Node<Data>* node = nodes.top().first, *curr_payload = nodes.top().second;
-      // node is target, payload is source
+      // node is source, payload is target
       nodes.pop();
 #if DEBUG
       CkPrintf("tp %d, target key = %d, type = %d, source key = %d, type = %d, pe %d\n", tp.thisIndex, node->key, node->type, curr_payload->key, curr_payload->type, CkMyPe());
@@ -402,24 +383,12 @@ public:
       if (curr_payload->type == Node<Data>::Type::EmptyLeaf) {
         continue;
       }
-      else if (curr_payload->type == Node<Data>::Type::Leaf) {
-        int leaf_index = -1;
-        for (int i = 0; i < tp.leaves.size(); i++) {
-          if (tp.leaves[i] == curr_payload) {
-            leaf_index = i;
-            break;
-          }
-        }
-        CkAssert(leaf_index != -1);
-        this->template runSimpleTraversal<Visitor>(tp, node, leaf_index);
-        continue;
-      }
       CkAssert(curr_payload->type == Node<Data>::Type::Internal);
       switch (node->type) {
         case Node<Data>::Type::Leaf:
         case Node<Data>::Type::CachedRemoteLeaf:
           {
-            runInvertedTraversal(node, curr_payload);
+            doLeaf<Visitor>(node, curr_payload, tp.r_local); // n2 calc
             break;
           }
         case Node<Data>::Type::Internal:
@@ -428,8 +397,13 @@ public:
           {
             if (doCell<Visitor>(node, curr_payload, tp.r_local)) {
               for (int i = 0; i < node->n_children; i++) {
-                for (int j = 0; j < curr_payload->n_children; j++) {
-                  nodes.push(std::make_pair(node->getChild(i), curr_payload->getChild(j)));
+                if (curr_payload->type == Node<Data>::Type::Leaf) {
+                  nodes.push(std::make_pair(node->getChild(i), curr_payload));
+                }
+                else {
+                  for (int j = 0; j < curr_payload->n_children; j++) {
+                    nodes.push(std::make_pair(node->getChild(i), curr_payload->getChild(j)));
+                  }
                 }
               }
             } else {

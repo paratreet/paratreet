@@ -57,6 +57,7 @@ public:
   }
 
   static bool cell(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
+    if (source.n_particles <= nMinParticleNode) return true;
     return Space::intersect(target.data.box, source.data.box)
       || Space::intersect(target.data.box, source.data.centroid, source.data.rsq);
   }
