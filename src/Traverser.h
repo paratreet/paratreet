@@ -365,14 +365,14 @@ public:
       Node<Data>* node = nodes.top();
       nodes.pop();
       if (node->type == Node<Data>::Type::Leaf || node->type == Node<Data>::Type::CachedRemoteLeaf) {
-        Visitor::leaf(*source_leaf, *node); // why even call leaf() here? maybe just call node.
+        doLeaf<Visitor>(source_leaf, node, tp.r_local);
       } else {
-        if (Visitor::open(*node, *source_leaf)) {
+        if (doOpen<Visitor>(source_leaf, node, tp.r_local)) {
           for (int j = 0; j < node->n_children; j++) {
             nodes.push(node->getChild(j));
           }
         } else {
-          Visitor::node(*node, *source_leaf);
+          doNode<Visitor>(source_leaf, node, tp.r_local);
         }
       }
     }
