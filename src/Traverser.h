@@ -320,19 +320,12 @@ class DualTraverser : public Traverser<Data> {
 private:
   Subtree<Data>& tp;
   std::unordered_map<Key, std::vector<Node<Data>*>> curr_nodes; // source nodes to target nodes
-  std::vector<Key> keys;
 public:
-  DualTraverser(Subtree<Data>& tpi, std::vector<Key> keysi)
-     : tp(tpi), keys(keysi)
-  {
-    for (auto key : keysi) curr_nodes[key].push_back(tp.local_root);
-  }
+  DualTraverser(Subtree<Data>& tpi) : tp(tpi)
+  {}
   void start() override {
-    for (auto && key : keys) {
-      auto desc = tp.cm_local->root->getDescendant(key);
-      if (!desc) CkAbort("Missing descendant. Do loadCache, dont set config.num_share_nodes");
-      doTrav(desc);
-    }
+    curr_nodes[1].push_back(tp.local_root);
+    doTrav(tp.cm_local->root);
     // do work
   }
   virtual void interact() override {}
@@ -394,19 +387,23 @@ public:
         case Node<Data>::Type::CachedBoundary:
         case Node<Data>::Type::CachedRemote:
           {
-            if (doCell<Visitor>(node, curr_payload, tp.r_local)) {
-              for (int i = 0; i < node->n_children; i++) {
-                if (curr_payload->type == Node<Data>::Type::Leaf) {
-                  nodes.push(std::make_pair(node->getChild(i), curr_payload));
+            if (curr_payload->type == Node<Data>::Type::Leaf
+               // cell means should we open target
+             || !doCell<Visitor>(node, curr_payload, tp.r_local)) {
+              if (doOpen<Visitor>(node, curr_payload, tp.r_local)) {
+	        for (int i = 0; i < node->n_children; i++) {
+	          nodes.emplace(node->getChild(i), curr_payload);
                 }
-                else {
-                  for (int j = 0; j < curr_payload->n_children; j++) {
-                    nodes.push(std::make_pair(node->getChild(i), curr_payload->getChild(j)));
-                  }
+              } else {
+                doNode<Visitor>(node, curr_payload, tp.r_local);
+              }
+            }
+            else {
+              for (int i = 0; i < node->n_children; i++) {
+                for (int j = 0; j < curr_payload->n_children; j++) {
+                  nodes.emplace(node->getChild(i), curr_payload->getChild(j));
                 }
               }
-            } else {
-              doNode<Visitor>(node, curr_payload, tp.r_local);
             }
             break;
           }

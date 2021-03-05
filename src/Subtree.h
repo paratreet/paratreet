@@ -222,8 +222,7 @@ void Subtree<Data>::startDual() {
   r_local->subtree_proxy = this->thisProxy;
   r_local->use_subtree = true;
   cm_local = cm_proxy.ckLocalBranch();
-  auto && tp_keys = treespec.ckLocalBranch()->getSubtreeDecomposition()->getAllTpKeys(n_subtrees);
-  traverser.reset(new DualTraverser<Data, Visitor>(*this, tp_keys));
+  traverser.reset(new DualTraverser<Data, Visitor>(*this));
   traverser->start();
 }
 

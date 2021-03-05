@@ -57,9 +57,9 @@ public:
   }
 
   static bool cell(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
-    if (source.n_particles <= nMinParticleNode) return true;
-    return Space::intersect(target.data.box, source.data.box)
-      || Space::intersect(target.data.box, source.data.centroid, source.data.rsq);
+    // cell means: do we want to open up target
+    // for example, if source is root, we dont want to open up target
+    return !Space::enclose(source.data.box, target.data.box);
   }
 
 };
