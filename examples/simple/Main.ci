@@ -2,6 +2,7 @@ mainmodule Main {
     extern module paratreet;
 
     readonly bool verify;
+    readonly bool dual_tree;
     readonly int peanoKey;
     readonly CProxy_CountManager count_manager;
     readonly CProxy_NeighborListCollector neighbor_list_collector;
@@ -29,6 +30,7 @@ mainmodule Main {
     }
 
     extern entry void Partition<CentroidData> startDown<GravityVisitor> ();
+    extern entry void Subtree<CentroidData> startDual<GravityVisitor> ();
     extern entry void Partition<CentroidData> startDown<CollisionVisitor> ();
     extern entry void Partition<CentroidData> startUpAndDown<DensityVisitor> ();
     //extern entry void Partition<CentroidData> startDown<PressureVisitor> ();

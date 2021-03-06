@@ -29,15 +29,13 @@ extern CProxy_Resumer<CentroidData> centroid_resumer;
 
 namespace paratreet {
   extern void preTraversalFn(CProxy_Driver<CentroidData>&, CProxy_CacheManager<CentroidData>& cache);
-  extern void traversalFn(BoundingBox&,CProxy_Partition<CentroidData>&,int);
+  extern void traversalFn(BoundingBox&,CProxy_Partition<CentroidData>&,CProxy_Subtree<CentroidData>&,int);
   extern void postTraversalFn(BoundingBox&,CProxy_Partition<CentroidData>&,int);
   extern Real getTimestep(BoundingBox&, Real);
 }
 
 template <typename Data>
 class Driver : public CBase_Driver<Data> {
-private:
-
 public:
   CProxy_CacheManager<Data> cache_manager;
   std::vector<std::pair<Key, SpatialNode<Data>>> storage;
@@ -221,7 +219,7 @@ public:
 
       // Perform traversals
       start_time = CkWallTimer();
-      paratreet::traversalFn(universe, partitions, iter);
+      paratreet::traversalFn(universe, partitions, subtrees, iter);
       if (config.perturb_no_barrier) {
         partitions.perturb(subtrees, timestep_size, complete_rebuild); // 0.1s for example
       }

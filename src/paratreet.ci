@@ -94,6 +94,8 @@ module paratreet {
     entry void destroy();
     entry void reset();
     entry void sendLeaves(CProxy_Partition<Data>);
+    template <typename Visitor> entry void startDual();
+    entry void goDown();
     entry void checkParticlesChanged(const CkCallback&);
     entry void collectMetaData(const CkCallback & cb);
     entry void pauseForLB();

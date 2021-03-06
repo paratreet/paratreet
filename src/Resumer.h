@@ -11,9 +11,11 @@ template <typename Data>
 class Resumer : public CBase_Resumer<Data> {
 public: // these need to be seen by other local chares
   CProxy_Partition<Data> part_proxy;
+  CProxy_Subtree<Data> subtree_proxy;
   CacheManager<Data>* cm_local;
   std::vector<std::queue<Node<Data>*>> resume_nodes_per_part;
   std::unordered_map<Key, std::vector<int>> waiting;
+  bool use_subtree = false;
 
 private: // stats
   unsigned long long n_part_ints = 0ull;
@@ -87,7 +89,10 @@ public:
       auto && resume_nodes = resume_nodes_per_part[part_index];
       bool should_resume = resume_nodes.empty();
       resume_nodes.push(node);
-      if (should_resume) part_proxy[part_index].goDown();
+      if (should_resume) {
+        if (use_subtree) subtree_proxy[part_index].goDown();
+        else part_proxy[part_index].goDown();
+      }
     }
     waiting.erase(it);
   }
