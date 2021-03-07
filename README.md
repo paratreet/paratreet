@@ -36,7 +36,7 @@ $ make -j
 
 3. Build example applications.
 ```
-$ cd ../examples/simple
+$ cd ../examples
 $ make test
 ```
 
