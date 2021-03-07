@@ -96,7 +96,7 @@ public:
     std::vector<int> new_active_buckets;
     new_active_buckets.reserve(leaves.size());
 #if DEBUG
-    CkPrintf("tp %d, key = 0x%" PRIx64 ", type = %d, pe %d\n", part.thisIndex, node->key, node->type, CkMyPe());
+    CkPrintf("tp %d, key = 0x%" PRIx64 ", type = %d, pe %d\n", part.thisIndex, node->key, (int)node->type, CkMyPe());
 #endif
     switch (node->type) {
       case Node<Data>::Type::Leaf:
@@ -177,7 +177,7 @@ public:
       resume_nodes.pop();
       auto key = start_node->key;
 #if DEBUG
-      CkPrintf("going down on key %d while its type is %d\n", key, start_node->type);
+      CkPrintf("going down on key %d while its type is %d\n", key, (int)start_node->type);
 #endif
       auto& now_ready = curr_nodes[key];
       recurse(start_node, now_ready);
@@ -219,7 +219,7 @@ public:
       resume_nodes.pop();
       auto key = start_node->key;
 #if DEBUG
-      CkPrintf("going down on key %d while its type is %d\n", key, start_node->type);
+      CkPrintf("going down on key %d while its type is %d\n", key, (int)start_node->type);
 #endif
       traverse(start_node);
     }
@@ -239,7 +239,7 @@ private:
         Node<Data>* node = nodes.top();
         nodes.pop();
 #if DEBUG
-        CkPrintf("tp %d, key = %d, type = %d, pe %d\n", part.thisIndex, node->key, node->type, CkMyPe());
+        CkPrintf("tp %d, key = %d, type = %d, pe %d\n", part.thisIndex, node->key, (int)node->type, CkMyPe());
 #endif
         switch (node->type) {
           case Node<Data>::Type::Leaf:
@@ -290,7 +290,7 @@ private:
           for (int j = 0; j < trav_top_parent->n_children; j++) {
             Node<Data>* child = trav_top_parent->getChild(j);
             if (child == nullptr) {
-              CkPrintf("child of key %lu and parent type %d is nullptr\n", trav_top_parent->key * 8 + j, trav_top_parent->type);
+              CkPrintf("child of key %lu and parent type %d is nullptr\n", trav_top_parent->key * 8 + j, (int)trav_top_parent->type);
             }
             if (child != trav_tops[bucket]) {
                if (trav_top_parent->type == Node<Data>::Type::Boundary) {
@@ -305,7 +305,6 @@ private:
         }
       }
     }
-    //else CkPrintf("tp %d leaf %d still waiting\n", tp->thisIndex, i);
     curr_nodes.erase(key);
     for (auto cn : curr_nodes_insertions) curr_nodes[cn.first].push_back(cn.second);
     auto && resume_nodes = part.r_local->resume_nodes_per_part[part.thisIndex];
@@ -371,7 +370,7 @@ public:
       // node is source, payload is target
       nodes.pop();
 #if DEBUG
-      CkPrintf("tp %d, target key = %d, type = %d, source key = %d, type = %d, pe %d\n", tp.thisIndex, node->key, node->type, curr_payload->key, curr_payload->type, CkMyPe());
+      CkPrintf("tp %d, target key = %d, type = %d, source key = %d, type = %d, pe %d\n", tp.thisIndex, node->key, (int)node->type, curr_payload->key, (int)curr_payload->type, CkMyPe());
 #endif
       if (curr_payload->type == Node<Data>::Type::EmptyLeaf) {
         continue;
