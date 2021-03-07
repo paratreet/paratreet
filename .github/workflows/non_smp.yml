@@ -45,16 +45,16 @@ jobs:
         export CHARM_HOME=$GITHUB_WORKSPACE/charm
         cd src
         make -j4 MAKE_OPTS="-DGROUP_CACHE"
-        cd ../examples/simple
+        cd ../examples/
         make MAKE_OPTS="-DGROUP_CACHE"
-        ./charmrun +p1 ./Gravity -f ../../inputgen/1k.tipsy ++local -u 2
-        ./charmrun +p4 ./Gravity -f ../../inputgen/1k.tipsy ++local -u 2
-        ./charmrun +p4 ./Gravity -f ../../inputgen/1k.tipsy ++local -d sfc -u 2
-        ./charmrun +p4 ./Gravity -f ../../inputgen/1k.tipsy ++local -d kd -t kd -u 2
-        ./charmrun +p4 ./Gravity -f ../../inputgen/1k.tipsy ++local -d longest -t longest -u 2
-        ./charmrun +p4 ./Gravity -f ../../inputgen/1k.tipsy ++local -e -u 2
-        ./charmrun +p1 ./SPH     -f ../../inputgen/1k.tipsy ++local -u 2
-        ./charmrun +p4 ./SPH     -f ../../inputgen/1k.tipsy ++local -u 2
-        ./charmrun +p4 ./SPH     -f ../../inputgen/1k.tipsy ++local -d sfc -u 2
-        ./charmrun +p4 ./SPH     -f ../../inputgen/1k.tipsy ++local -d kd -t kd -u 2
-        ./charmrun +p4 ./SPH     -f ../../inputgen/1k.tipsy ++local -d longest -t longest -u 2
+        ./charmrun +p1 ./Gravity -f ../inputgen/1k.tipsy ++local -u 2
+        ./charmrun +p4 ./Gravity -f ../inputgen/1k.tipsy ++local -u 2
+        ./charmrun +p4 ./Gravity -f ../inputgen/1k.tipsy ++local -d sfc -u 2
+        ./charmrun +p4 ./Gravity -f ../inputgen/1k.tipsy ++local -d kd -t kd -u 2
+        ./charmrun +p4 ./Gravity -f ../inputgen/1k.tipsy ++local -d longest -t longest -u 2
+        ./charmrun +p4 ./Gravity -f ../inputgen/1k.tipsy ++local -e -u 2
+        ./charmrun +p1 ./SPH     -f ../inputgen/1k.tipsy ++local -u 2
+        ./charmrun +p4 ./SPH     -f ../inputgen/1k.tipsy ++local -u 2
+        ./charmrun +p4 ./SPH     -f ../inputgen/1k.tipsy ++local -d sfc -u 2
+        ./charmrun +p4 ./SPH     -f ../inputgen/1k.tipsy ++local -d kd -t kd -u 2
+        ./charmrun +p4 ./SPH     -f ../inputgen/1k.tipsy ++local -d longest -t longest -u 2
