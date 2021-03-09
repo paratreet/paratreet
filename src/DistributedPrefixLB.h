@@ -31,27 +31,29 @@ public:
   DistributedPrefixLB(const CkLBOptions &);
   DistributedPrefixLB(CkMigrateMessage *m);
   static void initnodeFn(void);
-
-  void GossipLoadInfo(int, int, int[], double[]);
-  void LoadReduction(CkReductionMsg* msg);
-  void AfterLBReduction(CkReductionMsg* msg);
-  void DoneGossip();
-  void InformMigration(int obj_id, int from_pe, double obj_load, bool force);
-  void RecvAck(int obj_id, int assigned_pe, bool can_accept);
+  void prefixStep();
+  void prefixPassValue(int, int);
+  void donePrefix();
 
 private:
-  // Load information obtained via gossipping
-  int underloaded_pe_count;
-  std::vector<int> pe_no;
-  std::vector<double> loads;
-  std::vector<double> distribution;
-  bool underloaded;
+  // Prefix related
+  std::vector<LDObjStats> obj_map;
+  std::vector<int> size_map;
 
-  minHeap* objs;
-
-  int total_migrates_ack;
+  int total_iter;
+  int prefix_stage;
+  int prefix_sum;
+  double prefix_start_time;
+  double prefix_end_time;
+  std::vector<char> flag_buf;
+  std::vector<int> value_buf;
+  int my_particle_size_sum = 0;
+  int total_particle_size = 0;
+  double total_partition_load = 0.0;
+  double avg_size;
+  int max_size;
+  double size_ratio;
   int total_migrates;
-  std::vector<MigrateInfo*> migrateInfo;
 
   // Constant variables for configuring how the strategy works
   bool kUseAck;
@@ -61,45 +63,16 @@ private:
   int kMaxObjPickTrials;
   int kMaxPhases;
   double kTargetRatio;
-
-  // Global stats about the load gather from reductions
-  double avg_load;
-  double max_load;
-  double load_ratio;
-
-  // Information about this PEs load
-  double my_load;
-  double init_load;
-  double b_load;
-  double b_load_per_obj;
-
-  // Control flow variables
-  bool lb_started;
-  int phase_number;
-  int gossip_msg_count;
-  int objs_count;
-  int negack_count;
-  double transfer_threshold;
-
   double start_time;
 
   const DistBaseLB::LDStats* my_stats;
 
   void InitLB(const CkLBOptions &);
-  void SendLoadInfo();
-  void LoadBalance();
-  void MapObjsToPe(minHeap *objs, std::vector<int> &obj_no, std::vector<int> &obj_pe_no);
-	int PickRandReceiverPeIdx() const;
-	void CalculateCumulateDistribution();
   void Strategy(const DistBaseLB::LDStats* const stats);
-  void Setup();
-  void Cleanup();
+  void prefixReset();
+  void prefixCleanup();
+  void doPrefix();
   void PackAndSendMigrateMsgs();
-  void StartNextLBPhase();
-  void DoneWithLBPhase();
-
-  // TODO: Should this use the lb_started flag?
-  bool QueryBalanceNow(int step) { return true; };
 };
 
 #endif /* _DistributedPrefixLB_H_ */

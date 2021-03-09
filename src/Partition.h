@@ -10,7 +10,7 @@
 #include "paratreet.decl.h"
 #include "LBCommon.h"
 
-CkpvExtern(int, _lb_obj_index);
+//CkpvExtern(int, _lb_obj_index);
 extern CProxy_TreeSpec treespec;
 extern CProxy_Reader readers;
 
@@ -88,7 +88,7 @@ Partition<Data>::Partition(
   bool matching_decomps_
   )
 {
-  this->usesAtSync = true;
+  //this->usesAtSync = true;
   n_partitions = np;
   tc_proxy = tc_holder.proxy;
   r_proxy = rp;
@@ -289,13 +289,13 @@ void Partition<Data>::doPerturb()
   copyParticles(particles);
   int size = particles.size();
   r_local->countPartitionParticles(particles.size());
-  #if CMK_LB_USER_DATA
-  if (CkpvAccess(_lb_obj_index) != -1) {
-    void *data = this->getObjUserData(CkpvAccess(_lb_obj_index));
-    LBUserData lb_data{pt, this->thisIndex, size};
-    *(LBUserData *) data = lb_data;
-  }
-  #endif
+  //#if CMK_LB_USER_DATA
+  //if (CkpvAccess(_lb_obj_index) != -1) {
+  //  void *data = this->getObjUserData(CkpvAccess(_lb_obj_index));
+  //  LBUserData lb_data{pt, this->thisIndex, size};
+  //  *(LBUserData *) data = lb_data;
+  //}
+  //#endif
   for (auto && p : particles) {
     p.perturb(saved_perturb.timestep, readers.ckLocalBranch()->universe.box);
   }

@@ -29,21 +29,11 @@ protected:
 
 public:
   PrefixLB(const CkLBOptions &);
-  PrefixLB(CkMigrateMessage *m):CBase_PrefixLB(m) { lbname = (char *)"PrefixLB"; }
+  PrefixLB(CkMigrateMessage *m):CBase_PrefixLB(m) { lbname = (char *)"PrefixLB"; };
   void work(LDStats* stats);
 private:
   bool QueryBalanceNow(int step) { return true; }
 
-protected:
-/*
-  void create(LDStats* stats, int count);
-  void assign(computeInfo *c, int p);
-  void assign(computeInfo *c, processorInfo *p);
-  void deAssign(computeInfo *c, processorInfo *pRec);
-  void computeAverage();
-  double computeMax();
-  int refine();
-*/
 };
 
 #endif /* _REFINELB_H_ */

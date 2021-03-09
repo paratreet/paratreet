@@ -13,12 +13,14 @@
 #include "Resumer.h"
 #include "Driver.h"
 #include "OrientedBox.h"
+#include "LBCommon.h"
 
 #include <cstring>
 #include <queue>
 #include <vector>
 #include <fstream>
 
+CkpvExtern(int, _lb_obj_index);
 extern CProxy_TreeSpec treespec;
 extern CProxy_Reader readers;
 
@@ -66,11 +68,16 @@ public:
   void collectMetaData(const CkCallback & cb);
   void addNodeToFlatSubtree(Node<Data>* node);
   void pauseForLB(){
-    //CkPrintf("[ST %d]  pause for LB on PE %d\n", this->thisIndex, CkMyPe());
+    #if CMK_LB_USER_DATA
+    if (CkpvAccess(_lb_obj_index) != -1) {
+      void *data = this->getObjUserData(CkpvAccess(_lb_obj_index));
+      LBUserData lb_data{pt, this->thisIndex, (int)incoming_particles.size(), n_total_particles};
+      *(LBUserData *) data = lb_data;
+    }
+    #endif
     this->AtSync();
   }
   void ResumeFromSync(){
-    //CkPrintf("[ST %d]  resume from sync for LB on PE %d\n", this->thisIndex, CkMyPe());
     return;
   };
 
@@ -98,7 +105,7 @@ Subtree<Data>::Subtree(const CkCallback& cb, int n_total_particles_,
                        CProxy_Resumer<Data> r_proxy_,
                        CProxy_CacheManager<Data> cm_proxy_, DPHolder<Data> dp_holder,
                        bool matching_decomps_){
-  //this->usesAtSync = true;
+  this->usesAtSync = true;
   n_total_particles = n_total_particles_;
   n_subtrees = n_subtrees_;
   n_partitions = n_partitions_;

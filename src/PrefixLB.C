@@ -24,14 +24,7 @@ PrefixLB::PrefixLB(const CkLBOptions &opt): CBase_PrefixLB(opt)
   #endif
 }
 
-//typedef struct {
-//  int index;
-//  LDObjData data;
-//  int from_proc;
-//  int to_proc;
-//  inline void pup(PUP::er &p);
-//} LDObjStats;
-bool compareLDObjStats(const LDObjStats & a, const LDObjStats & b)
+bool PrefixLBCompareLDObjStats(const LDObjStats & a, const LDObjStats & b)
 {
   // first compare PE
   int a_pe = a.from_proc, b_pe = b.from_proc;
@@ -40,7 +33,7 @@ bool compareLDObjStats(const LDObjStats & a, const LDObjStats & b)
   // then compare chare array index
   // to_proc is assigned with chare_idx from user data
   return a.to_proc < b.to_proc;
-}
+};
 
 void PrefixLB::work(LDStats* stats)
 {
@@ -52,7 +45,7 @@ void PrefixLB::work(LDStats* stats)
   int migratable_obj_ct = 0, nonmig_obj_ct = 0;
   std::vector<LDObjStats> objMap;
 
-  double total_patition_load = 0.0;
+  double total_partition_load = 0.0;
   int total_partical = 0;
   std::vector<int> size_map (stats->objData.size(), 0);
 
@@ -67,8 +60,9 @@ void PrefixLB::work(LDStats* stats)
       // Assign chare_idx at the position of to_proc
       objMap.push_back(LDObjStats{obj_idx, oData, pe, usr_data.chare_idx});
       size_map[obj_idx] = usr_data.particle_size;
-      total_patition_load += oData.wallTime * stats->procs[pe].pe_speed;
+      total_partition_load += oData.wallTime * stats->procs[pe].pe_speed;
       total_partical += usr_data.particle_size;
+      //CkPrintf("ST %d: size = %d\n", usr_data.chare_idx, usr_data.particle_size);
     }else{
       // For non Parition objects, keep the PE
       stats->assign(obj_idx, pe);
@@ -85,9 +79,9 @@ void PrefixLB::work(LDStats* stats)
   }
 
   #if CMK_LB_USER_DATA
-  std::sort(objMap.begin(), objMap.end(), compareLDObjStats);
+  std::sort(objMap.begin(), objMap.end(), PrefixLBCompareLDObjStats);
 
-  double avg_load = total_patition_load / n_pes;
+  double avg_load = total_partition_load / n_pes;
   int avg_particals = total_partical / n_pes;
   double prefixed_load = 0.0;
   int prefix_particle_size = 0;
@@ -96,7 +90,7 @@ void PrefixLB::work(LDStats* stats)
     int pe = oStat.from_proc;
     prefixed_load += oStat.data.wallTime * stats -> procs[pe].pe_speed;
     prefix_particle_size += size_map[oStat.index];
-    int to_pei_load = std::floor(prefixed_load / avg_load);
+    int to_pe_load = std::floor(prefixed_load / avg_load);
     int to_pe_size = std::floor(prefix_particle_size / avg_particals);
     int to_pe = std::min(to_pe_size, n_pes-1);
     stats->assign(oStat.index, to_pe);
@@ -108,7 +102,7 @@ void PrefixLB::work(LDStats* stats)
 
   //CkPrintf("[%d] PrefixLB strategy moved %d objs\n n_pes = %d; n_objs = %d; n_migrateobjs = %d\n total migratable ct= %d load =  %f; total nonmig ct = %d load = %f\n",CkMyPe(),  migrate_ct, n_pes, stats->objData.size(), stats->n_migrateobjs, migratable_obj_ct, total_load, nonmig_obj_ct, total_nonmig_load);
   CkPrintf("CharmLB> PrefixLB: PE [%d] moved %d objects.\n", CkMyPe(), migrate_ct);
-  //CkPrintf("Partition load =  %f, else = %f\n", total_patition_load, total_load - total_patition_load);
+  //CkPrintf("Partition load =  %f, else = %f\n", total_partition_load, total_load - total_partition_load);
   #endif
 }
 

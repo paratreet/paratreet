@@ -57,7 +57,6 @@ void TreeCanopy<Data>::recvProxies(TPHolder<Data> tp_holder, int tp_index_,
     void *data = this->getObjUserData(CkpvAccess(_lb_obj_index));
     LBUserData lb_data{cp};
     *(LBUserData *) data = lb_data;
-    //CkPrintf("[C %d] \n", this->thisIndex);
   }
   #endif
 }

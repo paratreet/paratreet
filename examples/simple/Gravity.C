@@ -22,8 +22,9 @@ namespace paratreet {
     }
   }
   Real getTimestep(BoundingBox& universe, Real max_velocity) {
-    Real universe_box_len = universe.box.greater_corner.x - universe.box.lesser_corner.x;
-    return universe_box_len / max_velocity / std::cbrt(universe.n_particles);
+    return 0.0001;
+    //Real universe_box_len = universe.box.greater_corner.x - universe.box.lesser_corner.x;
+    //return universe_box_len / max_velocity / std::cbrt(universe.n_particles);
   }
 
   void perLeafFn(int indicator, SpatialNode<CentroidData>& leaf) {}
