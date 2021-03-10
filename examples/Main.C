@@ -7,6 +7,8 @@
 #include "CollisionVisitor.h"
 
 /* readonly */ bool verify;
+/* readonly */ bool dual_tree;
+/* readonly */ int peanoKey;
 /* readonly */ CProxy_CountManager count_manager;
 /* readonly */ CProxy_NeighborListCollector neighbor_list_collector;
 
@@ -27,8 +29,8 @@ class Main : public CBase_Main {
     // Initialize readonly variables
     conf.input_file = "";
     conf.output_file = "";
-    conf.min_n_subtrees = CkNumPes() * 4;
-    conf.min_n_partitions = CkNumPes() * 4;
+    conf.min_n_subtrees = CkNumPes() * 8; // default from ChaNGa
+    conf.min_n_partitions = CkNumPes() * 8;
     conf.max_particles_per_leaf = 12; // default from ChaNGa
     conf.decomp_type = paratreet::DecompType::eOct;
     conf.tree_type = paratreet::TreeType::eOct;
@@ -41,6 +43,8 @@ class Main : public CBase_Main {
     conf.perturb_no_barrier = false;
 
     verify = false;
+    dual_tree = false;
+    peanoKey = 3;
 
     // Initialize member variables
     cur_iteration = 0;
@@ -48,7 +52,7 @@ class Main : public CBase_Main {
     // Process command line arguments
     int c;
     std::string input_str;
-    while ((c = getopt(m->argc, m->argv, "f:n:p:l:d:t:i:s:u:r:b:v:a")) != -1) {
+    while ((c = getopt(m->argc, m->argv, "f:n:p:l:d:t:i:s:u:r:b:v:ame")) != -1) {
       switch (c) {
         case 'f':
           conf.input_file = optarg;
@@ -114,7 +118,14 @@ class Main : public CBase_Main {
           break;
         case 'a':
           conf.perturb_no_barrier = true;
-          CkPrintf("You are skipping the perturb barrier. This only works for Gravity.\n");
+          CkPrintf("You are skipping the perturb barrier. This only works for nlogn Gravity.\n");
+          break;
+	case 'm':
+	  peanoKey = 0; // morton
+	  break;
+        case 'e':
+          dual_tree = true;
+          CkPrintf("You are doing a dual-tree traversal. Make sure you have matching decomps.\n");
           break;
         default:
           CkPrintf("Usage: %s\n", m->argv[0]);

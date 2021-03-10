@@ -1,5 +1,5 @@
 CHARM_HOME ?= $(HOME)/charm-paratreet
-BASE_PATH=$(shell realpath "$(shell pwd)/../..")
+BASE_PATH=$(shell realpath "$(shell pwd)/..")
 PARATREET_PATH = $(BASE_PATH)/src
 STRUCTURE_PATH = $(BASE_PATH)/utility/structures
 HYPERCOMM_PATH = $(BASE_PATH)/hypercomm-aggregation

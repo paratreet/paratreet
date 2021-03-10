@@ -68,7 +68,7 @@ module paratreet {
 
   template <typename Data>
   array [1d] Partition {
-    entry Partition(int, CProxy_CacheManager<Data>, CProxy_Resumer<Data>, TCHolder<Data>);
+    entry Partition(int, CProxy_CacheManager<Data>, CProxy_Resumer<Data>, TCHolder<Data>, bool);
     template <typename Visitor> entry void startDown();
     template <typename Visitor> entry void startUpAndDown();
     entry void interact(const CkCallback&);
@@ -86,7 +86,7 @@ module paratreet {
 
   template <typename Data>
   array [1d] Subtree {
-    entry Subtree(const CkCallback&, int, int, int, TCHolder<Data>, CProxy_Resumer<Data>, CProxy_CacheManager<Data>, DPHolder<Data>);
+    entry Subtree(const CkCallback&, int, int, int, TCHolder<Data>, CProxy_Resumer<Data>, CProxy_CacheManager<Data>, DPHolder<Data>, bool);
     entry void receive(ParticleMsg*);
     entry void buildTree(CProxy_Partition<Data>, CkCallback);
     entry void requestNodes(Key, int);
@@ -94,6 +94,8 @@ module paratreet {
     entry void destroy();
     entry void reset();
     entry void sendLeaves(CProxy_Partition<Data>);
+    template <typename Visitor> entry void startDual();
+    entry void goDown();
     entry void checkParticlesChanged(const CkCallback&);
     entry void collectMetaData(const CkCallback & cb);
     entry void pauseForLB();
@@ -136,6 +138,7 @@ module paratreet {
     entry void countSfc(const std::vector<QuickSelectSFCState>&, size_t, const CkCallback&);
     entry void countKd(const std::vector<QuickSelectKDState>&, const CkCallback&);
     entry void countLongestDim(const CkCallback&);
+    entry void initBinarySplit(const CkCallback&);
     entry void doBinarySplit(const std::vector<std::pair<int, Real>>&, const CkCallback&);
     entry void getAllSfcKeys(const CkCallback&);
     entry void getAllPositions(const CkCallback&);

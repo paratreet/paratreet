@@ -29,15 +29,13 @@ extern CProxy_Resumer<CentroidData> centroid_resumer;
 
 namespace paratreet {
   extern void preTraversalFn(CProxy_Driver<CentroidData>&, CProxy_CacheManager<CentroidData>& cache);
-  extern void traversalFn(BoundingBox&,CProxy_Partition<CentroidData>&,int);
+  extern void traversalFn(BoundingBox&,CProxy_Partition<CentroidData>&,CProxy_Subtree<CentroidData>&,int);
   extern void postTraversalFn(BoundingBox&,CProxy_Partition<CentroidData>&,int);
   extern Real getTimestep(BoundingBox&, Real);
 }
 
 template <typename Data>
 class Driver : public CBase_Driver<Data> {
-private:
-
 public:
   CProxy_CacheManager<Data> cache_manager;
   std::vector<std::pair<Key, SpatialNode<Data>>> storage;
@@ -113,7 +111,10 @@ public:
     n_subtrees = treespec.ckLocalBranch()->getSubtreeDecomposition()->findSplitters(universe, readers, config.min_n_subtrees);
     treespec.receiveDecomposition(CkCallbackResumeThread(),
       CkPointer<Decomposition>(treespec.ckLocalBranch()->getSubtreeDecomposition()), true);
+    CkPrintf("Setting up splitters for subtree decompositions: %.3lf ms\n",
+        (CkWallTimer() - start_time) * 1000);
     bool matching_decomps = config.decomp_type == paratreet::subtreeDecompForTree(config.tree_type);
+    start_time = CkWallTimer();
     if (matching_decomps) {
       n_partitions = n_subtrees;
       CkPrintf("Using same decomposition for subtrees and partitions\n");
@@ -138,7 +139,7 @@ public:
       CkCallbackResumeThread(),
       universe.n_particles, n_subtrees, n_partitions,
       centroid_calculator, centroid_resumer,
-      centroid_cache, this->thisProxy, subtree_opts
+      centroid_cache, this->thisProxy, matching_decomps, subtree_opts
       );
     CkPrintf("Created %d Subtrees: %.3lf ms\n", n_subtrees,
         (CkWallTimer() - start_time) * 1000);
@@ -150,7 +151,7 @@ public:
     else treespec.ckLocalBranch()->getPartitionDecomposition()->setArrayOpts(partition_opts);
     partitions = CProxy_Partition<CentroidData>::ckNew(
       n_partitions, centroid_cache, centroid_resumer,
-      centroid_calculator, partition_opts
+      centroid_calculator, matching_decomps, partition_opts
       );
     CkPrintf("Created %d Partitions: %.3lf ms\n", n_partitions,
         (CkWallTimer() - start_time) * 1000);
@@ -218,7 +219,7 @@ public:
 
       // Perform traversals
       start_time = CkWallTimer();
-      paratreet::traversalFn(universe, partitions, iter);
+      paratreet::traversalFn(universe, partitions, subtrees, iter);
       if (config.perturb_no_barrier) {
         partitions.perturb(subtrees, timestep_size, complete_rebuild); // 0.1s for example
       }

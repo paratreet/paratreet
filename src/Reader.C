@@ -136,12 +136,14 @@ void Reader::countSfc(const std::vector<QuickSelectSFCState>& states, size_t log
   contribute(sizeof(int) * counts.size(), &counts[0], CkReduction::sum_int, cb);
 }
 
+void Reader::initBinarySplit(const CkCallback& cb) {
+  bins.clear();
+  bins.emplace_back();
+  for (auto && particle : particles) bins.back().push_back(particle.position);
+  contribute(cb);
+}
+
 void Reader::countKd(const std::vector<QuickSelectKDState>& states, const CkCallback& cb) {
-  if (bins.empty()) {
-    bins.emplace_back();
-    for (auto && particle : particles) bins.back().push_back(particle.position);
-  }
-  CkAssert(states.size() == bins.size());
   std::vector<int> counts (states.size(), 0);
   for (int i = 0; i < states.size(); i++) {
     auto && state = states[i];
@@ -156,10 +158,6 @@ void Reader::countKd(const std::vector<QuickSelectKDState>& states, const CkCall
 }
 
 void Reader::countLongestDim(const CkCallback& cb) {
-  if (bins.empty()) {
-    bins.emplace_back();
-    for (auto && particle : particles) bins.back().push_back(particle.position);
-  }
   std::vector<Vector3D<Real>> centers (bins.size(), (0,0,0));
   std::vector<int> counts (bins.size(), 0);
   std::vector<Vector3D<Real>> lesser_corner (bins.size());

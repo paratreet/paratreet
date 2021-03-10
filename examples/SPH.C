@@ -14,7 +14,7 @@ namespace paratreet {
     driver.loadCache(CkCallbackResumeThread());
   }
 
-  void traversalFn(BoundingBox& universe, CProxy_Partition<CentroidData>& part, int iter) {
+  void traversalFn(BoundingBox& universe, CProxy_Partition<CentroidData>& part, CProxy_Subtree<CentroidData>&, int iter) {
     neighbor_list_collector.reset(CkCallbackResumeThread());
     part.template startUpAndDown<DensityVisitor>();
   }
