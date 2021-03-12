@@ -10,9 +10,10 @@
 #include "paratreet.decl.h"
 #include "LBCommon.h"
 
-//CkpvExtern(int, _lb_obj_index);
+CkpvExtern(int, _lb_obj_index);
 extern CProxy_TreeSpec treespec;
 extern CProxy_Reader readers;
+using namespace LBCommon;
 
 namespace paratreet {
   extern void perLeafFn(int indicator, SpatialNode<CentroidData>&);
@@ -24,6 +25,7 @@ struct Partition : public CBase_Partition<Data> {
   std::vector<Node<Data>*> leaves;
   std::vector<Node<Data>*> tree_leaves;
   bool matching_decomps;
+  OrientedBox<Real> universe_box;
 
   std::unique_ptr<Traverser<Data>> traverser;
   int n_partitions;
@@ -39,7 +41,11 @@ struct Partition : public CBase_Partition<Data> {
   CProxy_Resumer<Data> r_proxy;
   Resumer<Data>* r_local;
 
-  Partition(int, CProxy_CacheManager<Data>, CProxy_Resumer<Data>, TCHolder<Data>, bool);
+  #if CMK_LB_USER_DATA
+  Vector3D<Real> centroid;
+  #endif
+
+  Partition(int, CProxy_CacheManager<Data>, CProxy_Resumer<Data>, TCHolder<Data>, bool, OrientedBox<Real>);
   Partition(CkMigrateMessage * msg){delete msg;};
 
   template<typename Visitor> void startDown();
@@ -85,15 +91,16 @@ template <typename Data>
 Partition<Data>::Partition(
   int np, CProxy_CacheManager<Data> cm,
   CProxy_Resumer<Data> rp, TCHolder<Data> tc_holder,
-  bool matching_decomps_
+  bool matching_decomps_, OrientedBox<Real> universe_box_
   )
 {
-  //this->usesAtSync = true;
   n_partitions = np;
   tc_proxy = tc_holder.proxy;
   r_proxy = rp;
   cm_proxy = cm;
   matching_decomps = matching_decomps_;
+  universe_box = universe_box_;
+  if (!matching_decomps) this->usesAtSync = true;
   initLocalBranches();
 }
 
@@ -254,6 +261,7 @@ void Partition<Data>::pup(PUP::er& p)
   p | cm_proxy;
   p | r_proxy;
   p | matching_decomps;
+  p | universe_box;
   if (p.isUnpacking()) {
     initLocalBranches();
   }
@@ -289,13 +297,23 @@ void Partition<Data>::doPerturb()
   copyParticles(particles);
   int size = particles.size();
   r_local->countPartitionParticles(particles.size());
-  //#if CMK_LB_USER_DATA
-  //if (CkpvAccess(_lb_obj_index) != -1) {
-  //  void *data = this->getObjUserData(CkpvAccess(_lb_obj_index));
-  //  LBUserData lb_data{pt, this->thisIndex, size};
-  //  *(LBUserData *) data = lb_data;
-  //}
-  //#endif
+  #if CMK_LB_USER_DATA
+  for (auto p : particles){
+    centroid += p.position;
+  }
+  centroid /= (Real) size;
+  if (CkpvAccess(_lb_obj_index) != -1) {
+    void *data = this->getObjUserData(CkpvAccess(_lb_obj_index));
+    LBUserData lb_data{
+      pt, this->thisIndex,
+      size, 0,
+      centroid,
+      SFC::generateKey(centroid, universe_box)
+    };
+
+    *(LBUserData *) data = lb_data;
+  }
+  #endif
   for (auto && p : particles) {
     p.perturb(saved_perturb.timestep, readers.ckLocalBranch()->universe.box);
   }

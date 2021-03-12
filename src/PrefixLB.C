@@ -11,6 +11,8 @@
 extern int quietModeRequested;
 CkpvExtern(int, _lb_obj_index);
 
+using LBCommon::LBUserData;
+
 CreateLBFunc_Def(PrefixLB, "Move jobs base on prefix sum.")
 
 PrefixLB::PrefixLB(const CkLBOptions &opt): CBase_PrefixLB(opt)
@@ -56,7 +58,7 @@ void PrefixLB::work(LDStats* stats)
     #if CMK_LB_USER_DATA
     int idx = CkpvAccess(_lb_obj_index);
     LBUserData usr_data = *(LBUserData *)oData.getUserData(CkpvAccess(_lb_obj_index));
-    if (usr_data.lb_type == pt){
+    if (usr_data.lb_type == LBCommon::st){
       // Assign chare_idx at the position of to_proc
       objMap.push_back(LDObjStats{obj_idx, oData, pe, usr_data.chare_idx});
       size_map[obj_idx] = usr_data.particle_size;

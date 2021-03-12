@@ -48,6 +48,7 @@ public:
   int n_subtrees;
   int n_partitions;
   double start_time;
+  bool matching_decomps;
 
   Driver(CProxy_CacheManager<Data> cache_manager_) :
     cache_manager(cache_manager_), storage_sorted(false) {}
@@ -115,7 +116,7 @@ public:
       CkPointer<Decomposition>(treespec.ckLocalBranch()->getSubtreeDecomposition()), true);
     CkPrintf("Setting up splitters for subtree decompositions: %.3lf ms\n",
         (CkWallTimer() - start_time) * 1000);
-    bool matching_decomps = config.decomp_type == paratreet::subtreeDecompForTree(config.tree_type);
+    matching_decomps = config.decomp_type == paratreet::subtreeDecompForTree(config.tree_type);
     start_time = CkWallTimer();
     if (matching_decomps) {
       n_partitions = n_subtrees;
@@ -141,7 +142,7 @@ public:
       CkCallbackResumeThread(),
       universe.n_particles, n_subtrees, n_partitions,
       centroid_calculator, centroid_resumer,
-      centroid_cache, this->thisProxy, matching_decomps, subtree_opts
+      centroid_cache, this->thisProxy, matching_decomps, universe.box, subtree_opts
       );
     CkPrintf("Created %d Subtrees: %.3lf ms\n", n_subtrees,
         (CkWallTimer() - start_time) * 1000);
@@ -153,7 +154,7 @@ public:
     else treespec.ckLocalBranch()->getPartitionDecomposition()->setArrayOpts(partition_opts);
     partitions = CProxy_Partition<CentroidData>::ckNew(
       n_partitions, centroid_cache, centroid_resumer,
-      centroid_calculator, matching_decomps, partition_opts
+      centroid_calculator, matching_decomps, universe.box, partition_opts
       );
     CkPrintf("Created %d Partitions: %.3lf ms\n", n_partitions,
         (CkWallTimer() - start_time) * 1000);
@@ -244,8 +245,8 @@ public:
       }
       if (iter % config.lb_period == config.lb_period - 1){
         start_time = CkWallTimer();
-        //subtrees.pauseForLB(); // move them later
-        partitions.pauseForLB();
+        if (!matching_decomps) partitions.pauseForLB();
+        subtrees.pauseForLB();
         CkWaitQD();
         CkPrintf("Load balancing: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
       }

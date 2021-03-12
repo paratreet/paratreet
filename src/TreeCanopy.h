@@ -7,6 +7,8 @@
 #include "CacheManager.h"
 #include "LBCommon.h"
 
+using namespace LBCommon;
+
 CkpvExtern(int, _lb_obj_index);
 template<typename Data>
 class CProxy_Subtree;

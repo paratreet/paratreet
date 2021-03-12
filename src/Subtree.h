@@ -23,6 +23,7 @@
 CkpvExtern(int, _lb_obj_index);
 extern CProxy_TreeSpec treespec;
 extern CProxy_Reader readers;
+using namespace LBCommon;
 
 template <typename Data>
 class Subtree : public CBase_Subtree<Data> {
@@ -35,11 +36,19 @@ public:
   int n_subtrees;
   int n_partitions;
 
+  OrientedBox<Real> universe_box;
+
+  #if CMK_LB_USER_DATA
+  Vector3D<Real> centroid;
+  #endif
+
   bool matching_decomps;
 
   Key tp_key; // Should be a prefix of all particle keys underneath this node
   Node<Data>* local_root; // Root node of this Subtree, TreeCanopies sit above this node
   MultiData<Data> flat_subtree;
+
+  CkCallback lb_cb;
 
   CProxy_TreeCanopy<Data> tc_proxy;
   CProxy_CacheManager<Data> cm_proxy;
@@ -48,7 +57,7 @@ public:
   std::vector<Particle> flushed_particles; // For debugging
 
   Subtree(const CkCallback&, int, int, int, TCHolder<Data>,
-          CProxy_Resumer<Data>, CProxy_CacheManager<Data>, DPHolder<Data>, bool);
+          CProxy_Resumer<Data>, CProxy_CacheManager<Data>, DPHolder<Data>, bool, OrientedBox<Real>);
   Subtree(CkMigrateMessage * msg){
     delete msg;
   };
@@ -69,14 +78,24 @@ public:
   void addNodeToFlatSubtree(Node<Data>* node);
   void pauseForLB(){
     #if CMK_LB_USER_DATA
+    centroid /= (Real) incoming_particles.size();
+    if (incoming_particles.size() == 0){
+      Real zero = 0.0;
+      centroid = Vector3D<Real>(zero, zero, zero);
+    }
     if (CkpvAccess(_lb_obj_index) != -1) {
       void *data = this->getObjUserData(CkpvAccess(_lb_obj_index));
-      LBUserData lb_data{pt, this->thisIndex, (int)incoming_particles.size(), n_total_particles};
+      LBUserData lb_data{
+        st, this->thisIndex, (int)incoming_particles.size(),
+        n_total_particles, centroid,
+        SFC::generateKey(centroid, universe_box)
+      };
       *(LBUserData *) data = lb_data;
     }
     #endif
     this->AtSync();
   }
+
   void ResumeFromSync(){
     return;
   };
@@ -104,7 +123,9 @@ Subtree<Data>::Subtree(const CkCallback& cb, int n_total_particles_,
                        int n_subtrees_, int n_partitions_, TCHolder<Data> tc_holder,
                        CProxy_Resumer<Data> r_proxy_,
                        CProxy_CacheManager<Data> cm_proxy_, DPHolder<Data> dp_holder,
-                       bool matching_decomps_){
+                       bool matching_decomps_,
+                       OrientedBox<Real> universe_box_
+                       ){
   this->usesAtSync = true;
   n_total_particles = n_total_particles_;
   n_subtrees = n_subtrees_;
@@ -113,6 +134,7 @@ Subtree<Data>::Subtree(const CkCallback& cb, int n_total_particles_,
   tc_proxy = tc_holder.proxy;
   cm_proxy = cm_proxy_;
   r_proxy  = r_proxy_;
+  universe_box  = universe_box_;
 
   matching_decomps = matching_decomps_;
 
@@ -144,6 +166,7 @@ void Subtree<Data>::pup(PUP::er& p) {
   p | r_proxy;
   p | incoming_particles;
   p | matching_decomps;
+  p | universe_box;
 }
 
 template <typename Data>
@@ -155,6 +178,12 @@ void Subtree<Data>::receive(ParticleMsg* msg) {
   incoming_particles.resize(initial_size + msg->n_particles);
   std::memcpy(&incoming_particles[initial_size], msg->particles,
               msg->n_particles * sizeof(Particle));
+
+  #if CMK_LB_USER_DATA
+  for (int i  = 0; i < msg->n_particles; i++ ){
+    centroid += incoming_particles[initial_size + i].position;
+  }
+  #endif
   delete msg;
 }
 

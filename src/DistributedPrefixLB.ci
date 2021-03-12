@@ -1,14 +1,18 @@
 module DistributedPrefixLB {
-
 extern module DistBaseLB;
 initnode void lbinit(void);
+
+include "common.h";
 
 group [migratable] DistributedPrefixLB : DistBaseLB {
   entry void DistributedPrefixLB(const CkLBOptions &);
   initnode void initnodeFn();
+  entry void getOtherPECentroids(std::vector<Vector3D<Real>>, Vector3D<Real>, int);
+  entry void send_migrate_cts(int , int, int);
   entry void prefixStep();
   entry void prefixPassValue(int in_stage, int in_value);
   entry void donePrefix();
+  entry void sendPrefixSummary(int, int);
 };
 
 };
