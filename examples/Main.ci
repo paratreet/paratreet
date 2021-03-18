@@ -22,10 +22,10 @@ mainmodule Main {
     group NeighborListCollector {
         entry NeighborListCollector();
         entry void addRequest(int, Key);
-        entry void forwardRequest(int, Particle);
-        entry void fillRequest(int, Particle);
+        entry [inline] void forwardRequest(int, Particle);
+        entry [inline] void fillRequest(int, Particle);
         entry void shareAccelerations();
-        entry void addAcceleration(Particle);
+        entry [inline] void addAcceleration(Particle);
         entry void reset(const CkCallback&);
     }
 

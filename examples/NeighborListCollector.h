@@ -43,7 +43,6 @@ struct NeighborListCollector : public CBase_NeighborListCollector {
     part.acceleration = Vector3D<Real>(0,0,0);
     part.pressure_dVolume = 0;
     remote_particles.emplace(part.key, std::make_pair(pe_home, part));
-    // update density
   }
   void addAcceleration(Particle part) {
     auto it = remote_particles.find(part.key);
