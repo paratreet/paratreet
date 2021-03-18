@@ -29,8 +29,9 @@ struct NeighborListCollector : public CBase_NeighborListCollector {
     requested_to[key].push_back(pe);
   }
   void densityFinished(const Particle& part, const SpatialNode<CentroidData>& leaf) {
-    thisProxy[leaf.home_pe].forwardRequest(thisIndex, part);
-    // send density, send neighbor list
+    // thisProxy[leaf.home_pe].forwardRequest(thisIndex, part); // needed for RTFORCE
+    thisProxy[leaf.home_pe].fillRequest(thisIndex, part);
+    // send density forward
   }
   void forwardRequest(int pe_home, Particle part) {
     auto && pes_requested = requested_to[part.key];
@@ -41,7 +42,7 @@ struct NeighborListCollector : public CBase_NeighborListCollector {
   void fillRequest(int pe_home, Particle part) {
     part.acceleration = Vector3D<Real>(0,0,0);
     part.pressure_dVolume = 0;
-    auto pPart = &(remote_particles.emplace(part.key, std::make_pair(pe_home, part)).first->second);
+    remote_particles.emplace(part.key, std::make_pair(pe_home, part));
     // update density
   }
   void addAcceleration(Particle part) {
