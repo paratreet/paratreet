@@ -23,9 +23,9 @@ namespace paratreet {
     // by now, all density requests have gone out
     double start_time = CkWallTimer();
     part.callPerLeafFn(0, CkCallbackResumeThread()); // calculates density, fills requests
-    // CkWaitQD(); dont need these cause not doing RTFORCE
-    // CkPrintf("Density calculations and sharing: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
-    // start_time = CkWallTimer();
+    CkWaitQD();
+    CkPrintf("Density calculations and sharing: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
+    start_time = CkWallTimer();
     part.callPerLeafFn(1, CkCallbackResumeThread()); // calculates pressure
     CkPrintf("Pressure calculations: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
     start_time = CkWallTimer();
