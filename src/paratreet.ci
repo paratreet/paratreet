@@ -62,8 +62,14 @@ module paratreet {
 
   group Writer {
     entry Writer(std::string of, int n_particles);
-    entry void receive(std::vector<Particle> particles, CkCallback cb);
-    entry void write(CkCallback cb);
+    entry void receive(std::vector<Particle> particles, Real time, CkCallback cb);
+    entry void write(Real time, CkCallback cb);
+  }
+
+  group TipsyWriter {
+    entry TipsyWriter(std::string of, int n_particles);
+    entry void receive(std::vector<Particle> particles, Real time, CkCallback cb);
+    entry void write(Real time, CkCallback cb);
   }
 
   template <typename Data>
@@ -79,6 +85,7 @@ module paratreet {
     entry void reset();
     entry void perturb(TPHolder<Data>, Real, bool);
     entry void output(CProxy_Writer w, CkCallback cb);
+    entry void output(CProxy_TipsyWriter w, CkCallback cb);
     entry void callPerLeafFn(int indicator, CkCallback cb);
     entry void pauseForLB();
   }
