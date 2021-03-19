@@ -4,6 +4,7 @@
 #include "paratreet.decl.h"
 #include "common.h"
 #include "Space.h"
+#include "CollisionTracker.h"
 #include <cmath>
 #include <vector>
 #include <queue>
