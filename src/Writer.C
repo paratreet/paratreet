@@ -124,23 +124,31 @@ void TipsyWriter::do_write(Real time)
   tipsyHeader.time = time;
   tipsyHeader.nbodies = total_particles;
   tipsyHeader.nsph = 0;
-  tipsyHeader.nstar = total_particles;
-  tipsyHeader.ndark = 0;
+  tipsyHeader.nstar = 0;
+  tipsyHeader.ndark = total_particles;
 
   bool use_double = sizeof(Real) == 8;
-  Tipsy::TipsyWriter w(output_file, tipsyHeader, false, use_double, use_double);
+
+  auto output_filename = output_file+".tipsy";
+
+  if (thisIndex == 0) CmiFopen(output_filename.c_str(), "w");
+
+  Tipsy::TipsyWriter w(output_filename, tipsyHeader, false, use_double, use_double);
 
   if(thisIndex == 0) w.writeHeader();
-  int prefix_count = (total_particles / CkNumPes()) * thisIndex;
+
+  int avg_particles = total_particles / CkNumPes();
+  if (avg_particles * CkNumPes() != total_particles) ++avg_particles;
+  int prefix_count = avg_particles * thisIndex;
   if(!w.seekParticleNum(prefix_count)) CkAbort("bad seek");
 
   for (const auto& p : particles) {
-    Tipsy::star_particle_t<Real, Real> sp;
-    sp.mass = p.mass;
-    sp.pos = p.position;
-    sp.vel = p.velocity; // dvFac = 1
-    if(!w.putNextStarParticle_t(sp)) {
-      CkError("[%d] Write star failed, errno %d: %s\n", CkMyPe(), errno, strerror(errno));
+    Tipsy::dark_particle_t<Real, Real> dp;
+    dp.mass = p.mass;
+    dp.pos = p.position;
+    dp.vel = p.velocity; // dvFac = 1
+    if(!w.putNextDarkParticle_t(dp)) {
+      CkError("[%d] Write dark failed, errno %d: %s\n", CkMyPe(), errno, strerror(errno));
       CkAbort("Bad Write");
     }
   }
