@@ -9,8 +9,10 @@
 /* readonly */ bool verify;
 /* readonly */ bool dual_tree;
 /* readonly */ int peanoKey;
+/* readonly */ int iter_start_collision;
 /* readonly */ CProxy_CountManager count_manager;
 /* readonly */ CProxy_NeighborListCollector neighbor_list_collector;
+/* readonly */ CProxy_CollisionTracker collision_tracker;
 
 class Main : public CBase_Main {
   int cur_iteration;
@@ -45,6 +47,7 @@ class Main : public CBase_Main {
     verify = false;
     dual_tree = false;
     peanoKey = 3;
+    iter_start_collision = 0;
 
     // Initialize member variables
     cur_iteration = 0;
@@ -52,7 +55,7 @@ class Main : public CBase_Main {
     // Process command line arguments
     int c;
     std::string input_str;
-    while ((c = getopt(m->argc, m->argv, "f:n:p:l:d:t:i:s:u:r:b:v:ame")) != -1) {
+    while ((c = getopt(m->argc, m->argv, "f:n:p:l:d:t:i:s:u:r:b:v:amec:")) != -1) {
       switch (c) {
         case 'f':
           conf.input_file = optarg;
@@ -127,6 +130,9 @@ class Main : public CBase_Main {
           dual_tree = true;
           CkPrintf("You are doing a dual-tree traversal. Make sure you have matching decomps.\n");
           break;
+        case 'c':
+          iter_start_collision = atoi(optarg);
+          break;
         default:
           CkPrintf("Usage: %s\n", m->argv[0]);
           CkPrintf("\t-f [input file]\n");
@@ -158,6 +164,7 @@ class Main : public CBase_Main {
 
     count_manager = CProxy_CountManager::ckNew(0.00001, 10000, 5);
     neighbor_list_collector = CProxy_NeighborListCollector::ckNew();
+    collision_tracker = CProxy_CollisionTracker::ckNew();
 
     // Delegate to Driver
     CkCallback runCB(CkIndex_Main::run(), thisProxy);

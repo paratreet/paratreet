@@ -34,7 +34,7 @@ namespace paratreet {
     part.callPerLeafFn(2, CkCallbackResumeThread()); // averages pressure
     CkPrintf("Averaging pressures: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
     if (iter == 0 && verify) {
-      paratreet::outputParticles(universe, part);
+      paratreet::outputParticleAccelerations(universe, part);
     }
   }
 

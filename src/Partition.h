@@ -51,6 +51,7 @@ struct Partition : public CBase_Partition<Data> {
   void reset();
   void perturb(TPHolder<Data>, Real, bool);
   void output(CProxy_Writer w, CkCallback cb);
+  void output(CProxy_TipsyWriter w, CkCallback cb);
   void callPerLeafFn(int indicator, const CkCallback& cb);
   void pup(PUP::er& p);
   void makeLeaves(int);
@@ -62,6 +63,7 @@ struct Partition : public CBase_Partition<Data> {
   };
 
 private:
+  Real time_advanced = 0;
   struct PerturbRequest {
     bool waiting = false;
     TPHolder<Data> tp_holder;
@@ -77,6 +79,7 @@ private:
   void flush(CProxy_Reader, std::vector<Particle>&);
   void makeLeaves(const std::vector<Key>&, int);
   void doPerturb();
+  template <typename WriterProxy> void doOutput(WriterProxy w, CkCallback cb);
 };
 
 template <typename Data>
@@ -289,6 +292,7 @@ void Partition<Data>::doPerturb()
   std::vector<Particle> particles;
   copyParticles(particles);
   r_local->countPartitionParticles(particles.size());
+  time_advanced += saved_perturb.timestep;
   for (auto && p : particles) {
     p.perturb(saved_perturb.timestep, readers.ckLocalBranch()->universe.box);
   }
@@ -333,6 +337,19 @@ void Partition<Data>::copyParticles(std::vector<Particle>& particles) {
 template <typename Data>
 void Partition<Data>::output(CProxy_Writer w, CkCallback cb)
 {
+  doOutput(w, cb);
+}
+
+template <typename Data>
+void Partition<Data>::output(CProxy_TipsyWriter w, CkCallback cb)
+{
+  doOutput(w, cb);
+}
+
+template <typename Data>
+template <typename ProxyWriter>
+void Partition<Data>::doOutput(ProxyWriter w, CkCallback cb)
+{
   std::vector<Particle> particles;
   copyParticles(particles);
 
@@ -360,7 +377,7 @@ void Partition<Data>::output(CProxy_Writer w, CkCallback cb)
       ++particle_idx;
     }
 
-    w[writer_idx].receive(writer_particles, cb);
+    w[writer_idx].receive(writer_particles, time_advanced, cb);
   }
 
   if (this->thisIndex != n_partitions - 1)

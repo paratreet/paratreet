@@ -7,6 +7,9 @@
 #include <cmath>
 #include <vector>
 #include <queue>
+#include "CollisionTracker.h"
+
+extern CProxy_CollisionTracker collision_tracker;
 
 struct CollisionVisitor {
 public:
