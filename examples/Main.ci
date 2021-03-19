@@ -34,6 +34,7 @@ mainmodule Main {
     nodegroup CollisionTracker {
         entry CollisionTracker();
         entry [exclusive] void setShouldDelete(Key key);
+        entry void reset(const CkCallback&);
     }
 
     extern entry void Partition<CentroidData> startDown<GravityVisitor> ();

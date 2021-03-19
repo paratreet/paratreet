@@ -6,7 +6,6 @@
 
 extern bool verify;
 extern int iter_start_collision;
-extern CProxy_CollisionTracker collision_tracker;
 
 namespace paratreet {
 
@@ -21,6 +20,7 @@ namespace paratreet {
     part.template startDown<GravityVisitor>();
     if (iter >= iter_start_collision) {
       CkWaitQD();
+      collision_tracker.reset(CkCallbackResumeThread());
       CkPrintf("Gravity step done, doing fixed ball traversal now: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
       part.template startDown<CollisionVisitor>();
     }

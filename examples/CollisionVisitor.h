@@ -4,10 +4,12 @@
 #include "paratreet.decl.h"
 #include "common.h"
 #include "Space.h"
-#include "CollisionTracker.h"
 #include <cmath>
 #include <vector>
 #include <queue>
+#include "CollisionTracker.h"
+
+extern CProxy_CollisionTracker collision_tracker;
 
 struct CollisionVisitor {
 public:
