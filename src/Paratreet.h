@@ -28,7 +28,8 @@ namespace paratreet {
     void initialize(const Configuration&, CkCallback);
     void run(CkCallback);
     void updateConfiguration(const Configuration&, CkCallback);
-    void outputParticles(BoundingBox&, CProxy_Partition<CentroidData>&);
+    void outputParticleAccelerations(BoundingBox&, CProxy_Partition<CentroidData>&);
+    void outputTipsy(BoundingBox&, CProxy_Partition<CentroidData>&);
 }
 
 #endif

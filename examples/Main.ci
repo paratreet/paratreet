@@ -4,8 +4,10 @@ mainmodule Main {
     readonly bool verify;
     readonly bool dual_tree;
     readonly int peanoKey;
+    readonly int iter_start_collision;
     readonly CProxy_CountManager count_manager;
     readonly CProxy_NeighborListCollector neighbor_list_collector;
+    readonly CProxy_CollisionTracker collision_tracker;
 
     mainchare Main {
         initnode void initialize();
@@ -26,6 +28,12 @@ mainmodule Main {
         entry void fillRequest(int, Particle);
         entry void shareAccelerations();
         entry void addAcceleration(Particle);
+        entry void reset(const CkCallback&);
+    }
+
+    nodegroup CollisionTracker {
+        entry CollisionTracker();
+        entry [exclusive] void setShouldDelete(Key key);
         entry void reset(const CkCallback&);
     }
 

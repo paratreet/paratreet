@@ -20,7 +20,7 @@ namespace paratreet {
 
   void postTraversalFn(BoundingBox& universe, CProxy_Partition<CentroidData>& part, int iter) {
     if (iter == 0 && verify) {
-      paratreet::outputParticles(universe, part);
+      paratreet::outputParticleAccelerations(universe, part);
     }
   }
   Real getTimestep(BoundingBox& universe, Real max_velocity) {
