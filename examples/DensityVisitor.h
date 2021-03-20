@@ -50,7 +50,7 @@ public:
         // Add the particle to the neighbor list if it isnt filled up
         if (Q.size() < k) {
           // nlc->makeRequest(source.home_pe, sp.key); // on RTFORCE, request his density
-          nlc->fillRequest(source.home_pe, sp); // else, its good to go
+          nlc->saveSubtreeHome(source.home_pe, sp); // else, its good to go
           pqSmoothNode pqNew;
           pqNew.mass = sp.mass;
           pqNew.fKey = dsq;

@@ -74,11 +74,11 @@ namespace paratreet {
     Real PoverRho2a = a.potential_predicted * gammam1 / (a.density * a.density);
     Real work = rNorm * dvdotdr * (PoverRho2a + visc * 0.5);
     leaf.applyGasWork(pi, work);
-    b.pressure_dVolume -= work;
+    b.pressure_dVolume += work;
     auto && accSignless = rNorm * aFac * (PoverRho2a + visc) * dx;
     auto acc = accSignless * (a.key == b.key ? 1 : -1);
     leaf.applyAcceleration(pi, acc);
-    b.acceleration -= acc;
+    b.acceleration += acc;
   }
 
 }
