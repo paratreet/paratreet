@@ -50,7 +50,7 @@ public:
   int       n_particles = 0;
   bool      is_leaf     = false;
   int       depth       = 0;
-  int       home_pe     = -1;
+  int       home_pe     = -1; // SUBTREE HOME
   inline const Particle* particles() const {return particles_;}
 
 private:

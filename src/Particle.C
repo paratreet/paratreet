@@ -12,6 +12,7 @@ void Particle::pup(PUP::er &p) {
   p|density;
   p|potential;
   p|potential_predicted;
+  p|pressure_dVolume;
   p|position;
   p|acceleration;
   p|velocity;
