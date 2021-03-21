@@ -91,19 +91,18 @@ public:
       readers.load(config.input_file, CkCallbackResumeThread((void*&)result));
       CkPrintf("Loading Tipsy data and building universe: %.3lf ms\n",
           (CkWallTimer() - start_time) * 1000);
-    }
-    universe = *((BoundingBox*)result->getData());
-    delete result;
-    remakeUniverse();
-    if (config.min_n_subtrees < CkNumPes() || config.min_n_partitions < CkNumPes()) {
-      CkPrintf("WARNING: Consider increasing min_n_subtrees and min_n_partitions to at least #pes\n");
-    }
-
-    // Assign keys and sort particles locally
-    start_time = CkWallTimer();
-    readers.assignKeys(universe, CkCallbackResumeThread());
-    CkPrintf("Assigning keys and sorting particles: %.3lf ms\n",
+      universe = *((BoundingBox*)result->getData());
+      delete result;
+      remakeUniverse();
+      if (config.min_n_subtrees < CkNumPes() || config.min_n_partitions < CkNumPes()) {
+        CkPrintf("WARNING: Consider increasing min_n_subtrees and min_n_partitions to at least #pes\n");
+      }
+      // Assign keys and sort particles locally
+      start_time = CkWallTimer();
+      readers.assignKeys(universe, CkCallbackResumeThread());
+      CkPrintf("Assigning keys and sorting particles: %.3lf ms\n",
         (CkWallTimer() - start_time) * 1000);
+    }
 
     // Set up splitters for decomposition
     start_time = CkWallTimer();
