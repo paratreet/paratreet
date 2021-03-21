@@ -64,6 +64,20 @@ public:
     cb.send();
   }
 
+  void remakeUniverse() {
+    Vector3D<Real> bsize = universe.box.size();
+    Real max = (bsize.x > bsize.y) ? bsize.x : bsize.y;
+    max = (max > bsize.z) ? max : bsize.z;
+    Vector3D<Real> bcenter = universe.box.center();
+    // The magic number below is approximately 2^(-19)
+    const Real fEps = 1.0 + 1.91e-6;  // slop to ensure keys fall between 0 and 1.
+    bsize = Vector3D<Real>(fEps*0.5*max);
+    universe.box = OrientedBox<Real>(bcenter-bsize, bcenter+bsize);
+
+    std::cout << "Universal bounding box: " << universe << " with volume "
+      << universe.box.volume() << std::endl;
+  }
+
   // Performs decomposition by distributing particles among Subtrees,
   // by either loading particle information from input file or re-computing
   // the universal bounding box
@@ -83,19 +97,7 @@ public:
     }
     universe = *((BoundingBox*)result->getData());
     delete result;
-
-    Vector3D<Real> bsize = universe.box.size();
-    Real max = (bsize.x > bsize.y) ? bsize.x : bsize.y;
-    max = (max > bsize.z) ? max : bsize.z;
-    Vector3D<Real> bcenter = universe.box.center();
-    // The magic number below is approximately 2^(-19)
-    const Real fEps = 1.0 + 1.91e-6;  // slop to ensure keys fall between 0 and 1.
-    bsize = Vector3D<Real>(fEps*0.5*max);
-    universe.box = OrientedBox<Real>(bcenter-bsize, bcenter+bsize);
-
-    std::cout << "Universal bounding box: " << universe << " with volume "
-      << universe.box.volume() << std::endl;
-
+    remakeUniverse();
     if (config.min_n_subtrees < CkNumPes() || config.min_n_partitions < CkNumPes()) {
       CkPrintf("WARNING: Consider increasing min_n_subtrees and min_n_partitions to at least #pes\n");
     }
@@ -216,7 +218,11 @@ public:
 
       CkWaitQD();
 
-      partitions.perturbHalfStep(timestep_size, CkCallbackResumeThread());
+      CkReductionMsg* result;
+      partitions.perturbHalfStep(timestep_size, CkCallbackResumeThread((void*&)result));
+      universe = *((BoundingBox*)result->getData());
+      delete result;
+      remakeUniverse();
 
       // Now track PE imbalance for memory reasons
       centroid_resumer.collectMetaData(CkCallbackResumeThread((void *&) msg2));

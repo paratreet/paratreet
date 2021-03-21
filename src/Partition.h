@@ -265,8 +265,20 @@ void Partition<Data>::erasePartition() {
 template <typename Data>
 void Partition<Data>::perturbHalfStep(Real timestep, CkCallback cb)
 {
-  for (auto && leaf : leaves) leaf->perturbHalfStep(timestep);
-  this->contribute(cb);
+  BoundingBox box;
+  for (auto && leaf : leaves) {
+    leaf->perturbHalfStep(timestep);
+    for (int pi = 0; pi < leaf->n_particles; pi++) {
+      auto& particle = leaf->particles()[pi];
+      auto fake_velocity = particle.velocity + particle.acceleration * timestep / 2;
+      auto new_pos = particle.position + fake_velocity * timestep;
+      box.grow(new_pos);
+      box.mass += particle.mass;
+      box.ke += 0.5 * particle.mass * particle.velocity.lengthSquared();
+      box.n_particles++;
+    }
+  }
+  this->contribute(sizeof(BoundingBox), &box, BoundingBox::reducer(), cb);
 }
 
 template <typename Data>
