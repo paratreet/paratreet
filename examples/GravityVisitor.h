@@ -14,7 +14,7 @@ public:
 
 private:
   // note gconst = 1
-  static constexpr Real theta = 0.7;
+  // note: theta defined elsewhere
   static constexpr int  nMinParticleNode = 6;
 
   static void addGravity(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {

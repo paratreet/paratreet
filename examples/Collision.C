@@ -18,16 +18,14 @@ namespace paratreet {
   void traversalFn(BoundingBox& universe, CProxy_Partition<CentroidData>& part, CProxy_Subtree<CentroidData>&, int iter) {
     double start_time = CkWallTimer();
     part.template startDown<GravityVisitor>();
+    CkWaitQD();
+    CkPrintf("Gravity step: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
     if (iter >= iter_start_collision) {
-      CkWaitQD();
       collision_tracker.reset(CkCallback::ignore);
-      CkPrintf("Gravity step done, doing fixed ball traversal now: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
+      start_time = CkWallTimer();
       part.template startDown<CollisionVisitor>();
-    }
-  }
-
-  void postTraversalFn(BoundingBox& universe, CProxy_Partition<CentroidData>& part, int iter) {
-    if (iter >= iter_start_collision) {
+      CkWaitQD();
+      CkPrintf("Collision traversals: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
       // Collision is a little funky because were going to edit the mass and position of particles after a collision
       // that means were going to set the mass and position to whatever we want
       // first get minimum distance of any two particles
@@ -39,10 +37,13 @@ namespace paratreet {
       part.callPerLeafFn(1, CkCallbackResumeThread());
       CkPrintf("Collision deletions: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
     }
+  }
+
+  void postIterationFn(BoundingBox& universe, CProxy_Partition<CentroidData>& part, int iter) {
     if (iter == 800000 - 1) paratreet::outputTipsy(universe, part);
   }
 
-  Real getFixedTimestep() {return 0.01633030773;}
+  Real getFixedTimestep() {return 0.0025;}
   Real getTimestep(BoundingBox& universe, Real max_velocity) {
     return getFixedTimestep();
   }

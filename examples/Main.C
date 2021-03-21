@@ -42,7 +42,6 @@ class Main : public CBase_Main {
     conf.flush_period = 0;
     conf.flush_max_avg_ratio = 10.;
     conf.lb_period = 5;
-    conf.perturb_no_barrier = false;
 
     verify = false;
     dual_tree = false;
@@ -118,10 +117,6 @@ class Main : public CBase_Main {
           verify = true;
           conf.output_file = optarg;
           if (conf.output_file.empty()) CkAbort("output file unspecified");
-          break;
-        case 'a':
-          conf.perturb_no_barrier = true;
-          CkPrintf("You are skipping the perturb barrier. This only works for nlogn Gravity.\n");
           break;
 	case 'm':
 	  peanoKey = 0; // morton

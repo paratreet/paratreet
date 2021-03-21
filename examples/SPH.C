@@ -16,12 +16,12 @@ namespace paratreet {
 
   void traversalFn(BoundingBox& universe, CProxy_Partition<CentroidData>& part, CProxy_Subtree<CentroidData>&, int iter) {
     neighbor_list_collector.reset(CkCallbackResumeThread());
-    part.template startUpAndDown<DensityVisitor>();
-  }
-
-  void postTraversalFn(BoundingBox& universe, CProxy_Partition<CentroidData>& part, int iter) {
-    // by now, all density requests have gone out
     double start_time = CkWallTimer();
+    part.template startUpAndDown<DensityVisitor>();
+    CkWaitQD();
+    CkPrintf("K-nearest neighbors traversal: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
+    start_time = CkWallTimer();
+    // by now, all density requests have gone out
     part.callPerLeafFn(0, CkCallbackResumeThread()); // calculates density, fills requests
     CkWaitQD();
     CkPrintf("Density calculations and sharing: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
@@ -33,6 +33,8 @@ namespace paratreet {
     CkWaitQD();
     part.callPerLeafFn(2, CkCallbackResumeThread()); // averages pressure
     CkPrintf("Averaging pressures: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
+  }
+  void postIterationFn(BoundingBox& universe, CProxy_Partition<CentroidData>& part, int iter) {
     if (iter == 0 && verify) {
       paratreet::outputParticleAccelerations(universe, part);
     }
