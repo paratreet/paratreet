@@ -91,9 +91,6 @@ public:
       readers.load(config.input_file, CkCallbackResumeThread((void*&)result));
       CkPrintf("Loading Tipsy data and building universe: %.3lf ms\n",
           (CkWallTimer() - start_time) * 1000);
-    } else {
-      readers.computeUniverseBoundingBox(CkCallbackResumeThread((void*&)result));
-      CkPrintf("Rebuilding universe: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
     }
     universe = *((BoundingBox*)result->getData());
     delete result;
