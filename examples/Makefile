@@ -22,16 +22,16 @@ Collision: Main.decl.h Main.o Collision.o
 SPH: Main.decl.h Main.o SPH.o
 	$(CHARMC) -language charm++ -module CommonLBs -o SPH SPH.o Main.o $(LD_LIBS)
 
-Gravity.o: Gravity.C
+Gravity.o: Gravity.C Main.decl.h
 	$(CHARMC) -c $<
 
-Collision.o: Collision.C
+Collision.o: Collision.C Main.decl.h
 	$(CHARMC) -c $<
 
-SPH.o: SPH.C SPHUtils.h NeighborListCollector.h
+SPH.o: SPH.C SPHUtils.h NeighborListCollector.h Main.decl.h
 	$(CHARMC) -c $<
 
-Main.o: Main.C $(VISITORS) $(OTHERS)
+Main.o: Main.C $(VISITORS) $(OTHERS) Main.decl.h
 	$(CHARMC) -c $<
 
 test: all

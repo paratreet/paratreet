@@ -176,9 +176,10 @@ public:
   // Core iterative loop of the simulation
   void run(CkCallback cb) {
     auto config = treespec.ckLocalBranch()->getConfiguration();
+    double total_time = 0;
     for (int iter = 0; iter < config.num_iterations; iter++) {
       CkPrintf("\n* Iteration %d\n", iter);
-      double iter_time = CkWallTimer();
+      double iter_start_time = CkWallTimer();
       // Start tree build in Subtrees
       start_time = CkWallTimer();
       CkCallback timeCb (CkReductionTarget(Driver<Data>, reportTime), this->thisProxy);
@@ -260,7 +261,12 @@ public:
       storage.clear();
       storage_sorted = false;
       CkWaitQD();
-      CkPrintf("Iteration %d time: %.3lf ms\n", iter, (CkWallTimer() - iter_time) * 1000);
+      double iter_time = CkWallTimer() - iter_start_time;
+      total_time += iter_time;
+      CkPrintf("Iteration %d time: %.3lf ms\n", iter, iter_time * 1000);
+      if (iter == config.num_iterations-1) {
+        CkPrintf("Average iteration time: %.3lf ms\n", total_time / config.num_iterations * 1000);
+      }
     }
 
     cb.send();
