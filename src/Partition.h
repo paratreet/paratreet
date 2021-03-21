@@ -50,7 +50,7 @@ struct Partition : public CBase_Partition<Data> {
   void destroy();
   void reset();
   void perturbHalfStep(Real, CkCallback);
-  void perturb(TPHolder<Data>, Real, bool);
+  void perturb(OrientedBox<Real>, TPHolder<Data>, Real, bool);
   void output(CProxy_Writer w, CkCallback cb);
   void output(CProxy_TipsyWriter w, CkCallback cb);
   void callPerLeafFn(int indicator, const CkCallback& cb);
@@ -282,14 +282,14 @@ void Partition<Data>::perturbHalfStep(Real timestep, CkCallback cb)
 }
 
 template <typename Data>
-void Partition<Data>::perturb(TPHolder<Data> tp_holder, Real timestep, bool if_flush)
+void Partition<Data>::perturb(OrientedBox<Real> universe_box, TPHolder<Data> tp_holder, Real timestep, bool if_flush)
 {
   std::vector<Particle> particles;
   copyParticles(particles);
   r_local->countPartitionParticles(particles.size());
   time_advanced += timestep;
   for (auto && p : particles) {
-    p.perturb(timestep, readers.ckLocalBranch()->universe.box);
+    p.perturb(timestep, universe_box);
   }
 
   if (if_flush) {

@@ -235,7 +235,7 @@ public:
 
       paratreet::postIterationFn(universe, partitions, iter);
 
-      partitions.perturb(subtrees, timestep_size, complete_rebuild); // 0.1s for example
+      partitions.perturb(universe.box, subtrees, timestep_size, complete_rebuild); // 0.1s for example
       CkWaitQD();
       CkPrintf("Perturbations: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
       if (iter % config.lb_period == config.lb_period - 1){
