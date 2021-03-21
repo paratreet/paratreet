@@ -48,7 +48,7 @@ namespace paratreet {
     return getFixedTimestep();
   }
 
-  bool doesCollide(const Particle& a, const Particle& b) {
+  Real getCollideTime(const Particle& a, const Particle& b) {
     auto dx = a.position - b.position;
     auto vRel = a.velocity - b.velocity;
     auto rdotv = dot(dx, vRel);
@@ -60,7 +60,7 @@ namespace paratreet {
     Real dt = std::numeric_limits<Real>::max();
     if (dt1 > 0 && dt1 < dt2) dt = dt1;
     else if (dt2 > 0 && dt2 < dt1) dt = dt2;
-    return dt < getFixedTimestep();
+    return dt;
   }
 
   void perLeafFn(int indicator, SpatialNode<CentroidData>& leaf) {
@@ -70,13 +70,19 @@ namespace paratreet {
       if (part.mass == 0) continue;
       if (indicator == 0) {
         auto && fb = leaf.data.fixed_ball[pi];
+        Real best_dt = getFixedTimestep();
+        int best_dt_i = -1;
         for (int fbi = 0; fbi < fb.size(); fbi++) {
           auto& fbp = fb[fbi];
-          if (doesCollide(part, fbp)) {
-            collision_tracker[ct->thisIndex].setShouldDelete(part.key);
-            collision_tracker.setShouldDelete(fbp.key);
-            break;
+          auto dt = getCollideTime(part, fbp);
+          if (dt < best_dt) {
+            best_dt = dt;
+            best_dt_i = fbi;
           }
+        }
+        if (best_dt_i != -1) {
+          collision_tracker[ct->thisIndex].setShouldDelete(part.key);
+          collision_tracker.setShouldDelete(fb[best_dt_i].key);
         }
       }
       else if (indicator == 1) {
