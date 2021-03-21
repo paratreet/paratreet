@@ -12,6 +12,15 @@
 #include <vector>
 #include <mutex>
 
+#include <hypercomm/routing.hpp>
+#include <hypercomm/aggregation.hpp>
+
+#ifdef GROUP_CACHE
+constexpr bool kGroupCache = true;
+#else
+constexpr bool kGroupCache = false;
+#endif
+
 extern CProxy_TreeSpec treespec;
 
 template <typename Data>
@@ -30,7 +39,35 @@ public:
   Data nodewide_data;
   std::atomic<size_t> num_buckets = ATOMIC_VAR_INIT(0ul);
 
-  CacheManager() { }
+  using buffer_t = aggregation::direct_buffer;
+  using router_t = aggregation::routing::mesh<2>;
+  using addCache_aggregator_t = aggregation::aggregator<buffer_t, router_t, MultiData<Data>>;
+  using reqNodes_aggregator_t = aggregation::aggregator<buffer_t, router_t, std::pair<Key, int>>;
+
+  std::unique_ptr<addCache_aggregator_t> addCache_aggregator;
+  std::unique_ptr<reqNodes_aggregator_t> reqNodes_aggregator;
+
+  CacheManager() {
+    auto roughCapacity = 3 * 225;
+    auto roughTimeout = 0.0625;
+    auto roughUtil = 1 - 0.05;
+
+    addCache_aggregator = std::unique_ptr<addCache_aggregator_t>(
+        new addCache_aggregator_t(roughCapacity * 384 * 2, roughUtil, roughTimeout * 1.5,
+          [this](const aggregation::msg_size_t& size, char* data) {
+            PUP::detail::TemporaryObjectHolder<MultiData<Data>> t;
+            PUP::fromMemBuf(t, data, size);
+            this->addCache(t.t);
+          }, !kGroupCache, CcdPROCESSOR_STILL_IDLE));
+
+    reqNodes_aggregator = std::unique_ptr<reqNodes_aggregator_t>(
+        new reqNodes_aggregator_t(roughCapacity * 6, roughUtil, roughTimeout,
+          [this](const aggregation::msg_size_t& size, char* data) {
+            PUP::detail::TemporaryObjectHolder<std::pair<Key, int>> t;
+            PUP::fromMemBuf(t, data, size);
+            this->requestNodes(t.t);
+          }, !kGroupCache, CcdPROCESSOR_STILL_IDLE));
+  }
 
   void initialize(const CkCallback& cb) {
     this->initialize();
@@ -312,7 +349,7 @@ void CacheManager<Data>::serviceRequest(Node<Data>* node, int cm_index) {
   std::vector<Particle> sending_particles;
   makeMsgPerNode(node->depth, sending_nodes, sending_particles, node);
   MultiData<Data> multidata (sending_particles.data(), sending_particles.size(), sending_nodes.data(), sending_nodes.size(), this->thisIndex, node->tp_index);
-  this->thisProxy[cm_index].addCache(multidata);
+  addCache_aggregator->send(cm_index, multidata);
 }
 
 template <typename Data>

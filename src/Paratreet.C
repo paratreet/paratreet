@@ -12,6 +12,8 @@
 
 #include "Paratreet.h"
 
+#include <hypercomm/registration.hpp>
+
 /* readonly */ CProxy_Reader readers;
 /* readonly */ CProxy_TreeSpec treespec;
 /* readonly */ int n_readers;

@@ -177,6 +177,10 @@ module paratreet {
     entry DecompArrayMap(CkPointer<Decomposition>, int, int);
   };
 
+  namespace aggregation {
+    initproc void initialize(void);
+  }
+
   extern entry void Reader request<CentroidData>(CProxy_Subtree<CentroidData>, int, int);
   extern entry void Reader flush<CentroidData>(int, int, CProxy_Subtree<CentroidData>);
   extern entry void Reader assignPartitions<CentroidData>(int, int, CProxy_Partition<CentroidData>);
