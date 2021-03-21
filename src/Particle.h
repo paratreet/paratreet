@@ -29,9 +29,13 @@ struct Particle {
   void reset();
   void finishInit();
 
+  void perturbHalfStep(Real timestep) {
+    velocity += acceleration * timestep / 2;
+    acceleration = (0., 0., 0.);
+  }
+
   void perturb (Real timestep, OrientedBox<Real> universe) {
     position += (velocity * timestep);
-    position += (acceleration * timestep * timestep / 2);
     for (int dim = 0; dim < 3; dim++) {
       CkAssert(std::isfinite(position[dim]));
       while (position[dim] < universe.lesser_corner[dim]) {
@@ -41,7 +45,7 @@ struct Particle {
         position[dim] -= universe.greater_corner[dim] - universe.lesser_corner[dim];
       }
     }
-    velocity += (acceleration * timestep);
+    velocity += (acceleration * timestep / 2);
     velocity_predicted = velocity + (acceleration * timestep);
     Real uDelta = 0.5e-7 * timestep;
     potential -= pressure_dVolume * uDelta; // for adiabatic, dU = -p dV

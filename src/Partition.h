@@ -49,6 +49,7 @@ struct Partition : public CBase_Partition<Data> {
   void receiveLeaves(std::vector<Key>, Key, int, TPHolder<Data>);
   void destroy();
   void reset();
+  void perturbHalfStep(Real);
   void perturb(TPHolder<Data>, Real, bool);
   void output(CProxy_Writer w, CkCallback cb);
   void output(CProxy_TipsyWriter w, CkCallback cb);
@@ -271,6 +272,12 @@ void Partition<Data>::erasePartition() {
   cm_local->lockMaps();
   cm_local->partition_lookup.erase(this->thisIndex);
   cm_local->unlockMaps();
+}
+
+template <typename Data>
+void Partition<Data>::perturbHalfStep(Real timestep)
+{
+  for (auto && leaf : leaves) leaf->perturbHalfStep(timestep);
 }
 
 template <typename Data>
