@@ -270,7 +270,9 @@ void Partition<Data>::perturbHalfStep(Real timestep, CkCallback cb)
     leaf->perturbHalfStep(timestep);
     for (int pi = 0; pi < leaf->n_particles; pi++) {
       auto& particle = leaf->particles()[pi];
-      box.grow(particle.position);
+      auto fake_velocity = particle.velocity + particle.acceleration * timestep / 2;
+      auto new_pos = particle.position + fake_velocity * timestep;
+      box.grow(new_pos);
       box.mass += particle.mass;
       box.ke += 0.5 * particle.mass * particle.velocity.lengthSquared();
       box.n_particles++;
