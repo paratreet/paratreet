@@ -29,28 +29,8 @@ struct Particle {
   void reset();
   void finishInit();
 
-  void perturb (Real timestep, OrientedBox<Real> universe) {
-    position += (velocity * timestep);
-    position += (acceleration * timestep * timestep / 2);
-    for (int dim = 0; dim < 3; dim++) {
-      CkAssert(std::isfinite(position[dim]));
-      while (position[dim] < universe.lesser_corner[dim]) {
-        position[dim] += universe.greater_corner[dim] - universe.lesser_corner[dim];
-      }
-      while (position[dim] > universe.greater_corner[dim]) {
-        position[dim] -= universe.greater_corner[dim] - universe.lesser_corner[dim];
-      }
-    }
-    velocity += (acceleration * timestep);
-    velocity_predicted = velocity + (acceleration * timestep);
-    Real uDelta = 0.5e-7 * timestep;
-    potential -= pressure_dVolume * uDelta; // for adiabatic, dU = -p dV
-    potential_predicted = potential - pressure_dVolume * uDelta;
-    key = SFC::generateKey(position, universe);
-    key |= (Key)1 << (KEY_BITS-1); // Add placeholder bit
-    density = 0;
-    pressure_dVolume = 0.;
-  }
+  void perturbHalfStep(Real timestep);
+  void perturb (Real timestep, OrientedBox<Real> universe);
 
   bool operator==(const Particle&) const;
   bool operator<=(const Particle&) const;

@@ -18,7 +18,7 @@ namespace paratreet {
     else part.template startDown<GravityVisitor>();
   }
 
-  void postTraversalFn(BoundingBox& universe, CProxy_Partition<CentroidData>& part, int iter) {
+  void postIterationFn(BoundingBox& universe, CProxy_Partition<CentroidData>& part, int iter) {
     if (iter == 0 && verify) {
       paratreet::outputParticleAccelerations(universe, part);
     }

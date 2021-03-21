@@ -34,6 +34,11 @@ public:
       delete[] particles_;
     }
   }
+  void perturbHalfStep(Real timestep) {
+    for (int i = 0; i < n_particles; i++) {
+      particles_[i].perturbHalfStep(timestep);
+    }
+  }
   void pup (PUP::er& p) {
     p | depth;
     p | data;

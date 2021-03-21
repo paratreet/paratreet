@@ -30,7 +30,7 @@ extern CProxy_Resumer<CentroidData> centroid_resumer;
 namespace paratreet {
   extern void preTraversalFn(CProxy_Driver<CentroidData>&, CProxy_CacheManager<CentroidData>& cache);
   extern void traversalFn(BoundingBox&,CProxy_Partition<CentroidData>&,CProxy_Subtree<CentroidData>&,int);
-  extern void postTraversalFn(BoundingBox&,CProxy_Partition<CentroidData>&,int);
+  extern void postIterationFn(BoundingBox&,CProxy_Partition<CentroidData>&,int);
   extern Real getTimestep(BoundingBox&, Real);
 }
 
@@ -197,6 +197,27 @@ public:
       Real max_velocity = *(Real*)(res[0].data); // avoid max_velocity = 0.0
       Real timestep_size = paratreet::getTimestep(universe, max_velocity);
 
+      // Prefetch into cache
+      start_time = CkWallTimer();
+      // use exactly one of these three commands to load the software cache
+      paratreet::preTraversalFn(this->thisProxy, centroid_cache);
+      CkWaitQD();
+      CkPrintf("TreeCanopy cache loading: %.3lf ms\n",
+          (CkWallTimer() - start_time) * 1000);
+
+      // Perform traversals
+      start_time = CkWallTimer();
+      paratreet::traversalFn(universe, partitions, subtrees, iter);
+      CkWaitQD();
+      CkPrintf("Tree traversal: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
+
+      // Move the particles in Partitions
+      start_time = CkWallTimer();
+
+      CkWaitQD();
+
+      partitions.perturbHalfStep(timestep_size, CkCallbackResumeThread());
+
       // Now track PE imbalance for memory reasons
       centroid_resumer.collectMetaData(CkCallbackResumeThread((void *&) msg2));
       msg2->toTuple(&res2, &numRedn2);
@@ -210,37 +231,11 @@ public:
       CkPrintf("[Meta] n_subtree = %d; timestep_size = %f; sumPESize = %d; maxPESize = %d, avgPESize = %f; ratio = %f; maxVelocity = %f; rebuild = %s\n", n_subtrees, timestep_size, sumPESize, maxPESize, avgPESize, ratio, max_velocity, (complete_rebuild? "yes" : "no"));
       //End Subtree reduction message parsing
 
-      // Prefetch into cache
-      start_time = CkWallTimer();
-      // use exactly one of these three commands to load the software cache
-      paratreet::preTraversalFn(this->thisProxy, centroid_cache);
+      paratreet::postIterationFn(universe, partitions, iter);
+
+      partitions.perturb(subtrees, timestep_size, complete_rebuild); // 0.1s for example
       CkWaitQD();
-      CkPrintf("TreeCanopy cache loading: %.3lf ms\n",
-          (CkWallTimer() - start_time) * 1000);
-
-      // Perform traversals
-      start_time = CkWallTimer();
-      paratreet::traversalFn(universe, partitions, subtrees, iter);
-      if (config.perturb_no_barrier) {
-        partitions.perturb(subtrees, timestep_size, complete_rebuild); // 0.1s for example
-      }
-      CkWaitQD();
-      CkPrintf("Tree traversal: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
-
-      // Call user's post-interaction function, which may for example:
-      // Output particle accelerations for verification
-      // TODO: Initial force interactions similar to ChaNGa
-      paratreet::postTraversalFn(universe, partitions, iter);
-
-      // Move the particles in Partitions
-      start_time = CkWallTimer();
-
-      CkWaitQD();
-      if (!config.perturb_no_barrier) {
-        partitions.perturb(subtrees, timestep_size, complete_rebuild); // 0.1s for example
-        CkWaitQD();
-        CkPrintf("Perturbations: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
-      }
+      CkPrintf("Perturbations: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
       if (iter % config.lb_period == config.lb_period - 1){
         start_time = CkWallTimer();
         //subtrees.pauseForLB(); // move them later

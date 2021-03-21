@@ -18,25 +18,29 @@ namespace paratreet {
   void traversalFn(BoundingBox& universe, CProxy_Partition<CentroidData>& part, CProxy_Subtree<CentroidData>&, int iter) {
     double start_time = CkWallTimer();
     part.template startDown<GravityVisitor>();
+    CkWaitQD();
+    CkPrintf("Gravity step: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
     if (iter >= iter_start_collision) {
-      CkWaitQD();
-      collision_tracker.reset(CkCallbackResumeThread());
-      CkPrintf("Gravity step done, doing fixed ball traversal now: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
+      collision_tracker.reset(CkCallback::ignore);
+      start_time = CkWallTimer();
       part.template startDown<CollisionVisitor>();
+      CkWaitQD();
+      CkPrintf("Collision traversals: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
+      // Collision is a little funky because were going to edit the mass and position of particles after a collision
+      // that means were going to set the mass and position to whatever we want
+      // first get minimum distance of any two particles
+      double start_time = CkWallTimer();
+      part.callPerLeafFn(0, CkCallbackResumeThread());
+      CkWaitQD();
+      CkPrintf("Collision calculations: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
+      start_time = CkWallTimer();
+      part.callPerLeafFn(1, CkCallbackResumeThread());
+      CkPrintf("Collision deletions: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
     }
   }
 
-  void postTraversalFn(BoundingBox& universe, CProxy_Partition<CentroidData>& part, int iter) {
-    // Collision is a little funky because were going to edit the mass and position of particles after a collision
-    // that means were going to set the mass and position to whatever we want
-    // first get minimum distance of any two particles
-    double start_time = CkWallTimer();
-    part.callPerLeafFn(0, CkCallbackResumeThread());
-    CkWaitQD();
-    CkPrintf("Collision calculations: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
-    start_time = CkWallTimer();
-    part.callPerLeafFn(1, CkCallbackResumeThread());
-    CkPrintf("Collision deletions: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
+  void postIterationFn(BoundingBox& universe, CProxy_Partition<CentroidData>& part, int iter) {
+    if (iter == 800000 - 1) paratreet::outputTipsy(universe, part);
   }
 
   Real getFixedTimestep() {return 0.0025;}
@@ -44,7 +48,7 @@ namespace paratreet {
     return getFixedTimestep();
   }
 
-  bool doesCollide(const Particle& a, const Particle& b) {
+  Real getCollideTime(const Particle& a, const Particle& b) {
     auto dx = a.position - b.position;
     auto vRel = a.velocity - b.velocity;
     auto rdotv = dot(dx, vRel);
@@ -56,7 +60,7 @@ namespace paratreet {
     Real dt = std::numeric_limits<Real>::max();
     if (dt1 > 0 && dt1 < dt2) dt = dt1;
     else if (dt2 > 0 && dt2 < dt1) dt = dt2;
-    return dt < getFixedTimestep();
+    return dt;
   }
 
   void perLeafFn(int indicator, SpatialNode<CentroidData>& leaf) {
@@ -66,13 +70,19 @@ namespace paratreet {
       if (part.mass == 0) continue;
       if (indicator == 0) {
         auto && fb = leaf.data.fixed_ball[pi];
+        Real best_dt = getFixedTimestep();
+        int best_dt_i = -1;
         for (int fbi = 0; fbi < fb.size(); fbi++) {
           auto& fbp = fb[fbi];
-          if (doesCollide(part, fbp)) {
-            collision_tracker[ct->thisIndex].setShouldDelete(part.key);
-            collision_tracker.setShouldDelete(fbp.key);
-            break;
+          auto dt = getCollideTime(part, fbp);
+          if (dt < best_dt) {
+            best_dt = dt;
+            best_dt_i = fbi;
           }
+        }
+        if (best_dt_i != -1) {
+          collision_tracker[ct->thisIndex].setShouldDelete(part.key);
+          collision_tracker.setShouldDelete(fb[best_dt_i].key);
         }
       }
       else if (indicator == 1) {
