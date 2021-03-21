@@ -38,7 +38,6 @@ namespace paratreet {
         int flush_period;
         int flush_max_avg_ratio;
         int lb_period;
-        bool perturb_no_barrier;
         std::string input_file;
         std::string output_file;
 #ifdef __CHARMC__
@@ -55,7 +54,6 @@ namespace paratreet {
             p | flush_period;
             p | flush_max_avg_ratio;
             p | lb_period;
-            p | perturb_no_barrier;
             p | input_file;
             p | output_file;
         }

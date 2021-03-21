@@ -65,13 +65,6 @@ struct Partition : public CBase_Partition<Data> {
 
 private:
   Real time_advanced = 0;
-  struct PerturbRequest {
-    bool waiting = false;
-    TPHolder<Data> tp_holder;
-    Real timestep = 0.;
-    bool if_flush = false;
-  };
-  PerturbRequest saved_perturb;
 
 private:
   void initLocalBranches();
@@ -79,7 +72,6 @@ private:
   void copyParticles(std::vector<Particle>& particles);
   void flush(CProxy_Reader, std::vector<Particle>&);
   void makeLeaves(const std::vector<Key>&, int);
-  void doPerturb();
   template <typename WriterProxy> void doOutput(WriterProxy w, CkCallback cb);
 };
 
@@ -136,9 +128,6 @@ template <typename Data>
 void Partition<Data>::goDown()
 {
   traverser->resumeTrav();
-  if (saved_perturb.waiting && traverser->isFinished()) {
-    doPerturb();
-  }
 }
 
 template <typename Data>
@@ -237,7 +226,6 @@ void Partition<Data>::destroy()
 template <typename Data>
 void Partition<Data>::reset()
 {
-  if (saved_perturb.waiting) CkAbort("never did the perturb");
   traverser.reset();
   for (int i = 0; i < leaves.size(); i++) {
     if (leaves[i] != tree_leaves[i]) {
@@ -284,34 +272,21 @@ void Partition<Data>::perturbHalfStep(Real timestep, CkCallback cb)
 template <typename Data>
 void Partition<Data>::perturb(TPHolder<Data> tp_holder, Real timestep, bool if_flush)
 {
-  saved_perturb.tp_holder = tp_holder;
-  saved_perturb.timestep = timestep;
-  saved_perturb.if_flush = if_flush;
-  if (traverser && !traverser->isFinished()) {
-    saved_perturb.waiting = true;
-  }
-  else doPerturb();
-}
-
-template <typename Data>
-void Partition<Data>::doPerturb()
-{
-  saved_perturb.waiting = false;
   std::vector<Particle> particles;
   copyParticles(particles);
   r_local->countPartitionParticles(particles.size());
-  time_advanced += saved_perturb.timestep;
+  time_advanced += timestep;
   for (auto && p : particles) {
-    p.perturb(saved_perturb.timestep, readers.ckLocalBranch()->universe.box);
+    p.perturb(timestep, readers.ckLocalBranch()->universe.box);
   }
 
-  if (saved_perturb.if_flush) {
+  if (if_flush) {
     flush(readers, particles);
   }
   else {
     auto sendParticles = [&](int dest, int n_particles, Particle* particles) {
       ParticleMsg* msg = new (n_particles) ParticleMsg(particles, n_particles);
-      saved_perturb.tp_holder.proxy[dest].receive(msg);
+      tp_holder.proxy[dest].receive(msg);
     };
     treespec.ckLocalBranch()->getSubtreeDecomposition()->flush(particles, sendParticles);
   }

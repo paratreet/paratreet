@@ -9,6 +9,9 @@ void Particle::perturbHalfStep(Real timestep) {
 }
 
 void Particle::perturb (Real timestep, OrientedBox<Real> universe) {
+  velocity += (acceleration * timestep / 2);
+  velocity_predicted = velocity + (acceleration * timestep);
+  acceleration = (0., 0., 0.);
   position += (velocity * timestep);
   for (int dim = 0; dim < 3; dim++) {
     CkAssert(std::isfinite(position[dim]));
@@ -19,9 +22,6 @@ void Particle::perturb (Real timestep, OrientedBox<Real> universe) {
       position[dim] -= universe.greater_corner[dim] - universe.lesser_corner[dim];
     }
   }
-  velocity += (acceleration * timestep / 2);
-  acceleration = (0., 0., 0.);
-  velocity_predicted = velocity + (acceleration * timestep);
   Real uDelta = 0.5e-7 * timestep;
   potential -= pressure_dVolume * uDelta; // for adiabatic, dU = -p dV
   potential_predicted = potential - pressure_dVolume * uDelta;
