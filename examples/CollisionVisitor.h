@@ -36,9 +36,11 @@ public:
   static void leaf(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
     for (int i = 0; i < target.n_particles; i++) {
       for (int j = 0; j < source.n_particles; j++) {
-        Real dsq = (target.particles()[i].position - source.particles()[j].position).lengthSquared();
-        Real rsq = target.particles()[i].ball*target.particles()[i].ball;
-        if (dsq < rsq) target.data.fixed_ball[i].push_back(source.particles()[j]);
+        auto& sp = source.particles()[j];
+        auto& tp = target.particles()[i];
+        Real dsq = (tp.position - sp.position).lengthSquared();
+        Real rsq = tp.ball * tp.ball;
+        if (dsq < rsq && sp.order != tp.order) target.data.fixed_ball[i].push_back(source.particles()[j]);
       }
     }
   }
