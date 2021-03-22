@@ -62,14 +62,14 @@ module paratreet {
 
   group Writer {
     entry Writer(std::string of, int n_particles);
-    entry void receive(std::vector<Particle> particles, Real time, CkCallback cb);
-    entry void write(Real time, CkCallback cb);
+    entry void receive(std::vector<Particle> particles, Real time, int iter, CkCallback cb);
+    entry void write(Real time, int iter, CkCallback cb);
   }
 
   group TipsyWriter {
     entry TipsyWriter(std::string of, int n_particles);
-    entry void receive(std::vector<Particle> particles, Real time, CkCallback cb);
-    entry void write(Real time, CkCallback cb);
+    entry void receive(std::vector<Particle> particles, Real time, int iter, CkCallback cb);
+    entry void write(Real time, int iter, CkCallback cb);
   }
 
   template <typename Data>

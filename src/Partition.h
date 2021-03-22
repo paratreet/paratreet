@@ -66,6 +66,7 @@ struct Partition : public CBase_Partition<Data> {
 
 private:
   Real time_advanced = 0;
+  int iter = 1;
 
 private:
   void initLocalBranches();
@@ -276,6 +277,7 @@ template <typename Data>
 void Partition<Data>::perturb(Real timestep, CkCallback cb)
 {
   time_advanced += timestep;
+  iter += 1;
   BoundingBox box;
   for (auto && leaf : leaves) {
     leaf->perturb(timestep);
@@ -380,7 +382,7 @@ void Partition<Data>::doOutput(ProxyWriter w, CkCallback cb)
       ++particle_idx;
     }
 
-    w[writer_idx].receive(writer_particles, time_advanced, cb);
+    w[writer_idx].receive(writer_particles, time_advanced, iter, cb);
   }
 
   if (this->thisIndex != n_partitions - 1)
