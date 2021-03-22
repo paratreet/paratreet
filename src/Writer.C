@@ -12,7 +12,7 @@ Writer::Writer(std::string of, int n_particles)
   }
 }
 
-void Writer::receive(std::vector<Particle> ps, Real time, CkCallback cb)
+void Writer::receive(std::vector<Particle> ps, Real time, int iter, CkCallback cb)
 {
   // Accumulate received particles
   particles.insert(particles.end(), ps.begin(), ps.end());
@@ -28,18 +28,18 @@ void Writer::receive(std::vector<Particle> ps, Real time, CkCallback cb)
   can_write = true;
 
   if (prev_written || thisIndex == 0)
-    write(time, cb);
+    write(time, iter, cb);
 }
 
-void Writer::write(Real time, CkCallback cb)
+void Writer::write(Real time, int iter, CkCallback cb)
 {
   prev_written = true;
   if (can_write) {
     do_write();
     cur_dim = (cur_dim + 1) % 3;
-    if (thisIndex != CkNumPes() - 1) thisProxy[thisIndex + 1].write(time, cb);
+    if (thisIndex != CkNumPes() - 1) thisProxy[thisIndex + 1].write(time, iter, cb);
     else if (cur_dim == 0) cb.send();
-    else thisProxy[0].write(time, cb);
+    else thisProxy[0].write(time, iter, cb);
   }
 }
 
@@ -88,7 +88,7 @@ TipsyWriter::TipsyWriter(std::string of, int n_particles)
   }
 }
 
-void TipsyWriter::receive(std::vector<Particle> ps, Real time, CkCallback cb)
+void TipsyWriter::receive(std::vector<Particle> ps, Real time, int iter, CkCallback cb)
 {
   // Accumulate received particles
   particles.insert(particles.end(), ps.begin(), ps.end());
@@ -104,20 +104,20 @@ void TipsyWriter::receive(std::vector<Particle> ps, Real time, CkCallback cb)
   can_write = true;
 
   if (prev_written || thisIndex == 0)
-    write(time, cb);
+    write(time, iter, cb);
 }
 
-void TipsyWriter::write(Real time, CkCallback cb)
+void TipsyWriter::write(Real time, int iter, CkCallback cb)
 {
   prev_written = true;
   if (can_write) {
-    do_write(time);
-    if (thisIndex != CkNumPes() - 1) thisProxy[thisIndex + 1].write(time, cb);
+    do_write(time, iter);
+    if (thisIndex != CkNumPes() - 1) thisProxy[thisIndex + 1].write(time, iter, cb);
     else cb.send();
   }
 }
 
-void TipsyWriter::do_write(Real time)
+void TipsyWriter::do_write(Real time, int iter)
 {
   Tipsy::header tipsyHeader;
 
@@ -129,7 +129,7 @@ void TipsyWriter::do_write(Real time)
 
   bool use_double = sizeof(Real) == 8;
 
-  auto output_filename = output_file+".tipsy";
+  auto output_filename = output_file + "." + std::to_string(iter) + ".tipsy";
 
   if (thisIndex == 0) CmiFopen(output_filename.c_str(), "w");
 

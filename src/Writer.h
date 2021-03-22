@@ -7,8 +7,8 @@
 
 struct Writer : public CBase_Writer {
   Writer(std::string of, int n_particles);
-  void receive(std::vector<Particle> particles, Real time, CkCallback cb);
-  void write(Real time, CkCallback cb);
+  void receive(std::vector<Particle> particles, Real time, int iter, CkCallback cb);
+  void write(Real time, int iter, CkCallback cb);
 
 private:
   std::vector<Particle> particles;
@@ -24,8 +24,8 @@ private:
 
 struct TipsyWriter : public CBase_TipsyWriter {
   TipsyWriter(std::string of, int n_particles);
-  void receive(std::vector<Particle> particles, Real time, CkCallback cb);
-  void write(Real time, CkCallback cb);
+  void receive(std::vector<Particle> particles, Real time, int iter, CkCallback cb);
+  void write(Real time, int iter, CkCallback cb);
 
 private:
   std::vector<Particle> particles;
@@ -35,7 +35,7 @@ private:
   bool can_write = false;
   bool prev_written = false;
 
-  void do_write(Real time);
+  void do_write(Real time, int iter);
 };
 
 #endif /* _WRITER_H_ */
