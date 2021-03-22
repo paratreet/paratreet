@@ -83,11 +83,11 @@ public:
   // the universal bounding box
   void decompose(int iter) {
     auto config = treespec.ckLocalBranch()->getConfiguration();
-    // Build universe
     double decomp_time = CkWallTimer();
-    start_time = CkWallTimer();
-    CkReductionMsg* result;
     if (iter == 0) {
+      // Build universe
+      start_time = CkWallTimer();
+      CkReductionMsg* result;
       readers.load(config.input_file, CkCallbackResumeThread((void*&)result));
       CkPrintf("Loading Tipsy data and building universe: %.3lf ms\n",
           (CkWallTimer() - start_time) * 1000);
@@ -102,7 +102,7 @@ public:
       readers.assignKeys(universe, CkCallbackResumeThread());
       CkPrintf("Assigning keys and sorting particles: %.3lf ms\n",
         (CkWallTimer() - start_time) * 1000);
-    }
+    } else CkWaitQD();
 
     // Set up splitters for decomposition
     start_time = CkWallTimer();
@@ -210,10 +210,6 @@ public:
       CkPrintf("Tree traversal: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
 
       // Move the particles in Partitions
-      start_time = CkWallTimer();
-
-      CkWaitQD();
-
       partitions.kick(timestep_size, CkCallbackResumeThread());
 
       // Now track PE imbalance for memory reasons
@@ -239,7 +235,7 @@ public:
       partitions.rebuild(universe.box, subtrees, complete_rebuild); // 0.1s for example
       CkWaitQD();
       CkPrintf("Perturbations: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
-      if (iter % config.lb_period == config.lb_period - 1){
+      if (!complete_rebuild && iter % config.lb_period == config.lb_period - 1){
         start_time = CkWallTimer();
         //subtrees.pauseForLB(); // move them later
         partitions.pauseForLB();

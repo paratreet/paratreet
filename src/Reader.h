@@ -14,7 +14,6 @@ extern int n_readers;
 extern CProxy_TreeSpec treespec;
 
 class Reader : public CBase_Reader {
-  BoundingBox box;
   std::vector<Particle> particles;
   std::vector<std::vector<Vector3D<Real>>> bins;
   std::vector<ParticleMsg*> particle_messages;
@@ -63,7 +62,7 @@ class Reader : public CBase_Reader {
 
 template <typename Data>
 void Reader::request(CProxy_Subtree<Data> tp_proxy, int index, int num_to_give) {
-  int n_particles = box.n_particles;
+  int n_particles = universe.n_particles;
   ParticleMsg* msg = new (num_to_give) ParticleMsg(&particles[0], num_to_give);
   for (int i = 0; i < n_particles - num_to_give; i++) {
     particles[i] = particles[num_to_give + i];
