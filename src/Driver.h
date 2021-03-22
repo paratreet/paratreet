@@ -214,11 +214,7 @@ public:
 
       CkWaitQD();
 
-      CkReductionMsg* result;
-      partitions.perturbHalfStep(timestep_size, CkCallbackResumeThread((void*&)result));
-      universe = *((BoundingBox*)result->getData());
-      delete result;
-      remakeUniverse();
+      partitions.kick(timestep_size, CkCallbackResumeThread());
 
       // Now track PE imbalance for memory reasons
       centroid_resumer.collectMetaData(CkCallbackResumeThread((void *&) msg2));
@@ -235,7 +231,12 @@ public:
 
       paratreet::postIterationFn(universe, partitions, iter);
 
-      partitions.perturb(universe.box, subtrees, timestep_size, complete_rebuild); // 0.1s for example
+      CkReductionMsg* result;
+      partitions.perturb(timestep_size, CkCallbackResumeThread((void *&)result));
+      universe = *((BoundingBox*)result->getData());
+      delete result;
+      remakeUniverse();
+      partitions.rebuild(universe.box, subtrees, complete_rebuild); // 0.1s for example
       CkWaitQD();
       CkPrintf("Perturbations: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
       if (iter % config.lb_period == config.lb_period - 1){

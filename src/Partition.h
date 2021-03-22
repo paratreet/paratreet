@@ -49,8 +49,9 @@ struct Partition : public CBase_Partition<Data> {
   void receiveLeaves(std::vector<Key>, Key, int, TPHolder<Data>);
   void destroy();
   void reset();
-  void perturbHalfStep(Real, CkCallback);
-  void perturb(OrientedBox<Real>, TPHolder<Data>, Real, bool);
+  void kick(Real, CkCallback);
+  void perturb(Real, CkCallback);
+  void rebuild(OrientedBox<Real>, TPHolder<Data>, bool);
   void output(CProxy_Writer w, CkCallback cb);
   void output(CProxy_TipsyWriter w, CkCallback cb);
   void callPerLeafFn(int indicator, const CkCallback& cb);
@@ -263,16 +264,24 @@ void Partition<Data>::erasePartition() {
 }
 
 template <typename Data>
-void Partition<Data>::perturbHalfStep(Real timestep, CkCallback cb)
+void Partition<Data>::kick(Real timestep, CkCallback cb)
 {
+  for (auto && leaf : leaves) {
+    leaf->kick(timestep);
+  }
+  this->contribute(cb);
+}
+
+template <typename Data>
+void Partition<Data>::perturb(Real timestep, CkCallback cb)
+{
+  time_advanced += timestep;
   BoundingBox box;
   for (auto && leaf : leaves) {
-    leaf->perturbHalfStep(timestep);
+    leaf->perturb(timestep);
     for (int pi = 0; pi < leaf->n_particles; pi++) {
       auto& particle = leaf->particles()[pi];
-      auto fake_velocity = particle.velocity + particle.acceleration * timestep / 2;
-      auto new_pos = particle.position + fake_velocity * timestep;
-      box.grow(new_pos);
+      box.grow(particle.position);
       box.mass += particle.mass;
       box.ke += 0.5 * particle.mass * particle.velocity.lengthSquared();
       box.n_particles++;
@@ -282,14 +291,13 @@ void Partition<Data>::perturbHalfStep(Real timestep, CkCallback cb)
 }
 
 template <typename Data>
-void Partition<Data>::perturb(OrientedBox<Real> universe_box, TPHolder<Data> tp_holder, Real timestep, bool if_flush)
+void Partition<Data>::rebuild(OrientedBox<Real> universe_box, TPHolder<Data> tp_holder, bool if_flush)
 {
   std::vector<Particle> particles;
   copyParticles(particles);
   r_local->countPartitionParticles(particles.size());
-  time_advanced += timestep;
   for (auto && p : particles) {
-    p.perturb(timestep, universe_box);
+    p.adjustNewUniverse(universe_box);
   }
 
   if (if_flush) {
