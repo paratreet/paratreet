@@ -69,6 +69,7 @@ void Reader::load(std::string input_file, const CkCallback& cb) {
       particles[i].mass = dp.mass;
       particles[i].position = dp.pos;
       particles[i].velocity = dp.vel;
+      particles[i].soft = dp.eps;
     }
     else {
       if (!r.getNextStarParticle(sp)) {

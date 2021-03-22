@@ -25,11 +25,11 @@ namespace paratreet {
       start_time = CkWallTimer();
       part.template startDown<CollisionVisitor>();
       CkWaitQD();
-      CkPrintf("Collision traversals: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
+      CkPrintf("Collision traversal: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
       // Collision is a little funky because were going to edit the mass and position of particles after a collision
       // that means were going to set the mass and position to whatever we want
       // first get minimum distance of any two particles
-      double start_time = CkWallTimer();
+      start_time = CkWallTimer();
       part.callPerLeafFn(0, CkCallbackResumeThread());
       CkWaitQD();
       CkPrintf("Collision calculations: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
@@ -43,23 +43,29 @@ namespace paratreet {
     if (iter == 800000 - 1) paratreet::outputTipsy(universe, part);
   }
 
-  Real getFixedTimestep() {return 0.0025;}
+  Real getFixedTimestep() {return 0.01570796326;}
   Real getTimestep(BoundingBox& universe, Real max_velocity) {
     return getFixedTimestep();
   }
 
   Real getCollideTime(const Particle& a, const Particle& b) {
     auto dx = a.position - b.position;
-    auto vRel = a.velocity - b.velocity;
+    auto vRel = a.velocity - b.velocity + getFixedTimestep() * (a.acceleration - b.acceleration);
     auto rdotv = dot(dx, vRel);
     Real dx2 = dx.lengthSquared(), vRel2 = vRel.lengthSquared();
     Real sr = 2 * (a.soft + b.soft);
-    Real D = sqrt(1 - ((dx2 - (sr*sr))/(rdotv*rdotv))*vRel2);
-    Real dt1 = -rdotv/vRel2*(1 + D);
-    Real dt2 = -rdotv/vRel2*(1 - D);
+    auto dist = (dx2 - sr * sr);
+    Real inside = dist/(rdotv*rdotv) * vRel2;
     Real dt = std::numeric_limits<Real>::max();
-    if (dt1 > 0 && dt1 < dt2) dt = dt1;
-    else if (dt2 > 0 && dt2 < dt1) dt = dt2;
+    //CkPrintf("rdotv is %lf, inside is %lf, dx2 is %lf, vRel2 is %lf, sr is %lf\n", rdotv, inside, dx2, vRel2, sr);
+    if (inside <= 1) {
+      Real D = sqrt(1 - inside);
+      Real dt1 = -rdotv/vRel2*(1 + D);
+      Real dt2 = -rdotv/vRel2*(1 - D);
+      //CkPrintf("D is %lf, dt1 is %lf, dt2 is %lf\n", D, dt1, dt2);
+      if (dt1 > 0 && dt1 < dt2) dt = dt1;
+      else if (dt2 > 0 && dt2 < dt1) dt = dt2;
+    }
     return dt;
   }
 
@@ -87,7 +93,7 @@ namespace paratreet {
       }
       else if (indicator == 1) {
         if (ct->should_delete.find(part.key) != ct->should_delete.end()) {
-          if (verify) CkPrintf("deleting particle key %" PRIx64" of mass %f, %dth in leaf\n", part.key, part.mass, pi);
+          CkPrintf("deleting particle order %d of mass %f, %dth in leaf\n", part.order, part.mass, pi);
           Particle copy_part = part;
           copy_part.mass = 0;
           leaf.changeParticle(pi, copy_part);
