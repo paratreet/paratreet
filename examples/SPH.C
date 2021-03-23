@@ -50,7 +50,7 @@ namespace paratreet {
     for (int pi = 0; pi < leaf.n_particles; pi++) {
       auto& part = leaf.particles()[pi];
       auto& Q = leaf.data.neighbors[pi];
-      auto rsq = Q.front().fKey, fBall = std::sqrt(rsq);
+      auto rsq = Q[0].fKey, fBall = std::sqrt(rsq);
       if (indicator == 0) { // sum up the density. requires 0ing of densities
         Real density = 0.;
         auto ih2 = 4.0/rsq;  // 1/h^2
