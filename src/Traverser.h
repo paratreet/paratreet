@@ -203,7 +203,7 @@ public:
       auto tree_leaf = part.tree_leaves[i];
       curr_nodes[tree_leaf->key].push_back(i);
       trav_tops[i] = tree_leaf;
-      tree_leaf->data.widen();
+      part.leaves[i]->data.widen();
     }
     num_waiting = std::vector<int> (part.leaves.size(), 1);
   }
