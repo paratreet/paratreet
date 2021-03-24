@@ -24,7 +24,7 @@ public:
     // Check if any of the target balls intersect the source volume
     for (int i = 0; i < target.n_particles; i++) {
       if (target.data.neighbors[i].size() < k) return true;
-      if(Space::intersect(source.data.box, target.particles()[i].position, target.data.neighbors[i].front().fKey))
+      if(Space::intersect(source.data.box, target.particles()[i].position, target.data.neighbors[i][0].fKey))
         return true;
     }
     return false;
@@ -42,9 +42,9 @@ public:
         auto dsq = dr.lengthSquared();
         // Remove the most distant neighbor if this one is closer and the list is full
         if (Q.size() == k) {
-          if (dsq < Q.front().fKey) { // closer than farthest away
-            std::pop_heap(Q.begin(), Q.end());
-            Q.pop_back();
+          if (dsq < Q[0].fKey) {
+            std::pop_heap(&(Q[0]) + 0, &(Q)[0] + k);
+            Q.resize(k-1);
           }
         }
         // Add the particle to the neighbor list if it isnt filled up
@@ -56,7 +56,7 @@ public:
           pqNew.fKey = dsq;
           pqNew.pKey = sp.key;
           Q.push_back(pqNew);
-          std::push_heap(Q.begin(), Q.end());
+          std::push_heap(&(Q)[0] + 0, &(Q)[0] + Q.size());
         }
       }
     }

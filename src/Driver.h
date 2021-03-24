@@ -209,6 +209,8 @@ public:
       CkWaitQD();
       CkPrintf("Tree traversal: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
 
+      start_time = CkWallTimer();
+
       // Move the particles in Partitions
       partitions.kick(timestep_size, CkCallbackResumeThread());
 
