@@ -46,6 +46,7 @@ public:
   int n_subtrees;
   int n_partitions;
   double start_time;
+  bool matching_decomps;
 
   Driver(CProxy_CacheManager<Data> cache_manager_) :
     cache_manager(cache_manager_), storage_sorted(false) {}
@@ -113,7 +114,7 @@ public:
       CkPointer<Decomposition>(treespec.ckLocalBranch()->getSubtreeDecomposition()), true);
     CkPrintf("Setting up splitters for subtree decompositions: %.3lf ms\n",
         (CkWallTimer() - start_time) * 1000);
-    bool matching_decomps = config.decomp_type == paratreet::subtreeDecompForTree(config.tree_type);
+    matching_decomps = config.decomp_type == paratreet::subtreeDecompForTree(config.tree_type);
     start_time = CkWallTimer();
     if (matching_decomps) {
       n_partitions = n_subtrees;
@@ -238,8 +239,8 @@ public:
       CkPrintf("Perturbations: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
       if (iter % config.lb_period == config.lb_period - 1){
         start_time = CkWallTimer();
-        //subtrees.pauseForLB(); // move them later
-        partitions.pauseForLB();
+        if (!matching_decomps) partitions.pauseForLB();
+        subtrees.pauseForLB();
         CkWaitQD();
         CkPrintf("Load balancing: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
       }

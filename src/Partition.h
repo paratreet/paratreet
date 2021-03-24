@@ -8,9 +8,12 @@
 #include "ParticleMsg.h"
 #include "MultiData.h"
 #include "paratreet.decl.h"
+#include "LBCommon.h"
 
+CkpvExtern(int, _lb_obj_index);
 extern CProxy_TreeSpec treespec;
 extern CProxy_Reader readers;
+using namespace LBCommon;
 
 namespace paratreet {
   extern void perLeafFn(int indicator, SpatialNode<CentroidData>&);
@@ -36,6 +39,10 @@ struct Partition : public CBase_Partition<Data> {
   CacheManager<Data> *cm_local;
   CProxy_Resumer<Data> r_proxy;
   Resumer<Data>* r_local;
+
+  #if CMK_LB_USER_DATA
+  Vector3D<Real> centroid;
+  #endif
 
   Partition(int, CProxy_CacheManager<Data>, CProxy_Resumer<Data>, TCHolder<Data>, bool);
   Partition(CkMigrateMessage * msg){delete msg;};
@@ -82,7 +89,7 @@ Partition<Data>::Partition(
   bool matching_decomps_
   )
 {
-  this->usesAtSync = true;
+  if (!matching_decomps_) this->usesAtSync = true;
   n_partitions = np;
   tc_proxy = tc_holder.proxy;
   r_proxy = rp;
@@ -276,6 +283,23 @@ void Partition<Data>::perturb(TPHolder<Data> tp_holder, Real timestep, bool if_f
   copyParticles(particles);
   r_local->countPartitionParticles(particles.size());
   time_advanced += timestep;
+  #if CMK_LB_USER_DATA
+  int size = particles.size();
+  for (auto p : particles){
+    centroid += p.position;
+  }
+  centroid /= (Real) size;
+  if (CkpvAccess(_lb_obj_index) != -1) {
+    void *data = this->getObjUserData(CkpvAccess(_lb_obj_index));
+    LBUserData lb_data{
+      pt, this->thisIndex,
+      size, 0,
+      centroid
+    };
+
+    *(LBUserData *) data = lb_data;
+  }
+  #endif
   for (auto && p : particles) {
     p.perturb(timestep, readers.ckLocalBranch()->universe.box);
   }

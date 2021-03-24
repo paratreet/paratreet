@@ -13,14 +13,17 @@
 #include "Resumer.h"
 #include "Driver.h"
 #include "OrientedBox.h"
+#include "LBCommon.h"
 
 #include <cstring>
 #include <queue>
 #include <vector>
 #include <fstream>
 
+CkpvExtern(int, _lb_obj_index);
 extern CProxy_TreeSpec treespec;
 extern CProxy_Reader readers;
+using namespace LBCommon;
 
 template <typename Data>
 class Subtree : public CBase_Subtree<Data> {
@@ -32,6 +35,10 @@ public:
   int n_total_particles;
   int n_subtrees;
   int n_partitions;
+
+  #if CMK_LB_USER_DATA
+  Vector3D<Real> centroid;
+  #endif
 
   bool matching_decomps;
 
@@ -72,11 +79,30 @@ public:
   void collectMetaData(const CkCallback & cb);
   void addNodeToFlatSubtree(Node<Data>* node);
   void pauseForLB(){
-    //CkPrintf("[ST %d]  pause for LB on PE %d\n", this->thisIndex, CkMyPe());
+    #if CMK_LB_USER_DATA
+    // incoming_particles contains the new set of particles after perturb
+    for (auto p : incoming_particles ){
+      centroid += p.position;
+    }
+    if (incoming_particles.size() == 0){
+      Real zero = 0.0;
+      centroid = Vector3D<Real>(zero, zero, zero);
+    }else{
+      centroid /= (Real) particles.size();
+    }
+    if (CkpvAccess(_lb_obj_index) != -1) {
+      void *data = this->getObjUserData(CkpvAccess(_lb_obj_index));
+      LBUserData lb_data{
+        st, this->thisIndex, (int)incoming_particles.size(),
+        n_total_particles, centroid
+      };
+      *(LBUserData *) data = lb_data;
+    }
+    #endif
     this->AtSync();
   }
+
   void ResumeFromSync(){
-    //CkPrintf("[ST %d]  resume from sync for LB on PE %d\n", this->thisIndex, CkMyPe());
     return;
   };
 
@@ -104,7 +130,7 @@ Subtree<Data>::Subtree(const CkCallback& cb, int n_total_particles_,
                        CProxy_Resumer<Data> r_proxy_,
                        CProxy_CacheManager<Data> cm_proxy_, DPHolder<Data> dp_holder,
                        bool matching_decomps_){
-  //this->usesAtSync = true;
+  this->usesAtSync = true;
   n_total_particles = n_total_particles_;
   n_subtrees = n_subtrees_;
   n_partitions = n_partitions_;
