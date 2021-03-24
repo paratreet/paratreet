@@ -31,10 +31,6 @@ DistributedPrefixLB::DistributedPrefixLB(const CkLBOptions &opt) : CBase_Distrib
   InitLB(opt);
 }
 
-void DistributedPrefixLB::toggle(){
-  CkPrintf("LB[%d] toggled\n", CkMyPe());
-}
-
 bool DistPrefixLBCompare(const LBCompareStats & a, const LBCompareStats & b)
 {
   // compare chare array index
@@ -57,9 +53,6 @@ void DistributedPrefixLB::Strategy(const DistBaseLB::LDStats* const stats) {
   if (CkMyPe() == 0 && _lb_args.debug() >= 1) {
     start_time = CmiWallTimer();
     CkPrintf("In DistributedPrefixLB strategy at %lf\n", start_time);
-    for (int i = 0; i < CkNumPes(); i++){
-      thisProxy[i].toggle();
-    }
   }
 
   // Reset member variables for this LB iteration
@@ -69,6 +62,7 @@ void DistributedPrefixLB::Strategy(const DistBaseLB::LDStats* const stats) {
   initVariables();
 
   createObjMaps();
+  prefixInit();
 
   if (st_ct > 0) std::sort(st_obj_map.begin(), st_obj_map.end(), DistPrefixLBCompare);
   if (pt_ct > 0) std::sort(pt_obj_map.begin(), pt_obj_map.end(), DistPrefixLBCompare);
@@ -76,7 +70,17 @@ void DistributedPrefixLB::Strategy(const DistBaseLB::LDStats* const stats) {
   if (_lb_args.debug() >= 2) CkPrintf("My pe = %d; st_ct = %d; total_st_particle_size = %d; pt_ct = %d total_pt_particle_size = %d \n", my_pe, st_ct, st_particle_size_sum, pt_ct, pt_particle_size_sum);
   prefix_start_time = CmiWallTimer();
 
-  doPrefix();
+  thisProxy[0].reportInitDone();
+}
+
+void DistributedPrefixLB::reportInitDone(){
+  total_init_complete ++;
+  if(total_init_complete == CkNumPes()){
+    CkPrintf("DistributedPrefixLB>>> Initialization done. Start prefix\n");
+    total_init_complete = 0;
+    for (int i = 0; i < CkNumPes(); i++)
+      thisProxy[i].prefixStep();
+  }
 }
 
 void DistributedPrefixLB::initVariables(){
@@ -132,11 +136,6 @@ void DistributedPrefixLB::createObjMaps(){
   }
 }
 
-void DistributedPrefixLB::doPrefix(){
-  prefixInit();
-  thisProxy[my_pe].prefixStep();
-}
-
 void DistributedPrefixLB::prefixInit(){
   total_iter = ceil(log2(CkNumPes()));
   if(my_pe == 0) CkPrintf("total_iter = %d\n", total_iter);
@@ -187,6 +186,7 @@ void DistributedPrefixLB::prefixStep(){
 }
 
 void DistributedPrefixLB::prefixPassValue(int in_stage, int in_val){
+  //CkPrintf("LB[%d] in_stage = %d; in_val = %d\n", my_pe, in_stage, in_val);
   if(!flag_buf[in_stage]){
     flag_buf[in_stage] = 1;
     value_buf[in_stage] = in_val;

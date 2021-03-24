@@ -22,7 +22,7 @@ public:
   DistributedPrefixLB(const CkLBOptions &);
   DistributedPrefixLB(CkMigrateMessage *m);
   static void initnodeFn(void);
-  void toggle();
+  void reportInitDone();
   void prefixStep();
   void acknowledgeIncomingPrefixMigrations(int);
   void prefixPassValue(int, int);
@@ -37,6 +37,7 @@ private:
   int total_prefix_moves; // Number of migration moves
   int total_prefix_objects; // Number of objects
   int recv_prefix_summary_ct;
+  int total_init_complete = 0;
 
   // Prefix related
   std::vector<LBCompareStats> st_obj_map;
@@ -84,7 +85,6 @@ private:
   void createObjMaps();
   void prefixInit();
   void cleanUp();
-  void doPrefix();
   void sendOutPrefixDecisions();
   void makePrefixMoves();
   void PackAndMakeMigrateMsgs(int num_moves,int total_ct);
