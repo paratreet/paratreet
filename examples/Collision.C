@@ -21,9 +21,9 @@ namespace paratreet {
 
   void postIterationFn(BoundingBox& universe, ProxyPack<CentroidData>& proxy_pack, int iter) {
     if (iter % 100000 == 0) paratreet::outputTipsy(universe, proxy_pack.partition);
-    proxy_pack.cache.resetCachedParticles(CkCallbackResumeThread());
     if (iter >= iter_start_collision) {
       collision_tracker.reset(CkCallback::ignore);
+      proxy_pack.cache.resetCachedParticles(CkCallbackResumeThread());
       double start_time = CkWallTimer();
       proxy_pack.partition.template startDown<CollisionVisitor>();
       CkWaitQD();
