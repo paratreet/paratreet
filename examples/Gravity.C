@@ -22,12 +22,11 @@ namespace paratreet {
     if (iter == 0 && verify) {
       paratreet::outputParticleAccelerations(universe, part);
     }
-    if ((iter+1)%100 == 0) paratreet::outputTipsy(universe, part);
   }
 
-  Real getFixedTimestep() {return 0.01570796326;}
   Real getTimestep(BoundingBox& universe, Real max_velocity) {
-    return getFixedTimestep();
+    Real universe_box_len = universe.box.greater_corner.x - universe.box.lesser_corner.x;
+    return universe_box_len / max_velocity / std::cbrt(universe.n_particles);
   }
 
   void perLeafFn(int indicator, SpatialNode<CentroidData>& leaf) {}
