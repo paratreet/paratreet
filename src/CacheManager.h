@@ -21,7 +21,7 @@ public:
   Node<Data>* root = nullptr;
   using NodeLookup = std::unordered_map<Key, Node<Data>*>;
   NodeLookup local_tps;
-  NodeLookup leaf_lookup;
+  std::map<Key, Node<Data>*> leaf_lookup;
   std::map<Key, std::vector<int>> subtree_copy_started;
   std::map<int, Partition<Data>*> partition_lookup; // managed by Partition
   std::set<Key> prefetch_set;
@@ -89,18 +89,24 @@ private:
     }
   }
 public:
+  void resetCachedParticles(CkCallback cb) {
+    for (auto && ll : leaf_lookup) {
+      Data empty_data;
+      SpatialNode<Data> empty_sn (empty_data, 0, false, nullptr, 0);
+      auto parent = ll.second->parent;
+      auto new_leaf = treespec.ckLocalBranch()->makeCachedNode(ll.first, Node<Data>::Type::RemoteLeaf, empty_sn, parent, nullptr); // placeholder
+      swapIn(new_leaf);
+    }
+    cleanupPlaceholders();
+    this->contribute(cb);
+  }
   void destroy(bool restore) {
     local_tps.clear();
     leaf_lookup.clear();
     subtree_copy_started.clear();
     prefetch_set.clear();
 
-    for (auto& dae : delete_at_end) {
-      for (auto to_delete : dae) {
-        delete to_delete;
-      }
-      dae.resize(0);
-    }
+    cleanupPlaceholders();
 
     if (root != nullptr) {
       root->triggerFree();
@@ -132,6 +138,7 @@ private:
   void process(Key);
   void connect(Node<Data>*, bool);
   void connect(Node<Data>*, const std::vector<Node<Data>*>&);
+  void cleanupPlaceholders();
 };
 
 template <typename Data>
@@ -383,5 +390,16 @@ void CacheManager<Data>::process(Key key) {
     r_proxy[this->thisIndex * CkNodeSize(0) + i].process(key);
   }
 }
+
+template <typename Data>
+void CacheManager<Data>::cleanupPlaceholders() {
+  for (auto& dae : delete_at_end) {
+    for (auto to_delete : dae) {
+      delete to_delete;
+    }
+    dae.resize(0);
+  }
+}
+
 
 #endif //PARATREET_CACHEMANAGER_H_

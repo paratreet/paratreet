@@ -44,14 +44,14 @@ namespace paratreet {
     void outputParticleAccelerations(BoundingBox& universe, CProxy_Partition<CentroidData>& partitions) {
         auto& output_file = treespec.ckLocalBranch()->getConfiguration().output_file;
         CProxy_Writer w = CProxy_Writer::ckNew(output_file, universe.n_particles);
-        partitions[0].output(w, CkCallbackResumeThread());
         CkPrintf("Outputting particle accelerations for verification...\n");
+        partitions[0].output(w, CkCallbackResumeThread());
     }
     void outputTipsy(BoundingBox& universe, CProxy_Partition<CentroidData>& partitions) {
         auto& output_file = treespec.ckLocalBranch()->getConfiguration().output_file;
         CProxy_TipsyWriter tw = CProxy_TipsyWriter::ckNew(output_file, universe.n_particles);
-        partitions[0].output(tw, CkCallbackResumeThread());
         CkPrintf("Outputting to Tipsy file...\n");
+        partitions[0].output(tw, CkCallbackResumeThread());
     }
 
     void updateConfiguration(const Configuration& cfg, CkCallback cb) {

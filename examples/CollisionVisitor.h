@@ -17,7 +17,7 @@ public:
 
   static Real getCollideTime(const Particle& a, const Particle& b) {
     auto dx = a.position - b.position;
-    auto vRel = a.velocity - b.velocity + 0.01570796326 * (a.acceleration - b.acceleration); // this is kinda wrong cause accelerations are not updated properly
+    auto vRel = a.velocity - b.velocity + (0.01570796326 / 2.) * (a.acceleration - b.acceleration); // this is kinda wrong cause accelerations are not updated properly
     auto rdotv = dot(dx, vRel);
     Real dx2 = dx.lengthSquared(), vRel2 = vRel.lengthSquared();
     Real sr = 2 * (a.soft + b.soft);

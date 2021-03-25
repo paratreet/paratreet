@@ -16,13 +16,15 @@ namespace paratreet {
   }
 
   void traversalFn(BoundingBox& universe, ProxyPack<CentroidData>& proxy_pack, int iter) {
-    double start_time = CkWallTimer();
     proxy_pack.partition.template startDown<GravityVisitor>();
-    CkWaitQD();
-    CkPrintf("Gravity step: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
+  }
+
+  void postIterationFn(BoundingBox& universe, ProxyPack<CentroidData>& proxy_pack, int iter) {
+    if (iter % 100000 == 0) paratreet::outputTipsy(universe, proxy_pack.partition);
+    proxy_pack.cache.resetCachedParticles(CkCallbackResumeThread());
     if (iter >= iter_start_collision) {
       collision_tracker.reset(CkCallback::ignore);
-      start_time = CkWallTimer();
+      double start_time = CkWallTimer();
       proxy_pack.partition.template startDown<CollisionVisitor>();
       CkWaitQD();
       CkPrintf("Collision traversal: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
@@ -37,10 +39,6 @@ namespace paratreet {
       proxy_pack.partition.callPerLeafFn(1, CkCallbackResumeThread());
       CkPrintf("Collision deletions: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
     }
-  }
-
-  void postIterationFn(BoundingBox& universe, ProxyPack<CentroidData>& proxy_pack, int iter) {
-    if (iter % 100000 == 0) paratreet::outputTipsy(universe, proxy_pack.partition);
   }
 
   Real getTimestep(BoundingBox& universe, Real max_velocity) {
