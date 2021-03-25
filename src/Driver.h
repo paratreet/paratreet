@@ -28,9 +28,9 @@ extern CProxy_CacheManager<CentroidData> centroid_cache;
 extern CProxy_Resumer<CentroidData> centroid_resumer;
 
 namespace paratreet {
-  extern void preTraversalFn(CProxy_Driver<CentroidData>&, CProxy_CacheManager<CentroidData>& cache);
-  extern void traversalFn(BoundingBox&,CProxy_Partition<CentroidData>&,CProxy_Subtree<CentroidData>&,int);
-  extern void postIterationFn(BoundingBox&,CProxy_Partition<CentroidData>&,int);
+  extern void preTraversalFn(ProxyPack<CentroidData>&);
+  extern void traversalFn(BoundingBox&, ProxyPack<CentroidData>&, int);
+  extern void postIterationFn(BoundingBox&, ProxyPack<CentroidData>&, int);
   extern Real getTimestep(BoundingBox&, Real);
 }
 
@@ -195,17 +195,19 @@ public:
       Real max_velocity = *(Real*)(res[0].data); // avoid max_velocity = 0.0
       Real timestep_size = paratreet::getTimestep(universe, max_velocity);
 
+      ProxyPack<Data> proxy_pack (this->thisProxy, subtrees, partitions, centroid_cache);
+
       // Prefetch into cache
       start_time = CkWallTimer();
       // use exactly one of these three commands to load the software cache
-      paratreet::preTraversalFn(this->thisProxy, centroid_cache);
+      paratreet::preTraversalFn(proxy_pack);
       CkWaitQD();
       CkPrintf("TreeCanopy cache loading: %.3lf ms\n",
           (CkWallTimer() - start_time) * 1000);
 
       // Perform traversals
       start_time = CkWallTimer();
-      paratreet::traversalFn(universe, partitions, subtrees, iter);
+      paratreet::traversalFn(universe, proxy_pack, iter);
       CkWaitQD();
       CkPrintf("Tree traversal: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
 
@@ -227,7 +229,7 @@ public:
       CkPrintf("[Meta] n_subtree = %d; timestep_size = %f; sumPESize = %d; maxPESize = %d, avgPESize = %f; ratio = %f; maxVelocity = %f; rebuild = %s\n", n_subtrees, timestep_size, sumPESize, maxPESize, avgPESize, ratio, max_velocity, (complete_rebuild? "yes" : "no"));
       //End Subtree reduction message parsing
 
-      paratreet::postIterationFn(universe, partitions, iter);
+      paratreet::postIterationFn(universe, proxy_pack, iter);
 
       CkReductionMsg* result;
       partitions.perturb(timestep_size, CkCallbackResumeThread((void *&)result));

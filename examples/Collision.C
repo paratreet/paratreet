@@ -9,38 +9,38 @@ extern int iter_start_collision;
 
 namespace paratreet {
 
-  void preTraversalFn(CProxy_Driver<CentroidData>& driver, CProxy_CacheManager<CentroidData>& cache) {
-    //cache.startParentPrefetch(this->thisProxy, CkCallback::ignore); // MUST USE FOR UPND TRAVS
-    //cache.template startPrefetch<GravityVisitor>(this->thisProxy, CkCallback::ignore);
-    driver.loadCache(CkCallbackResumeThread());
+  void preTraversalFn(ProxyPack<CentroidData>& proxy_pack) {
+    //proxy_pack.cache.startParentPrefetch(this->thisProxy, CkCallback::ignore); // MUST USE FOR UPND TRAVS
+    //proxy_pack.cache.template startPrefetch<GravityVisitor>(this->thisProxy, CkCallback::ignore);
+    proxy_pack.driver.loadCache(CkCallbackResumeThread());
   }
 
-  void traversalFn(BoundingBox& universe, CProxy_Partition<CentroidData>& part, CProxy_Subtree<CentroidData>&, int iter) {
+  void traversalFn(BoundingBox& universe, ProxyPack<CentroidData>& proxy_pack, int iter) {
     double start_time = CkWallTimer();
-    part.template startDown<GravityVisitor>();
+    proxy_pack.partition.template startDown<GravityVisitor>();
     CkWaitQD();
     CkPrintf("Gravity step: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
     if (iter >= iter_start_collision) {
       collision_tracker.reset(CkCallback::ignore);
       start_time = CkWallTimer();
-      part.template startDown<CollisionVisitor>();
+      proxy_pack.partition.template startDown<CollisionVisitor>();
       CkWaitQD();
       CkPrintf("Collision traversal: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
       // Collision is a little funky because were going to edit the mass and position of particles after a collision
       // that means were going to set the mass and position to whatever we want
       // first get minimum distance of any two particles
       start_time = CkWallTimer();
-      part.callPerLeafFn(0, CkCallbackResumeThread());
+      proxy_pack.partition.callPerLeafFn(0, CkCallbackResumeThread());
       CkWaitQD();
       CkPrintf("Collision calculations: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
       start_time = CkWallTimer();
-      part.callPerLeafFn(1, CkCallbackResumeThread());
+      proxy_pack.partition.callPerLeafFn(1, CkCallbackResumeThread());
       CkPrintf("Collision deletions: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
     }
   }
 
-  void postIterationFn(BoundingBox& universe, CProxy_Partition<CentroidData>& part, int iter) {
-    if (iter % 100000 == 0) paratreet::outputTipsy(universe, part);
+  void postIterationFn(BoundingBox& universe, ProxyPack<CentroidData>& proxy_pack, int iter) {
+    if (iter % 100000 == 0) paratreet::outputTipsy(universe, proxy_pack.partition);
   }
 
   Real getTimestep(BoundingBox& universe, Real max_velocity) {
