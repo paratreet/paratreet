@@ -112,7 +112,7 @@ public:
               else doLeaf<Visitor>(node, leaves[bucket], part.r_local);
             }
           }
-          if (!delay_leaf) node->finish(active_buckets.size());
+          //if (!delay_leaf) node->finish(active_buckets.size());
           break;
         }
       case Node<Data>::Type::Internal:
@@ -130,7 +130,7 @@ public:
               doNode<Visitor>(node, leaves[bucket], part.r_local);
             }
           }
-          node->finish(active_buckets.size() - new_active_buckets.size());
+          //node->finish(active_buckets.size() - new_active_buckets.size());
           break;
         }
       case Node<Data>::Type::Boundary:
