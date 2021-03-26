@@ -44,6 +44,7 @@ module paratreet {
     entry void startPrefetch(DPHolder<Data>, CkCallback);
     entry void startParentPrefetch(DPHolder<Data>, CkCallback);
     entry void destroy(bool);
+    entry void resetCachedParticles(CkCallback);
   };
 #ifdef GROUP_CACHE
   group CacheManager<CentroidData>;

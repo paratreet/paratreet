@@ -26,6 +26,7 @@ public:
   std::map<int, Partition<Data>*> partition_lookup; // managed by Partition
   std::set<Key> prefetch_set;
   std::vector<std::vector<Node<Data>*>> delete_at_end;
+  std::vector<std::vector<Node<Data>*>> cached_leaves;
   CProxy_Resumer<Data> r_proxy;
   Data nodewide_data;
   std::atomic<size_t> num_buckets = ATOMIC_VAR_INIT(0ul);
@@ -39,6 +40,7 @@ public:
 
   void initialize() {
     delete_at_end.resize(CkNumPes(), std::vector<Node<Data>*>(0, nullptr));
+    cached_leaves.resize(CkNumPes());
     num_buckets.store(0u);
   }
 
@@ -89,18 +91,30 @@ private:
     }
   }
 public:
+  void resetCachedParticles(CkCallback cb) {
+    for (auto && clv : cached_leaves) {
+      for (auto && cl : clv) {
+        Data empty_data;
+        SpatialNode<Data> empty_sn (empty_data, 0, false, nullptr, 0);
+        auto parent = cl->parent;
+        auto new_leaf = treespec.ckLocalBranch()->makeCachedNode(cl->key, Node<Data>::Type::Remote, empty_sn, parent, nullptr); // placeholder
+        new_leaf->cm_index = cl->cm_index;
+        auto which_child = cl->key % cl->getBranchFactor();
+        cl->parent->exchangeChild(which_child, new_leaf);
+        delete cl;
+      }
+      clv.clear();
+    }
+    this->contribute(cb);
+  }
   void destroy(bool restore) {
     local_tps.clear();
     leaf_lookup.clear();
     subtree_copy_started.clear();
     prefetch_set.clear();
+    cached_leaves.clear();
 
-    for (auto& dae : delete_at_end) {
-      for (auto to_delete : dae) {
-        delete to_delete;
-      }
-      dae.resize(0);
-    }
+    cleanupPlaceholders();
 
     if (root != nullptr) {
       root->triggerFree();
@@ -132,6 +146,7 @@ private:
   void process(Key);
   void connect(Node<Data>*, bool);
   void connect(Node<Data>*, const std::vector<Node<Data>*>&);
+  void cleanupPlaceholders();
 };
 
 template <typename Data>
@@ -272,7 +287,11 @@ Node<Data>* CacheManager<Data>::addCacheHelper(Particle* particles, int n_partic
     insertNode(node, false, true);
   }
   if (add_to_tps) connect(first_node, leaves);
-  else swapIn(first_node);
+  else {
+    auto && clv = cached_leaves[CkMyRank()];
+    clv.insert(clv.end(), leaves.begin(), leaves.end());
+    swapIn(first_node);
+  }
   return first_node;
 }
 
@@ -383,5 +402,19 @@ void CacheManager<Data>::process(Key key) {
     r_proxy[this->thisIndex * CkNodeSize(0) + i].process(key);
   }
 }
+
+template <typename Data>
+void CacheManager<Data>::cleanupPlaceholders() {
+  for (auto& dae : delete_at_end) {
+    for (auto to_delete : dae) {
+      delete to_delete;
+    }
+    dae.clear();
+  }
+  for (auto clv : cached_leaves) {
+    clv.clear();
+  }
+}
+
 
 #endif //PARATREET_CACHEMANAGER_H_

@@ -8,41 +8,40 @@ extern bool verify;
 
 namespace paratreet {
 
-  void preTraversalFn(CProxy_Driver<CentroidData>& driver, CProxy_CacheManager<CentroidData>& cache) {
-    //cache.startParentPrefetch(this->thisProxy, CkCallback::ignore); // MUST USE FOR UPND TRAVS
-    //cache.template startPrefetch<GravityVisitor>(this->thisProxy, CkCallback::ignore);
-    driver.loadCache(CkCallbackResumeThread());
+  void preTraversalFn(ProxyPack<CentroidData>& proxy_pack) {
+    //proxy_pack.cache.startParentPrefetch(this->thisProxy, CkCallback::ignore); // MUST USE FOR UPND TRAVS
+    //proxy_pack.cache.template startPrefetch<GravityVisitor>(this->thisProxy, CkCallback::ignore);
+    proxy_pack.driver.loadCache(CkCallbackResumeThread());
   }
 
-  void traversalFn(BoundingBox& universe, CProxy_Partition<CentroidData>& part, CProxy_Subtree<CentroidData>&, int iter) {
+  void traversalFn(BoundingBox& universe, ProxyPack<CentroidData>& proxy_pack, int iter) {
     neighbor_list_collector.reset(CkCallbackResumeThread());
     double start_time = CkWallTimer();
-    part.template startUpAndDown<DensityVisitor>();
+    proxy_pack.partition.template startUpAndDown<DensityVisitor>();
     CkWaitQD();
     CkPrintf("K-nearest neighbors traversal: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
     start_time = CkWallTimer();
     // by now, all density requests have gone out
-    part.callPerLeafFn(0, CkCallbackResumeThread()); // calculates density, fills requests
+    proxy_pack.partition.callPerLeafFn(0, CkCallbackResumeThread()); // calculates density, fills requests
     CkWaitQD();
     CkPrintf("Density calculations and sharing: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
     start_time = CkWallTimer();
-    part.callPerLeafFn(1, CkCallbackResumeThread()); // calculates pressure
+    proxy_pack.partition.callPerLeafFn(1, CkCallbackResumeThread()); // calculates pressure
     CkPrintf("Pressure calculations: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
     start_time = CkWallTimer();
     neighbor_list_collector.shareAccelerations();
     CkWaitQD();
-    part.callPerLeafFn(2, CkCallbackResumeThread()); // averages pressure
+    proxy_pack.partition.callPerLeafFn(2, CkCallbackResumeThread()); // averages pressure
     CkPrintf("Averaging pressures: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
   }
-  void postIterationFn(BoundingBox& universe, CProxy_Partition<CentroidData>& part, int iter) {
+  void postIterationFn(BoundingBox& universe, ProxyPack<CentroidData>& proxy_pack, int iter) {
     if (iter == 0 && verify) {
-      paratreet::outputParticleAccelerations(universe, part);
+      paratreet::outputParticleAccelerations(universe, proxy_pack.partition);
     }
   }
 
   Real getTimestep(BoundingBox& universe, Real max_velocity) {
-    Real universe_box_len = universe.box.greater_corner.x - universe.box.lesser_corner.x;
-    return universe_box_len / max_velocity / std::cbrt(universe.n_particles);
+    return 0.0002;
   }
 
   void perLeafFn(int indicator, SpatialNode<CentroidData>& leaf) {
