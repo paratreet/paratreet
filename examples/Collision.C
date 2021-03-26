@@ -20,7 +20,8 @@ namespace paratreet {
   }
 
   void postIterationFn(BoundingBox& universe, ProxyPack<CentroidData>& proxy_pack, int iter) {
-    if (iter % 100000 == 0) paratreet::outputTipsy(universe, proxy_pack.partition);
+    proxy_pack.partition.callPerLeafFn(2, CkCallbackResumeThread());
+    if (iter % 10000 == 0) paratreet::outputTipsy(universe, proxy_pack.partition);
     if (iter >= iter_start_collision) {
       collision_tracker.reset(CkCallback::ignore);
       proxy_pack.cache.resetCachedParticles(CkCallbackResumeThread());
@@ -67,6 +68,14 @@ namespace paratreet {
         if (ct->should_delete.find(part.key) != ct->should_delete.end()) {
           Particle copy_part = part;
           copy_part.mass = 0;
+          leaf.changeParticle(pi, copy_part);
+        }
+      }
+      else if (indicator == 2) {
+        if (part.position.lengthSquared() > 100) {
+          Particle copy_part = part;
+          copy_part.mass = 0;
+          copy_part.position = copy_part.velocity = copy_part.acceleration = (0, 0, 0);
           leaf.changeParticle(pi, copy_part);
         }
       }
