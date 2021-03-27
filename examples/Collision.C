@@ -20,10 +20,9 @@ namespace paratreet {
   }
 
   void postIterationFn(BoundingBox& universe, ProxyPack<CentroidData>& proxy_pack, int iter) {
-    proxy_pack.partition.callPerLeafFn(2, CkCallbackResumeThread());
+    proxy_pack.partition.callPerLeafFn(1, CkCallbackResumeThread());
     if (iter % 10000 == 0) paratreet::outputTipsy(universe, proxy_pack.partition);
     if (iter >= iter_start_collision) {
-      collision_tracker.reset(CkCallback::ignore);
       proxy_pack.cache.resetCachedParticles(CkCallbackResumeThread());
       double start_time = CkWallTimer();
       proxy_pack.partition.template startDown<CollisionVisitor>();
@@ -36,9 +35,6 @@ namespace paratreet {
       proxy_pack.partition.callPerLeafFn(0, CkCallbackResumeThread());
       CkWaitQD();
       CkPrintf("Collision calculations: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
-      start_time = CkWallTimer();
-      proxy_pack.partition.callPerLeafFn(1, CkCallbackResumeThread());
-      CkPrintf("Collision deletions: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
     }
   }
 
@@ -46,8 +42,7 @@ namespace paratreet {
     return 0.01570796326;
   }
 
-  void perLeafFn(int indicator, SpatialNode<CentroidData>& leaf) {
-    auto ct = collision_tracker.ckLocalBranch();
+  void perLeafFn(int indicator, SpatialNode<CentroidData>& leaf, Partition<CentroidData>* partition) {
     for (int pi = 0; pi < leaf.n_particles; pi++) {
       auto& part = leaf.particles()[pi];
       if (part.mass == 0) continue;
@@ -60,23 +55,13 @@ namespace paratreet {
           auto& velA = part.velocity;
           auto& velB = partB.velocity;
           CkPrintf("deleting particles of order %d and %d that collide at dt %lf. First has position (%lf, %lf, %lf) velocity (%lf, %lf, %lf). Second has position (%lf, %lf, %lf) velocity (%lf, %lf, %lf)\n", part.order, partB.order, best_dt, posA.x, posA.y, posA.z, velA.x, velA.y, velA.z, posB.x, posB.y, posB.z, velB.x, velB.y, velB.z);
-          collision_tracker[ct->thisIndex].setShouldDelete(part.key);
-          collision_tracker.setShouldDelete(partB.key);
+          partition->deleteParticleOfOrder(part.order);
+          partition->thisProxy[partB.partition_idx].deleteParticleOfOrder(partB.order);
         }
       }
       else if (indicator == 1) {
-        if (ct->should_delete.find(part.key) != ct->should_delete.end()) {
-          Particle copy_part = part;
-          copy_part.mass = 0;
-          leaf.changeParticle(pi, copy_part);
-        }
-      }
-      else if (indicator == 2) {
-        if (part.position.lengthSquared() > 100) {
-          Particle copy_part = part;
-          copy_part.mass = 0;
-          copy_part.position = copy_part.velocity = copy_part.acceleration = (0, 0, 0);
-          leaf.changeParticle(pi, copy_part);
+        if (part.position.lengthSquared() > 1000) {
+          partition->deleteParticleOfOrder(part.order);
         }
       }
     }

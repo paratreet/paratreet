@@ -157,13 +157,13 @@ public:
     // Flush decomposed particles to home Subtrees and Partitions
     // TODO Separate decomposition for Subtrees and Partitions
     start_time = CkWallTimer();
-    readers.assignPartitions(universe.n_particles, n_partitions, partitions);
+    readers.assignPartitions(n_partitions, partitions);
     CkStartQD(CkCallbackResumeThread());
     CkPrintf("Assigning particles to Partitions: %.3lf ms\n",
         (CkWallTimer() - start_time) * 1000);
 
     start_time = CkWallTimer();
-    readers.flush(universe.n_particles, n_subtrees, subtrees);
+    readers.flush(n_subtrees, subtrees);
     CkStartQD(CkCallbackResumeThread());
     CkPrintf("Flushing particles to Subtrees: %.3lf ms\n",
         (CkWallTimer() - start_time) * 1000);
@@ -236,7 +236,7 @@ public:
       universe = *((BoundingBox*)result->getData());
       delete result;
       remakeUniverse();
-      partitions.rebuild(universe.box, subtrees, complete_rebuild); // 0.1s for example
+      partitions.rebuild(universe, subtrees, complete_rebuild); // 0.1s for example
       CkWaitQD();
       CkPrintf("Perturbations: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
       if (!complete_rebuild && iter % config.lb_period == config.lb_period - 1){
