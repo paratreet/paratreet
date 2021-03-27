@@ -20,7 +20,7 @@ public:
   }
   virtual ~SpatialNode() = default;
 
-  void changeParticle(int index, Particle& part) {
+  void changeParticle(int index, const Particle& part) {
     particles_[index] = part;
   }
   void applyAcceleration(int index, Vector3D<Real> accel) {

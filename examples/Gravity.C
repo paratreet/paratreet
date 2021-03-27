@@ -29,5 +29,5 @@ namespace paratreet {
     return universe_box_len / max_velocity / std::cbrt(universe.n_particles);
   }
 
-  void perLeafFn(int indicator, SpatialNode<CentroidData>& leaf) {}
+  void perLeafFn(int indicator, SpatialNode<CentroidData>& leaf, Partition<CentroidData>* partition) {}
 }

@@ -44,7 +44,7 @@ namespace paratreet {
     return 0.0002;
   }
 
-  void perLeafFn(int indicator, SpatialNode<CentroidData>& leaf) {
+  void perLeafFn(int indicator, SpatialNode<CentroidData>& leaf, Partition<CentroidData>* partition) {
     auto nlc = neighbor_list_collector.ckLocalBranch();
     for (int pi = 0; pi < leaf.n_particles; pi++) {
       auto& part = leaf.particles()[pi];
