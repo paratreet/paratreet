@@ -18,11 +18,13 @@ class Reader : public CBase_Reader {
   std::vector<std::vector<Vector3D<Real>>> bins;
   std::vector<ParticleMsg*> particle_messages;
   int particle_index;
+
   static constexpr const Real gasConstant = 1.0;
   static constexpr const Real gammam1 = 5.0/3.0 - 1;
   static constexpr const Real meanMolWeight = 1.0;
 
   public:
+    Real start_time = 0;
     BoundingBox universe;
     // std::vector<Splitter> splitters;
     // std::vector<Key> SFCsplitters;

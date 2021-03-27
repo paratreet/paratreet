@@ -67,9 +67,10 @@ struct Partition : public CBase_Partition<Data> {
     return;
   };
 
-private:
   Real time_advanced = 0;
   int iter = 1;
+
+private:
   std::set<int> particle_delete_order;
 
 private:
@@ -95,6 +96,7 @@ Partition<Data>::Partition(
   cm_proxy = cm;
   matching_decomps = matching_decomps_;
   initLocalBranches();
+  time_advanced = readers.ckLocalBranch()->start_time;
 }
 
 template <typename Data>
@@ -224,6 +226,7 @@ void Partition<Data>::makeLeaves(int subtree_idx) {
 template <typename Data>
 void Partition<Data>::destroy()
 {
+  readers.ckLocalBranch()->start_time = time_advanced;
   reset();
   erasePartition();
   this->thisProxy[this->thisIndex].ckDestroy();
@@ -338,7 +341,7 @@ template <typename Data>
 void Partition<Data>::copyParticles(std::vector<Particle>& particles, bool check_delete) {
   for (auto && leaf : leaves) {
     for (int i = 0; i < leaf->n_particles; i++) {
-      if (check_delete && particle_delete_order.find(leaf->particles()[i].order) == particle_delete_order.end()) {
+      if (!check_delete || particle_delete_order.find(leaf->particles()[i].order) == particle_delete_order.end()) {
         particles.emplace_back(leaf->particles()[i]);
       }
     }

@@ -22,6 +22,7 @@ void Reader::load(std::string input_file, const CkCallback& cb) {
   int n_sph = tipsyHeader.nsph;
   int n_dark = tipsyHeader.ndark;
   int n_star = tipsyHeader.nstar;
+  start_time = tipsyHeader.time;
 
   int n_particles = n_total / n_readers;
   int excess = n_total % n_readers;

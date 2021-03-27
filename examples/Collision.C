@@ -54,7 +54,7 @@ namespace paratreet {
           auto& posB = partB.position;
           auto& velA = part.velocity;
           auto& velB = partB.velocity;
-          CkPrintf("deleting particles of order %d and %d that collide at dt %lf. First has position (%lf, %lf, %lf) velocity (%lf, %lf, %lf). Second has position (%lf, %lf, %lf) velocity (%lf, %lf, %lf)\n", part.order, partB.order, best_dt, posA.x, posA.y, posA.z, velA.x, velA.y, velA.z, posB.x, posB.y, posB.z, velB.x, velB.y, velB.z);
+          CkPrintf("deleting particles of order %d and %d that collide at dt %lf. First has position (%lf, %lf, %lf) velocity (%lf, %lf, %lf). Second has position (%lf, %lf, %lf) velocity (%lf, %lf, %lf)\n", part.order, partB.order, partition->time_advanced + best_dt, posA.x, posA.y, posA.z, velA.x, velA.y, velA.z, posB.x, posB.y, posB.z, velB.x, velB.y, velB.z);
           partition->deleteParticleOfOrder(part.order);
           partition->thisProxy[partB.partition_idx].deleteParticleOfOrder(partB.order);
         }
