@@ -146,15 +146,13 @@ void Partition<Data>::interact(const CkCallback& cb)
 
 template <typename Data>
 void Partition<Data>::addLeaves(const std::vector<Node<Data>*>& leaf_ptrs, int subtree_idx) {
-  receive_lock.lock();
-  tree_leaves.insert(tree_leaves.end(), leaf_ptrs.begin(), leaf_ptrs.end());
-  for (auto leaf : leaf_ptrs) {
-    if(matching_decomps){
-      // When Subtree and Partition have the same decomp type
-      // the tree structures will be identical
-      // reuse leaf without checks and modifications
-      leaves.push_back(leaf);
-    }else{
+  decltype(leaves) new_leaves;
+  if (!matching_decomps) {
+    // When Subtree and Partition have the same decomp type
+    // the tree structures will be identical
+    // reuse leaf without checks and modifications
+    new_leaves.reserve(leaf_ptrs.size());
+    for (auto leaf : leaf_ptrs) {
       std::vector<Particle> leaf_particles;
       for (int pi = 0; pi < leaf->n_particles; pi++) {
         if (leaf->particles()[pi].partition_idx == this->thisIndex) {
@@ -162,7 +160,7 @@ void Partition<Data>::addLeaves(const std::vector<Node<Data>*>& leaf_ptrs, int s
         }
       }
       if (leaf_particles.size() == leaf->n_particles) {
-        leaves.push_back(leaf);
+        new_leaves.push_back(leaf);
       }
       else {
         auto particles = new Particle [leaf_particles.size()];
@@ -174,10 +172,16 @@ void Partition<Data>::addLeaves(const std::vector<Node<Data>*>& leaf_ptrs, int s
         node->type = Node<Data>::Type::Leaf;
         node->home_pe = leaf->home_pe;
         node->data = Data(node->particles(), node->n_particles);
-        leaves.push_back(node);
+        new_leaves.push_back(node);
       }
     }
   }
+  receive_lock.lock();
+  tree_leaves.insert(tree_leaves.end(), leaf_ptrs.begin(), leaf_ptrs.end());
+  if (matching_decomps) {
+    leaves.insert(leaves.end(), leaf_ptrs.begin(), leaf_ptrs.end());
+  }
+  else leaves.insert(leaves.end(), new_leaves.begin(), new_leaves.end());
   receive_lock.unlock();
   cm_local->num_buckets += leaf_ptrs.size();
 }
