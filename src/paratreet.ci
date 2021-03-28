@@ -87,8 +87,8 @@ module paratreet {
     entry void kick(Real, CkCallback cb);
     entry void perturb(Real, CkCallback cb);
     entry void rebuild(BoundingBox, TPHolder<Data>, bool);
-    entry void output(CProxy_Writer w, CkCallback cb);
-    entry void output(CProxy_TipsyWriter w, CkCallback cb);
+    entry void output(CProxy_Writer, int, CkCallback);
+    entry void output(CProxy_TipsyWriter, int, CkCallback);
     entry void callPerLeafFn(int indicator, CkCallback cb);
     entry void deleteParticleOfOrder(int order);
     entry void pauseForLB();
