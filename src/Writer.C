@@ -88,40 +88,32 @@ TipsyWriter::TipsyWriter(std::string of, int n_particles)
   }
 }
 
-void TipsyWriter::receive(std::vector<Particle> ps, Real time, int iter, CkCallback cb)
+void TipsyWriter::receive(std::vector<Particle> ps, Real time, int iter)
 {
   // Accumulate received particles
   particles.insert(particles.end(), ps.begin(), ps.end());
+  time_ = time;
+  iter_ = iter;
+}
 
-  if (particles.size() != expected_particles) return;
-
+void TipsyWriter::write(int prefix_count, CkCallback cb) {
   // Received expected number of particles, sort the particles
   std::sort(particles.begin(), particles.end(),
             [](const Particle& left, const Particle& right) {
               return left.order < right.order;
             });
 
-  can_write = true;
-
-  if (prev_written || thisIndex == 0)
-    write(time, iter, cb);
+  int new_prefix_count = prefix_count + particles.size();
+  do_write(prefix_count);
+  if (thisIndex != CkNumPes() - 1) thisProxy[thisIndex + 1].write(new_prefix_count, cb);
+  else cb.send();
 }
 
-void TipsyWriter::write(Real time, int iter, CkCallback cb)
-{
-  prev_written = true;
-  if (can_write) {
-    do_write(time, iter);
-    if (thisIndex != CkNumPes() - 1) thisProxy[thisIndex + 1].write(time, iter, cb);
-    else cb.send();
-  }
-}
-
-void TipsyWriter::do_write(Real time, int iter)
+void TipsyWriter::do_write(int prefix_count)
 {
   Tipsy::header tipsyHeader;
 
-  tipsyHeader.time = time;
+  tipsyHeader.time = time_;
   tipsyHeader.nbodies = total_particles;
   tipsyHeader.nsph = 0;
   tipsyHeader.nstar = 0;
@@ -129,7 +121,7 @@ void TipsyWriter::do_write(Real time, int iter)
 
   bool use_double = sizeof(Real) == 8;
 
-  auto output_filename = output_file + "." + std::to_string(iter) + ".tipsy";
+  auto output_filename = output_file + "." + std::to_string(iter_) + ".tipsy";
 
   if (thisIndex == 0) CmiFopen(output_filename.c_str(), "w");
 
@@ -137,9 +129,6 @@ void TipsyWriter::do_write(Real time, int iter)
 
   if(thisIndex == 0) w.writeHeader();
 
-  int avg_particles = total_particles / CkNumPes();
-  if (avg_particles * CkNumPes() != total_particles) ++avg_particles;
-  int prefix_count = avg_particles * thisIndex;
   if(!w.seekParticleNum(prefix_count)) CkAbort("bad seek");
 
   for (const auto& p : particles) {

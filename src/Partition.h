@@ -353,19 +353,6 @@ void Partition<Data>::copyParticles(std::vector<Particle>& particles, bool check
 template <typename Data>
 void Partition<Data>::output(CProxy_Writer w, int n_total_particles, CkCallback cb)
 {
-  doOutput(w, n_total_particles, cb);
-}
-
-template <typename Data>
-void Partition<Data>::output(CProxy_TipsyWriter w, int n_total_particles, CkCallback cb)
-{
-  doOutput(w, n_total_particles, cb);
-}
-
-template <typename Data>
-template <typename ProxyWriter>
-void Partition<Data>::doOutput(ProxyWriter w, int n_total_particles, CkCallback cb)
-{
   std::vector<Particle> particles;
   copyParticles(particles, false);
 
@@ -393,6 +380,43 @@ void Partition<Data>::doOutput(ProxyWriter w, int n_total_particles, CkCallback 
     }
 
     w[writer_idx].receive(writer_particles, time_advanced, iter, cb);
+  }
+
+  if (this->thisIndex != n_partitions - 1)
+    this->thisProxy[this->thisIndex + 1].output(w, n_total_particles, cb);
+}
+
+
+template <typename Data>
+void Partition<Data>::output(CProxy_TipsyWriter w, int n_total_particles, CkCallback cb)
+{
+  std::vector<Particle> particles;
+  copyParticles(particles, false);
+
+  std::sort(particles.begin(), particles.end(),
+            [](const Particle& left, const Particle& right) {
+              return left.order < right.order;
+            });
+
+  int particles_per_writer = n_total_particles / CkNumPes();
+  if (particles_per_writer * CkNumPes() != n_total_particles)
+    ++particles_per_writer;
+
+  int particle_idx = 0;
+  while (particle_idx < particles.size()) {
+    int writer_idx = particles[particle_idx].order / particles_per_writer;
+    int first_particle = writer_idx * particles_per_writer;
+    std::vector<Particle> writer_particles;
+
+    while (
+      particles[particle_idx].order < first_particle + particles_per_writer
+      && particle_idx < particles.size()
+      ) {
+      writer_particles.push_back(particles[particle_idx]);
+      ++particle_idx;
+    }
+
+    w[writer_idx].receive(writer_particles, time_advanced, iter);
   }
 
   if (this->thisIndex != n_partitions - 1)

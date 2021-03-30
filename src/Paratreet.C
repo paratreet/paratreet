@@ -51,7 +51,9 @@ namespace paratreet {
         auto& output_file = treespec.ckLocalBranch()->getConfiguration().output_file;
         CProxy_TipsyWriter tw = CProxy_TipsyWriter::ckNew(output_file, universe.n_particles);
         CkPrintf("Outputting to Tipsy file...\n");
-        partitions[0].output(tw, universe.n_particles, CkCallbackResumeThread());
+        partitions[0].output(tw, universe.n_particles, CkCallback::ignore);
+        CkWaitQD();
+        tw[0].write(0, CkCallbackResumeThread());
     }
 
     void updateConfiguration(const Configuration& cfg, CkCallback cb) {
