@@ -47,7 +47,7 @@ namespace paratreet {
         CkPrintf("Outputting particle accelerations for verification...\n");
         partitions[0].output(w, universe.n_particles, CkCallbackResumeThread());
         CkWaitQD();
-        w[0].write(0, CkCallbackResumeThread());
+        w[0].write(CkCallbackResumeThread());
     }
     void outputTipsy(BoundingBox& universe, CProxy_Partition<CentroidData>& partitions) {
         auto& output_file = treespec.ckLocalBranch()->getConfiguration().output_file;
