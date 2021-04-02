@@ -59,7 +59,7 @@ namespace paratreet {
         }
       }
       else if (indicator == 1) {
-        if (part.position.lengthSquared() > 45) {
+        if (part.position.lengthSquared() > 45 || part.position.z < -0.2 || part.position.z > 0.2) {
           partition->deleteParticleOfOrder(part.order);
         }
       }

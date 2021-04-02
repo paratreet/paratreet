@@ -4,43 +4,28 @@
 Writer::Writer(std::string of, int n_particles)
   : output_file(of), total_particles(n_particles)
 {
-  expected_particles = n_particles / CkNumPes();
-  if (expected_particles * CkNumPes() != n_particles) {
-    ++expected_particles;
-    if (thisIndex == CkNumPes() - 1)
-      expected_particles = n_particles - thisIndex * expected_particles;
-  }
 }
 
-void Writer::receive(std::vector<Particle> ps, Real time, int iter, CkCallback cb)
+void Writer::receive(std::vector<Particle> ps, Real time, int iter)
 {
   // Accumulate received particles
   particles.insert(particles.end(), ps.begin(), ps.end());
+  time_ = time;
+  iter_ = iter;
+}
 
-  if (particles.size() != expected_particles) return;
-
+void Writer::write(CkCallback cb)
+{
   // Received expected number of particles, sort the particles
   std::sort(particles.begin(), particles.end(),
             [](const Particle& left, const Particle& right) {
               return left.order < right.order;
             });
-
-  can_write = true;
-
-  if (prev_written || thisIndex == 0)
-    write(time, iter, cb);
-}
-
-void Writer::write(Real time, int iter, CkCallback cb)
-{
-  prev_written = true;
-  if (can_write) {
-    do_write();
-    cur_dim = (cur_dim + 1) % 3;
-    if (thisIndex != CkNumPes() - 1) thisProxy[thisIndex + 1].write(time, iter, cb);
-    else if (cur_dim == 0) cb.send();
-    else thisProxy[0].write(time, iter, cb);
-  }
+  do_write();
+  cur_dim = (cur_dim + 1) % 3;
+  if (thisIndex != CkNumPes() - 1) thisProxy[thisIndex + 1].write(cb);
+  else if (cur_dim == 0) cb.send();
+  else thisProxy[0].write(cb);
 }
 
 void Writer::do_write()
@@ -80,12 +65,6 @@ void Writer::do_write()
 TipsyWriter::TipsyWriter(std::string of, int n_particles)
   : output_file(of), total_particles(n_particles)
 {
-  expected_particles = n_particles / CkNumPes();
-  if (expected_particles * CkNumPes() != n_particles) {
-    ++expected_particles;
-    if (thisIndex == CkNumPes() - 1)
-      expected_particles = n_particles - thisIndex * expected_particles;
-  }
 }
 
 void TipsyWriter::receive(std::vector<Particle> ps, Real time, int iter)
