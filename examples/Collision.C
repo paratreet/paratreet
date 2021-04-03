@@ -45,7 +45,6 @@ namespace paratreet {
   void perLeafFn(int indicator, SpatialNode<CentroidData>& leaf, Partition<CentroidData>* partition) {
     for (int pi = 0; pi < leaf.n_particles; pi++) {
       auto& part = leaf.particles()[pi];
-      if (part.mass == 0) continue;
       if (indicator == 0) {
         auto best_dt = leaf.data.best_dt[pi].first;
         if (best_dt < 0.01570796326) {
@@ -60,7 +59,7 @@ namespace paratreet {
         }
       }
       else if (indicator == 1) {
-        if (part.position.lengthSquared() > 1000) {
+        if (part.position.lengthSquared() > 45 || part.position.z < -0.2 || part.position.z > 0.2) {
           partition->deleteParticleOfOrder(part.order);
         }
       }

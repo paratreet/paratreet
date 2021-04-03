@@ -356,6 +356,7 @@ void Partition<Data>::output(CProxy_Writer w, int n_total_particles, CkCallback 
   doOutput(w, n_total_particles, cb);
 }
 
+
 template <typename Data>
 void Partition<Data>::output(CProxy_TipsyWriter w, int n_total_particles, CkCallback cb)
 {
@@ -363,8 +364,8 @@ void Partition<Data>::output(CProxy_TipsyWriter w, int n_total_particles, CkCall
 }
 
 template <typename Data>
-template <typename ProxyWriter>
-void Partition<Data>::doOutput(ProxyWriter w, int n_total_particles, CkCallback cb)
+template <typename WriterProxy>
+void Partition<Data>::doOutput(WriterProxy w, int n_total_particles, CkCallback cb)
 {
   std::vector<Particle> particles;
   copyParticles(particles, false);
@@ -392,11 +393,8 @@ void Partition<Data>::doOutput(ProxyWriter w, int n_total_particles, CkCallback 
       ++particle_idx;
     }
 
-    w[writer_idx].receive(writer_particles, time_advanced, iter, cb);
+    w[writer_idx].receive(writer_particles, time_advanced, iter);
   }
-
-  if (this->thisIndex != n_partitions - 1)
-    this->thisProxy[this->thisIndex + 1].output(w, n_total_particles, cb);
 }
 
 #endif /* _PARTITION_H_ */
