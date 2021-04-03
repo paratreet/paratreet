@@ -45,7 +45,7 @@ namespace paratreet {
         auto& output_file = treespec.ckLocalBranch()->getConfiguration().output_file;
         CProxy_Writer w = CProxy_Writer::ckNew(output_file, universe.n_particles);
         CkPrintf("Outputting particle accelerations for verification...\n");
-        partitions[0].output(w, universe.n_particles, CkCallbackResumeThread());
+        partitions.output(w, universe.n_particles, CkCallback::ignore);
         CkWaitQD();
         w[0].write(CkCallbackResumeThread());
     }
@@ -53,7 +53,7 @@ namespace paratreet {
         auto& output_file = treespec.ckLocalBranch()->getConfiguration().output_file;
         CProxy_TipsyWriter tw = CProxy_TipsyWriter::ckNew(output_file, universe.n_particles);
         CkPrintf("Outputting to Tipsy file...\n");
-        partitions[0].output(tw, universe.n_particles, CkCallback::ignore);
+        partitions.output(tw, universe.n_particles, CkCallback::ignore);
         CkWaitQD();
         tw[0].write(0, CkCallbackResumeThread());
     }
