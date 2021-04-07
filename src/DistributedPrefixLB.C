@@ -37,51 +37,63 @@ bool DistPrefixLBCompare(const LBCompareStats & a, const LBCompareStats & b)
   return a.chare_idx < b.chare_idx;
 };
 
+bool CentroidRecordCompare(const LBCentroidCompare & a, const LBCentroidCompare & b){
+  return a.distance < b.distance;
+}
+
 void DistributedPrefixLB::initnodeFn()
 {
-  //_registerCommandLineOpt("+DistLBTargetRatio");
-  //_registerCommandLineOpt("+DistLBMaxPhases");
+  //_registerCommandLineOpt("+DistLBBackgroundRatio");
+  _registerCommandLineOpt("+DistLBMaxPhases");
 }
 
 void DistributedPrefixLB::InitLB(const CkLBOptions &opt) {
   thisProxy = CProxy_DistributedPrefixLB(thisgroup);
   if (opt.getSeqNo() > 0 || (_lb_args.metaLbOn() && _lb_args.metaLbModelDir() != nullptr))
     turnOff();
+  nearestK = _lb_args.maxDistPhases();
 }
 
 void DistributedPrefixLB::Strategy(const DistBaseLB::LDStats* const stats) {
-  if (CkMyPe() == 0 && _lb_args.debug() >= 1) {
+  if (CkMyPe() == 0) {
     start_time = CmiWallTimer();
-    CkPrintf("In DistributedPrefixLB strategy at %lf\n", start_time);
+    CkPrintf("DistributedPrefixLB>>> In DistributedPrefixLB strategy at %lf, term to balance %s, nearestK = %d\n", start_time, (lb_partition_term? "partitions" : "subtrees"), nearestK);
   }
 
   // Reset member variables for this LB iteration
   my_stats = stats;
   my_pe = CkMyPe();
+  background_load = my_stats->bg_walltime * my_stats->pe_speed;
+  nearestK = std::min(nearestK, CkNumPes()-1);
 
   initVariables();
 
   createObjMaps();
-  prefixInit();
-
   if (st_ct > 0) std::sort(st_obj_map.begin(), st_obj_map.end(), DistPrefixLBCompare);
   if (pt_ct > 0) std::sort(pt_obj_map.begin(), pt_obj_map.end(), DistPrefixLBCompare);
 
   if (_lb_args.debug() >= 2) CkPrintf("My pe = %d; st_ct = %d; total_st_particle_size = %d; pt_ct = %d total_pt_particle_size = %d \n", my_pe, st_ct, st_particle_size_sum, pt_ct, pt_particle_size_sum);
-  prefix_start_time = CmiWallTimer();
 
-  thisProxy[0].reportInitDone();
+  if(lb_partition_term) prefixInit();
+  else subtreeLBInits();
 }
 
-void DistributedPrefixLB::reportInitDone(){
+void DistributedPrefixLB::reportPrefixInitDone(double in_load){
   total_init_complete ++;
+  global_load += in_load;
   if(total_init_complete == CkNumPes()){
-    CkPrintf("DistributedPrefixLB>>> Initialization done. Start prefix\n");
-    total_init_complete = 0;
-    for (int i = 0; i < CkNumPes(); i++)
-      thisProxy[i].prefixStep();
+    CkPrintf("DistributedPrefixLB>>> Initialization done. Start prefix. Global_load = %.4f\n", global_load);
+    for (int i = 0; i < CkNumPes(); i++){
+      thisProxy[i].broadcastGlobalLoad(global_load);
+    }
   }
 }
+
+void DistributedPrefixLB::broadcastGlobalLoad(double global_load_){
+  global_load = global_load_;
+  prefixStep();
+}
+
 
 void DistributedPrefixLB::initVariables(){
   // Used in PE[0] only
@@ -89,10 +101,17 @@ void DistributedPrefixLB::initVariables(){
   total_prefix_objects = 0;
   recv_prefix_summary_ct = 0;
 
+  // LB Patition (Prefix) variables
   total_incoming_prefix_migrations = 0;
 
   total_partition_load = 0.0;
+  total_subtree_load = 0.0;
+  total_pe_load = 0.0;
   total_particle_size = 0;
+  global_load = 0.0;
+
+
+  // LB Subtree variables
 }
 
 void DistributedPrefixLB::createObjMaps(){
@@ -100,10 +119,13 @@ void DistributedPrefixLB::createObjMaps(){
   pt_ct = 0;
   st_particle_size_sum = 0;
   pt_particle_size_sum = 0;
+  Vector3D<Real> avg_centroid;
   for (int i = 0; i < my_stats->objData.size(); i++) {
     LDObjData oData = my_stats->objData[i];
     #if CMK_LB_USER_DATA
     int idx = CkpvAccess(_lb_obj_index);
+    double obj_load = oData.wallTime * my_stats->pe_speed;
+    total_pe_load += obj_load;
     LBUserData usr_data = *(LBUserData *)oData.getUserData(CkpvAccess(_lb_obj_index));
     // Collect Subtree chare element data
     if (usr_data.lb_type == LBCommon::st){
@@ -111,11 +133,12 @@ void DistributedPrefixLB::createObjMaps(){
       st_obj_map.push_back(
           LBCompareStats{
             i, usr_data.chare_idx,
-            usr_data.particle_size,
+            usr_data.particle_size, obj_load,
             &my_stats->objData[i], my_pe, usr_data.centroid
           });
-  if(_lb_args.debug() > 3) ckout << "ST[" << usr_data.chare_idx << "] @ PE[" << my_pe << "] size = "<< usr_data.particle_size <<"; centroid: " << usr_data.centroid << endl;
-      total_partition_load += oData.wallTime * my_stats->pe_speed;
+
+      //if (my_pe == 0) ckout << usr_data.centroid << endl;
+      total_subtree_load += obj_load;
       st_particle_size_sum += usr_data.particle_size;
       if (total_particle_size == 0) total_particle_size = usr_data.particle_sum;
     }
@@ -125,32 +148,47 @@ void DistributedPrefixLB::createObjMaps(){
       pt_obj_map.push_back(
           LBCompareStats{
             i, usr_data.chare_idx,
-            usr_data.particle_size,
+            usr_data.particle_size, obj_load,
             &my_stats->objData[i], my_pe, usr_data.centroid
           });
-    if(_lb_args.debug() == 4) ckout << "PT[" << usr_data.chare_idx << "] @ PE[" << my_pe << "] size = "<< usr_data.particle_size <<"; centroid: " << usr_data.centroid << endl;
-      total_partition_load += oData.wallTime * my_stats->pe_speed;
+      if(_lb_args.debug() == 4) ckout << "PT[" << usr_data.chare_idx << "] @ PE[" << my_pe << "] size = "<< usr_data.particle_size <<"; centroid: " << usr_data.centroid << endl;
+      total_partition_load += obj_load;
       pt_particle_size_sum += usr_data.particle_size;
+
+      if(!lb_partition_term){
+        avg_centroid += usr_data.centroid;
+        local_partition_centroids.push_back(usr_data.centroid);
+      }
     }
     #endif
   }
+  background_load += (total_pe_load - total_partition_load);
+  background_load *= background_load_ratio;
+  if(!lb_partition_term){
+    pe_avg_partition_centroid = avg_centroid / (Real) pt_ct;
+  }
+
+  if(_lb_args.debug() >= 1) CkPrintf("PE[%d] st_ct = %d; subtree load = %.2f;  pt_ct = %d; partition load = %.2f; total pe load = %.2f; background_load = %.2f\n", my_pe, st_ct, total_subtree_load, pt_ct, total_partition_load, total_pe_load, background_load);
 }
 
 void DistributedPrefixLB::prefixInit(){
+  prefix_start_time = CmiWallTimer();
   total_iter = ceil(log2(CkNumPes()));
   if(my_pe == 0) CkPrintf("total_iter = %d\n", total_iter);
   // When Subtree and Partition are bounded
-  my_particle_sum = st_particle_size_sum;
-  obj_map_to_balance = st_obj_map;
-  prefix_sum = my_particle_sum;
+  my_particle_sum = pt_particle_size_sum;
+  my_prefix_load = total_partition_load + background_load;
+  obj_map_to_balance = pt_obj_map;
+  prefix_sum = my_prefix_load;
   prefix_stage = 0;
   prefix_done = false;
   flag_buf = vector<char>(total_iter, 0);
-  value_buf = vector<int>(total_iter, 0);
+  value_buf = vector<double>(total_iter, 0.0);
   update_tracker = vector<char>(total_iter, 0);
   send_tracker = vector<char>(total_iter, 0);
   prefix_migrate_out_ct = vector<int>(CkNumPes(), 0);
   recv_prefix_move_pes = 0;
+  thisProxy[0].reportPrefixInitDone(my_prefix_load);
 }
 
 
@@ -161,7 +199,7 @@ void DistributedPrefixLB::prefixStep(){
   //CkPrintf("LB<%d> @step %d; prefix = %d\n", my_pe, prefix_stage, prefix_sum);
   if (prefix_stage >= total_iter && (!prefix_done)){
     prefix_done = true;
-    if (_lb_args.debug() >= 2) CkPrintf("LB[%d] init size = %d; prefix sum = %d\n", my_pe, my_particle_sum, prefix_sum);
+    if (_lb_args.debug() >= 1) CkPrintf("LB[%d] init load = %.4f; prefix sum = %.4f\n", my_pe, my_prefix_load, prefix_sum);
     donePrefix();
   }else{
     int send_to_idx = my_pe + (1 << prefix_stage);
@@ -185,8 +223,7 @@ void DistributedPrefixLB::prefixStep(){
   }
 }
 
-void DistributedPrefixLB::prefixPassValue(int in_stage, int in_val){
-  //CkPrintf("LB[%d] in_stage = %d; in_val = %d\n", my_pe, in_stage, in_val);
+void DistributedPrefixLB::prefixPassValue(int in_stage, double in_val){
   if(!flag_buf[in_stage]){
     flag_buf[in_stage] = 1;
     value_buf[in_stage] = in_val;
@@ -197,7 +234,9 @@ void DistributedPrefixLB::prefixPassValue(int in_stage, int in_val){
 void DistributedPrefixLB::acknowledgeIncomingPrefixMigrations(int nMoves){
   total_incoming_prefix_migrations += nMoves;
   recv_prefix_move_pes += 1;
+  //CkPrintf("LB[%d] recv_prefix_move_pes = %d, total_incoming_prefix_migrations = %d\n", my_pe, recv_prefix_move_pes, total_incoming_prefix_migrations);
   if(recv_prefix_move_pes == CkNumPes()){
+    migrates_expected = total_incoming_prefix_migrations;
     PackAndMakeMigrateMsgs(total_migrates, obj_map_to_balance.size());
   }
 }
@@ -211,21 +250,30 @@ void DistributedPrefixLB::sendOutPrefixDecisions(){
 
 void DistributedPrefixLB::makePrefixMoves(){
   total_migrates = 0;
-  int average_size = total_particle_size / CkNumPes();
-  int curr_prefix = prefix_sum - my_particle_sum;
+  double average_load = global_load / (double)CkNumPes();
+  // split background load evenly to all objects
+  double average_background_load = background_load / (double) obj_map_to_balance.size();
+  double curr_prefix = prefix_sum - my_prefix_load;
   for (LBCompareStats & oStat : obj_map_to_balance){
-    int to_pe = std::min(curr_prefix / average_size, CkNumPes()-1);
-    curr_prefix += oStat.particle_size;
+    double incr_load = oStat.load + average_background_load;
+    curr_prefix += incr_load / 2.0;
+    int to_pe = std::min((int)(curr_prefix / average_load), CkNumPes()-1);
     if (my_pe != to_pe){
       total_migrates ++;
+      // never migrate all objects out
+      if (total_migrates == obj_map_to_balance.size()){
+        total_migrates --;
+        continue;
+      }
       MigrateInfo * move = new MigrateInfo;
       move->obj = oStat.data_ptr->handle;
       move->from_pe = my_pe;
       move->to_pe = to_pe;
-      //if(_lb_args.debug()) CkPrintf("LB[%d] send to %d\n", my_pe, to_pe);
+      if(_lb_args.debug() >= 1) CkPrintf("LB[%d] send to %d; curr_prefix = %.4f\n", my_pe, to_pe, curr_prefix);
       migrate_records.push_back(move);
       prefix_migrate_out_ct[to_pe] += 1;
     }
+    curr_prefix += incr_load / 2.0;
   }
 
   sendOutPrefixDecisions();
@@ -237,8 +285,9 @@ void DistributedPrefixLB::PackAndMakeMigrateMsgs(int num_moves, int total_ct) {
 
   if(_lb_args.debug() >= 2) CkPrintf("LB[%d] PackAndMakeMigrateMsgs num_moves = %d, total_ct = %d\n", my_pe, num_moves, total_ct);
   if (num_moves == total_ct) {
-    if(_lb_args.debug() >= 2) CkPrintf("LB[%d] move all out\n", my_pe);
+    CkPrintf("LB[%d] move all out\n", my_pe);
     num_moves -= 1;
+    prefix_migrate_out_ct[migrate_records[num_moves]->to_pe] --;
     delete migrate_records[num_moves];
     migrate_records[num_moves] = NULL;
   }
@@ -252,13 +301,13 @@ void DistributedPrefixLB::PackAndMakeMigrateMsgs(int num_moves, int total_ct) {
   }
 
   if (_lb_args.debug() > 2) CkPrintf("LB[%d] move %d / %d  objects\n", my_pe, num_moves, total_ct);
-  thisProxy[0].sendPrefixSummary(num_moves, total_ct);
+  thisProxy[0].sendSummary(num_moves, total_ct);
   sendMigrateMsgs();
 }
 
 void DistributedPrefixLB::sendMigrateMsgs(){
-  if(_lb_args.debug() >= 2) CkPrintf("LB[%d] sendMigrateMsgs\n", my_pe);
-  migrates_expected = total_incoming_prefix_migrations;
+  if (st_ct > 0) lb_partition_term = !lb_partition_term;
+  if(_lb_args.debug() >= 1) CkPrintf("LB[%d] sendMigrateMsgs migrates_expected = %d\n", my_pe, migrates_expected);
   cleanUp();
   ProcessMigrationDecision(final_migration_msg);
 }
@@ -272,17 +321,18 @@ void DistributedPrefixLB::donePrefix(){
   makePrefixMoves();
 }
 
-void DistributedPrefixLB::sendPrefixSummary(int num_moves, int base_ct){
+void DistributedPrefixLB::sendSummary(int num_moves, int base_ct){
   total_prefix_moves += num_moves;
   total_prefix_objects += base_ct;
   recv_prefix_summary_ct += 1;
 
   if (recv_prefix_summary_ct == CkNumPes()){
-    CkPrintf("DistributedPrefixLB>> Prefix Summary:: moved %d/%d objects\n", total_prefix_moves, total_prefix_objects);
+    CkPrintf("DistributedPrefixLB>> Summary:: moved %d/%d objects\n", total_prefix_moves, total_prefix_objects);
   }
 }
 
 void DistributedPrefixLB::cleanUp(){
+  total_init_complete = 0;
   if(pt_obj_map.size() > 0) pt_obj_map.clear();
   if(st_obj_map.size() > 0) st_obj_map.clear();
   if(obj_map_to_balance.size() > 0) obj_map_to_balance.clear();
@@ -295,6 +345,10 @@ void DistributedPrefixLB::cleanUp(){
   }
 
   migrate_records.clear();
+  subtreeLBCleanUp();
 }
+
+#include "LBSubtreeHelper.C"
+
 
 #include "DistributedPrefixLB.def.h"

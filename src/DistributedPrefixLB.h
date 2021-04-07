@@ -14,6 +14,8 @@
 #include <vector>
 using LBCommon::LBUserData;
 using LBCommon::LBCompareStats;
+using LBCommon::LBCentroidRecord;
+using LBCommon::LBCentroidCompare;
 
 void CreateDistributedPrefixLB();
 
@@ -22,22 +24,29 @@ public:
   DistributedPrefixLB(const CkLBOptions &);
   DistributedPrefixLB(CkMigrateMessage *m);
   static void initnodeFn(void);
-  void reportInitDone();
+  void reportPrefixInitDone(double);
   void prefixStep();
   void acknowledgeIncomingPrefixMigrations(int);
-  void prefixPassValue(int, int);
+  void prefixPassValue(int, double);
   void donePrefix();
-  void sendPrefixSummary(int, int);
+  void sendSummary(int, int);
+  void broadcastGlobalLoad(double);
+
+  void sendPEParitionCentroids(int, std::vector<Vector3D<Real>>);
+  void sendSubtreeMigrationDecisions(int);
 
 private:
   int my_pe;
   LBMigrateMsg * final_migration_msg;
+  bool lb_partition_term = true;
 
   // Only used in PE[0] for prefix summary
   int total_prefix_moves; // Number of migration moves
   int total_prefix_objects; // Number of objects
   int recv_prefix_summary_ct;
   int total_init_complete = 0;
+
+  double global_load = 0.0;
 
   // Prefix related
   std::vector<LBCompareStats> st_obj_map;
@@ -53,12 +62,13 @@ private:
 
   int total_iter;
   int prefix_stage;
-  int prefix_sum;
+  double prefix_sum;
+  double my_prefix_load;
   bool prefix_done;
   double prefix_start_time;
   double prefix_end_time;
   std::vector<char> flag_buf;
-  std::vector<int> value_buf;
+  std::vector<double> value_buf;
   std::vector<char> update_tracker;
   std::vector<char> send_tracker;
   int st_particle_size_sum = 0;
@@ -66,6 +76,23 @@ private:
   int my_particle_sum; // local sum, initial value for prefix_sum
   int total_particle_size = 0; // total particles in universe
   double total_partition_load = 0.0;
+  double total_subtree_load = 0.0;
+  double total_pe_load = 0.0;
+  double background_load = 0.0;
+  double background_load_ratio = 1.0;
+
+
+  // LB subtree related variables
+  int nearestK = 20;
+  int recv_pe_centroids_ct = 0;
+  int recv_incoming_subtree_counts = 1;
+  int total_subtree_migrates;
+  int incoming_subtree_migrations = 0;
+  Vector3D<Real> pe_avg_partition_centroid;
+  std::vector<Vector3D<Real>> local_partition_centroids;
+  std::vector<LBCentroidRecord> global_partition_centroids;
+
+  std::vector<int> subtree_migrate_out_ct;
 
   // Other
   double avg_size;
@@ -87,8 +114,17 @@ private:
   void cleanUp();
   void sendOutPrefixDecisions();
   void makePrefixMoves();
+
+  void subtreeLBInits();
+  void subtreeLBCleanUp();
+  void broadcastLocalPartitionCentroids();
+  void makeSubtreeMoves();
+  int calculateTargetPE(Vector3D<Real>, int);
+
+
   void PackAndMakeMigrateMsgs(int num_moves,int total_ct);
   void sendMigrateMsgs();
 };
 
-#endif /* _DistributedPrefixLB_H_ */
+#endif /* _DistributedPref
+          ixLB_H_ */

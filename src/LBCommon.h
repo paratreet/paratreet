@@ -4,6 +4,7 @@
 #include "common.h"
 
 namespace LBCommon{
+
   enum LBType {
     pt = 1111, // Partition
     st = 2222, // Subtree
@@ -30,13 +31,25 @@ namespace LBCommon{
   struct LBCompareStats{
     int index; // index from objData
     int chare_idx; // index from Subtree or Partition chare arrays
-    int particle_size;
+    int partical_size;
+    double load;
     const LDObjData* data_ptr;
     int from_proc;
     Vector3D<Real> centroid;
     inline void pup(PUP::er &p);
   };
 
+  struct LBCentroidRecord{
+    Vector3D<Real> centroid;
+    int from_pe;
+    inline void pup(PUP::er &p);
+  };
+
+  struct LBCentroidCompare{
+    Real distance;
+    int from_pe;
+    inline void pup(PUP::er &p);
+  };
 };
 
 #endif //PARATREET_USER_LBCOMMON_H_

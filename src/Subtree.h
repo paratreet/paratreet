@@ -88,8 +88,10 @@ public:
       Real zero = 0.0;
       centroid = Vector3D<Real>(zero, zero, zero);
     }else{
-      centroid /= (Real) particles.size();
+      centroid /= (Real) incoming_particles.size();
     }
+
+    //ckout << incoming_particles.size() << "::" << centroid <<endl;
     if (CkpvAccess(_lb_obj_index) != -1) {
       void *data = this->getObjUserData(CkpvAccess(_lb_obj_index));
       LBUserData lb_data{
@@ -130,7 +132,7 @@ Subtree<Data>::Subtree(const CkCallback& cb, int n_total_particles_,
                        CProxy_Resumer<Data> r_proxy_,
                        CProxy_CacheManager<Data> cm_proxy_, DPHolder<Data> dp_holder,
                        bool matching_decomps_){
-  this->usesAtSync = true;
+  if (!matching_decomps_) this->usesAtSync = true;
   n_total_particles = n_total_particles_;
   n_subtrees = n_subtrees_;
   n_partitions = n_partitions_;

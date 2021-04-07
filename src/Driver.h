@@ -47,6 +47,7 @@ public:
   int n_partitions;
   double start_time;
   bool matching_decomps;
+  bool lb_partition_term = true;
 
   Driver(CProxy_CacheManager<Data> cache_manager_) :
     cache_manager(cache_manager_), storage_sorted(false) {}
@@ -239,10 +240,13 @@ public:
       CkPrintf("Perturbations: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
       if (iter % config.lb_period == config.lb_period - 1){
         start_time = CkWallTimer();
-        if (!matching_decomps) partitions.pauseForLB();
-        subtrees.pauseForLB();
+        partitions.pauseForLB();
+        if (!matching_decomps) {
+          subtrees.pauseForLB();
+          lb_partition_term = !lb_partition_term;
+        };
         CkWaitQD();
-        CkPrintf("Load balancing: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
+        CkPrintf("Load balancing %s : %.3lf ms\n", (lb_partition_term? "partitions" : "subtrees"), (CkWallTimer() - start_time) * 1000);
       }
       // Destroy subtrees and perform decomposition from scratch
       if (complete_rebuild) {

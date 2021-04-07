@@ -6,6 +6,7 @@ OPTS = -g -Ofast -I$(STRUCTURE_PATH) -I$(PARATREET_PATH) -DCOUNT_INTERACTIONS=0 
 CHARMC = $(CHARM_HOME)/bin/charmc $(OPTS)
 LD_LIBS = -L$(PARATREET_PATH) -lparatreet
 LB_LIBS = -module CommonLBs -module DistributedPrefixLB
+PROJ_LIBS = -tracemode projections
 
 all: Gravity SPH Collision
 VISITORS = DensityVisitor.h PressureVisitor.h GravityVisitor.h CollisionVisitor.h
@@ -16,12 +17,15 @@ Main.decl.h: Main.ci
 
 Gravity: Main.decl.h Main.o Gravity.o
 	$(CHARMC) -language charm++ $(LB_LIBS) -o Gravity Gravity.o Main.o $(LD_LIBS)
+	$(CHARMC) -language charm++ $(LB_LIBS) $(PROJ_LIBS) -o Gravity_proj Gravity.o Main.o $(LD_LIBS)
 
 Collision: Main.decl.h Main.o Collision.o
 	$(CHARMC) -language charm++ $(LB_LIBS) -o Collision Collision.o Main.o $(LD_LIBS)
+	$(CHARMC) -language charm++ $(LB_LIBS) $(PROJ_LIBS) -o Collision_proj Gravity.o Main.o $(LD_LIBS)
 
 SPH: Main.decl.h Main.o SPH.o
 	$(CHARMC) -language charm++ $(LB_LIBS) -o SPH SPH.o Main.o $(LD_LIBS)
+	$(CHARMC) -language charm++ $(LB_LIBS) $(PROJ_LIBS) -o SPH_proj Gravity.o Main.o $(LD_LIBS)
 
 Gravity.o: Gravity.C Main.decl.h
 	$(CHARMC) -c $<
