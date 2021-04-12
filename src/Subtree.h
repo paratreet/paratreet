@@ -132,7 +132,7 @@ Subtree<Data>::Subtree(const CkCallback& cb, int n_total_particles_,
                        CProxy_Resumer<Data> r_proxy_,
                        CProxy_CacheManager<Data> cm_proxy_, DPHolder<Data> dp_holder,
                        bool matching_decomps_){
-  if (!matching_decomps_) this->usesAtSync = true;
+  if (matching_decomps_) this->usesAtSync = true;
   n_total_particles = n_total_particles_;
   n_subtrees = n_subtrees_;
   n_partitions = n_partitions_;

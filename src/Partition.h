@@ -95,7 +95,7 @@ Partition<Data>::Partition(
   bool matching_decomps_
   )
 {
-  this->usesAtSync = true;
+  if (!matching_decomps_) this->usesAtSync = true;
   n_partitions = np;
   tc_proxy = tc_holder.proxy;
   r_proxy = rp;

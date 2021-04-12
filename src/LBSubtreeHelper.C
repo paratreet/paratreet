@@ -48,7 +48,7 @@ void DistributedPrefixLB::sendSubtreeMigrationDecisions(int count){
 
 void DistributedPrefixLB::makeSubtreeMoves(){
   for (LBCompareStats & oStat : st_obj_map){
-    int to_pe = calculateTargetPE(oStat.centroid, oStat.partical_size);
+    int to_pe = calculateTargetPE(oStat.centroid, oStat.particle_size);
     if (my_pe != to_pe){
       total_subtree_migrates ++;
       if (total_subtree_migrates == st_ct){

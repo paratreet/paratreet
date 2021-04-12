@@ -24,13 +24,13 @@ public:
   DistributedPrefixLB(const CkLBOptions &);
   DistributedPrefixLB(CkMigrateMessage *m);
   static void initnodeFn(void);
-  void reportPrefixInitDone(double);
+  void reportPrefixInitDone(int);
   void prefixStep();
   void acknowledgeIncomingPrefixMigrations(int);
-  void prefixPassValue(int, double);
+  void prefixPassValue(int, int);
   void donePrefix();
   void sendSummary(int, int);
-  void broadcastGlobalLoad(double);
+  void broadcastGlobalLoad(int);
 
   void sendPEParitionCentroids(int, std::vector<Vector3D<Real>>);
   void sendSubtreeMigrationDecisions(int);
@@ -46,7 +46,7 @@ private:
   int recv_prefix_summary_ct;
   int total_init_complete = 0;
 
-  double global_load = 0.0;
+  int global_load = 0.0;
 
   // Prefix related
   std::vector<LBCompareStats> st_obj_map;
@@ -62,13 +62,13 @@ private:
 
   int total_iter;
   int prefix_stage;
-  double prefix_sum;
-  double my_prefix_load;
+  int prefix_sum;
+  int my_prefix_load;
   bool prefix_done;
   double prefix_start_time;
   double prefix_end_time;
   std::vector<char> flag_buf;
-  std::vector<double> value_buf;
+  std::vector<int> value_buf;
   std::vector<char> update_tracker;
   std::vector<char> send_tracker;
   int st_particle_size_sum = 0;
@@ -83,7 +83,7 @@ private:
 
 
   // LB subtree related variables
-  int nearestK = 20;
+  int nearestK = 5;
   int recv_pe_centroids_ct = 0;
   int recv_incoming_subtree_counts = 1;
   int total_subtree_migrates;

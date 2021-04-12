@@ -7,13 +7,13 @@ include "common.h";
 group [migratable] DistributedPrefixLB : DistBaseLB {
   entry void DistributedPrefixLB(const CkLBOptions &);
   initnode void initnodeFn();
-  entry void reportPrefixInitDone(double);
+  entry void reportPrefixInitDone(int);
   entry void prefixStep();
   entry void acknowledgeIncomingPrefixMigrations(int);
-  entry void prefixPassValue(int in_stage, double in_value);
+  entry void prefixPassValue(int in_stage, int in_value);
   entry void donePrefix();
   entry void sendSummary(int, int);
-  entry void broadcastGlobalLoad(double);
+  entry void broadcastGlobalLoad(int);
 
   entry void sendPEParitionCentroids(int, std::vector<Vector3D<Real>>);
   entry void sendSubtreeMigrationDecisions(int);

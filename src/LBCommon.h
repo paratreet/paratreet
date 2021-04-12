@@ -31,7 +31,7 @@ namespace LBCommon{
   struct LBCompareStats{
     int index; // index from objData
     int chare_idx; // index from Subtree or Partition chare arrays
-    int partical_size;
+    int particle_size;
     double load;
     const LDObjData* data_ptr;
     int from_proc;

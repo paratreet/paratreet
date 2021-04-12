@@ -243,9 +243,9 @@ public:
       CkPrintf("Perturbations: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
       if (!complete_rebuild && iter % config.lb_period == config.lb_period - 1){
         start_time = CkWallTimer();
-        partitions.pauseForLB();
+        subtrees.pauseForLB();
         if (!matching_decomps) {
-          subtrees.pauseForLB();
+          partitions.pauseForLB();
           lb_partition_term = !lb_partition_term;
         };
         CkWaitQD();

@@ -78,18 +78,18 @@ void DistributedPrefixLB::Strategy(const DistBaseLB::LDStats* const stats) {
   else subtreeLBInits();
 }
 
-void DistributedPrefixLB::reportPrefixInitDone(double in_load){
+void DistributedPrefixLB::reportPrefixInitDone(int in_load){
   total_init_complete ++;
   global_load += in_load;
   if(total_init_complete == CkNumPes()){
-    CkPrintf("DistributedPrefixLB>>> Initialization done. Start prefix. Global_load = %.4f\n", global_load);
+    CkPrintf("DistributedPrefixLB>>> Initialization done. Start prefix. Global_particle_size = %d\n", global_load);
     for (int i = 0; i < CkNumPes(); i++){
       thisProxy[i].broadcastGlobalLoad(global_load);
     }
   }
 }
 
-void DistributedPrefixLB::broadcastGlobalLoad(double global_load_){
+void DistributedPrefixLB::broadcastGlobalLoad(int global_load_){
   global_load = global_load_;
   prefixStep();
 }
@@ -108,7 +108,7 @@ void DistributedPrefixLB::initVariables(){
   total_subtree_load = 0.0;
   total_pe_load = 0.0;
   total_particle_size = 0;
-  global_load = 0.0;
+  global_load = 0;
 
 
   // LB Subtree variables
@@ -168,7 +168,7 @@ void DistributedPrefixLB::createObjMaps(){
     pe_avg_partition_centroid = avg_centroid / (Real) pt_ct;
   }
 
-  if(_lb_args.debug() >= 1) CkPrintf("PE[%d] st_ct = %d; subtree load = %.2f;  pt_ct = %d; partition load = %.2f; total pe load = %.2f; background_load = %.2f\n", my_pe, st_ct, total_subtree_load, pt_ct, total_partition_load, total_pe_load, background_load);
+  if(_lb_args.debug() >= 1) CkPrintf("PE[%d] total_particle_size = %d; st_ct = %d; subtree load = %.2f;  pt_ct = %d; partition load = %.2f; total pe load = %.2f; background_load = %.2f\n", my_pe, total_particle_size,st_ct, total_subtree_load, pt_ct, total_partition_load, total_pe_load, background_load);
 }
 
 void DistributedPrefixLB::prefixInit(){
@@ -176,14 +176,14 @@ void DistributedPrefixLB::prefixInit(){
   total_iter = ceil(log2(CkNumPes()));
   if(my_pe == 0) CkPrintf("total_iter = %d\n", total_iter);
   // When Subtree and Partition are bounded
-  my_particle_sum = pt_particle_size_sum;
-  my_prefix_load = total_partition_load + background_load;
-  obj_map_to_balance = pt_obj_map;
+  my_particle_sum = st_particle_size_sum;
+  my_prefix_load = my_particle_sum;
+  obj_map_to_balance = st_obj_map;
   prefix_sum = my_prefix_load;
   prefix_stage = 0;
   prefix_done = false;
   flag_buf = vector<char>(total_iter, 0);
-  value_buf = vector<double>(total_iter, 0.0);
+  value_buf = vector<int>(total_iter, 0);
   update_tracker = vector<char>(total_iter, 0);
   send_tracker = vector<char>(total_iter, 0);
   prefix_migrate_out_ct = vector<int>(CkNumPes(), 0);
@@ -223,7 +223,7 @@ void DistributedPrefixLB::prefixStep(){
   }
 }
 
-void DistributedPrefixLB::prefixPassValue(int in_stage, double in_val){
+void DistributedPrefixLB::prefixPassValue(int in_stage, int in_val){
   if(!flag_buf[in_stage]){
     flag_buf[in_stage] = 1;
     value_buf[in_stage] = in_val;
@@ -250,17 +250,15 @@ void DistributedPrefixLB::sendOutPrefixDecisions(){
 
 void DistributedPrefixLB::makePrefixMoves(){
   total_migrates = 0;
-  double average_load = global_load / (double)CkNumPes();
-  // split background load evenly to all objects
-  double average_background_load = background_load / (double) obj_map_to_balance.size();
-  double curr_prefix = prefix_sum - my_prefix_load;
+  int average_size = total_particle_size / CkNumPes();
+  int curr_prefix = prefix_sum - my_particle_sum;
+  int next_prefix = curr_prefix;
   for (LBCompareStats & oStat : obj_map_to_balance){
-    double incr_load = oStat.load + average_background_load;
-    curr_prefix += incr_load / 2.0;
-    int to_pe = std::min((int)(curr_prefix / average_load), CkNumPes()-1);
+    int to_pe = std::min(curr_prefix / average_size, CkNumPes()-1);
+    next_prefix = curr_prefix + oStat.particle_size;
+    curr_prefix += oStat.particle_size / 2;
     if (my_pe != to_pe){
       total_migrates ++;
-      // never migrate all objects out
       if (total_migrates == obj_map_to_balance.size()){
         total_migrates --;
         continue;
@@ -273,7 +271,7 @@ void DistributedPrefixLB::makePrefixMoves(){
       migrate_records.push_back(move);
       prefix_migrate_out_ct[to_pe] += 1;
     }
-    curr_prefix += incr_load / 2.0;
+    curr_prefix = next_prefix;
   }
 
   sendOutPrefixDecisions();
@@ -306,7 +304,7 @@ void DistributedPrefixLB::PackAndMakeMigrateMsgs(int num_moves, int total_ct) {
 }
 
 void DistributedPrefixLB::sendMigrateMsgs(){
-  if (st_ct > 0) lb_partition_term = !lb_partition_term;
+  if (pt_ct > 0) lb_partition_term = !lb_partition_term;
   if(_lb_args.debug() >= 1) CkPrintf("LB[%d] sendMigrateMsgs migrates_expected = %d\n", my_pe, migrates_expected);
   cleanUp();
   ProcessMigrationDecision(final_migration_msg);
