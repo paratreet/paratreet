@@ -28,9 +28,9 @@ extern CProxy_CacheManager<CentroidData> centroid_cache;
 extern CProxy_Resumer<CentroidData> centroid_resumer;
 
 namespace paratreet {
-  extern void preTraversalFn(CProxy_Driver<CentroidData>&, CProxy_CacheManager<CentroidData>& cache);
-  extern void traversalFn(BoundingBox&,CProxy_Partition<CentroidData>&,CProxy_Subtree<CentroidData>&,int);
-  extern void postIterationFn(BoundingBox&,CProxy_Partition<CentroidData>&,int);
+  extern void preTraversalFn(ProxyPack<CentroidData>&);
+  extern void traversalFn(BoundingBox&, ProxyPack<CentroidData>&, int);
+  extern void postIterationFn(BoundingBox&, ProxyPack<CentroidData>&, int);
   extern Real getTimestep(BoundingBox&, Real);
 }
 
@@ -66,26 +66,7 @@ public:
     cb.send();
   }
 
-  // Performs decomposition by distributing particles among Subtrees,
-  // by either loading particle information from input file or re-computing
-  // the universal bounding box
-  void decompose(int iter) {
-    auto config = treespec.ckLocalBranch()->getConfiguration();
-    // Build universe
-    double decomp_time = CkWallTimer();
-    start_time = CkWallTimer();
-    CkReductionMsg* result;
-    if (iter == 0) {
-      readers.load(config.input_file, CkCallbackResumeThread((void*&)result));
-      CkPrintf("Loading Tipsy data and building universe: %.3lf ms\n",
-          (CkWallTimer() - start_time) * 1000);
-    } else {
-      readers.computeUniverseBoundingBox(CkCallbackResumeThread((void*&)result));
-      CkPrintf("Rebuilding universe: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
-    }
-    universe = *((BoundingBox*)result->getData());
-    delete result;
-
+  void remakeUniverse() {
     Vector3D<Real> bsize = universe.box.size();
     Real max = (bsize.x > bsize.y) ? bsize.x : bsize.y;
     max = (max > bsize.z) ? max : bsize.z;
@@ -97,16 +78,33 @@ public:
 
     std::cout << "Universal bounding box: " << universe << " with volume "
       << universe.box.volume() << std::endl;
+  }
 
-    if (config.min_n_subtrees < CkNumPes() || config.min_n_partitions < CkNumPes()) {
-      CkPrintf("WARNING: Consider increasing min_n_subtrees and min_n_partitions to at least #pes\n");
-    }
-
-    // Assign keys and sort particles locally
-    start_time = CkWallTimer();
-    readers.assignKeys(universe, CkCallbackResumeThread());
-    CkPrintf("Assigning keys and sorting particles: %.3lf ms\n",
+  // Performs decomposition by distributing particles among Subtrees,
+  // by either loading particle information from input file or re-computing
+  // the universal bounding box
+  void decompose(int iter) {
+    auto config = treespec.ckLocalBranch()->getConfiguration();
+    double decomp_time = CkWallTimer();
+    if (iter == 0) {
+      // Build universe
+      start_time = CkWallTimer();
+      CkReductionMsg* result;
+      readers.load(config.input_file, CkCallbackResumeThread((void*&)result));
+      CkPrintf("Loading Tipsy data and building universe: %.3lf ms\n",
+          (CkWallTimer() - start_time) * 1000);
+      universe = *((BoundingBox*)result->getData());
+      delete result;
+      remakeUniverse();
+      if (config.min_n_subtrees < CkNumPes() || config.min_n_partitions < CkNumPes()) {
+        CkPrintf("WARNING: Consider increasing min_n_subtrees and min_n_partitions to at least #pes\n");
+      }
+      // Assign keys and sort particles locally
+      start_time = CkWallTimer();
+      readers.assignKeys(universe, CkCallbackResumeThread());
+      CkPrintf("Assigning keys and sorting particles: %.3lf ms\n",
         (CkWallTimer() - start_time) * 1000);
+    } else CkWaitQD();
 
     // Set up splitters for decomposition
     start_time = CkWallTimer();
@@ -161,13 +159,13 @@ public:
     // Flush decomposed particles to home Subtrees and Partitions
     // TODO Separate decomposition for Subtrees and Partitions
     start_time = CkWallTimer();
-    readers.assignPartitions(universe.n_particles, n_partitions, partitions);
+    readers.assignPartitions(n_partitions, partitions);
     CkStartQD(CkCallbackResumeThread());
     CkPrintf("Assigning particles to Partitions: %.3lf ms\n",
         (CkWallTimer() - start_time) * 1000);
 
     start_time = CkWallTimer();
-    readers.flush(universe.n_particles, n_subtrees, subtrees);
+    readers.flush(n_subtrees, subtrees);
     CkStartQD(CkCallbackResumeThread());
     CkPrintf("Flushing particles to Subtrees: %.3lf ms\n",
         (CkWallTimer() - start_time) * 1000);
@@ -199,26 +197,26 @@ public:
       Real max_velocity = *(Real*)(res[0].data); // avoid max_velocity = 0.0
       Real timestep_size = paratreet::getTimestep(universe, max_velocity);
 
+      ProxyPack<Data> proxy_pack (this->thisProxy, subtrees, partitions, centroid_cache);
+
       // Prefetch into cache
       start_time = CkWallTimer();
       // use exactly one of these three commands to load the software cache
-      paratreet::preTraversalFn(this->thisProxy, centroid_cache);
+      paratreet::preTraversalFn(proxy_pack);
       CkWaitQD();
       CkPrintf("TreeCanopy cache loading: %.3lf ms\n",
           (CkWallTimer() - start_time) * 1000);
 
       // Perform traversals
       start_time = CkWallTimer();
-      paratreet::traversalFn(universe, partitions, subtrees, iter);
+      paratreet::traversalFn(universe, proxy_pack, iter);
       CkWaitQD();
       CkPrintf("Tree traversal: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
 
-      // Move the particles in Partitions
       start_time = CkWallTimer();
 
-      CkWaitQD();
-
-      partitions.perturbHalfStep(timestep_size, CkCallbackResumeThread());
+      // Move the particles in Partitions
+      partitions.kick(timestep_size, CkCallbackResumeThread());
 
       // Now track PE imbalance for memory reasons
       centroid_resumer.collectMetaData(CkCallbackResumeThread((void *&) msg2));
@@ -233,12 +231,17 @@ public:
       CkPrintf("[Meta] n_subtree = %d; timestep_size = %f; sumPESize = %d; maxPESize = %d, avgPESize = %f; ratio = %f; maxVelocity = %f; rebuild = %s\n", n_subtrees, timestep_size, sumPESize, maxPESize, avgPESize, ratio, max_velocity, (complete_rebuild? "yes" : "no"));
       //End Subtree reduction message parsing
 
-      paratreet::postIterationFn(universe, partitions, iter);
+      paratreet::postIterationFn(universe, proxy_pack, iter);
 
-      partitions.perturb(subtrees, timestep_size, complete_rebuild); // 0.1s for example
+      CkReductionMsg* result;
+      partitions.perturb(timestep_size, CkCallbackResumeThread((void *&)result));
+      universe = *((BoundingBox*)result->getData());
+      delete result;
+      remakeUniverse();
+      partitions.rebuild(universe, subtrees, complete_rebuild); // 0.1s for example
       CkWaitQD();
       CkPrintf("Perturbations: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
-      if (iter % config.lb_period == config.lb_period - 1){
+      if (!complete_rebuild && iter % config.lb_period == config.lb_period - 1){
         start_time = CkWallTimer();
         partitions.pauseForLB();
         if (!matching_decomps) {

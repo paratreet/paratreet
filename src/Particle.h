@@ -29,8 +29,9 @@ struct Particle {
   void reset();
   void finishInit();
 
-  void perturbHalfStep(Real timestep);
-  void perturb (Real timestep, OrientedBox<Real> universe);
+  void kick(Real timestep);
+  void perturb(Real timestep);
+  void adjustNewUniverse(OrientedBox<Real> universe);
 
   bool operator==(const Particle&) const;
   bool operator<=(const Particle&) const;

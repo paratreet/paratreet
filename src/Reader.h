@@ -14,16 +14,17 @@ extern int n_readers;
 extern CProxy_TreeSpec treespec;
 
 class Reader : public CBase_Reader {
-  BoundingBox box;
   std::vector<Particle> particles;
   std::vector<std::vector<Vector3D<Real>>> bins;
   std::vector<ParticleMsg*> particle_messages;
   int particle_index;
+
   static constexpr const Real gasConstant = 1.0;
   static constexpr const Real gammam1 = 5.0/3.0 - 1;
   static constexpr const Real meanMolWeight = 1.0;
 
   public:
+    Real start_time = 0;
     BoundingBox universe;
     // std::vector<Splitter> splitters;
     // std::vector<Key> SFCsplitters;
@@ -56,14 +57,14 @@ class Reader : public CBase_Reader {
 
     // Sending particles to home Partitions and Subtrees
     template <typename Data>
-    void flush(int, int, CProxy_Subtree<Data>);
+    void flush(int, CProxy_Subtree<Data>);
     template <typename Data>
-    void assignPartitions(int, int, CProxy_Partition<Data>);
+    void assignPartitions(int, CProxy_Partition<Data>);
 };
 
 template <typename Data>
 void Reader::request(CProxy_Subtree<Data> tp_proxy, int index, int num_to_give) {
-  int n_particles = box.n_particles;
+  int n_particles = universe.n_particles;
   ParticleMsg* msg = new (num_to_give) ParticleMsg(&particles[0], num_to_give);
   for (int i = 0; i < n_particles - num_to_give; i++) {
     particles[i] = particles[num_to_give + i];
@@ -75,7 +76,7 @@ void Reader::request(CProxy_Subtree<Data> tp_proxy, int index, int num_to_give) 
 }
 
 template <typename Data>
-void Reader::flush(int n_total_particles, int n_subtrees,
+void Reader::flush(int n_subtrees,
                    CProxy_Subtree<Data> subtrees) {
   auto sendParticles = [&](int dest, int n_particles, Particle* particles) {
     ParticleMsg* msg = new (n_particles) ParticleMsg(particles, n_particles);
@@ -95,7 +96,7 @@ void Reader::flush(int n_total_particles, int n_subtrees,
 }
 
 template <typename Data>
-void Reader::assignPartitions(int n_total_particles, int n_partitions, CProxy_Partition<Data> partitions)
+void Reader::assignPartitions(int n_partitions, CProxy_Partition<Data> partitions)
 {
   auto sendParticles =
     [&](int dest, int n_particles, Particle* particles) {

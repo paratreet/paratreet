@@ -22,6 +22,7 @@ void Reader::load(std::string input_file, const CkCallback& cb) {
   int n_sph = tipsyHeader.nsph;
   int n_dark = tipsyHeader.ndark;
   int n_star = tipsyHeader.nstar;
+  start_time = tipsyHeader.time;
 
   int n_particles = n_total / n_readers;
   int excess = n_total % n_readers;
@@ -34,7 +35,7 @@ void Reader::load(std::string input_file, const CkCallback& cb) {
   }
 
   // Prepare bounding box
-  box.reset();
+  BoundingBox box;
   box.pe = 0.0;
   box.ke = 0.0;
 
@@ -69,6 +70,7 @@ void Reader::load(std::string input_file, const CkCallback& cb) {
       particles[i].mass = dp.mass;
       particles[i].position = dp.pos;
       particles[i].velocity = dp.vel;
+      particles[i].soft = dp.eps;
     }
     else {
       if (!r.getNextStarParticle(sp)) {
@@ -101,7 +103,7 @@ void Reader::load(std::string input_file, const CkCallback& cb) {
 
 
 void Reader::computeUniverseBoundingBox(const CkCallback& cb) {
-  box.reset();
+  BoundingBox box;
   for (std::vector<Particle>::const_iterator it = particles.begin();
        it != particles.end(); ++it) {
     box.grow(it->position);

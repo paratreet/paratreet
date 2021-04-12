@@ -16,7 +16,7 @@ extern CProxy_Reader readers;
 using namespace LBCommon;
 
 namespace paratreet {
-  extern void perLeafFn(int indicator, SpatialNode<CentroidData>&);
+  extern void perLeafFn(int indicator, SpatialNode<CentroidData>&, Partition<CentroidData>* partition);
 }
 
 template <typename Data>
@@ -24,6 +24,7 @@ struct Partition : public CBase_Partition<Data> {
   std::mutex receive_lock;
   std::vector<Node<Data>*> leaves;
   std::vector<Node<Data>*> tree_leaves;
+  std::vector<Particle> saved_particles;
   bool matching_decomps;
 
   std::unique_ptr<Traverser<Data>> traverser;
@@ -56,11 +57,13 @@ struct Partition : public CBase_Partition<Data> {
   void receiveLeaves(std::vector<Key>, Key, int, TPHolder<Data>);
   void destroy();
   void reset();
-  void perturbHalfStep(Real, CkCallback);
-  void perturb(TPHolder<Data>, Real, bool);
-  void output(CProxy_Writer w, CkCallback cb);
-  void output(CProxy_TipsyWriter w, CkCallback cb);
+  void kick(Real, CkCallback);
+  void perturb(Real, CkCallback);
+  void rebuild(BoundingBox, TPHolder<Data>, bool);
+  void output(CProxy_Writer w, int n_total_particles, CkCallback cb);
+  void output(CProxy_TipsyWriter w, int n_total_particles, CkCallback cb);
   void callPerLeafFn(int indicator, const CkCallback& cb);
+  void deleteParticleOfOrder(int order) {particle_delete_order.insert(order);}
   void pup(PUP::er& p);
   void makeLeaves(int);
   void pauseForLB(){
@@ -70,16 +73,19 @@ struct Partition : public CBase_Partition<Data> {
     return;
   };
 
-private:
   Real time_advanced = 0;
+  int iter = 1;
+
+private:
+  std::set<int> particle_delete_order;
 
 private:
   void initLocalBranches();
   void erasePartition();
-  void copyParticles(std::vector<Particle>& particles);
+  void copyParticles(std::vector<Particle>& particles, bool check_delete);
   void flush(CProxy_Reader, std::vector<Particle>&);
   void makeLeaves(const std::vector<Key>&, int);
-  template <typename WriterProxy> void doOutput(WriterProxy w, CkCallback cb);
+  template <typename WriterProxy> void doOutput(WriterProxy w, int n_total_particles, CkCallback cb);
 };
 
 template <typename Data>
@@ -96,6 +102,7 @@ Partition<Data>::Partition(
   cm_proxy = cm;
   matching_decomps = matching_decomps_;
   initLocalBranches();
+  time_advanced = readers.ckLocalBranch()->start_time;
 }
 
 template <typename Data>
@@ -146,15 +153,13 @@ void Partition<Data>::interact(const CkCallback& cb)
 
 template <typename Data>
 void Partition<Data>::addLeaves(const std::vector<Node<Data>*>& leaf_ptrs, int subtree_idx) {
-  receive_lock.lock();
-  tree_leaves.insert(tree_leaves.end(), leaf_ptrs.begin(), leaf_ptrs.end());
-  for (auto leaf : leaf_ptrs) {
-    if(matching_decomps){
-      // When Subtree and Partition have the same decomp type
-      // the tree structures will be identical
-      // reuse leaf without checks and modifications
-      leaves.push_back(leaf);
-    }else{
+  decltype(leaves) new_leaves;
+  if (!matching_decomps) {
+    // When Subtree and Partition have the same decomp type
+    // the tree structures will be identical
+    // reuse leaf without checks and modifications
+    new_leaves.reserve(leaf_ptrs.size());
+    for (auto leaf : leaf_ptrs) {
       std::vector<Particle> leaf_particles;
       for (int pi = 0; pi < leaf->n_particles; pi++) {
         if (leaf->particles()[pi].partition_idx == this->thisIndex) {
@@ -162,7 +167,7 @@ void Partition<Data>::addLeaves(const std::vector<Node<Data>*>& leaf_ptrs, int s
         }
       }
       if (leaf_particles.size() == leaf->n_particles) {
-        leaves.push_back(leaf);
+        new_leaves.push_back(leaf);
       }
       else {
         auto particles = new Particle [leaf_particles.size()];
@@ -174,10 +179,16 @@ void Partition<Data>::addLeaves(const std::vector<Node<Data>*>& leaf_ptrs, int s
         node->type = Node<Data>::Type::Leaf;
         node->home_pe = leaf->home_pe;
         node->data = Data(node->particles(), node->n_particles);
-        leaves.push_back(node);
+        new_leaves.push_back(node);
       }
     }
   }
+  receive_lock.lock();
+  tree_leaves.insert(tree_leaves.end(), leaf_ptrs.begin(), leaf_ptrs.end());
+  if (matching_decomps) {
+    leaves.insert(leaves.end(), leaf_ptrs.begin(), leaf_ptrs.end());
+  }
+  else leaves.insert(leaves.end(), new_leaves.begin(), new_leaves.end());
   receive_lock.unlock();
   cm_local->num_buckets += leaf_ptrs.size();
 }
@@ -225,6 +236,7 @@ void Partition<Data>::makeLeaves(int subtree_idx) {
 template <typename Data>
 void Partition<Data>::destroy()
 {
+  readers.ckLocalBranch()->start_time = time_advanced;
   reset();
   erasePartition();
   this->thisProxy[this->thisIndex].ckDestroy();
@@ -270,22 +282,24 @@ void Partition<Data>::erasePartition() {
 }
 
 template <typename Data>
-void Partition<Data>::perturbHalfStep(Real timestep, CkCallback cb)
+void Partition<Data>::kick(Real timestep, CkCallback cb)
 {
-  for (auto && leaf : leaves) leaf->perturbHalfStep(timestep);
+  for (auto && leaf : leaves) {
+    leaf->kick(timestep);
+  }
   this->contribute(cb);
 }
 
 template <typename Data>
-void Partition<Data>::perturb(TPHolder<Data> tp_holder, Real timestep, bool if_flush)
+void Partition<Data>::perturb(Real timestep, CkCallback cb)
 {
-  std::vector<Particle> particles;
-  copyParticles(particles);
-  r_local->countPartitionParticles(particles.size());
   time_advanced += timestep;
+  iter += 1;
+  BoundingBox box;
+  copyParticles(saved_particles, true);
   #if CMK_LB_USER_DATA
-  int size = particles.size();
-  for (auto p : particles){
+  int size = saved_particles.size();
+  for (auto p : saved_particles){
     centroid += p.position;
   }
   centroid /= (Real) size;
@@ -300,20 +314,35 @@ void Partition<Data>::perturb(TPHolder<Data> tp_holder, Real timestep, bool if_f
     *(LBUserData *) data = lb_data;
   }
   #endif
-  for (auto && p : particles) {
-    p.perturb(timestep, readers.ckLocalBranch()->universe.box);
+  for (auto && p : saved_particles) {
+    p.perturb(timestep);
+    box.grow(p.position);
+    box.mass += p.mass;
+    box.ke += 0.5 * p.mass * p.velocity.lengthSquared();
+  }
+  box.n_particles = saved_particles.size();
+  this->contribute(sizeof(BoundingBox), &box, BoundingBox::reducer(), cb);
+}
+
+template <typename Data>
+void Partition<Data>::rebuild(BoundingBox universe, TPHolder<Data> tp_holder, bool if_flush)
+{
+  r_local->countPartitionParticles(saved_particles.size());
+  for (auto && p : saved_particles) {
+    p.adjustNewUniverse(universe.box);
   }
 
   if (if_flush) {
-    flush(readers, particles);
+    flush(readers, saved_particles);
   }
   else {
     auto sendParticles = [&](int dest, int n_particles, Particle* particles) {
       ParticleMsg* msg = new (n_particles) ParticleMsg(particles, n_particles);
       tp_holder.proxy[dest].receive(msg);
     };
-    treespec.ckLocalBranch()->getSubtreeDecomposition()->flush(particles, sendParticles);
+    treespec.ckLocalBranch()->getSubtreeDecomposition()->flush(saved_particles, sendParticles);
   }
+  saved_particles.clear();
 }
 
 template <typename Data>
@@ -329,43 +358,47 @@ template <typename Data>
 void Partition<Data>::callPerLeafFn(int indicator, const CkCallback& cb)
 {
   for (auto && leaf : leaves) {
-    paratreet::perLeafFn(indicator, *leaf);
+    paratreet::perLeafFn(indicator, *leaf, this);
   }
   this->contribute(cb);
 }
 
 template <typename Data>
-void Partition<Data>::copyParticles(std::vector<Particle>& particles) {
+void Partition<Data>::copyParticles(std::vector<Particle>& particles, bool check_delete) {
   for (auto && leaf : leaves) {
-    particles.insert(particles.end(), leaf->particles(), leaf->particles() + leaf->n_particles);
+    for (int i = 0; i < leaf->n_particles; i++) {
+      if (!check_delete || particle_delete_order.find(leaf->particles()[i].order) == particle_delete_order.end()) {
+        particles.emplace_back(leaf->particles()[i]);
+      }
+    }
   }
 }
 
 template <typename Data>
-void Partition<Data>::output(CProxy_Writer w, CkCallback cb)
+void Partition<Data>::output(CProxy_Writer w, int n_total_particles, CkCallback cb)
 {
-  doOutput(w, cb);
+  doOutput(w, n_total_particles, cb);
+}
+
+
+template <typename Data>
+void Partition<Data>::output(CProxy_TipsyWriter w, int n_total_particles, CkCallback cb)
+{
+  doOutput(w, n_total_particles, cb);
 }
 
 template <typename Data>
-void Partition<Data>::output(CProxy_TipsyWriter w, CkCallback cb)
-{
-  doOutput(w, cb);
-}
-
-template <typename Data>
-template <typename ProxyWriter>
-void Partition<Data>::doOutput(ProxyWriter w, CkCallback cb)
+template <typename WriterProxy>
+void Partition<Data>::doOutput(WriterProxy w, int n_total_particles, CkCallback cb)
 {
   std::vector<Particle> particles;
-  copyParticles(particles);
+  copyParticles(particles, false);
 
   std::sort(particles.begin(), particles.end(),
             [](const Particle& left, const Particle& right) {
               return left.order < right.order;
             });
 
-  int n_total_particles = readers.ckLocalBranch()->universe.n_particles;
   int particles_per_writer = n_total_particles / CkNumPes();
   if (particles_per_writer * CkNumPes() != n_total_particles)
     ++particles_per_writer;
@@ -384,11 +417,8 @@ void Partition<Data>::doOutput(ProxyWriter w, CkCallback cb)
       ++particle_idx;
     }
 
-    w[writer_idx].receive(writer_particles, time_advanced, cb);
+    w[writer_idx].receive(writer_particles, time_advanced, iter);
   }
-
-  if (this->thisIndex != n_partitions - 1)
-    this->thisProxy[this->thisIndex + 1].output(w, cb);
 }
 
 #endif /* _PARTITION_H_ */

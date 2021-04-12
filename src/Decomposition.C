@@ -345,7 +345,7 @@ int BinaryDecomposition::flush(std::vector<Particle> &particles, const SendParti
   for (int idx = 0; idx < out_particles.size(); idx++) {
     auto && out = out_particles[idx];
     if (!out.empty()) fn(idx, out.size(), out.data());
-    particles.insert(particles.begin(), out.begin(), out.end());
+    particles.insert(particles.end(), out.begin(), out.end());
   }
   return particles.size();
 }
@@ -446,7 +446,7 @@ std::vector<BinaryDecomposition::BinarySplit> KdDecomposition::sortAndGetSplitte
 #if DEBUG
       CkPrintf("count %d is %d for goal_rank %d start_range %f end_range %f compare_to %f\n", i, counts[i], state.goal_rank, state.start_range, state.end_range, state.compare_to());
 #endif
-      bool identical = (state.end_range - state.start_range) <= std::numeric_limits<Real>::epsilon();
+      bool identical = (state.end_range - state.start_range) <= 2 * std::numeric_limits<Real>::epsilon();
       if (count == state.goal_rank || identical) {
         state.pending = false;
         n_pending--;

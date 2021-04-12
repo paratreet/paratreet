@@ -20,7 +20,7 @@ public:
   }
   virtual ~SpatialNode() = default;
 
-  void changeParticle(int index, Particle& part) {
+  void changeParticle(int index, const Particle& part) {
     particles_[index] = part;
   }
   void applyAcceleration(int index, Vector3D<Real> accel) {
@@ -34,11 +34,17 @@ public:
       delete[] particles_;
     }
   }
-  void perturbHalfStep(Real timestep) {
+  void kick(Real timestep) {
     for (int i = 0; i < n_particles; i++) {
-      particles_[i].perturbHalfStep(timestep);
+      particles_[i].kick(timestep);
     }
   }
+  void perturb(Real timestep) {
+    for (int i = 0; i < n_particles; i++) {
+      particles_[i].perturb(timestep);
+    }
+  }
+
   void pup (PUP::er& p) {
     p | depth;
     p | data;

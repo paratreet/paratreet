@@ -76,7 +76,10 @@ protected:
 protected:
   void startTrav(Node<Data>* new_payload) {
     std::vector<int> all_leaves;
-    for (int i = 0; i < leaves.size(); i++) all_leaves.push_back(i);
+    for (int i = 0; i < leaves.size(); i++) {
+      leaves[i]->data.widen();
+      all_leaves.push_back(i);
+    }
     recurse(new_payload, all_leaves);
   }
 
@@ -109,7 +112,7 @@ public:
               else doLeaf<Visitor>(node, leaves[bucket], part.r_local);
             }
           }
-          if (!delay_leaf) node->finish(active_buckets.size());
+          //if (!delay_leaf) node->finish(active_buckets.size());
           break;
         }
       case Node<Data>::Type::Internal:
@@ -127,7 +130,7 @@ public:
               doNode<Visitor>(node, leaves[bucket], part.r_local);
             }
           }
-          node->finish(active_buckets.size() - new_active_buckets.size());
+          //node->finish(active_buckets.size() - new_active_buckets.size());
           break;
         }
       case Node<Data>::Type::Boundary:
@@ -200,6 +203,7 @@ public:
       auto tree_leaf = part.tree_leaves[i];
       curr_nodes[tree_leaf->key].push_back(i);
       trav_tops[i] = tree_leaf;
+      part.leaves[i]->data.widen();
     }
     num_waiting = std::vector<int> (part.leaves.size(), 1);
   }

@@ -14,8 +14,8 @@ struct CentroidData {
   Vector3D<Real> centroid; // too slow to compute this on the fly
   Real max_rad = 0.0;
   Real size_sm;
-  std::vector< std::vector<pqSmoothNode> > neighbors; // Neighbor list for knn search
-  std::vector< CkVec<Particle> > fixed_ball; // Neighbor list for fixed ball search
+  std::vector< CkVec<pqSmoothNode> > neighbors; // Neighbor list for knn search
+  std::vector<std::pair<Real, Particle>> best_dt;
   OrientedBox<Real> box;
   int count;
   Real rsq;
@@ -33,9 +33,7 @@ struct CentroidData {
     }
     centroid = moment / sum_mass;
     getRadius();
-    count += n_particles;
-    fixed_ball.resize(n_particles);
-    neighbors.resize(n_particles);
+    count = n_particles;
   }
 
   void getRadius() {
@@ -60,6 +58,11 @@ struct CentroidData {
 
   CentroidData& operator=(const CentroidData&) = default;
 
+  void widen() {
+    neighbors.resize(count);
+    best_dt.resize(count, std::make_pair(std::numeric_limits<Real>::max(), Particle{}));
+  }
+
   void pup(PUP::er& p) {
     p | moment;
     p | sum_mass;
@@ -69,8 +72,6 @@ struct CentroidData {
     p | rsq;
     p | max_rad;
     p | size_sm;
-    p | fixed_ball;
-    p | neighbors;
   }
 
 };
