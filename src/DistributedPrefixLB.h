@@ -39,6 +39,7 @@ private:
   int my_pe;
   LBMigrateMsg * final_migration_msg;
   bool lb_partition_term = true;
+  int lb_iteration = 0;
 
   // Only used in PE[0] for prefix summary
   int total_prefix_moves; // Number of migration moves

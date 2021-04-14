@@ -182,13 +182,16 @@ void DistributedPrefixLB::prefixInit(){
   prefix_sum = my_prefix_load;
   prefix_stage = 0;
   prefix_done = false;
-  flag_buf = vector<char>(total_iter, 0);
-  value_buf = vector<int>(total_iter, 0);
-  update_tracker = vector<char>(total_iter, 0);
-  send_tracker = vector<char>(total_iter, 0);
-  prefix_migrate_out_ct = vector<int>(CkNumPes(), 0);
+  if (flag_buf.size() != total_iter){
+    flag_buf = vector<char>(total_iter, 0);
+    value_buf = vector<int>(total_iter, 0);
+    update_tracker = vector<char>(total_iter, 0);
+    send_tracker = vector<char>(total_iter, 0);
+    prefix_migrate_out_ct = vector<int>(CkNumPes(), 0);
+  }
   recv_prefix_move_pes = 0;
-  thisProxy[0].reportPrefixInitDone(my_prefix_load);
+  if(lb_iteration == 0) thisProxy[0].reportPrefixInitDone(my_prefix_load);
+  else prefixStep();
 }
 
 
@@ -331,15 +334,17 @@ void DistributedPrefixLB::sendSummary(int num_moves, int base_ct){
 
 void DistributedPrefixLB::cleanUp(){
   total_init_complete = 0;
+  lb_iteration ++;
   if(pt_obj_map.size() > 0) pt_obj_map.clear();
   if(st_obj_map.size() > 0) st_obj_map.clear();
   if(obj_map_to_balance.size() > 0) obj_map_to_balance.clear();
 
   if(flag_buf.size() > 0){
-    flag_buf.clear();
-    value_buf.clear();
-    update_tracker.clear();
-    send_tracker.clear();
+    int size = flag_buf.size();
+    flag_buf.assign(size, 0);
+    update_tracker.assign(size, 0);
+    send_tracker.assign(size, 0);
+    prefix_migrate_out_ct.assign(CkNumPes(), 0);
   }
 
   migrate_records.clear();
