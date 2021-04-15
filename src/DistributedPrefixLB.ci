@@ -7,7 +7,7 @@ include "common.h";
 group [migratable] DistributedPrefixLB : DistBaseLB {
   entry void DistributedPrefixLB(const CkLBOptions &);
   initnode void initnodeFn();
-  entry void reportPrefixInitDone(double);
+  entry [reductiontarget] void reportPrefixInitDone(double);
   entry void prefixStep();
   entry void acknowledgeIncomingPrefixMigrations(int);
   entry void prefixPassValue(int in_stage, double in_value);

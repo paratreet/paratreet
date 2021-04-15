@@ -78,15 +78,10 @@ void DistributedPrefixLB::Strategy(const DistBaseLB::LDStats* const stats) {
   else subtreeLBInits();
 }
 
-void DistributedPrefixLB::reportPrefixInitDone(double in_load){
-  total_init_complete ++;
-  global_load += in_load;
-  if(total_init_complete == CkNumPes()){
-    CkPrintf("DistributedPrefixLB>>> Initialization done. Start prefix. Global_load = %.4f\n", global_load);
-    for (int i = 0; i < CkNumPes(); i++){
-      thisProxy[i].broadcastGlobalLoad(global_load);
-    }
-  }
+void DistributedPrefixLB::reportPrefixInitDone(double sum_load){
+  global_load = sum_load;
+  if(my_pe == 0) CkPrintf("DistributedPrefixLB>>> Initialization done. Start prefix. Global_load = %.4f\n", global_load);
+  prefixStep();
 }
 
 void DistributedPrefixLB::broadcastGlobalLoad(double global_load_){
@@ -188,7 +183,8 @@ void DistributedPrefixLB::prefixInit(){
   send_tracker = vector<char>(total_iter, 0);
   prefix_migrate_out_ct = vector<int>(CkNumPes(), 0);
   recv_prefix_move_pes = 0;
-  thisProxy[0].reportPrefixInitDone(my_prefix_load);
+  CkCallback cb(CkReductionTarget(DistributedPrefixLB, reportPrefixInitDone), thisProxy);
+  contribute(sizeof(double), &my_prefix_load, CkReduction::sum_double, cb);
 }
 
 
