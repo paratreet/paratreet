@@ -26,12 +26,16 @@ void TreeSpec::getDecomposition(std::unique_ptr<Decomposition>& decomp, paratree
   if (!decomp) {
     if (decomp_type == paratreet::DecompType::eOct) {
       decomp.reset(new OctDecomposition());
+    } else if (decomp_type == paratreet::DecompType::eBinaryOct) {
+      decomp.reset(new BinaryOctDecomposition());
     } else if (decomp_type == paratreet::DecompType::eSfc) {
       decomp.reset(new SfcDecomposition());
     } else if (decomp_type == paratreet::DecompType::eKd) {
       decomp.reset(new KdDecomposition());
     } else if (decomp_type == paratreet::DecompType::eLongest) {
       decomp.reset(new LongestDimDecomposition());
+    } else {
+      CkAbort("dont recognize decomposition type");
     }
   }
 }
@@ -46,6 +50,8 @@ Tree* TreeSpec::getTree() {
       tree.reset(new KdTree());
     } else if (config.tree_type == paratreet::TreeType::eLongest) {
       tree.reset(new LongestDimTree());
+    } else {
+      CkAbort("dont recognize tree type");
     }
   }
   return tree.get();

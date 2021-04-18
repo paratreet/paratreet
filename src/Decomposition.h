@@ -60,11 +60,11 @@ struct SfcDecomposition : public Decomposition {
   SfcDecomposition(CkMigrateMessage *m) : Decomposition(m) { }
   virtual ~SfcDecomposition() = default;
 
-  Key getTpKey(int idx) override;
-  int flush(std::vector<Particle> &particles, const SendParticlesFn &fn) override;
-  int getNumParticles(int tp_index) override;
-  int findSplitters(BoundingBox &universe, CProxy_Reader &readers, int min_n_splitters) override;
-  void alignSplitters(SfcDecomposition *);
+  virtual Key getTpKey(int idx) override;
+  virtual int flush(std::vector<Particle> &particles, const SendParticlesFn &fn) override;
+  virtual int getNumParticles(int tp_index) override;
+  virtual int findSplitters(BoundingBox &universe, CProxy_Reader &readers, int min_n_splitters) override;
+  virtual void alignSplitters(SfcDecomposition *);
   std::vector<Splitter> getSplitters();
   virtual void pup(PUP::er& p) override;
 
@@ -80,23 +80,23 @@ protected:
 struct OctDecomposition : public SfcDecomposition {
   PUPable_decl(OctDecomposition);
 
-  OctDecomposition() { }
+  OctDecomposition() : SfcDecomposition() {}
   OctDecomposition(CkMigrateMessage *m) : SfcDecomposition(m) { }
   virtual ~OctDecomposition() = default;
-  virtual int getBranchFactor() {return 8;}
+  virtual int getBranchFactor() const {return 8;}
 
-  int flush(std::vector<Particle> &particles, const SendParticlesFn &fn) override;
-  int findSplitters(BoundingBox &universe, CProxy_Reader &readers, int min_n_splitters) override;
-  void setArrayOpts(CkArrayOptions& opts) override;
+  virtual int flush(std::vector<Particle> &particles, const SendParticlesFn &fn) override;
+  virtual int findSplitters(BoundingBox &universe, CProxy_Reader &readers, int min_n_splitters) override;
+  virtual void setArrayOpts(CkArrayOptions& opts) override;
 };
 
 struct BinaryOctDecomposition : public OctDecomposition {
   PUPable_decl(BinaryOctDecomposition);
 
-  BinaryOctDecomposition() { }
+  BinaryOctDecomposition() : OctDecomposition() { }
   BinaryOctDecomposition(CkMigrateMessage *m) : OctDecomposition(m) { }
   virtual ~BinaryOctDecomposition() = default;
-  virtual int getBranchFactor() override {return 2;}
+  virtual int getBranchFactor() const override {return 2;}
 };
 
 
