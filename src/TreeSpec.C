@@ -40,8 +40,8 @@ Tree* TreeSpec::getTree() {
   if (!tree) {
     if (config.tree_type == paratreet::TreeType::eOct) {
       tree.reset(new OctTree());
-    } else if (config.tree_type == paratreet::TreeType::eOctBinary) {
-      tree.reset(new BinaryTree());
+    } else if (config.tree_type == paratreet::TreeType::eBinaryOct) {
+      tree.reset(new BinaryOctTree());
     } else if (config.tree_type == paratreet::TreeType::eKd) {
       tree.reset(new KdTree());
     } else if (config.tree_type == paratreet::TreeType::eLongest) {

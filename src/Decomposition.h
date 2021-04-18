@@ -83,11 +83,22 @@ struct OctDecomposition : public SfcDecomposition {
   OctDecomposition() { }
   OctDecomposition(CkMigrateMessage *m) : SfcDecomposition(m) { }
   virtual ~OctDecomposition() = default;
+  virtual int getBranchFactor() {return 8;}
 
   int flush(std::vector<Particle> &particles, const SendParticlesFn &fn) override;
   int findSplitters(BoundingBox &universe, CProxy_Reader &readers, int min_n_splitters) override;
   void setArrayOpts(CkArrayOptions& opts) override;
 };
+
+struct BinaryOctDecomposition : public OctDecomposition {
+  PUPable_decl(BinaryOctDecomposition);
+
+  BinaryOctDecomposition() { }
+  BinaryOctDecomposition(CkMigrateMessage *m) : OctDecomposition(m) { }
+  virtual ~BinaryOctDecomposition() = default;
+  virtual int getBranchFactor() override {return 2;}
+};
+
 
 struct BinaryDecomposition : public Decomposition {
   BinaryDecomposition() = default;

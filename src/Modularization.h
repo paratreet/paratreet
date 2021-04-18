@@ -42,9 +42,9 @@ public:
   virtual int findChildsLastParticle(const Particle* particles, int start, int finish, Key child_key, size_t log_branch_factor) override;
 };
 
-class BinaryTree : public OctTree {
+class BinaryOctTree : public OctTree {
 public:
-  virtual ~BinaryTree() = default;
+  virtual ~BinaryOctTree() = default;
   virtual int getBranchFactor() override {return 2;}
 };
 

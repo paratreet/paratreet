@@ -34,8 +34,8 @@ class Main : public CBase_Main {
     conf.min_n_subtrees = CkNumPes() * 8; // default from ChaNGa
     conf.min_n_partitions = CkNumPes() * 8;
     conf.max_particles_per_leaf = 12; // default from ChaNGa
-    conf.decomp_type = paratreet::DecompType::eOct;
-    conf.tree_type = paratreet::TreeType::eOct;
+    conf.decomp_type = paratreet::DecompType::eBinaryOct;
+    conf.tree_type = paratreet::TreeType::eBinaryOct;
     conf.num_iterations = 3;
     conf.num_share_nodes = 0; // 3;
     conf.cache_share_depth= 3;
@@ -73,6 +73,9 @@ class Main : public CBase_Main {
           if (input_str.compare("oct") == 0) {
             conf.decomp_type = paratreet::DecompType::eOct;
           }
+          else if (input_str.compare("binoct") == 0) {
+            conf.decomp_type = paratreet::DecompType::eBinaryOct;
+          }
           else if (input_str.compare("sfc") == 0) {
             conf.decomp_type = paratreet::DecompType::eSfc;
           }
@@ -88,8 +91,8 @@ class Main : public CBase_Main {
           if (input_str.compare("oct") == 0) {
             conf.tree_type = paratreet::TreeType::eOct;
           }
-          else if (input_str.compare("bin") == 0) {
-            conf.tree_type = paratreet::TreeType::eOctBinary;
+          else if (input_str.compare("binoct") == 0) {
+            conf.tree_type = paratreet::TreeType::eBinaryOct;
           }
           else if (input_str.compare("kd") == 0) {
             conf.tree_type = paratreet::TreeType::eKd;
