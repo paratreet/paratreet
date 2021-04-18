@@ -13,6 +13,7 @@ module paratreet {
   include "Decomposition.h";
   PUPable SfcDecomposition;
   PUPable OctDecomposition;
+  PUPable BinaryOctDecomposition;
   PUPable KdDecomposition;
   PUPable LongestDimDecomposition;
 

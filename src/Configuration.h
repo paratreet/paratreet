@@ -12,6 +12,7 @@ class CProxy_Subtree;
 namespace paratreet {
     enum class DecompType {
       eOct = 0,
+      eBinaryOct,
       eSfc,
       eKd,
       eLongest,
@@ -20,7 +21,7 @@ namespace paratreet {
 
     enum class TreeType {
       eOct = 0,
-      eOctBinary,
+      eBinaryOct,
       eKd,
       eLongest,
       eInvalid = 100
@@ -64,8 +65,8 @@ namespace paratreet {
       switch (t) {
         case TreeType::eOct:
           return "Octree";
-        case TreeType::eOctBinary:
-          return "OctBinaryTree";
+        case TreeType::eBinaryOct:
+          return "BinaryOctTree";
         case TreeType::eKd:
           return "KdTree";
         case TreeType::eLongest:
@@ -79,6 +80,8 @@ namespace paratreet {
       switch (t) {
         case DecompType::eOct:
           return "OctDecomp";
+        case DecompType::eBinaryOct:
+          return "BinaryOctDecomp";
         case DecompType::eSfc:
           return "SfcDecomp";
         case DecompType::eKd:
@@ -93,8 +96,9 @@ namespace paratreet {
     static DecompType subtreeDecompForTree(TreeType t) {
       switch (t) {
         case TreeType::eOct:
-        case TreeType::eOctBinary:
           return DecompType::eOct;
+        case TreeType::eBinaryOct:
+          return DecompType::eBinaryOct;
         case TreeType::eKd:
           return DecompType::eKd;
         case TreeType::eLongest:

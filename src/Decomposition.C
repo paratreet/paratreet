@@ -249,7 +249,7 @@ int OctDecomposition::flush(std::vector<Particle> &particles, const SendParticle
 }
 
 int OctDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &readers, int min_n_splitters) {
-  const int branch_factor = treespec.ckLocalBranch()->getTree()->getBranchFactor();
+  const int branch_factor = getBranchFactor();
   const int log_branch_factor = log2(branch_factor);
 
   BufferedVec<Key> keys;
