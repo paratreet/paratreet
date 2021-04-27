@@ -1,5 +1,3 @@
-#include "DistributedPrefixLB.h"
-
 void DistributedPrefixLB::subtreeLBInits(){
   subtree_migrate_out_ct = std::vector<int> (CkNumPes(), 0);
   total_subtree_migrates = 0;

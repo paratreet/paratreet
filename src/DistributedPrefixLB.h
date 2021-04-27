@@ -30,7 +30,7 @@ public:
   void prefixPassValue(int, double);
   void donePrefix();
   void sendSummary(int, int);
-  void broadcastGlobalLoad(double);
+  //void broadcastGlobalLoad(double);
 
   void sendPEParitionCentroids(int, std::vector<Vector3D<Real>>);
   void sendSubtreeMigrationDecisions(int);
@@ -83,7 +83,7 @@ private:
 
 
   // LB subtree related variables
-  int nearestK = 20;
+  int nearestK = 20;/*{{{*/
   int recv_pe_centroids_ct = 0;
   int recv_incoming_subtree_counts = 1;
   int total_subtree_migrates;
@@ -92,7 +92,11 @@ private:
   std::vector<Vector3D<Real>> local_partition_centroids;
   std::vector<LBCentroidRecord> global_partition_centroids;
 
-  std::vector<int> subtree_migrate_out_ct;
+  std::vector<int> subtree_migrate_out_ct;/*}}}*/
+
+  // LB Average Smoothing related variables
+
+
 
   // Other
   double avg_size;
@@ -125,6 +129,7 @@ private:
   void PackAndMakeMigrateMsgs(int num_moves,int total_ct);
   void sendMigrateMsgs();
 };
+
 
 #endif /* _DistributedPref
           ixLB_H_ */

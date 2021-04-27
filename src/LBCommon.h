@@ -52,4 +52,39 @@ namespace LBCommon{
   };
 };
 
+namespace{
+  bool CompareLBStats(const LBCommon::LBCompareStats & a, const LBCommon::LBCompareStats & b)
+  {
+    // compare chare array index
+    return a.chare_idx < b.chare_idx;
+  };
+
+  bool ComparePEAndChareidx(const LBCommon::LBCompareStats & a, const LBCommon::LBCompareStats &b)
+  {
+    // first compare PE
+    int a_pe = a.from_proc, b_pe = b.from_proc;
+    if (a_pe != b_pe) return a_pe < b_pe;
+
+    // then compare chare array index
+    return a.chare_idx < b.chare_idx;
+  };
+
+  bool PrefixLBCompareLDObjStats(const LDObjStats & a, const LDObjStats & b)
+  {
+    // first compare PE
+    int a_pe = a.from_proc, b_pe = b.from_proc;
+    if (a_pe != b_pe) return a_pe < b_pe;
+
+    // then compare chare array index
+    // to_proc is assigned with chare_idx from user data
+    return a.to_proc < b.to_proc;
+  };
+
+  bool CentroidRecordCompare(const LBCommon::LBCentroidCompare & a, const LBCommon::LBCentroidCompare & b){
+    return a.distance < b.distance;
+  };
+
+}
+
 #endif //PARATREET_USER_LBCOMMON_H_
+
