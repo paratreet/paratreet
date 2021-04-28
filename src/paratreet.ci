@@ -20,9 +20,6 @@ module paratreet {
   readonly CProxy_Reader readers;
   readonly CProxy_TreeSpec treespec;
   readonly int n_readers;
-  readonly CProxy_TreeCanopy<CentroidData> centroid_calculator;
-  readonly CProxy_CacheManager<CentroidData> centroid_cache;
-  readonly CProxy_Resumer<CentroidData> centroid_resumer;
 
   message ParticleMsg {
     Particle particles[];
@@ -126,7 +123,7 @@ module paratreet {
 
   template <typename Data>
   chare Driver {
-    entry Driver(CProxy_CacheManager<Data>);
+    entry Driver(CProxy_CacheManager<Data>, CProxy_Resumer<Data>, CProxy_TreeCanopy<Data>);
     entry [threaded] void init(CkCallback cb);
     entry [threaded] void run(CkCallback cb);
     entry [reductiontarget] void countInts(unsigned long long intrn_counts [4]);

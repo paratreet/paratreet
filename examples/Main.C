@@ -19,6 +19,7 @@ class Main : public CBase_Main {
   double total_start_time;
   double start_time;
   paratreet::Configuration conf;
+  CProxy_Driver<CentroidData> driver;
 
   public:
   static void initialize() {
@@ -166,11 +167,11 @@ class Main : public CBase_Main {
 
     // Delegate to Driver
     CkCallback runCB(CkIndex_Main::run(), thisProxy);
-    paratreet::initialize(conf, runCB);
+    driver = paratreet::initialize<CentroidData>(conf, runCB);
   }
 
   void run() {
-    paratreet::run(CkCallbackResumeThread());
+    driver.run(CkCallbackResumeThread());
 
     CkExit();
   }
