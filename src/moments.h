@@ -105,7 +105,7 @@ double momShiftLocr(LOCR *,momFloat,momFloat,momFloat);
 void momReduceMomc(MOMC *,MOMR *);
 void momEvalMomr(MOMR *,momFloat,momFloat,momFloat,momFloat,
 				 momFloat *,momFloat *,momFloat *,momFloat *);
-void momEvalFmomrcm(FMOMR *m, Real u, Real dir, Real x,
+void momEvalFmomrcm(const FMOMR *m, Real u, Real dir, Real x,
                     Real y, Real z, Real *fPot, Real *ax,
                     Real *ay, Real *az, Real *magai);
 void momMomr2Momc(MOMR *,MOMC *);

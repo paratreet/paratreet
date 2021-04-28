@@ -1466,7 +1466,7 @@ void momEvalMomr(MOMR *m,momFloat dir0,momFloat x,momFloat y,momFloat z,
  ** OpCount = (*,+) = (106,72) = 178 - 8 = 170
  **
  */
-void momEvalFmomrcm(FMOMR *m, Real u, Real dir, Real x,
+void momEvalFmomrcm(const FMOMR *m, Real u, Real dir, Real x,
                     Real y, Real z, Real *fPot, Real *ax,
                     Real *ay, Real *az, Real *magai) {
     const Real onethird = 1.0f / 3.0f;
