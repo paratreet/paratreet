@@ -142,8 +142,8 @@ public:
       auto accel = (-qir3 * r) + (c * qirv);
       target.applyAcceleration(i, accel);
 #endif
-#endif
     }
+#endif
   }
 
   static bool cell(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
