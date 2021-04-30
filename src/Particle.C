@@ -49,6 +49,7 @@ void Particle::pup(PUP::er &p) {
   p|velocity;
   p|ball;
   p|soft;
+  p|type;
 }
 
 void Particle::reset() {

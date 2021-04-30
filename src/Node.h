@@ -29,6 +29,9 @@ public:
   void applyGasWork(int index, Real work) {
     particles_[index].pressure_dVolume += work;
   }
+  void applyPotential(int index, Real pot) {
+    particles_[index].potential += pot;
+  }
   void freeParticles() {
     if (n_particles > 0) {
       delete[] particles_;

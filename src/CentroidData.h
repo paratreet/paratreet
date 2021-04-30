@@ -7,9 +7,11 @@
 #include "Particle.h"
 #include "ParticleComp.h"
 #include "OrientedBox.h"
+#include "MultipoleMoments.h"
 
 struct CentroidData {
   Vector3D<Real> moment;
+  MultipoleMoments multipoles;
   Real sum_mass;
   Vector3D<Real> centroid; // too slow to compute this on the fly
   Real max_rad = 0.0;
@@ -30,9 +32,10 @@ struct CentroidData {
       moment += particles[i].mass * particles[i].position;
       sum_mass += particles[i].mass;
       box.grow(particles[i].position);
+      getRadius();
+      multipoles += particles[i];
     }
     centroid = moment / sum_mass;
-    getRadius();
     count = n_particles;
   }
 
@@ -42,7 +45,8 @@ struct CentroidData {
     delta1.x = (delta1.x > delta2.x ? delta1.x : delta2.x);
     delta1.y = (delta1.y > delta2.y ? delta1.y : delta2.y);
     delta1.z = (delta1.z > delta2.z ? delta1.z : delta2.z);
-    rsq = delta1.lengthSquared() * opening_geometry_factor_squared / (theta * theta);
+    multipoles.radius = delta1.lengthSquared();
+    rsq = multipoles.radius * opening_geometry_factor_squared / (theta * theta);
     size_sm = 0.5*(box.size()).length();
   }
 
@@ -52,6 +56,7 @@ struct CentroidData {
     centroid = moment / sum_mass;
     box.grow(cd.box);
     getRadius();
+    multipoles += cd.multipoles;
     count += cd.count;
     return *this;
   }
@@ -65,6 +70,7 @@ struct CentroidData {
 
   void pup(PUP::er& p) {
     p | moment;
+    p | multipoles;
     p | sum_mass;
     p | centroid;
     p | box;

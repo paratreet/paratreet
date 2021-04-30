@@ -9,14 +9,17 @@
 // Floating point type
 #ifndef USE_DOUBLE_FP
 typedef float Real;
+typedef float SSEReal;
 #define REAL_MAX FLT_MAX
 #else
 typedef double Real;
+typedef double SSEReal;
 #define REAL_MAX DBL_MAX
 #endif
 
 // Simulation domain dimensions
 #define NDIM 3
+#define CMK_SSE 0
 
 // Particle key
 typedef SFC::Key Key;

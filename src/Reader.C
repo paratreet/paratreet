@@ -62,6 +62,7 @@ void Reader::load(std::string input_file, const CkCallback& cb) {
       particles[i].position = gp.pos;
       particles[i].velocity = gp.vel;
       particles[i].potential = gp.temp * gasConstant / gammam1 / meanMolWeight;
+      particles[i].type = Particle::Type::eGas;
     }
     else if (start_particle + i < (unsigned int)n_sph + (unsigned int)n_dark) {
       if (!r.getNextDarkParticle(dp)) {
@@ -71,6 +72,7 @@ void Reader::load(std::string input_file, const CkCallback& cb) {
       particles[i].position = dp.pos;
       particles[i].velocity = dp.vel;
       particles[i].soft = dp.eps;
+      particles[i].type = Particle::Type::eDark;
     }
     else {
       if (!r.getNextStarParticle(sp)) {
@@ -79,6 +81,7 @@ void Reader::load(std::string input_file, const CkCallback& cb) {
       particles[i].mass = sp.mass;
       particles[i].position = sp.pos;
       particles[i].velocity = sp.vel;
+      particles[i].type = Particle::Type::eStar;
     }
     particles[i].order = start_particle + i;
     particles[i].velocity_predicted = particles[i].velocity;
