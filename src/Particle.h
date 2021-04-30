@@ -22,7 +22,19 @@ struct Particle {
   Real pressure_dVolume = 0.;
   Real potential_predicted;
 
+  enum class Type : char {
+    eStar = 1,
+    eGas  = 2,
+    eDark = 3,
+    eUnknown = 100
+  };
+  Type type = Type::eUnknown;
+
   Particle();
+
+  bool isStar() const {return type == Type::eStar;}
+  bool isGas()  const {return type == Type::eGas;}
+  bool isDark() const {return type == Type::eDark;}
 
   void pup(PUP::er&) ;
 

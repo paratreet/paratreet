@@ -32,10 +32,10 @@ struct CentroidData {
       moment += particles[i].mass * particles[i].position;
       sum_mass += particles[i].mass;
       box.grow(particles[i].position);
+      getRadius();
       multipoles += particles[i];
     }
     centroid = moment / sum_mass;
-    getRadius();
     count = n_particles;
   }
 
@@ -45,17 +45,18 @@ struct CentroidData {
     delta1.x = (delta1.x > delta2.x ? delta1.x : delta2.x);
     delta1.y = (delta1.y > delta2.y ? delta1.y : delta2.y);
     delta1.z = (delta1.z > delta2.z ? delta1.z : delta2.z);
-    rsq = delta1.lengthSquared() * opening_geometry_factor_squared / (theta * theta);
+    multipoles.radius = delta1.lengthSquared();
+    rsq = multipoles.radius * opening_geometry_factor_squared / (theta * theta);
     size_sm = 0.5*(box.size()).length();
   }
 
   const CentroidData& operator+=(const CentroidData& cd) { // needed for upward traversal
-    multipoles += cd.multipoles;
     moment += cd.moment;
     sum_mass += cd.sum_mass;
     centroid = moment / sum_mass;
     box.grow(cd.box);
     getRadius();
+    multipoles += cd.multipoles;
     count += cd.count;
     return *this;
   }

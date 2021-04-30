@@ -159,11 +159,10 @@ void momEvalFmomrcm(FMOMR *m,SSEReal u,SSEReal dir,SSEReal x,
 
 /// A representation of a multipole expansion.
 class MultipoleMoments {
-	friend class CudaMultipoleMoments;
+public:
 	/// A physical size for this multipole expansion, calculated
 	/// by an external function using some other information
 	Real radius;
-public:
 	Real soft;		/* Effective softening */
 
 	/// The total mass represented by this expansion
@@ -319,12 +318,14 @@ public:
 		// be better to do this many particles at a time, then
 		// you could first determine the center of mass, then
 		// do a momMakeMomr(); momAddMomr() for each particle.
-		Vector3D<Real> dr = cm1 - cm;
-		momShiftFmomr(&mom, radius, dr.x, dr.y, dr.z);
-		dr = p.position - cm;
-		FMOMR momPart;
-		momMakeFmomr(&momPart, p.mass, radius, dr.x, dr.y, dr.z);
-		momAddFmomr(&mom, &momPart);
+		if (radius > 0) {
+			Vector3D<Real> dr = cm1 - cm;
+			momShiftFmomr(&mom, radius, dr.x, dr.y, dr.z);
+			dr = p.position - cm;
+			FMOMR momPart;
+			momMakeFmomr(&momPart, p.mass, radius, dr.x, dr.y, dr.z);
+			momAddFmomr(&mom, &momPart);
+                }
 #else
 		//add higher order components here
 		Vector3D<double> dr = cm1 - cm;
