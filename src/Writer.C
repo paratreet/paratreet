@@ -108,9 +108,11 @@ void TipsyWriter::do_write(int prefix_count)
 
   if(thisIndex == 0) w.writeHeader();
 
-  CkPrintf("seeking %d particles for total %d gas %d dark %d star %d\n",
-    prefix_count, box.n_particles, box.n_sph, box.n_dark, box.n_star);
-  if(!w.seekParticleNum(prefix_count)) CkAbort("bad seek");
+  if(!w.seekParticleNum(prefix_count)) {
+    CkPrintf("seeking %d particles for total %d gas %d dark %d star %d\n",
+      prefix_count, box.n_particles, box.n_sph, box.n_dark, box.n_star);
+    CkAbort("bad seek");
+  }
 
   for (const auto& p : particles) {
     if (p.isGas()) {
