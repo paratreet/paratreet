@@ -9,6 +9,7 @@ BoundingBox::BoundingBox(){
 
 void BoundingBox::reset(){
   n_particles = 0;
+  n_dark = n_sph = n_star = 0;
   box.reset();
   pe = 0.0;
   ke = 0.0;
@@ -33,6 +34,9 @@ void BoundingBox::grow(const BoundingBox &other){
   else{
     box.grow(other.box);
     n_particles += other.n_particles;
+    n_dark += other.n_dark;
+    n_sph += other.n_sph;
+    n_star += other.n_star;
     pe += other.pe;
     ke += other.ke;
     mass += other.mass;
@@ -47,6 +51,9 @@ void BoundingBox::expand(Real pad){
 void BoundingBox::pup(PUP::er &p){
   p | box;
   p | n_particles;
+  p | n_dark;
+  p | n_sph;
+  p | n_star;
   p | pe;
   p | ke;
   p | mass;

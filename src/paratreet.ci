@@ -66,7 +66,7 @@ module paratreet {
   }
 
   group TipsyWriter {
-    entry TipsyWriter(std::string of, int n_particles);
+    entry TipsyWriter(std::string of, BoundingBox box);
     entry void receive(std::vector<Particle> particles, Real time, int iter);
     entry void write(int prefix_count, CkCallback cb);
   }

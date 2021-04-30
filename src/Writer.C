@@ -62,8 +62,8 @@ void Writer::do_write()
   CkAssert(result == 0);
 }
 
-TipsyWriter::TipsyWriter(std::string of, int n_particles)
-  : output_file(of), total_particles(n_particles)
+TipsyWriter::TipsyWriter(std::string of, BoundingBox b)
+  : output_file(of), box(b)
 {
 }
 
@@ -93,10 +93,10 @@ void TipsyWriter::do_write(int prefix_count)
   Tipsy::header tipsyHeader;
 
   tipsyHeader.time = time_;
-  tipsyHeader.nbodies = total_particles;
-  tipsyHeader.nsph = 0;
-  tipsyHeader.nstar = 0;
-  tipsyHeader.ndark = total_particles;
+  tipsyHeader.nbodies = box.n_particles;
+  tipsyHeader.nsph = box.n_sph;
+  tipsyHeader.ndark = box.n_dark;
+  tipsyHeader.nstar = box.n_star;
 
   bool use_double = sizeof(Real) == 8;
 
@@ -108,17 +108,42 @@ void TipsyWriter::do_write(int prefix_count)
 
   if(thisIndex == 0) w.writeHeader();
 
+  CkPrintf("seeking %d particles for total %d gas %d dark %d star %d\n",
+    prefix_count, box.n_particles, box.n_sph, box.n_dark, box.n_star);
   if(!w.seekParticleNum(prefix_count)) CkAbort("bad seek");
 
   for (const auto& p : particles) {
-    Tipsy::dark_particle_t<Real, Real> dp;
-    dp.mass = p.mass;
-    dp.pos = p.position;
-    dp.vel = p.velocity; // dvFac = 1
-    if(!w.putNextDarkParticle_t(dp)) {
-      CkError("[%d] Write dark failed, errno %d: %s\n", CkMyPe(), errno, strerror(errno));
-      CkAbort("Bad Write");
+    if (p.isGas()) {
+      Tipsy::gas_particle_t<Real, Real> gp;
+      gp.mass = p.mass;
+      gp.pos = p.position;
+      gp.vel = p.velocity; // dvFac = 1
+      if(!w.putNextGasParticle_t(gp)) {
+        CkError("[%d] Write gas failed, errno %d: %s\n", CkMyPe(), errno, strerror(errno));
+        CkAbort("Bad Write");
+      }
     }
+    else if (p.isDark()) {
+      Tipsy::dark_particle_t<Real, Real> dp;
+      dp.mass = p.mass;
+      dp.pos = p.position;
+      dp.vel = p.velocity; // dvFac = 1
+      if(!w.putNextDarkParticle_t(dp)) {
+        CkError("[%d] Write dark failed, errno %d: %s\n", CkMyPe(), errno, strerror(errno));
+        CkAbort("Bad Write");
+      }
+    }
+    else if (p.isStar()) {
+      Tipsy::star_particle_t<Real, Real> sp;
+      sp.mass = p.mass;
+      sp.pos = p.position;
+      sp.vel = p.velocity; // dvFac = 1
+      if(!w.putNextStarParticle_t(sp)) {
+        CkError("[%d] Write star failed, errno %d: %s\n", CkMyPe(), errno, strerror(errno));
+        CkAbort("Bad Write");
+      }
+    }
+
   }
 }
 
