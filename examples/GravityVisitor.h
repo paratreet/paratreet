@@ -6,8 +6,6 @@
 #include "Space.h"
 #include <cmath>
 
-extern CProxy_Resumer<CentroidData> centroid_resumer;
-
 class GravityVisitor {
 public:
   static constexpr const bool CallSelfLeaf = true;

@@ -23,9 +23,6 @@
 
 extern CProxy_Reader readers;
 extern CProxy_TreeSpec treespec;
-extern CProxy_TreeCanopy<CentroidData> centroid_calculator;
-extern CProxy_CacheManager<CentroidData> centroid_cache;
-extern CProxy_Resumer<CentroidData> centroid_resumer;
 
 namespace paratreet {
   extern void preTraversalFn(ProxyPack<CentroidData>&);
@@ -37,18 +34,20 @@ namespace paratreet {
 template <typename Data>
 class Driver : public CBase_Driver<Data> {
 public:
+  CProxy_TreeCanopy<Data> calculator;
   CProxy_CacheManager<Data> cache_manager;
+  CProxy_Resumer<Data> resumer;
   std::vector<std::pair<Key, SpatialNode<Data>>> storage;
   bool storage_sorted;
   BoundingBox universe;
-  CProxy_Subtree<CentroidData> subtrees; // Cannot be a global readonly variable
-  CProxy_Partition<CentroidData> partitions;
+  CProxy_Subtree<Data> subtrees; // Cannot be a global readonly variable
+  CProxy_Partition<Data> partitions;
   int n_subtrees;
   int n_partitions;
   double start_time;
 
-  Driver(CProxy_CacheManager<Data> cache_manager_) :
-    cache_manager(cache_manager_), storage_sorted(false) {}
+  Driver(CProxy_CacheManager<Data> cache_manager_, CProxy_Resumer<Data> resumer_, CProxy_TreeCanopy<Data> calculator_) :
+    cache_manager(cache_manager_), resumer(resumer_), calculator(calculator_), storage_sorted(false) {}
 
   // Performs initial decomposition
   void init(CkCallback cb) {
@@ -133,11 +132,11 @@ public:
     start_time = CkWallTimer();
     CkArrayOptions subtree_opts(n_subtrees);
     treespec.ckLocalBranch()->getSubtreeDecomposition()->setArrayOpts(subtree_opts);
-    subtrees = CProxy_Subtree<CentroidData>::ckNew(
+    subtrees = CProxy_Subtree<Data>::ckNew(
       CkCallbackResumeThread(),
       universe.n_particles, n_subtrees, n_partitions,
-      centroid_calculator, centroid_resumer,
-      centroid_cache, this->thisProxy, matching_decomps, subtree_opts
+      calculator, resumer,
+      cache_manager, this->thisProxy, matching_decomps, subtree_opts
       );
     CkPrintf("Created %d Subtrees: %.3lf ms\n", n_subtrees,
         (CkWallTimer() - start_time) * 1000);
@@ -147,9 +146,9 @@ public:
     CkArrayOptions partition_opts(n_partitions);
     if (matching_decomps) partition_opts.bindTo(subtrees);
     else treespec.ckLocalBranch()->getPartitionDecomposition()->setArrayOpts(partition_opts);
-    partitions = CProxy_Partition<CentroidData>::ckNew(
-      n_partitions, centroid_cache, centroid_resumer,
-      centroid_calculator, matching_decomps, partition_opts
+    partitions = CProxy_Partition<Data>::ckNew(
+      n_partitions, cache_manager, resumer,
+      calculator, matching_decomps, partition_opts
       );
     CkPrintf("Created %d Partitions: %.3lf ms\n", n_partitions,
         (CkWallTimer() - start_time) * 1000);
@@ -195,7 +194,7 @@ public:
       Real max_velocity = *(Real*)(res[0].data); // avoid max_velocity = 0.0
       Real timestep_size = paratreet::getTimestep(universe, max_velocity);
 
-      ProxyPack<Data> proxy_pack (this->thisProxy, subtrees, partitions, centroid_cache);
+      ProxyPack<Data> proxy_pack (this->thisProxy, subtrees, partitions, cache_manager);
 
       // Prefetch into cache
       start_time = CkWallTimer();
@@ -217,7 +216,7 @@ public:
       partitions.kick(timestep_size, CkCallbackResumeThread());
 
       // Now track PE imbalance for memory reasons
-      centroid_resumer.collectMetaData(CkCallbackResumeThread((void *&) msg2));
+      resumer.collectMetaData(CkCallbackResumeThread((void *&) msg2));
       msg2->toTuple(&res2, &numRedn2);
       int maxPESize = *(int*)(res2[0].data);
       int sumPESize = *(int*)(res2[1].data);
@@ -258,9 +257,9 @@ public:
       }
 
       // Clear cache and other storages used in this iteration
-      centroid_cache.destroy(true);
+      cache_manager.destroy(true);
       CkCallback statsCb (CkReductionTarget(Driver<Data>, countInts), this->thisProxy);
-      centroid_resumer.collectAndResetStats(statsCb);
+      resumer.collectAndResetStats(statsCb);
       storage.clear();
       storage_sorted = false;
       CkWaitQD();
