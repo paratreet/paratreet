@@ -14,8 +14,8 @@ void Particle::perturb(Real timestep) {
   acceleration = (0., 0., 0.);
   position += (velocity * timestep);
   Real uDelta = 0.5e-7 * timestep;
-  potential -= pressure_dVolume * uDelta; // for adiabatic, dU = -p dV
-  potential_predicted = potential - pressure_dVolume * uDelta;
+  u -= pressure_dVolume * uDelta; // for adiabatic, dU = -p dV
+  u_predicted = u - pressure_dVolume * uDelta;
   density = 0;
   pressure_dVolume = 0.;
 }
@@ -42,7 +42,8 @@ void Particle::pup(PUP::er &p) {
   p|mass;
   p|density;
   p|potential;
-  p|potential_predicted;
+  p|u;
+  p|u_predicted;
   p|pressure_dVolume;
   p|position;
   p|acceleration;

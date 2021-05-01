@@ -71,7 +71,7 @@ namespace paratreet {
     Real rNorm = rs1 * b.mass; // normalized kernel value
     auto dv = b.velocity_predicted - a.velocity_predicted;
     Real dvdotdr = vFac * dot(dv, dx) + dsq * H;
-    Real PoverRho2a = a.potential_predicted * gammam1 / (a.density * a.density);
+    Real PoverRho2a = a.u_predicted * gammam1 / (a.density * a.density);
     Real work = rNorm * dvdotdr * (PoverRho2a + visc * 0.5);
     leaf.applyGasWork(pi, work);
     b.pressure_dVolume += work;
