@@ -6,9 +6,11 @@
 #include "Space.h"
 #include <cmath>
 
+template <int repX = 0, int repY = 0, int repZ = 0>
 class GravityVisitor {
 public:
   static constexpr const bool CallSelfLeaf = true;
+  static constexpr Vector3D<Real> offset() {return {repX, repY, repZ};}
 
 private:
   // note gconst = 1
@@ -60,10 +62,9 @@ private:
   }
 }
 
-
-  static inline bool openSoftening(const CentroidData& source, const CentroidData& target, Vector3D<Real> offset)
+  static inline bool openSoftening(const CentroidData& source, const CentroidData& target)
   {
-    Sphere<Real> sourceSphere(source.multipoles.cm + offset, 2.0 * source.multipoles.soft);
+    Sphere<Real> sourceSphere(source.multipoles.cm + offset(), 2.0 * source.multipoles.soft);
     Sphere<Real> targetSphere(target.multipoles.cm, 2.0 * target.multipoles.soft);
     if (Space::intersect(sourceSphere, targetSphere)) return true;
     return Space::intersect(target.box, sourceSphere);
@@ -71,7 +72,7 @@ private:
 
   static void addGravity(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
     for (int i = 0; i < target.n_particles; i++) {
-      Vector3D<Real> diff = source.data.centroid - target.particles()[i].position;
+      Vector3D<Real> diff = source.data.centroid + offset() - target.particles()[i].position;
       Real rsq = diff.lengthSquared();
       if (rsq != 0) {
         Vector3D<Real> accel = diff * (source.data.sum_mass / (rsq * sqrt(rsq)));
@@ -87,7 +88,7 @@ public:
     for (int i = 0; i < target.n_particles; i++) {
       Vector3D<Real> accel(0.0);
       for (int j = 0; j < source.n_particles; j++) {
-          Vector3D<Real> diff = source.particles()[j].position - target.particles()[i].position;
+          Vector3D<Real> diff = source.particles()[j].position + offset() - target.particles()[i].position;
           Real rsq = diff.lengthSquared();
           if (rsq != 0) {
               accel += diff * (source.particles()[j].mass / (rsq * sqrt(rsq)));
@@ -99,7 +100,7 @@ public:
 
   static bool open(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
     if (source.n_particles <= nMinParticleNode) return true;
-    return Space::intersect(target.data.box, source.data.centroid, source.data.rsq);
+    return Space::intersect(target.data.box, source.data.centroid + offset(), source.data.rsq);
   }
 
   static void node(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
@@ -114,7 +115,7 @@ public:
     auto& m = source.data.multipoles;
     for (int i = 0; i < target.n_particles; i++) {
       auto& part = target.particles()[i];
-      auto r = part.position - m.cm;
+      auto r = part.position - m.cm - offset();
       auto rsq = r.lengthSquared();
       Real dir = 1.0 / sqrt(rsq);
 #ifdef HEXADECAPOLE
