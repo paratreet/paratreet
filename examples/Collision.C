@@ -16,7 +16,7 @@ namespace paratreet {
   }
 
   void traversalFn(BoundingBox& universe, ProxyPack<CentroidData>& proxy_pack, int iter) {
-    proxy_pack.partition.template startDown<GravityVisitor>();
+    proxy_pack.partition.template startDown<GravityVisitor<0,0,0>>();
   }
 
   void postIterationFn(BoundingBox& universe, ProxyPack<CentroidData>& proxy_pack, int iter) {
