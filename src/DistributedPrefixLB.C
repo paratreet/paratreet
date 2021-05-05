@@ -244,13 +244,12 @@ void DistributedPrefixLB::makePrefixMoves(){
     double incr_load = oStat.load + average_background_load;
     curr_prefix += incr_load / 2.0;
     int to_pe = std::min((int)(curr_prefix / average_load), CkNumPes()-1);
+
+    if (_lb_args.debug() >= 1)
+      ckout << "PE " << to_pe << " <- " << my_pe << " Centroid : " << oStat.centroid << endl;
+
     if (my_pe != to_pe){
       total_migrates ++;
-      // never migrate all objects out
-      //if (total_migrates == obj_map_to_balance.size()){
-      //  total_migrates --;
-      //  continue;
-      //}
       MigrateInfo * move = new MigrateInfo;
       move->obj = oStat.data_ptr->handle;
       move->from_pe = my_pe;
@@ -270,14 +269,6 @@ void DistributedPrefixLB::PackAndMakeMigrateMsgs(int num_moves, int total_ct) {
   // Otherwise, will cause segfault
 
   if(_lb_args.debug() >= 2) CkPrintf("LB[%d] PackAndMakeMigrateMsgs num_moves = %d, total_ct = %d\n", my_pe, num_moves, total_ct);
-  //if (num_moves == total_ct) {
-  //  //CkPrintf("LB[%d] move all out\n", my_pe);
-  //  num_moves -= 1;
-  //  prefix_migrate_out_ct[migrate_records[num_moves]->to_pe] --;
-  //  delete migrate_records[num_moves];
-  //  migrate_records[num_moves] = NULL;
-  //}
-
   final_migration_msg = new(num_moves,CkNumPes(),CkNumPes(),0) LBMigrateMsg;
   final_migration_msg->n_moves = num_moves;
   for (int i = 0; i < num_moves; i++){

@@ -5,7 +5,7 @@ STRUCTURE_PATH = $(BASE_PATH)/utility/structures
 OPTS = -g -Ofast -I$(STRUCTURE_PATH) -I$(PARATREET_PATH) -DCOUNT_INTERACTIONS=0 -DCMK_LB_USER_DATA -DDEBUG=0 $(MAKE_OPTS)
 CHARMC = $(CHARM_HOME)/bin/charmc $(OPTS)
 LD_LIBS = -L$(PARATREET_PATH) -lparatreet
-LB_LIBS = -module CommonLBs -module DistributedPrefixLB -module PrefixLB -module AverageSmoothLB
+LB_LIBS = -module CommonLBs -module DistributedPrefixLB -module AverageSmoothLB -module OrbLB
 PROJ_LIBS = -tracemode projections
 
 all: Gravity SPH Collision

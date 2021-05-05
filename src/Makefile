@@ -12,7 +12,7 @@ IMPL_HEADERS = CacheManager.h Configuration.h Driver.h Partition.h Reader.h Resu
 
 all: lib
 
-lib: $(OBJS) DistributedPrefixLB PrefixLB AverageSmoothLB
+lib: $(OBJS) DistributedPrefixLB AverageSmoothLB OrbLB
 	ar x $(STRUCTURE_PATH)/libTipsy.a
 	ar cr libparatreet.a $(OBJS) $(TIPSY_OBJS)
 	rm -f $(TIPSY_OBJS)
@@ -39,11 +39,11 @@ AverageSmoothLB: AverageSmoothLB.C LBCommon.h AverageSmoothLB.decl.h
 AverageSmoothLB.decl.h: AverageSmoothLB.ci
 	$(CHARMC) AverageSmoothLB.ci
 
-PrefixLB: PrefixLB.C PrefixLB.decl.h LBCommon.h
-	$(CHARMC) -o libmodulePrefixLB.a PrefixLB.C
+OrbLB: OrbLB.C LBCommon.h OrbLB.decl.h
+	$(CHARMC) -o libmoduleOrbLB.a OrbLB.C
 
-PrefixLB.decl.h: PrefixLB.ci
-	$(CHARMC) PrefixLB.ci
+OrbLB.decl.h: OrbLB.ci
+	$(CHARMC) OrbLB.ci
 
 clean:
 	rm -f *.decl.h *.def.h conv-host *.o libmodulePrefixLB.a libmoduleDistributedPrefixLB.a libmoduleAverageSmoothLB.a libparatreet.a charmrun
