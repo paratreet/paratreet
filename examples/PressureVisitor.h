@@ -28,7 +28,7 @@ public:
     // Check if any of the target balls intersect the source volume
     // Ball size is set by furthest neighbor found during density calculation
     for (int i = 0; i < target.n_particles; i++) {
-      Real ballSq = target.data.neighbors[i][0].fKey;
+      Real ballSq = target.data.pps.neighbors[i][0].fKey;
       if(Space::intersect(source.data.box, target.particles()[i].position, ballSq))
         return true;
     }
@@ -40,7 +40,7 @@ public:
   static void leaf(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
     auto collector = neighbor_list_collector.ckLocalBranch();
     for (int i = 0; i < target.n_particles; i++) {
-      Real rsq = target.data.neighbors[i][0].fKey; // farthest distance, ball radius
+      Real rsq = target.data.pps.neighbors[i][0].fKey; // farthest distance, ball radius
       Real fBall = std::sqrt(rsq);
       for (int j = 0; j < source.n_particles; j++) {
         const Particle& a = target.particles()[i], b = source.particles()[j];

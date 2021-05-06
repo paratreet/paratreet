@@ -23,8 +23,8 @@ public:
   static bool open(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
     // Check if any of the target balls intersect the source volume
     for (int i = 0; i < target.n_particles; i++) {
-      if (target.data.neighbors[i].size() < k) return true;
-      if(Space::intersect(source.data.box, target.particles()[i].position, target.data.neighbors[i][0].fKey))
+      if (target.data.pps.neighbors[i].size() < k) return true;
+      if(Space::intersect(source.data.box, target.particles()[i].position, target.data.pps.neighbors[i][0].fKey))
         return true;
     }
     return false;
@@ -35,7 +35,7 @@ public:
   static void leaf(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
     auto nlc = neighbor_list_collector.ckLocalBranch();
     for (int i = 0; i < target.n_particles; i++) {
-      auto& Q = target.data.neighbors[i];
+      auto& Q = target.data.pps.neighbors[i];
       for (int j = 0; j < source.n_particles; j++) {
         const auto& sp = source.particles()[j]; //source particle
         Vector3D<Real> dr = target.particles()[i].position - sp.position;

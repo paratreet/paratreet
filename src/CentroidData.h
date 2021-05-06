@@ -16,8 +16,14 @@ struct CentroidData {
   Vector3D<Real> centroid; // too slow to compute this on the fly
   Real max_rad = 0.0;
   Real size_sm;
-  std::vector< CkVec<pqSmoothNode> > neighbors; // Neighbor list for knn search
-  std::vector<std::pair<Real, Particle>> best_dt;
+  struct PerParticleStruct {
+    PerParticleStruct() {}
+    PerParticleStruct& operator=(const PerParticleStruct&) {return *this;}
+    PerParticleStruct(const PerParticleStruct&) {}
+    std::vector< CkVec<pqSmoothNode> > neighbors; // Neighbor list for knn search
+    std::vector<std::pair<Real, Particle>> best_dt;
+  };
+  PerParticleStruct pps;
   OrientedBox<Real> box;
   int count;
   Real rsq;
@@ -64,8 +70,8 @@ struct CentroidData {
   CentroidData& operator=(const CentroidData&) = default;
 
   void widen() {
-    neighbors.resize(count);
-    best_dt.resize(count, std::make_pair(std::numeric_limits<Real>::max(), Particle{}));
+    pps.neighbors.resize(count);
+    pps.best_dt.resize(count, std::make_pair(std::numeric_limits<Real>::max(), Particle{}));
   }
 
   void pup(PUP::er& p) {

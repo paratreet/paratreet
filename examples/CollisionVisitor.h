@@ -63,8 +63,8 @@ public:
         Real rsq = tp.ball * tp.ball;
         if (dsq < rsq && sp.order != tp.order) {
           Real dt = getCollideTime(tp, sp);
-          if (dt < target.data.best_dt[i].first) {
-            target.data.best_dt[i] = std::make_pair(dt, sp);
+          if (dt < target.data.pps.best_dt[i].first) {
+            target.data.pps.best_dt[i] = std::make_pair(dt, sp);
           }
         }
       }
