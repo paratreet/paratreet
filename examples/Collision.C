@@ -46,9 +46,9 @@ namespace paratreet {
     for (int pi = 0; pi < leaf.n_particles; pi++) {
       auto& part = leaf.particles()[pi];
       if (indicator == 0) {
-        auto best_dt = leaf.data.best_dt[pi].first;
+        auto best_dt = leaf.data.pps.best_dt[pi].first;
         if (best_dt < 0.01570796326) {
-          auto& partB = leaf.data.best_dt[pi].second;
+          auto& partB = leaf.data.pps.best_dt[pi].second;
           auto& posA = part.position;
           auto& posB = partB.position;
           auto& velA = part.velocity;
