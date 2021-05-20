@@ -30,6 +30,8 @@ protected:
     int migration_ct;
     float migrate_ratio;
     //int pt_ct, st_ct, nonpt_ct, migration_ct;
+    int post_lb_max_size, post_lb_min_size;
+    float post_lb_size_max_avg_ratio;
 
     LDStats * my_stats;
 
@@ -59,8 +61,10 @@ private:
   void assign(int idx, int to_pe);
   // orb the centroids[start_cent to (end_cent - 1)] for PE[start_pe to (end_pe -1) ]
   void orbCentroidsForEvenLoadRecursiveHelper(int start_pe, int end_pe, int start_cent, int end_cent, int dim);
-  void orbCentroidsForEvenLoad();
+  void orbCentroidsForEvenParticleSizeRecursiveHelper(int start_pe, int end_pe, int start_cent, int end_cent, int dim);
+  void orbCentroids();
   float calcPartialLoadSum(int, int);
+  int calcPartialParticleSum(int, int);
   void initVariables();
   void summary();
   void cleanUp();

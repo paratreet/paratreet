@@ -29,7 +29,7 @@ void OrbLB::work(LDStats* stats)
   initVariables();
   collectPELoads();
   collectUserData();
-  orbCentroidsForEvenLoad();
+  orbCentroids();
   summary();
   cleanUp();
 }
@@ -158,6 +158,58 @@ void OrbLB::assign(int idx, int to_pe){
   }
 }/*}}}*/
 
+int OrbLB::calcPartialParticleSum(int start, int end){
+  int sum = 0;/*{{{*/
+  for (int idx = start; idx < end; idx ++){
+    sum += centroids[idx].particle_size;
+  }
+
+  return sum;
+}/*}}}*/
+
+void OrbLB::orbCentroidsForEvenParticleSizeRecursiveHelper(int start_pe, int end_pe, int start_cent, int end_cent, int depth){
+  // iterval = 0;{{{
+  if ((end_pe - start_pe) == 1){
+    for (int i = start_cent; i < end_cent; i++){
+      assign(i, start_pe);
+    }
+    return;
+  }
+
+  // iterval > 0;
+  int mid_pe = (start_pe + end_pe) / 2;
+  int dim = depth % 3;
+  if (use_longest_dim)
+    dim = findLongestDimInCentroids(start_cent, end_cent);
+
+  int partial_particle_sum = calcPartialParticleSum(start_cent, end_cent);
+  std::sort(centroids.begin()+start_cent, centroids.begin()+end_cent, NdComparator(dim));
+  int half_size = partial_particle_sum / 2;
+
+  int half_load_idx = 0;
+  for (int idx = start_cent; idx < end_cent; idx ++){
+    int half = centroids[idx].particle_size / 2;
+    int rest = centroids[idx].particle_size - half;
+    half_size -= half;
+    if (half_size < 0){
+      half_load_idx = idx;
+      break;
+    }
+    half_size -= rest;
+  }
+
+  if(_lb_args.debug() >= 2){
+    CkPrintf("recurse on PE [%d, %d, %d) with centroids [%d, %d, %d)\n", start_pe, mid_pe, end_pe, start_cent, half_load_idx, end_cent);
+    CkPrintf("dim = %d; partial_particle_sum = %d\n", dim, partial_particle_sum);
+  }
+
+  // recurse on the left
+  orbCentroidsForEvenParticleSizeRecursiveHelper(start_pe, mid_pe, start_cent, half_load_idx, depth+1);
+  // recurse on the right
+  orbCentroidsForEvenParticleSizeRecursiveHelper(mid_pe, end_pe, half_load_idx, end_cent, depth+1);
+
+}/*}}}*/
+
 void OrbLB::orbCentroidsForEvenLoadRecursiveHelper(int start_pe, int end_pe, int start_cent, int end_cent, int depth){
   // iterval = 0;{{{
   if ((end_pe - start_pe) == 1){
@@ -197,7 +249,7 @@ void OrbLB::orbCentroidsForEvenLoadRecursiveHelper(int start_pe, int end_pe, int
 
 }/*}}}*/
 
-void OrbLB::orbCentroidsForEvenLoad(){
+void OrbLB::orbCentroids(){
   orbCentroidsForEvenLoadRecursiveHelper(0, n_pes, 0, centroids.size(), 0);
 }
 
@@ -234,6 +286,10 @@ void OrbLB::summary(){
   post_lb_max_load = *std::max_element(post_lb_pe_loads.begin(), post_lb_pe_loads.end());
   post_lb_min_load = *std::min_element(post_lb_pe_loads.begin(), post_lb_pe_loads.end());
 
+  post_lb_max_size = *std::max_element(post_lb_pe_particle_size.begin(), post_lb_pe_particle_size.end());
+  post_lb_min_size = *std::min_element(post_lb_pe_particle_size.begin(), post_lb_pe_particle_size.end());
+  post_lb_size_max_avg_ratio = (float)post_lb_max_size / average_particle_size;
+
   post_lb_average_load = load_sum / (float)n_pes;
   post_lb_max_avg_ratio = post_lb_max_load / post_lb_average_load;
   post_lb_max_min_ratio = post_lb_max_load / post_lb_min_load;
@@ -241,7 +297,7 @@ void OrbLB::summary(){
   migrate_ratio /= (float) centroids.size();
   double end_time = CmiWallTimer();
 
-  if(_lb_args.debug()) CkPrintf("OrbLB >> Post LB load:: range (%.4f, %.4f); average = %.4f; max_avg_ratio = %.4f, max_min_ratio = %.4f\nOrbLB >>> Summary:: moved %d/%d objs, ratio = %.2f (strategy time = %.2f ms)\n", post_lb_min_load, post_lb_max_load, post_lb_average_load, post_lb_max_avg_ratio, post_lb_max_min_ratio, migration_ct, centroids.size(), migrate_ratio, (end_time - start_time)*1000 );
+  if(_lb_args.debug()) CkPrintf("OrbLB >> Post LB load:: range (%.4f, %.4f); average = %.4f; max_avg_ratio = %.4f, max_min_ratio = %.4f\nOrbLB >> Post LB particle size:: range(%d, %d); max_avg_ratio = %.4f\nOrbLB >>> Summary:: moved %d/%d objs, ratio = %.2f (strategy time = %.2f ms)\n", post_lb_min_load, post_lb_max_load, post_lb_average_load, post_lb_max_avg_ratio, post_lb_max_min_ratio, post_lb_min_size, post_lb_max_size, post_lb_size_max_avg_ratio, migration_ct, centroids.size(), migrate_ratio, (end_time - start_time)*1000 );
 }/*}}}*/
 
 void OrbLB::cleanUp(){
