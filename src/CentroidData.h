@@ -20,23 +20,28 @@ struct CentroidData {
   std::vector<std::pair<Real, Particle>> best_dt;
   OrientedBox<Real> box;
   int count;
-  Real rsq;
+  Real rsq;                     ///< Opening radius
   static constexpr const Real opening_geometry_factor_squared = 4.0 / 3.0;
   static constexpr const Real theta = 0.7;
 
   CentroidData() :
   moment(Vector3D<Real> (0,0,0)), sum_mass(0), count(0), rsq(0.) {}
 
+  /// Construct centroid from particles.
   CentroidData(const Particle* particles, int n_particles) : CentroidData() {
     for (int i = 0; i < n_particles; i++) {
       moment += particles[i].mass * particles[i].position;
       sum_mass += particles[i].mass;
       box.grow(particles[i].position);
-      getRadius();
-      multipoles += particles[i];
     }
+    getRadius();
     centroid = moment / sum_mass;
     count = n_particles;
+    // After we have a radius and centroid, we can calculate the high
+    // order (scaled by radius) multipole moments.
+    calculateRadiusBox(multipoles, box);
+    for (int i = 0; i < n_particles; i++)
+      multipoles += particles[i];
   }
 
   void getRadius() {
@@ -45,8 +50,8 @@ struct CentroidData {
     delta1.x = (delta1.x > delta2.x ? delta1.x : delta2.x);
     delta1.y = (delta1.y > delta2.y ? delta1.y : delta2.y);
     delta1.z = (delta1.z > delta2.z ? delta1.z : delta2.z);
-    multipoles.radius = delta1.lengthSquared();
-    rsq = multipoles.radius * opening_geometry_factor_squared / (theta * theta);
+    rsq = delta1.lengthSquared();
+    rsq *= opening_geometry_factor_squared / (theta * theta);
     size_sm = 0.5*(box.size()).length();
   }
 
@@ -57,6 +62,7 @@ struct CentroidData {
     box.grow(cd.box);
     getRadius();
     multipoles += cd.multipoles;
+    calculateRadiusFarthestCorner(multipoles, box);
     count += cd.count;
     return *this;
   }
