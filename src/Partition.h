@@ -3,6 +3,8 @@
 
 #include <vector>
 
+#include "CoreFunctions.h"
+
 #include "Particle.h"
 #include "Traverser.h"
 #include "ParticleMsg.h"
@@ -11,10 +13,6 @@
 
 extern CProxy_TreeSpec treespec;
 extern CProxy_Reader readers;
-
-namespace paratreet {
-  extern void perLeafFn(int indicator, SpatialNode<CentroidData>&, Partition<CentroidData>* partition);
-}
 
 template <typename Data>
 struct Partition : public CBase_Partition<Data> {

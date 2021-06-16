@@ -21,6 +21,10 @@ module paratreet {
   readonly CProxy_TreeSpec treespec;
   readonly int n_readers;
 
+  namespace paratreet {
+    initproc void __registerMain(void);
+  }
+
   message ParticleMsg {
     Particle particles[];
   };

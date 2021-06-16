@@ -1,0 +1,15 @@
+#ifndef EXAMPLE_MAIN_H
+#define EXAMPLE_MAIN_H
+
+#include "Main.decl.h"
+#include "Paratreet.h"
+
+class Main_: public paratreet::Main<CentroidData> {
+  virtual Real getTimestep(BoundingBox&, Real) override;
+  virtual void preTraversalFn(ProxyPack<CentroidData>&) override;
+  virtual void traversalFn(BoundingBox&, ProxyPack<CentroidData>&, int) override;
+  virtual void postIterationFn(BoundingBox&, ProxyPack<CentroidData>&, int) override;
+  virtual void perLeafFn(int indicator, SpatialNode<CentroidData>&, Partition<CentroidData>* partition) override;
+};
+
+#endif

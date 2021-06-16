@@ -1,10 +1,12 @@
-#include "Main.decl.h"
-#include "Paratreet.h"
+#include "Main.h"
+
 #include "GravityVisitor.h"
 #include "DensityVisitor.h"
 //#include "PressureVisitor.h"
 #include "CountVisitor.h"
 #include "CollisionVisitor.h"
+
+PARATREET_REGISTER_MAIN(Main_);
 
 /* readonly */ bool verify;
 /* readonly */ bool dual_tree;
