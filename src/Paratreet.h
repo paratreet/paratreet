@@ -85,7 +85,9 @@ namespace paratreet {
     }
 
     inline void __registerMain(void) {
-        CsvAccess(main_)->__register();
+        if (CkMyRank() == 0) {
+            CsvAccess(main_)->__register();
+        }
     }
 
     inline Real getTimestep(BoundingBox& box, Real real) {
