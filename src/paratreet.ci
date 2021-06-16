@@ -185,6 +185,11 @@ module paratreet {
     entry DecompArrayMap(CkPointer<Decomposition>, int, int);
   };
 
+  mainchare MainChare {
+    entry [nokeep] MainChare(CkArgMsg* m);
+    entry [threaded] void run();
+  };
+
 /*
   extern entry void Reader request<CentroidData>(CProxy_Subtree<CentroidData>, int, int);
   extern entry void Reader flush<CentroidData>(int, CProxy_Subtree<CentroidData>);

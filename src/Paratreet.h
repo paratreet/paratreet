@@ -27,10 +27,23 @@
     auto& PARATREET_MAIN_VAR(m) = __initMain<m>(); \
     }
 
+class MainChare: public CBase_MainChare {
+  public:
+    MainChare(CkArgMsg* m);
+    void run();
+};
+
 namespace paratreet {
     class MainBase {
       public:
+        paratreet::Configuration conf;
+        CProxy_Driver<CentroidData> driver;
+
         virtual void __register(void) = 0;
+
+        virtual void main(CkArgMsg*) = 0;
+        virtual void run(void) = 0;
+
         virtual Real getTimestep(BoundingBox&, Real) = 0;
     };
 
@@ -40,7 +53,6 @@ namespace paratreet {
             return (std::string(ty) + "<" + std::string(typeid(T).name()) + ">").c_str();
         }
       public:
-
         virtual void preTraversalFn(ProxyPack<T>&) = 0;
         virtual void traversalFn(BoundingBox&, ProxyPack<T>&, int) = 0;
         virtual void postIterationFn(BoundingBox&, ProxyPack<T>&, int) = 0;

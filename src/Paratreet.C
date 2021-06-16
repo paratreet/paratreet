@@ -16,6 +16,21 @@
 /* readonly */ CProxy_TreeSpec treespec;
 /* readonly */ int n_readers;
 
+using namespace paratreet;
+
+MainChare::MainChare(CkArgMsg* m) {
+    auto& main = CsvAccess(main_);
+
+    main->main(m);
+
+    CkCallback runCB(CkIndex_MainChare::run(), thisProxy);
+    main->driver = initialize<CentroidData>(main->conf, runCB);
+}
+
+void MainChare::run() {
+    CsvAccess(main_)->run();
+}
+
 namespace paratreet {
     CsvDeclare(main_type_, main_);
 
