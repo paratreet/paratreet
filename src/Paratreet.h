@@ -56,7 +56,7 @@ namespace paratreet {
     template<typename Data>
     void outputTipsy(BoundingBox& universe, CProxy_Partition<Data>& partitions) {
         auto& output_file = treespec.ckLocalBranch()->getConfiguration().output_file;
-        CProxy_TipsyWriter tw = CProxy_TipsyWriter::ckNew(output_file, universe.n_particles);
+        CProxy_TipsyWriter tw = CProxy_TipsyWriter::ckNew(output_file, universe);
         CkPrintf("Outputting to Tipsy file...\n");
         partitions.output(tw, universe.n_particles, CkCallback::ignore);
         CkWaitQD();

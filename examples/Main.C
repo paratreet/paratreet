@@ -8,6 +8,7 @@
 
 /* readonly */ bool verify;
 /* readonly */ bool dual_tree;
+/* readonly */ bool periodic;
 /* readonly */ int peanoKey;
 /* readonly */ int iter_start_collision;
 /* readonly */ CProxy_CountManager count_manager;
@@ -46,6 +47,7 @@ class Main : public CBase_Main {
 
     verify = false;
     dual_tree = false;
+    periodic = false;
     peanoKey = 3;
     iter_start_collision = 0;
 

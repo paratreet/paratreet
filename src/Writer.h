@@ -21,15 +21,14 @@ private:
 };
 
 struct TipsyWriter : public CBase_TipsyWriter {
-  TipsyWriter(std::string of, int n_particles);
+  TipsyWriter(std::string of, BoundingBox b);
   void receive(std::vector<Particle> ps, Real time, int iter);
   void write(int prefix_count, CkCallback cb);
 
 private:
   std::vector<Particle> particles;
   std::string output_file;
-  int total_particles = 0;
-  int expected_particles = 0;
+  BoundingBox box;
   int iter_ = 0;
   Real time_ = 0;
   void do_write(int prefix_count);

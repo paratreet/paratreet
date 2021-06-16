@@ -52,7 +52,7 @@ void Reader::load(std::string input_file, const CkCallback& cb) {
   Tipsy::star_particle sp;
 
   for (unsigned int i = 0; i < n_particles; i++) {
-    particles[i].potential = particles[i].soft = 0u;
+    particles[i].potential = particles[i].u = particles[i].soft = 0u;
     if (start_particle + i < (unsigned int)n_sph) {
       if (!r.getNextGasParticle(gp)) {
         CkAbort("Could not read gas particle\n");
@@ -61,8 +61,9 @@ void Reader::load(std::string input_file, const CkCallback& cb) {
       particles[i].soft = gp.hsmooth;
       particles[i].position = gp.pos;
       particles[i].velocity = gp.vel;
-      particles[i].potential = gp.temp * gasConstant / gammam1 / meanMolWeight;
+      particles[i].u = gp.temp * gasConstant / gammam1 / meanMolWeight;
       particles[i].type = Particle::Type::eGas;
+      box.n_sph++;
     }
     else if (start_particle + i < (unsigned int)n_sph + (unsigned int)n_dark) {
       if (!r.getNextDarkParticle(dp)) {
@@ -73,6 +74,7 @@ void Reader::load(std::string input_file, const CkCallback& cb) {
       particles[i].velocity = dp.vel;
       particles[i].soft = dp.eps;
       particles[i].type = Particle::Type::eDark;
+      box.n_dark++;
     }
     else {
       if (!r.getNextStarParticle(sp)) {
@@ -82,10 +84,11 @@ void Reader::load(std::string input_file, const CkCallback& cb) {
       particles[i].position = sp.pos;
       particles[i].velocity = sp.vel;
       particles[i].type = Particle::Type::eStar;
+      box.n_star++;
     }
     particles[i].order = start_particle + i;
     particles[i].velocity_predicted = particles[i].velocity;
-    particles[i].potential_predicted = particles[i].potential;
+    particles[i].u_predicted = particles[i].u;
     box.grow(particles[i].position);
     box.mass += particles[i].mass;
     box.ke += particles[i].mass * particles[i].velocity.lengthSquared();

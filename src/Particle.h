@@ -12,6 +12,7 @@ struct Particle {
   Real mass;
   Real density;
   Real potential;
+  Real u;
   Real ball;
   Real deltaT;
   Real soft;
@@ -20,7 +21,7 @@ struct Particle {
   Vector3D<Real> velocity;
   Vector3D<Real> velocity_predicted;
   Real pressure_dVolume = 0.;
-  Real potential_predicted;
+  Real u_predicted;
 
   enum class Type : char {
     eStar = 1,

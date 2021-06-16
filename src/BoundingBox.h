@@ -13,7 +13,10 @@
  */
 struct BoundingBox {
   OrientedBox<Real> box;
-  int n_particles;
+  int n_particles = 0;
+  int n_sph = 0;
+  int n_dark = 0;
+  int n_star = 0;
   Real pe;
   Real ke;
   Real mass;

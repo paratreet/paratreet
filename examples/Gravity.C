@@ -4,6 +4,7 @@
 
 extern bool verify;
 extern bool dual_tree;
+extern bool periodic;
 
 namespace paratreet {
 
@@ -14,13 +15,46 @@ namespace paratreet {
   }
 
   void traversalFn(BoundingBox& universe, ProxyPack<CentroidData>& proxy_pack, int iter) {
-    if (dual_tree) proxy_pack.subtree.startDual<GravityVisitor>();
-    else proxy_pack.partition.template startDown<GravityVisitor>();
+    if (dual_tree) proxy_pack.subtree.startDual<GravityVisitor<0,0,0>>();
+    if (dual_tree && periodic) CkAbort("Not sure about this -- dual_tree and periodic both set");
+    proxy_pack.partition.template startDown<GravityVisitor<0,0,0>>();
+    if (periodic) {
+      CkWaitQD();
+      proxy_pack.partition.template startDown<GravityVisitor<-1,-1,-1>>(); CkWaitQD();
+      proxy_pack.partition.template startDown<GravityVisitor<-1,-1,0>>(); CkWaitQD();
+      proxy_pack.partition.template startDown<GravityVisitor<-1,-1,1>>(); CkWaitQD();
+      proxy_pack.partition.template startDown<GravityVisitor<-1,0,-1>>(); CkWaitQD();
+      proxy_pack.partition.template startDown<GravityVisitor<-1,0,0>>(); CkWaitQD();
+      proxy_pack.partition.template startDown<GravityVisitor<-1,0,1>>(); CkWaitQD();
+      proxy_pack.partition.template startDown<GravityVisitor<-1,1,-1>>(); CkWaitQD();
+      proxy_pack.partition.template startDown<GravityVisitor<-1,1,0>>(); CkWaitQD();
+      proxy_pack.partition.template startDown<GravityVisitor<-1,1,1>>(); CkWaitQD();
+      proxy_pack.partition.template startDown<GravityVisitor<0,-1,-1>>(); CkWaitQD();
+      proxy_pack.partition.template startDown<GravityVisitor<0,-1,0>>(); CkWaitQD();
+      proxy_pack.partition.template startDown<GravityVisitor<0,-1,1>>(); CkWaitQD();
+      proxy_pack.partition.template startDown<GravityVisitor<0,0,-1>>(); CkWaitQD();
+      proxy_pack.partition.template startDown<GravityVisitor<0,0,1>>(); CkWaitQD();
+      proxy_pack.partition.template startDown<GravityVisitor<0,1,-1>>(); CkWaitQD();
+      proxy_pack.partition.template startDown<GravityVisitor<0,1,0>>(); CkWaitQD();
+      proxy_pack.partition.template startDown<GravityVisitor<0,1,1>>(); CkWaitQD();
+      proxy_pack.partition.template startDown<GravityVisitor<1,-1,-1>>(); CkWaitQD();
+      proxy_pack.partition.template startDown<GravityVisitor<1,-1,0>>(); CkWaitQD();
+      proxy_pack.partition.template startDown<GravityVisitor<1,-1,1>>(); CkWaitQD();
+      proxy_pack.partition.template startDown<GravityVisitor<1,0,-1>>(); CkWaitQD();
+      proxy_pack.partition.template startDown<GravityVisitor<1,0,0>>(); CkWaitQD();
+      proxy_pack.partition.template startDown<GravityVisitor<1,0,1>>(); CkWaitQD();
+      proxy_pack.partition.template startDown<GravityVisitor<1,1,-1>>(); CkWaitQD();
+      proxy_pack.partition.template startDown<GravityVisitor<1,1,0>>(); CkWaitQD();
+      proxy_pack.partition.template startDown<GravityVisitor<1,1,1>>(); CkWaitQD();
+    }
   }
 
   void postIterationFn(BoundingBox& universe, ProxyPack<CentroidData>& proxy_pack, int iter) {
     if (iter == 0 && verify) {
       paratreet::outputParticleAccelerations(universe, proxy_pack.partition);
+    }
+    else if (periodic) {
+      // do ewald
     }
   }
 

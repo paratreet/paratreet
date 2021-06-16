@@ -3,6 +3,7 @@ mainmodule Main {
 
     readonly bool verify;
     readonly bool dual_tree;
+    readonly bool periodic;
     readonly int peanoKey;
     readonly int iter_start_collision;
     readonly CProxy_CountManager count_manager;
@@ -39,11 +40,38 @@ mainmodule Main {
         entry void reset(const CkCallback&);
     }
 
-    extern entry void Partition<CentroidData> startDown<GravityVisitor> ();
-    extern entry void Subtree<CentroidData> startDual<GravityVisitor> ();
+    extern entry void Partition<CentroidData> startDown<GravityVisitor<0,0,0>> ();
+    extern entry void Partition<CentroidData> startDown<GravityVisitor<-1,-1,-1>> ();
+    extern entry void Partition<CentroidData> startDown<GravityVisitor<-1,-1,0>> ();
+    extern entry void Partition<CentroidData> startDown<GravityVisitor<-1,-1,1>> ();
+    extern entry void Partition<CentroidData> startDown<GravityVisitor<-1,0,-1>> ();
+    extern entry void Partition<CentroidData> startDown<GravityVisitor<-1,0,0>> ();
+    extern entry void Partition<CentroidData> startDown<GravityVisitor<-1,0,1>> ();
+    extern entry void Partition<CentroidData> startDown<GravityVisitor<-1,1,-1>> ();
+    extern entry void Partition<CentroidData> startDown<GravityVisitor<-1,1,0>> ();
+    extern entry void Partition<CentroidData> startDown<GravityVisitor<-1,1,1>> ();
+    extern entry void Partition<CentroidData> startDown<GravityVisitor<0,-1,-1>> ();
+    extern entry void Partition<CentroidData> startDown<GravityVisitor<0,-1,0>> ();
+    extern entry void Partition<CentroidData> startDown<GravityVisitor<0,-1,1>> ();
+    extern entry void Partition<CentroidData> startDown<GravityVisitor<0,0,-1>> ();
+    extern entry void Partition<CentroidData> startDown<GravityVisitor<0,0,1>> ();
+    extern entry void Partition<CentroidData> startDown<GravityVisitor<0,1,-1>> ();
+    extern entry void Partition<CentroidData> startDown<GravityVisitor<0,1,0>> ();
+    extern entry void Partition<CentroidData> startDown<GravityVisitor<0,1,1>> ();
+    extern entry void Partition<CentroidData> startDown<GravityVisitor<1,-1,-1>> ();
+    extern entry void Partition<CentroidData> startDown<GravityVisitor<1,-1,0>> ();
+    extern entry void Partition<CentroidData> startDown<GravityVisitor<1,-1,1>> ();
+    extern entry void Partition<CentroidData> startDown<GravityVisitor<1,0,-1>> ();
+    extern entry void Partition<CentroidData> startDown<GravityVisitor<1,0,0>> ();
+    extern entry void Partition<CentroidData> startDown<GravityVisitor<1,0,1>> ();
+    extern entry void Partition<CentroidData> startDown<GravityVisitor<1,1,-1>> ();
+    extern entry void Partition<CentroidData> startDown<GravityVisitor<1,1,0>> ();
+    extern entry void Partition<CentroidData> startDown<GravityVisitor<1,1,1>> ();
+
+    extern entry void Subtree<CentroidData> startDual<GravityVisitor<0,0,0>> ();
     extern entry void Partition<CentroidData> startDown<CollisionVisitor> ();
     extern entry void Partition<CentroidData> startUpAndDown<DensityVisitor> ();
     //extern entry void Partition<CentroidData> startDown<PressureVisitor> ();
-    extern entry void CacheManager<CentroidData> startPrefetch<GravityVisitor>(DPHolder<CentroidData>, CkCallback);
-    extern entry void Driver<CentroidData> prefetch<GravityVisitor> (CentroidData, int, CkCallback);
+    extern entry void CacheManager<CentroidData> startPrefetch<GravityVisitor<0,0,0>>(DPHolder<CentroidData>, CkCallback);
+    extern entry void Driver<CentroidData> prefetch<GravityVisitor<0,0,0>> (CentroidData, int, CkCallback);
 }

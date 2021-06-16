@@ -295,6 +295,9 @@ void Partition<Data>::perturb(Real timestep, CkCallback cb)
     box.grow(p.position);
     box.mass += p.mass;
     box.ke += 0.5 * p.mass * p.velocity.lengthSquared();
+    if (p.isGas()) box.n_sph++;
+    if (p.isDark()) box.n_dark++;
+    if (p.isStar()) box.n_star++;
   }
   box.n_particles = saved_particles.size();
   this->contribute(sizeof(BoundingBox), &box, BoundingBox::reducer(), cb);
