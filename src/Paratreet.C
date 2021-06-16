@@ -24,7 +24,7 @@ MainChare::MainChare(CkArgMsg* m) {
     main->main(m);
 
     CkCallback runCB(CkIndex_MainChare::run(), thisProxy);
-    main->driver = initialize<CentroidData>(main->conf, runCB);
+    main->initializeDriver(runCB);
 }
 
 void MainChare::run() {

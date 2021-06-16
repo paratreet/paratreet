@@ -34,10 +34,13 @@ class MainChare: public CBase_MainChare {
 };
 
 namespace paratreet {
+
+    template<typename Data>
+    CProxy_Driver<Data> initialize(const Configuration& conf, CkCallback cb);
+
     class MainBase {
       public:
         paratreet::Configuration conf;
-        CProxy_Driver<CentroidData> driver;
 
         virtual void __register(void) = 0;
 
@@ -45,6 +48,8 @@ namespace paratreet {
         virtual void run(void) = 0;
 
         virtual Real getTimestep(BoundingBox&, Real) = 0;
+
+        virtual void initializeDriver(const CkCallback&) = 0;
     };
 
     // NOTE because this is called Main, the user's instantiation cannot be
@@ -55,6 +60,12 @@ namespace paratreet {
             return (std::string(ty) + "<" + std::string(typeid(T).name()) + ">").c_str();
         }
       public:
+        CProxy_Driver<T> driver;
+
+        virtual void initializeDriver(const CkCallback& cb) override {
+            this->driver = initialize<T>(this->conf, cb);
+        }
+
         virtual void preTraversalFn(ProxyPack<T>&) = 0;
         virtual void traversalFn(BoundingBox&, ProxyPack<T>&, int) = 0;
         virtual void postIterationFn(BoundingBox&, ProxyPack<T>&, int) = 0;

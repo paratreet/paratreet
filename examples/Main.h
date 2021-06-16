@@ -3,6 +3,7 @@
 
 #include "Main.decl.h"
 #include "Paratreet.h"
+#include "CentroidData.h"
 
 class ExMain: public paratreet::Main<CentroidData> {
   virtual Real getTimestep(BoundingBox&, Real) override;
