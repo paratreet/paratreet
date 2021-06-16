@@ -6,7 +6,7 @@
 #include "CountVisitor.h"
 #include "CollisionVisitor.h"
 
-PARATREET_REGISTER_MAIN(Main_);
+PARATREET_REGISTER_MAIN(ExMain);
 
 /* readonly */ bool verify;
 /* readonly */ bool dual_tree;
@@ -21,7 +21,7 @@ PARATREET_REGISTER_MAIN(Main_);
     BoundingBox::registerReducer();
   }
 
-  void Main_::main(CkArgMsg* m) {
+  void ExMain::main(CkArgMsg* m) {
     // mainProxy = thisProxy;
     int cur_iteration;
     double total_start_time;
@@ -169,7 +169,7 @@ PARATREET_REGISTER_MAIN(Main_);
     // driver = paratreet::initialize<CentroidData>(conf, runCB);
   }
 
-  void Main_::run() {
+  void ExMain::run() {
     driver.run(CkCallbackResumeThread());
 
     CkExit();

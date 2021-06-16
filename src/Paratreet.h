@@ -47,6 +47,8 @@ namespace paratreet {
         virtual Real getTimestep(BoundingBox&, Real) = 0;
     };
 
+    // NOTE because this is called Main, the user's instantiation cannot be
+    //      named Main for now...
     template<typename T>
     class Main : public MainBase {
         static const char* __makeName(const char* ty) {
