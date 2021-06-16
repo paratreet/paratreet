@@ -48,11 +48,13 @@ module paratreet {
     entry void destroy(bool);
     entry void resetCachedParticles(CkCallback);
   };
+/*
 #ifdef GROUP_CACHE
   group CacheManager<CentroidData>;
 #else
   nodegroup CacheManager<CentroidData>;
 #endif
+ */
 
   template <typename Data>
   group Resumer {
@@ -61,7 +63,7 @@ module paratreet {
     entry void collectMetaData(const CkCallback & cb);
     entry [expedited] void process(Key);
   };
-  group Resumer<CentroidData>;
+// group Resumer<CentroidData>;
 
   group Writer {
     entry Writer(std::string of, int n_particles);
@@ -95,7 +97,7 @@ module paratreet {
     entry void deleteParticleOfOrder(int order);
     entry void pauseForLB();
   }
-  array [1d] Partition<CentroidData>;
+// array [1d] Partition<CentroidData>;
 
   template <typename Data>
   array [1d] Subtree {
@@ -113,7 +115,7 @@ module paratreet {
     entry void collectMetaData(const CkCallback & cb);
     entry void pauseForLB();
   }
-  array [1d] Subtree<CentroidData>;
+// array [1d] Subtree<CentroidData>;
 
   template <typename Data>
   array [Key] TreeCanopy {
@@ -123,7 +125,7 @@ module paratreet {
     entry void recvData(SpatialNode<Data>, int);
     entry void requestData (int);
   };
-  array [1d] TreeCanopy<CentroidData>;
+// array [1d] TreeCanopy<CentroidData>;
 
   template <typename Data>
   chare Driver {
@@ -138,7 +140,7 @@ module paratreet {
     entry void prefetch(Data, int, CkCallback);
     entry void request(Key request_list [list_size], int list_size, int, CkCallback);
   }
-  chare Driver<CentroidData>;
+// chare Driver<CentroidData>;
 
   group Reader {
     entry Reader();
@@ -183,8 +185,10 @@ module paratreet {
     entry DecompArrayMap(CkPointer<Decomposition>, int, int);
   };
 
+/*
   extern entry void Reader request<CentroidData>(CProxy_Subtree<CentroidData>, int, int);
   extern entry void Reader flush<CentroidData>(int, CProxy_Subtree<CentroidData>);
   extern entry void Reader assignPartitions<CentroidData>(int, CProxy_Partition<CentroidData>);
+ */
 
 };
