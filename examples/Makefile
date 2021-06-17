@@ -31,7 +31,7 @@ Collision.o: Collision.C Main.decl.h
 SPH.o: SPH.C SPHUtils.h NeighborListCollector.h Main.decl.h
 	$(CHARMC) -c $<
 
-Main.o: Main.C $(VISITORS) $(OTHERS) Main.decl.h
+Main.o: Main.C CentroidData.h $(VISITORS) $(OTHERS) Main.decl.h
 	$(CHARMC) -c $<
 
 test: all
