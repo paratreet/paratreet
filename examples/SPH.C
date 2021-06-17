@@ -1,4 +1,4 @@
-#include "Main.decl.h"
+#include "Main.h"
 #include "Paratreet.h"
 #include "SPHUtils.h"
 //#include "PressureVisitor.h"
@@ -6,15 +6,15 @@
 
 extern bool verify;
 
-namespace paratreet {
+  using namespace paratreet;
 
-  void preTraversalFn(ProxyPack<CentroidData>& proxy_pack) {
+  void ExMain::preTraversalFn(ProxyPack<CentroidData>& proxy_pack) {
     //proxy_pack.cache.startParentPrefetch(this->thisProxy, CkCallback::ignore); // MUST USE FOR UPND TRAVS
     //proxy_pack.cache.template startPrefetch<GravityVisitor>(this->thisProxy, CkCallback::ignore);
     proxy_pack.driver.loadCache(CkCallbackResumeThread());
   }
 
-  void traversalFn(BoundingBox& universe, ProxyPack<CentroidData>& proxy_pack, int iter) {
+  void ExMain::traversalFn(BoundingBox& universe, ProxyPack<CentroidData>& proxy_pack, int iter) {
     neighbor_list_collector.reset(CkCallbackResumeThread());
     double start_time = CkWallTimer();
     proxy_pack.partition.template startUpAndDown<DensityVisitor>();
@@ -34,17 +34,17 @@ namespace paratreet {
     proxy_pack.partition.callPerLeafFn(2, CkCallbackResumeThread()); // averages pressure
     CkPrintf("Averaging pressures: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
   }
-  void postIterationFn(BoundingBox& universe, ProxyPack<CentroidData>& proxy_pack, int iter) {
+  void ExMain::postIterationFn(BoundingBox& universe, ProxyPack<CentroidData>& proxy_pack, int iter) {
     if (iter == 0 && verify) {
       paratreet::outputParticleAccelerations(universe, proxy_pack.partition);
     }
   }
 
-  Real getTimestep(BoundingBox& universe, Real max_velocity) {
+  Real ExMain::getTimestep(BoundingBox& universe, Real max_velocity) {
     return 0.0002;
   }
 
-  void perLeafFn(int indicator, SpatialNode<CentroidData>& leaf, Partition<CentroidData>* partition) {
+  void ExMain::perLeafFn(int indicator, SpatialNode<CentroidData>& leaf, Partition<CentroidData>* partition) {
     auto nlc = neighbor_list_collector.ckLocalBranch();
     for (int pi = 0; pi < leaf.n_particles; pi++) {
       auto& part = leaf.particles()[pi];
@@ -85,4 +85,3 @@ namespace paratreet {
       }
     }
   }
-}

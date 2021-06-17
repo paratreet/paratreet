@@ -2,7 +2,9 @@
 #define PARATREET_DRIVER_H_
 
 #include "paratreet.decl.h"
-#include "common.h"
+
+#include "CoreFunctions.h"
+
 #include <algorithm>
 #include <vector>
 
@@ -23,13 +25,6 @@
 
 extern CProxy_Reader readers;
 extern CProxy_TreeSpec treespec;
-
-namespace paratreet {
-  extern void preTraversalFn(ProxyPack<CentroidData>&);
-  extern void traversalFn(BoundingBox&, ProxyPack<CentroidData>&, int);
-  extern void postIterationFn(BoundingBox&, ProxyPack<CentroidData>&, int);
-  extern Real getTimestep(BoundingBox&, Real);
-}
 
 template <typename Data>
 class Driver : public CBase_Driver<Data> {

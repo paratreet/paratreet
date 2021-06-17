@@ -1,10 +1,12 @@
-#include "Main.decl.h"
-#include "Paratreet.h"
+#include "Main.h"
+
 #include "GravityVisitor.h"
 #include "DensityVisitor.h"
 //#include "PressureVisitor.h"
 #include "CountVisitor.h"
 #include "CollisionVisitor.h"
+
+PARATREET_REGISTER_MAIN(ExMain);
 
 /* readonly */ bool verify;
 /* readonly */ bool dual_tree;
@@ -15,20 +17,15 @@
 /* readonly */ CProxy_NeighborListCollector neighbor_list_collector;
 /* readonly */ CProxy_CollisionTracker collision_tracker;
 
-class Main : public CBase_Main {
-  int cur_iteration;
-  double total_start_time;
-  double start_time;
-  paratreet::Configuration conf;
-  CProxy_Driver<CentroidData> driver;
-
-  public:
   static void initialize() {
     BoundingBox::registerReducer();
   }
 
-  Main(CkArgMsg* m) {
+  void ExMain::main(CkArgMsg* m) {
     // mainProxy = thisProxy;
+    int cur_iteration;
+    double total_start_time;
+    double start_time;
 
     // Initialize readonly variables
     conf.input_file = "";
@@ -168,25 +165,25 @@ class Main : public CBase_Main {
     collision_tracker = CProxy_CollisionTracker::ckNew();
 
     // Delegate to Driver
-    CkCallback runCB(CkIndex_Main::run(), thisProxy);
-    driver = paratreet::initialize<CentroidData>(conf, runCB);
+    // CkCallback runCB(CkIndex_Main::run(), thisProxy);
+    // driver = paratreet::initialize<CentroidData>(conf, runCB);
   }
 
-  void run() {
+  void ExMain::run() {
     driver.run(CkCallbackResumeThread());
 
     CkExit();
   }
 
-  void checkParticlesChangedDone(bool result) {
+  /* void checkParticlesChangedDone(bool result) {
     if (result) {
       CkPrintf("[Main, iter %d] Particles are the same.\n", cur_iteration);
     }
     else {
       CkPrintf("[Main, iter %d] Particles are changed.\n", cur_iteration);
     }
-  }
-};
+  } */
+
 // #include "paratreet.def.h"
 #include "templates.h"
 

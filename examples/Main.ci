@@ -10,12 +10,7 @@ mainmodule Main {
     readonly CProxy_NeighborListCollector neighbor_list_collector;
     readonly CProxy_CollisionTracker collision_tracker;
 
-    mainchare Main {
-        initnode void initialize();
-        entry Main(CkArgMsg* m);
-        entry [threaded] void run();
-        entry [reductiontarget] void checkParticlesChangedDone(bool result); // For debugging
-    };
+    initnode void initialize(void);
 
     group CountManager {
         entry CountManager(double min, double max, int nbins);

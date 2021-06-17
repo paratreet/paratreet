@@ -1,4 +1,4 @@
-#include "Main.decl.h"
+#include "Main.h"
 #include "Paratreet.h"
 #include "CollisionVisitor.h"
 #include "GravityVisitor.h"
@@ -7,19 +7,19 @@
 extern bool verify;
 extern int iter_start_collision;
 
-namespace paratreet {
+  using namespace paratreet;
 
-  void preTraversalFn(ProxyPack<CentroidData>& proxy_pack) {
+  void ExMain::preTraversalFn(ProxyPack<CentroidData>& proxy_pack) {
     //proxy_pack.cache.startParentPrefetch(this->thisProxy, CkCallback::ignore); // MUST USE FOR UPND TRAVS
     //proxy_pack.cache.template startPrefetch<GravityVisitor>(this->thisProxy, CkCallback::ignore);
     proxy_pack.driver.loadCache(CkCallbackResumeThread());
   }
 
-  void traversalFn(BoundingBox& universe, ProxyPack<CentroidData>& proxy_pack, int iter) {
+  void ExMain::traversalFn(BoundingBox& universe, ProxyPack<CentroidData>& proxy_pack, int iter) {
     proxy_pack.partition.template startDown<GravityVisitor<0,0,0>>();
   }
 
-  void postIterationFn(BoundingBox& universe, ProxyPack<CentroidData>& proxy_pack, int iter) {
+  void ExMain::postIterationFn(BoundingBox& universe, ProxyPack<CentroidData>& proxy_pack, int iter) {
     proxy_pack.partition.callPerLeafFn(1, CkCallbackResumeThread());
     if (iter % 10000 == 0) paratreet::outputTipsy(universe, proxy_pack.partition);
     if (iter >= iter_start_collision) {
@@ -38,11 +38,11 @@ namespace paratreet {
     }
   }
 
-  Real getTimestep(BoundingBox& universe, Real max_velocity) {
+  Real ExMain::getTimestep(BoundingBox& universe, Real max_velocity) {
     return 0.01570796326;
   }
 
-  void perLeafFn(int indicator, SpatialNode<CentroidData>& leaf, Partition<CentroidData>* partition) {
+  void ExMain::perLeafFn(int indicator, SpatialNode<CentroidData>& leaf, Partition<CentroidData>* partition) {
     for (int pi = 0; pi < leaf.n_particles; pi++) {
       auto& part = leaf.particles()[pi];
       if (indicator == 0) {
@@ -65,5 +65,3 @@ namespace paratreet {
       }
     }
   }
-
-}

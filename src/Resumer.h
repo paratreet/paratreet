@@ -4,8 +4,10 @@
 #include "paratreet.decl.h"
 #include "common.h"
 #include "Partition.h"
+
 #include <unordered_map>
 #include <vector>
+#include <queue>
 
 template <typename Data>
 class Resumer : public CBase_Resumer<Data> {
