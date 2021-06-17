@@ -7,7 +7,7 @@ OBJS = Paratreet.o Reader.o Writer.o Particle.o BoundingBox.o Decomposition.o Mo
 TIPSY_OBJS = NChilReader.o SS.o TipsyFile.o TipsyReader.o hilbert.o
 
 UTILITY_HEADERS = common.h Utility.h $(STRUCTURE_PATH)/Vector3D.h $(STRUCTURE_PATH)/SFC.h
-CORE_HEADERS = BoundingBox.h BufferedVec.h CentroidData.h MultiData.h Node.h NodeWrapper.h ParticleComp.h ParticleMsg.h Splitter.h moments.h MultipoleMoments.h
+CORE_HEADERS = BoundingBox.h BufferedVec.h MultiData.h Node.h NodeWrapper.h ParticleComp.h ParticleMsg.h Splitter.h moments.h MultipoleMoments.h
 IMPL_HEADERS = CacheManager.h Configuration.h Driver.h Partition.h Reader.h Resumer.h Splitter.h Subtree.h Traverser.h TreeCanopy.h
 
 all: lib

@@ -132,17 +132,17 @@ namespace paratreet {
         readers = CProxy_Reader::ckNew();
         treespec = CProxy_TreeSpec::ckNew(conf);
 
-        // Create centroid data related chares
-        CProxy_TreeCanopy<Data> centroid_calculator = CProxy_TreeCanopy<Data>::ckNew();
-        centroid_calculator.doneInserting();
-        CProxy_CacheManager<Data> centroid_cache = CProxy_CacheManager<Data>::ckNew();
-        CProxy_Resumer<Data> centroid_resumer = CProxy_Resumer<Data>::ckNew();
+        // Create library chares
+        CProxy_TreeCanopy<Data> canopy = CProxy_TreeCanopy<Data>::ckNew();
+        canopy.doneInserting();
+        CProxy_CacheManager<Data> cache = CProxy_CacheManager<Data>::ckNew();
+        CProxy_Resumer<Data> resumer = CProxy_Resumer<Data>::ckNew();
 
-        CProxy_Driver<Data> centroid_driver = CProxy_Driver<Data>::ckNew(centroid_cache, centroid_resumer, centroid_calculator, CkMyPe());
+        CProxy_Driver<Data> driver = CProxy_Driver<Data>::ckNew(cache, resumer, canopy, CkMyPe());
         // Call the driver initialization routine (performs decomposition)
-        centroid_driver.init(cb);
+        driver.init(cb);
 
-        return centroid_driver;
+        return driver;
     }
 
     void updateConfiguration(const Configuration&, CkCallback);
