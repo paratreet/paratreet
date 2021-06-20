@@ -18,6 +18,7 @@
 #include "Utility.h"
 #include "CacheManager.h"
 #include "Resumer.h"
+#include "ThreadStateHolder.h"
 #include "Modularization.h"
 #include "Node.h"
 #include "Writer.h"
@@ -25,6 +26,7 @@
 
 extern CProxy_Reader readers;
 extern CProxy_TreeSpec treespec;
+extern CProxy_ThreadStateHolder thread_state_holder;
 
 template <typename Data>
 class Driver : public CBase_Driver<Data> {
@@ -211,7 +213,7 @@ public:
       partitions.kick(timestep_size, CkCallbackResumeThread());
 
       // Now track PE imbalance for memory reasons
-      resumer.collectMetaData(CkCallbackResumeThread((void *&) msg2));
+      thread_state_holder.collectMetaData(CkCallbackResumeThread((void *&) msg2));
       msg2->toTuple(&res2, &numRedn2);
       int maxPESize = *(int*)(res2[0].data);
       int sumPESize = *(int*)(res2[1].data);
@@ -224,6 +226,8 @@ public:
       //End Subtree reduction message parsing
 
       paratreet::postIterationFn(universe, proxy_pack, iter);
+
+      thread_state_holder.setUniverse(universe);
 
       CkReductionMsg* result;
       partitions.perturb(timestep_size, CkCallbackResumeThread((void *&)result));
@@ -254,7 +258,7 @@ public:
       // Clear cache and other storages used in this iteration
       cache_manager.destroy(true);
       CkCallback statsCb (CkReductionTarget(Driver<Data>, countInts), this->thisProxy);
-      resumer.collectAndResetStats(statsCb);
+      thread_state_holder.collectAndResetStats(statsCb);
       storage.clear();
       storage_sorted = false;
       CkWaitQD();

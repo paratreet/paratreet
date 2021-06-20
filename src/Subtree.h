@@ -274,7 +274,7 @@ void Subtree<Data>::buildTree(CProxy_Partition<Data> part, CkCallback cb) {
 
   // Populate the tree structure (including TreeCanopy)
   populateTree();
-  r_proxy.ckLocalBranch()->countSubtreeParticles(particles.size());
+  thread_state_holder.ckLocalBranch()->countSubtreeParticles(particles.size());
   initCache();
 
   this->contribute(cb);
