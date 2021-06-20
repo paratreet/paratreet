@@ -14,6 +14,7 @@
 
 /* readonly */ CProxy_Reader readers;
 /* readonly */ CProxy_TreeSpec treespec;
+/* readonly */ CProxy_ThreadStateHolder thread_state_holder;
 /* readonly */ int n_readers;
 
 using namespace paratreet;

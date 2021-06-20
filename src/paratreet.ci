@@ -18,6 +18,7 @@ module paratreet {
 
   readonly CProxy_Reader readers;
   readonly CProxy_TreeSpec treespec;
+  readonly CProxy_ThreadStateHolder thread_state_holder;
   readonly int n_readers;
 
   namespace paratreet {
@@ -51,9 +52,15 @@ module paratreet {
   template <typename Data>
   group Resumer {
     entry Resumer();
+    entry [expedited] void process(Key);
+    entry void reset();
+  };
+
+  group ThreadStateHolder {
+    entry ThreadStateHolder();
+    entry void setUniverse(BoundingBox b);
     entry void collectAndResetStats(CkCallback cb);
     entry void collectMetaData(const CkCallback & cb);
-    entry [expedited] void process(Key);
   };
 
   group Writer {

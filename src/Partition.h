@@ -9,10 +9,12 @@
 #include "Traverser.h"
 #include "ParticleMsg.h"
 #include "MultiData.h"
+#include "ThreadStateHolder.h"
 #include "paratreet.decl.h"
 
 extern CProxy_TreeSpec treespec;
 extern CProxy_Reader readers;
+extern CProxy_ThreadStateHolder thread_state_holder;
 
 template <typename Data>
 struct Partition : public CBase_Partition<Data> {
@@ -304,7 +306,7 @@ void Partition<Data>::perturb(Real timestep, CkCallback cb)
 template <typename Data>
 void Partition<Data>::rebuild(BoundingBox universe, TPHolder<Data> tp_holder, bool if_flush)
 {
-  r_local->countPartitionParticles(saved_particles.size());
+  thread_state_holder.ckLocalBranch()->countPartitionParticles(saved_particles.size());
   for (auto && p : saved_particles) {
     p.adjustNewUniverse(universe.box);
   }

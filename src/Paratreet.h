@@ -11,6 +11,7 @@
 #include "BoundingBox.h"
 #include "ParticleMsg.h"
 #include "Reader.h"
+#include "ThreadStateHolder.h"
 #include "Subtree.h"
 #include "Partition.h"
 #include "Configuration.h"
@@ -18,6 +19,7 @@
 #include "paratreet.decl.h"
 /* readonly */ extern CProxy_Reader readers;
 /* readonly */ extern CProxy_TreeSpec treespec;
+/* readonly */ extern CProxy_ThreadStateHolder thread_state_holder;
 /* readonly */ extern int n_readers;
 
 #define PARATREET_MAIN_VAR(m)   m##_impl
@@ -131,6 +133,7 @@ namespace paratreet {
         n_readers = CkNumPes();
         readers = CProxy_Reader::ckNew();
         treespec = CProxy_TreeSpec::ckNew(conf);
+        thread_state_holder = CProxy_ThreadStateHolder::ckNew();
 
         // Create library chares
         CProxy_TreeCanopy<Data> canopy = CProxy_TreeCanopy<Data>::ckNew();

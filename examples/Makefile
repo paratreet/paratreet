@@ -13,7 +13,7 @@ OTHERS = CountManager.h
 Main.decl.h: Main.ci
 	$(CHARMC) $<
 
-Gravity: Main.decl.h Main.o Gravity.o
+Gravity: Main.decl.h Main.o Gravity.o moments.o
 	$(CHARMC) -language charm++ -module CommonLBs -o Gravity Gravity.o Main.o $(LD_LIBS)
 
 Collision: Main.decl.h Main.o Collision.o
@@ -31,7 +31,10 @@ Collision.o: Collision.C Main.decl.h
 SPH.o: SPH.C SPHUtils.h NeighborListCollector.h Main.decl.h
 	$(CHARMC) -c $<
 
-Main.o: Main.C CentroidData.h $(VISITORS) $(OTHERS) Main.decl.h
+Main.o: Main.C CentroidData.h moments.h MultipoleMoments.h $(VISITORS) $(OTHERS) Main.decl.h
+	$(CHARMC) -c $<
+
+moments.o: moments.C
 	$(CHARMC) -c $<
 
 test: all
