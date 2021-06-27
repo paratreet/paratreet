@@ -15,7 +15,6 @@ extern CProxy_TreeSpec treespec;
 
 class Reader : public CBase_Reader {
   std::vector<Particle> particles;
-  std::vector<std::vector<Vector3D<Real>>> bins;
   std::vector<ParticleMsg*> particle_messages;
   int particle_index;
 
@@ -35,11 +34,8 @@ class Reader : public CBase_Reader {
     void computeUniverseBoundingBox(const CkCallback& cb);
     void assignKeys(BoundingBox, const CkCallback&);
 
-    void countSfc(const std::vector<QuickSelectSFCState>& states, size_t, const CkCallback& cb);
-    void countKd(const std::vector<QuickSelectKDState>&, const CkCallback&);
-    void countLongestDim(const CkCallback&);
-    void countOct(std::vector<Key>, size_t, const CkCallback&);
-    void doBinarySplit(const std::vector<std::pair<int, Real>>&, const CkCallback&);
+    void countAssignments(const std::vector<GenericSplitter>&, Decomposition* decomp, const CkCallback& cb);
+    void doBinarySplit(const std::vector<GenericSplitter>&, Decomposition* decomp, const CkCallback&);
 
     // SFC decomposition
     void getAllSfcKeys(const CkCallback& cb);
@@ -53,7 +49,6 @@ class Reader : public CBase_Reader {
     void checkSort(const Key, const CkCallback&);
     template <typename Data>
     void request(CProxy_Subtree<Data>, int, int);
-    void initBinarySplit(const CkCallback&);
 
     // Sending particles to home Partitions and Subtrees
     template <typename Data>
