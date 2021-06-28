@@ -4,8 +4,10 @@
 #include "paratreet.decl.h"
 #include "common.h"
 #include "Partition.h"
+
 #include <unordered_map>
 #include <vector>
+#include <queue>
 
 template <typename Data>
 class Resumer : public CBase_Resumer<Data> {
@@ -17,37 +19,6 @@ public: // these need to be seen by other local chares
   std::unordered_map<Key, std::vector<int>> waiting;
   bool use_subtree = false;
 
-private: // stats
-  unsigned long long n_part_ints = 0ull;
-  unsigned long long n_node_ints = 0ull;
-  unsigned long long n_opens     = 0ull;
-  unsigned long long n_closes    = 0ull;
-  unsigned n_partition_particles = 0u;
-  unsigned n_subtree_particles   = 0u;
-
-public:
-  void collectAndResetStats(CkCallback cb) {
-#if COUNT_INTERACTIONS
-     CkPrintf("%lu particles on pe %d\n", n_partition_particles, CkMyPe());
-     unsigned long long intrn_counts [4] = {n_node_ints, n_part_ints, n_opens, n_closes};
-     CkPrintf("on PE %d: %llu node-particle interactions, %llu bucket-particle interactions %llu node opens, %llu node closes\n", CkMyPe(), intrn_counts[0], intrn_counts[1], intrn_counts[2], intrn_counts[3]);
-     this->contribute(4 * sizeof(unsigned long long), &intrn_counts, CkReduction::sum_ulong_long, cb);
-#endif
-     reset();
-  }
-
-  void collectMetaData (const CkCallback & cb) {
-    int nParticles = n_subtree_particles;
-    const size_t numTuples = 2;
-    CkReduction::tupleElement tupleRedn[] = {
-      CkReduction::tupleElement(sizeof(nParticles), &nParticles, CkReduction::max_int),
-      CkReduction::tupleElement(sizeof(nParticles), &nParticles, CkReduction::sum_int)
-    };
-    CkReductionMsg * msg = CkReductionMsg::buildFromTuple(tupleRedn, numTuples);
-    msg->setCallback(cb);
-    this->contribute(msg);
-  }
-
   void reset() {
 #if DEBUG
     for (auto && rnq : resume_nodes_per_part) {
@@ -55,28 +26,6 @@ public:
     }
     CkAssert(waiting.empty()); // should have gotten rid of them
 #endif
-    n_part_ints = n_node_ints = n_opens = n_closes = 0ull;
-    n_partition_particles = n_subtree_particles = 0u;
-  }
-
-  void countLeafInts(int n_ints) {
-    n_part_ints += n_ints;
-  }
-
-  void countNodeInts(int n_ints) {
-    n_node_ints += n_ints;
-  }
-
-  void countOpen(bool should_open) {
-    should_open ? n_opens++ : n_closes++;
-  }
-
-  void countPartitionParticles(int n_parts) {
-    n_partition_particles += n_parts;
-  }
-
-  void countSubtreeParticles(int n_parts) {
-    n_subtree_particles += n_parts;
   }
 
   void process(Key key) {

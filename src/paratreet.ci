@@ -3,7 +3,6 @@ module paratreet {
   include "CkArrayIndexKey.h";
   include "BoundingBox.h";
   include "Splitter.h";
-  include "CentroidData.h";
   include "Node.h";
   include "ProxyHolders.h";
   class CProxy_Reader;
@@ -19,7 +18,12 @@ module paratreet {
 
   readonly CProxy_Reader readers;
   readonly CProxy_TreeSpec treespec;
+  readonly CProxy_ThreadStateHolder thread_state_holder;
   readonly int n_readers;
+
+  namespace paratreet {
+    initproc void __registerMain(void);
+  }
 
   message ParticleMsg {
     Particle particles[];
@@ -44,20 +48,20 @@ module paratreet {
     entry void destroy(bool);
     entry void resetCachedParticles(CkCallback);
   };
-#ifdef GROUP_CACHE
-  group CacheManager<CentroidData>;
-#else
-  nodegroup CacheManager<CentroidData>;
-#endif
 
   template <typename Data>
   group Resumer {
     entry Resumer();
+    entry [expedited] void process(Key);
+    entry void reset();
+  };
+
+  group ThreadStateHolder {
+    entry ThreadStateHolder();
+    entry void setUniverse(BoundingBox b);
     entry void collectAndResetStats(CkCallback cb);
     entry void collectMetaData(const CkCallback & cb);
-    entry [expedited] void process(Key);
   };
-  group Resumer<CentroidData>;
 
   group Writer {
     entry Writer(std::string of, int n_particles);
@@ -91,7 +95,6 @@ module paratreet {
     entry void deleteParticleOfOrder(int order);
     entry void pauseForLB();
   }
-  array [1d] Partition<CentroidData>;
 
   template <typename Data>
   array [1d] Subtree {
@@ -109,7 +112,6 @@ module paratreet {
     entry void collectMetaData(const CkCallback & cb);
     entry void pauseForLB();
   }
-  array [1d] Subtree<CentroidData>;
 
   template <typename Data>
   array [Key] TreeCanopy {
@@ -119,7 +121,6 @@ module paratreet {
     entry void recvData(SpatialNode<Data>, int);
     entry void requestData (int);
   };
-  array [1d] TreeCanopy<CentroidData>;
 
   template <typename Data>
   chare Driver {
@@ -134,7 +135,6 @@ module paratreet {
     entry void prefetch(Data, int, CkCallback);
     entry void request(Key request_list [list_size], int list_size, int, CkCallback);
   }
-  chare Driver<CentroidData>;
 
   group Reader {
     entry Reader();
@@ -179,8 +179,9 @@ module paratreet {
     entry DecompArrayMap(CkPointer<Decomposition>, int, int);
   };
 
-  extern entry void Reader request<CentroidData>(CProxy_Subtree<CentroidData>, int, int);
-  extern entry void Reader flush<CentroidData>(int, CProxy_Subtree<CentroidData>);
-  extern entry void Reader assignPartitions<CentroidData>(int, CProxy_Partition<CentroidData>);
+  mainchare MainChare {
+    entry [nokeep] MainChare(CkArgMsg* m);
+    entry [threaded] void run();
+  };
 
 };
