@@ -201,10 +201,13 @@ void DistributedOrbLB::getUniverseDimensions(CkReductionMsg * msg){
 }
 
 void DistributedOrbLB::createPartitions(int dim, float load, Vector3D<Real> lower_coords, Vector3D<Real> upper_coords){
-  thisProxy.binaryLoadPartition(dim, load, lower_coords, upper_coords);
+  curr_cb = new CkCallbackResumeThread();
+  thisProxy.binaryLoadPartition(dim, load, lower_coords, upper_coords, *curr_cb);
+  CkPrintf("!!! Returned !!!\n");
+  delete curr_cb;
 }
 
-void DistributedOrbLB::binaryLoadPartition(int dim, float load, Vector3D<Real> lower_coords, Vector3D<Real> upper_coords){
+void DistributedOrbLB::binaryLoadPartition(int dim, float load, Vector3D<Real> lower_coords, Vector3D<Real> upper_coords, const CkCallback & curr_cb){
   if (my_pe == 0){
     ckout << lower_coords << "--" << upper_coords <<endl;
   }
@@ -258,6 +261,8 @@ void DistributedOrbLB::getSumBinaryLoads(CkReductionMsg * msg){
     lower_coords_col.push_back(curr_lower_coords);
     upper_coords_col.push_back(curr_upper_coords);
     curr_dim = (curr_dim + 1) % 3;
+
+    thisProxy.finishedPartitionOneDim(*curr_cb);
   } else {
     // Keep partition the larger section to find better split point
     if (delta < 0){
@@ -270,10 +275,15 @@ void DistributedOrbLB::getSumBinaryLoads(CkReductionMsg * msg){
 
     ckout << "dim " << curr_dim <<" split_pt = "<< split_pt << " acc_left = "<< left_load_col[curr_depth] << " lower "<< curr_lower_coords << " upper " << curr_upper_coords << endl;
     CkPrintf("\n\n");
-    thisProxy.binaryLoadPartition(curr_dim, curr_load, curr_lower_coords, curr_upper_coords);
+    thisProxy.binaryLoadPartition(curr_dim, curr_load, curr_lower_coords, curr_upper_coords, *curr_cb);
   }
 
   /*}}}*/
+}
+
+
+void DistributedOrbLB::finishedPartitionOneDim(const CkCallback & curr_cb){
+  curr_cb.send();
 }
 
 void DistributedOrbLB::reset(){

@@ -25,9 +25,11 @@ public:
   static void initnodeFn(void);
   void perLBStates(CkReductionMsg * msg);\
   void getUniverseDimensions(CkReductionMsg * msg);
-  void binaryLoadPartition(int dim, float load, Vector3D<Real> lower_coords, Vector3D<Real> upper_coords);
+  void recursiveLoadPartition();
+  void binaryLoadPartition(int dim, float load, Vector3D<Real> lower_coords, Vector3D<Real> upper_coords, const CkCallback &);
   void getSumBinaryLoads(CkReductionMsg * msg);
   void createPartitions(int dim, float load, Vector3D<Real> lower_coords, Vector3D<Real> upper_coords);
+  void finishedPartitionOneDim(const CkCallback & curr_cb);
 
 
 private:
@@ -47,6 +49,7 @@ private:
 
   // Parition related data
   vector <float> binary_loads;
+  CkCallbackResumeThread * curr_cb;
 
   // Collect global load data
   float global_load;
