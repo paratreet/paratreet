@@ -112,9 +112,9 @@ void AverageSmoothLB::createObjMaps(){
 }/*}}}*/
 
 void AverageSmoothLB::calcSmoothedLoads(){
-  averageSmoothedLoads();
+  //averageSmoothedLoads();
   //neighborSmoothedLoads();
-  //maxRatioAverageSmoothedLoads();
+  maxRatioAverageSmoothedLoads();
 }
 
 void AverageSmoothLB::averageSmoothedLoads(){

@@ -35,6 +35,7 @@ public:
   int n_total_particles;
   int n_subtrees;
   int n_partitions;
+  int count = 0;
 
   #if CMK_LB_USER_DATA
   Vector3D<Real> centroid;
@@ -91,7 +92,7 @@ public:
       centroid /= (Real) incoming_particles.size();
     }
 
-    //ckout << incoming_particles.size() << "::" << centroid <<endl;
+    ckout << incoming_particles.size() << "::" << centroid <<endl;
     if (CkpvAccess(_lb_obj_index) != -1) {
       void *data = this->getObjUserData(CkpvAccess(_lb_obj_index));
       LBUserData lb_data{
@@ -169,6 +170,7 @@ void Subtree<Data>::pup(PUP::er& p) {
   p | tc_proxy;
   p | cm_proxy;
   p | r_proxy;
+  p | count;
   p | incoming_particles;
   p | matching_decomps;
 }
@@ -276,8 +278,16 @@ void Subtree<Data>::requestCopy(int cm_index, PPHolder<Data> pp_holder) {
 
 template <typename Data>
 void Subtree<Data>::buildTree(CProxy_Partition<Data> part, CkCallback cb) {
+  count += 1;
   // Copy over received particles
   std::swap(particles, incoming_particles);
+  srand (this->thisIndex);
+
+  //if (count == 10){
+  //  for (auto p : particles){
+  //    if (rand() % 10000 == 1) ckout << "ST " << this->thisIndex << " Centroid : " << p.position << endl;
+  //  }
+  //}
 
   // Sort particles
   std::sort(particles.begin(), particles.end());

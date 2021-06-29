@@ -51,6 +51,9 @@ namespace LBCommon{
     int particle_size;
     int from_pe;
     float load;
+    float distance;
+    int to_pe;
+    const LDObjData* data_ptr;
     inline void pup(PUP::er &p);
   };/*}}}*/
 
@@ -89,10 +92,14 @@ namespace{
     return a.to_proc < b.to_proc;
   };/*}}}*/
 
+  // largest distance at front
   bool CentroidRecordCompare(const LBCommon::LBCentroidCompare & a, const LBCommon::LBCentroidCompare & b){
-    return a.distance < b.distance;/*{{{*/
+    return a.distance > b.distance;/*{{{*/
   };/*}}}*/
 
+  bool DiffusionCompareCentroidDistance(const LBCommon::LBCentroidAndIndexRecord & a, const LBCommon::LBCentroidAndIndexRecord & b){
+    return a.distance < b.distance;
+  }
 
   struct NdComparator{
     int dim = -1;/*{{{*/

@@ -1,0 +1,29 @@
+module DistributedOrbLB {
+extern module DistBaseLB;
+initnode void lbinit(void);
+
+include "common.h";
+
+group [migratable] DistributedOrbLB : DistBaseLB {
+  entry void DistributedOrbLB(const CkLBOptions &);
+  initnode void initnodeFn();
+  entry [reductiontarget] void perLBStates(CkReductionMsg * msg);
+  entry [reductiontarget] void getUniverseDimensions(CkReductionMsg * msg);
+  entry void binaryLoadPartition(int dim, float load, Vector3D<Real> lower_coords, Vector3D<Real> upper_coords);
+  entry [reductiontarget] void getSumBinaryLoads(CkReductionMsg * msg);
+};
+
+};
+
+
+//struct LBCentroidAndIndexRecord{
+//  Vector3D<Real> centroid;/*{{{*/
+//  int idx;
+//  int particle_size;
+//  int from_pe;
+//  float load;
+//  float distance;
+//  int to_pe;
+//  const LDObjData* data_ptr;
+//  inline void pup(PUP::er &p);
+//};/*}}}*/

@@ -302,7 +302,13 @@ void Partition<Data>::perturb(Real timestep, CkCallback cb)
   for (auto p : saved_particles){
     centroid += p.position;
   }
-  centroid /= (Real) size;
+  if (size == 0){
+    Real zero = 0.0;
+    centroid = Vector3D<Real>(zero, zero, zero);
+  }else{
+    centroid /= (Real) size;
+  }
+  //ckout <<"Partition "<< size << " ::" << centroid <<endl;
   if (CkpvAccess(_lb_obj_index) != -1) {
     void *data = this->getObjUserData(CkpvAccess(_lb_obj_index));
     LBUserData lb_data{

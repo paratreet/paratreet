@@ -12,7 +12,7 @@ IMPL_HEADERS = CacheManager.h Configuration.h Driver.h Partition.h Reader.h Resu
 
 all: lib
 
-lib: $(OBJS) DistributedPrefixLB AverageSmoothLB OrbLB
+lib: $(OBJS) DistributedPrefixLB DistributedOrbLB AverageSmoothLB OrbLB DiffusionLB
 	ar x $(STRUCTURE_PATH)/libTipsy.a
 	ar cr libparatreet.a $(OBJS) $(TIPSY_OBJS)
 	rm -f $(TIPSY_OBJS)
@@ -33,6 +33,12 @@ DistributedPrefixLB: DistributedPrefixLB.C LBCommon.h DistributedPrefixLB.decl.h
 DistributedPrefixLB.decl.h: DistributedPrefixLB.ci
 	$(CHARMC) DistributedPrefixLB.ci
 
+DistributedOrbLB: DistributedOrbLB.C LBCommon.h DistributedOrbLB.decl.h
+	$(CHARMC) -o libmoduleDistributedOrbLB.a DistributedOrbLB.C
+
+DistributedOrbLB.decl.h: DistributedOrbLB.ci
+	$(CHARMC) DistributedOrbLB.ci
+
 AverageSmoothLB: AverageSmoothLB.C LBCommon.h AverageSmoothLB.decl.h
 	$(CHARMC) -o libmoduleAverageSmoothLB.a AverageSmoothLB.C
 
@@ -45,5 +51,11 @@ OrbLB: OrbLB.C LBCommon.h OrbLB.decl.h
 OrbLB.decl.h: OrbLB.ci
 	$(CHARMC) OrbLB.ci
 
+DiffusionLB: DiffusionLB.C LBCommon.h DiffusionLB.decl.h
+	$(CHARMC) -o libmoduleDiffusionLB.a DiffusionLB.C
+
+DiffusionLB.decl.h: DiffusionLB.ci
+	$(CHARMC) DiffusionLB.ci
+
 clean:
-	rm -f *.decl.h *.def.h conv-host *.o libmodulePrefixLB.a libmoduleDistributedPrefixLB.a libmoduleAverageSmoothLB.a libparatreet.a charmrun
+	rm -f *.decl.h *.def.h conv-host *.o libmodulePrefixLB.a libmoduleDistributedPrefixLB.a libmoduleDistributedOrbLB.a libmoduleAverageSmoothLB.a libparatreet.a charmrun
