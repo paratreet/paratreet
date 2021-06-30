@@ -150,7 +150,7 @@ public:
     start_time = CkWallTimer();
     CkArrayOptions subtree_opts(n_subtrees);
     if (matching_decomps) subtree_opts.bindTo(partitions);
-    treespec.ckLocalBranch()->getSubtreeDecomposition()->setArrayOpts(subtree_opts, partition_locations, false); // !matching_decomps
+    treespec.ckLocalBranch()->getSubtreeDecomposition()->setArrayOpts(subtree_opts, partition_locations, !matching_decomps);
     subtrees = CProxy_Subtree<Data>::ckNew(
       CkCallbackResumeThread(),
       universe.n_particles, n_subtrees, n_partitions,

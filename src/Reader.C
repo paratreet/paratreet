@@ -134,8 +134,8 @@ void Reader::countAssignments(const std::vector<GenericSplitter>& states, Decomp
   decomp->countAssignments(states, particles, this, cb);
 }
 
-void Reader::doBinarySplit(const std::vector<GenericSplitter>& splits, Decomposition* decomp, const CkCallback& cb) {
-  decomp->doBinarySplit(splits, this, cb);
+void Reader::doSplit(const std::vector<GenericSplitter>& splits, Decomposition* decomp, const CkCallback& cb) {
+  decomp->doSplit(splits, this, cb);
 }
 
 void Reader::getAllSfcKeys(const CkCallback& cb)

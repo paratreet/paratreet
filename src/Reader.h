@@ -35,7 +35,7 @@ class Reader : public CBase_Reader {
     void assignKeys(BoundingBox, const CkCallback&);
 
     void countAssignments(const std::vector<GenericSplitter>&, Decomposition* decomp, const CkCallback& cb);
-    void doBinarySplit(const std::vector<GenericSplitter>&, Decomposition* decomp, const CkCallback&);
+    void doSplit(const std::vector<GenericSplitter>&, Decomposition* decomp, const CkCallback&);
 
     // SFC decomposition
     void getAllSfcKeys(const CkCallback& cb);

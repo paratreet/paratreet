@@ -441,7 +441,7 @@ int BinaryDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &rea
   return parallelFindSplitters(universe, readers, min_n_splitters);
 }
 
-void BinaryDecomposition::doBinarySplit(const std::vector<GenericSplitter>& splits, Reader* reader, const CkCallback& cb) {
+void BinaryDecomposition::doSplit(const std::vector<GenericSplitter>& splits, Reader* reader, const CkCallback& cb) {
   CkAssert(bins.size() == splits.size());
   decltype(bins) binsCopy (2 * bins.size());
   for (int i = 0; i < bins.size(); i++) {
@@ -468,7 +468,7 @@ int BinaryDecomposition::parallelFindSplitters(BoundingBox &universe, CProxy_Rea
   for (; (1 << depth) < min_n_splitters; depth++) {
     auto && level_splitters = this->sortAndGetSplitters(universe, readers);
     CkReductionMsg *msg;
-    readers.doBinarySplit(level_splitters, CkPointer<Decomposition>(this), CkCallbackResumeThread((void*&)msg));
+    readers.doSplit(level_splitters, CkPointer<Decomposition>(this), CkCallbackResumeThread((void*&)msg));
     int* counts = (int*)msg->getData();
     bins_sizes.clear();
     bins_sizes.resize(2 * level_splitters.size());
