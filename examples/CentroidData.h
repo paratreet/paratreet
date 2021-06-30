@@ -43,7 +43,7 @@ struct CentroidData {
     getRadius();
     centroid = moment / sum_mass;
     count = n_particles;
-    auto tmp_box = fixSize();
+    auto tmp_box = fixSize(depth);
     // After we have a radius and centroid, we can calculate the high
     // order (scaled by radius) multipole moments.
     calculateRadiusBox(multipoles, tmp_box);
@@ -54,14 +54,14 @@ struct CentroidData {
     /// The size of a node needs to be non-zero before calculating
     /// multipole moments.  Use a heuristic based on the size of the
     /// simulation to guess a non-zero size.
-    OrientedBox<Real> fixSize() {
+    OrientedBox<Real> fixSize(int depth) {
         auto tmp_box = box;
         if(size_sm == 0.0) { // Box has to have finite size for scaled multipole
             // calculations.
             auto size_universe = (thread_state_holder.ckLocalBranch()->universe.box.size()).length();
             // Approximate size by assuming a binary represented Oct tree.
-            // size_sm = size_universe/pow(2.0, depth/3);
-            size_sm = 1.0;  // Stopgap for now.
+            size_sm = size_universe/pow(2.0, depth/3);
+            // size_sm = 1.0;  // Stopgap for now.
             tmp_box.grow(box.center() + size_sm);
             return tmp_box;
         }
@@ -87,7 +87,7 @@ struct CentroidData {
     centroid = moment / sum_mass;
     box.grow(cd.box);
     getRadius();
-    auto tmp_box = fixSize();
+    auto tmp_box = fixSize(0); // XXX needs fixing
     multipoles += cd.multipoles;
     calculateRadiusFarthestCorner(multipoles, tmp_box);
     count += cd.count;
