@@ -15,7 +15,7 @@ elif [[ $hostname == *"batch"* ]]; then
   # OLCF Summit
   jsrun -n2 -a1 -c21 -K1 -r2 ../examples/Gravity -f $testname -v +ppn 21 +pemap L0-164:4 &> $testname.out
 else
-  ../examples/charmrun ../examples/Gravity +p 4 -f $testname -v +ppn 2 +setcpuaffinity &> $testname.out
+  ../examples/charmrun ../examples/Gravity +p 4 -f $testname -v $testname +ppn 2 +setcpuaffinity &> $testname.out
 fi
 
 echo -e "\nBuilding and running array utility..."
