@@ -70,6 +70,7 @@ public:
     const Real fEps = 1.0 + 1.91e-6;  // slop to ensure keys fall between 0 and 1.
     bsize = Vector3D<Real>(fEps*0.5*max);
     universe.box = OrientedBox<Real>(bcenter-bsize, bcenter+bsize);
+    thread_state_holder.setUniverse(universe);
 
     std::cout << "Universal bounding box: " << universe << " with volume "
       << universe.box.volume() << std::endl;
@@ -228,8 +229,6 @@ public:
       //End Subtree reduction message parsing
 
       paratreet::postIterationFn(universe, proxy_pack, iter);
-
-      thread_state_holder.setUniverse(universe);
 
       CkReductionMsg* result;
       partitions.perturb(timestep_size, CkCallbackResumeThread((void *&)result));

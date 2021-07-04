@@ -108,7 +108,7 @@ public:
 #ifdef BARNESHUT
     addGravity(source, target);
 #else
-    if (openSoftening(source.data, target.data, {})) {
+    if (openSoftening(source.data, target.data)) {
       addGravity(source, target);
       return;
     }

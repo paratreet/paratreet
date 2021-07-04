@@ -345,7 +345,7 @@ void Subtree<Data>::populateTree() {
   std::queue<Node<Data>*> going_up;
 
   for (auto leaf : leaves) {
-    leaf->data = Data(leaf->particles(), leaf->n_particles);
+      leaf->data = Data(leaf->particles(), leaf->n_particles, leaf->depth);
     going_up.push(leaf);
   }
   for (auto empty_leaf : empty_leaves) {
