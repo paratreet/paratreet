@@ -348,12 +348,11 @@ int OctDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &reader
   readers.localSort(CkCallbackResumeThread());
   int decomp_particle_sum = 0; // Used to check if all particles are decomposed
   int threshold = universe.n_particles / min_n_splitters;
-  std::vector<GenericSplitter> states;
   // Main decomposition loop
   while (keys.size() != 0) {
     // Send splitters to Readers for histogramming
     CkReductionMsg *msg;
-    states.clear();
+    std::vector<GenericSplitter> states;
     for (int i = 0; i < keys.size(); i++) {
       states.emplace_back();
       states.back().split_key = Utility::removeLeadingZeros(keys.get(i), log_branch_factor);
@@ -400,14 +399,21 @@ int OctDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &reader
     delete msg;
   }
 
-  CkReductionMsg *msg;
-  readers.countAssignments(states, isSubtree(), CkCallbackResumeThread((void*&)msg), true);
-  int* counts = (int*)msg->getData();
-  int n_counts = msg->getSize() / sizeof(int);
-  partition_idxs = {counts, counts + n_counts};
+  {
+    std::vector<GenericSplitter> states;
+    for (int i = 0; i < keys.size(); i++) {
+      states.emplace_back();
+      states.back().split_key = Utility::removeLeadingZeros(keys.get(i), log_branch_factor);
+    }
+    CkReductionMsg *msg;
+    readers.countAssignments(states, isSubtree(), CkCallbackResumeThread((void*&)msg), true);
+    int* counts = (int*)msg->getData();
+    int n_counts = msg->getSize() / sizeof(int);
+    partition_idxs = {counts, counts + n_counts};
+    delete msg;
+  }
   CkAssert(partition_idxs.size() == splitters.size());
   for (int i = 0; i < partition_idxs.size(); i++) partition_idxs[i] /= splitters[i].n_particles;
-  delete msg;
 
   // Check if decomposition is correct
   if (decomp_particle_sum != universe.n_particles) {
