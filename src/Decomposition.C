@@ -38,7 +38,9 @@ CollocateMap::CollocateMap(Decomposition* d, const std::vector<int>& pl)
 
 int CollocateMap::procNum(int, const CkArrayIndex &idx) {
   int index = *(int *)idx.data();
-  return partition_locations[decomp->getPartitionHome(index)];
+  size_t p_home = decomp->getPartitionHome(index);
+  CkAssert(p_home < partition_locations.size());
+  return partition_locations[p_home];
 }
 
 void Decomposition::pup(PUP::er& p) {
@@ -48,8 +50,8 @@ void Decomposition::pup(PUP::er& p) {
 
 void Decomposition::setArrayOpts(CkArrayOptions& opts, const std::vector<int>& partition_locations, bool collocate) {
   if (collocate) {
-    //auto myMap = CProxy_CollocateMap::ckNew(this, partition_locations);
-    //opts.setMap(myMap);
+    auto myMap = CProxy_CollocateMap::ckNew(this, partition_locations);
+    opts.setMap(myMap);
   }
 }
 
@@ -86,7 +88,8 @@ int SfcDecomposition::getNumParticles(int tp_index) {
 }
 
 int SfcDecomposition::getPartitionHome(int tp_index) {
-  return partition_idxs[tp_index];
+  return 0;
+  //return partition_idxs[tp_index];
 }
 
 void SfcDecomposition::countAssignments(const std::vector<GenericSplitter>& states, const std::vector<Particle>& particles, Reader* reader, const CkCallback& cb) {
