@@ -40,9 +40,10 @@ private:
 struct Decomposition: public PUP::able {
   PUPable_abstract(Decomposition);
 
-  Decomposition() { }
-  Decomposition(CkMigrateMessage *m) : PUP::able(m) { }
+  Decomposition(bool is_subtree_) : is_subtree(is_subtree_) { }
+  Decomposition(CkMigrateMessage *m) : PUP::able(m) {}
   virtual ~Decomposition() = default;
+  virtual void pup(PUP::er& p) override;
 
   virtual int flush(std::vector<Particle> &particles, const SendParticlesFn &fn) = 0;
 
@@ -54,7 +55,7 @@ struct Decomposition: public PUP::able {
 
   virtual void countAssignments(const std::vector<GenericSplitter>& states, const std::vector<Particle>& particles, Reader* reader, const CkCallback& cb) = 0;
 
-  virtual void doBinarySplit(const std::vector<GenericSplitter>& splits, Reader* reader, const CkCallback& cb) {}
+  virtual void doSplit(const std::vector<GenericSplitter>& splits, Reader* reader, const CkCallback& cb) {}
 
   virtual int findSplitters(BoundingBox &universe, CProxy_Reader &readers, int min_n_splitters) = 0;
 
@@ -69,12 +70,17 @@ struct Decomposition: public PUP::able {
     }
     return tp_keys;
   }
+
+protected:
+  bool isSubtree() const {return is_subtree;}
+private:
+  bool is_subtree = false; // cant use const cause pup()
 };
 
 struct SfcDecomposition : public Decomposition {
   PUPable_decl(SfcDecomposition);
 
-  SfcDecomposition() { }
+  SfcDecomposition(bool is_subtree) : Decomposition(is_subtree) {}
   SfcDecomposition(CkMigrateMessage *m) : Decomposition(m) { }
   virtual ~SfcDecomposition() = default;
 
@@ -101,7 +107,7 @@ protected:
 struct OctDecomposition : public SfcDecomposition {
   PUPable_decl(OctDecomposition);
 
-  OctDecomposition() : SfcDecomposition() {}
+  OctDecomposition(bool is_subtree) : SfcDecomposition(is_subtree) {}
   OctDecomposition(CkMigrateMessage *m) : SfcDecomposition(m) { }
   virtual ~OctDecomposition() = default;
   virtual int getBranchFactor() const {return 8;}
@@ -115,7 +121,7 @@ struct OctDecomposition : public SfcDecomposition {
 struct BinaryOctDecomposition : public OctDecomposition {
   PUPable_decl(BinaryOctDecomposition);
 
-  BinaryOctDecomposition() : OctDecomposition() { }
+  BinaryOctDecomposition(bool is_subtree) : OctDecomposition(is_subtree) {}
   BinaryOctDecomposition(CkMigrateMessage *m) : OctDecomposition(m) { }
   virtual ~BinaryOctDecomposition() = default;
   virtual int getBranchFactor() const override {return 2;}
@@ -123,7 +129,8 @@ struct BinaryOctDecomposition : public OctDecomposition {
 
 
 struct BinaryDecomposition : public Decomposition {
-  BinaryDecomposition() = default;
+
+  BinaryDecomposition(bool is_subtree) : Decomposition(is_subtree) {}
   BinaryDecomposition(CkMigrateMessage *m) : Decomposition(m) { }
   virtual ~BinaryDecomposition() = default;
 
@@ -134,7 +141,7 @@ struct BinaryDecomposition : public Decomposition {
   int getNumParticles(int tp_index) override;
   int getPartitionHome(int tp_index) override;
   int findSplitters(BoundingBox &universe, CProxy_Reader &readers, int min_n_splitters) override;
-  void doBinarySplit(const std::vector<GenericSplitter>& splits, Reader* reader, const CkCallback& cb) override;
+  void doSplit(const std::vector<GenericSplitter>& splits, Reader* reader, const CkCallback& cb) override;
 
   virtual void pup(PUP::er& p) override;
 
@@ -159,10 +166,9 @@ protected:
 
 struct KdDecomposition : public BinaryDecomposition {
   PUPable_decl(KdDecomposition);
-  KdDecomposition() = default;
+  KdDecomposition(bool is_subtree) : BinaryDecomposition(is_subtree) {}
   KdDecomposition(CkMigrateMessage *m) : BinaryDecomposition(m) { }
 
-  virtual void pup(PUP::er& p) override;
   virtual BinarySplit sortAndGetSplitter(int depth, Bin& bin) override;
   virtual void countAssignments(const std::vector<GenericSplitter>& states, const std::vector<Particle>& particles, Reader* reader, const CkCallback& cb) override;
   virtual void assign(Bin& parent, Bin& left, Bin& right, std::pair<int, Real> split) override;
@@ -171,10 +177,9 @@ struct KdDecomposition : public BinaryDecomposition {
 
 struct LongestDimDecomposition : public BinaryDecomposition {
   PUPable_decl(LongestDimDecomposition);
-  LongestDimDecomposition() = default;
+  LongestDimDecomposition(bool is_subtree) : BinaryDecomposition(is_subtree) {}
   LongestDimDecomposition(CkMigrateMessage *m) : BinaryDecomposition(m) { }
 
-  virtual void pup(PUP::er& p) override;
   virtual BinarySplit sortAndGetSplitter(int depth, Bin& bin) override;
   virtual void countAssignments(const std::vector<GenericSplitter>& states, const std::vector<Particle>& particles, Reader* reader, const CkCallback& cb) override;
   virtual void assign(Bin& parent, Bin& left, Bin& right, std::pair<int, Real> split) override;

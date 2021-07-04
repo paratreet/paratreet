@@ -41,6 +41,11 @@ int CollocateMap::procNum(int, const CkArrayIndex &idx) {
   return partition_locations[decomp->getPartitionHome(index)];
 }
 
+void Decomposition::pup(PUP::er& p) {
+  PUP::able::pup(p);
+  p | is_subtree;
+}
+
 void Decomposition::setArrayOpts(CkArrayOptions& opts, const std::vector<int>& partition_locations, bool collocate) {
   if (collocate) {
     auto myMap = CProxy_CollocateMap::ckNew(this, partition_locations);
@@ -125,7 +130,7 @@ int SfcDecomposition::parallelFindSplitters(BoundingBox &universe, CProxy_Reader
   int n_pending = states.size();
   while (n_pending > 0) {
     CkReductionMsg *msg;
-    readers.countAssignments(states, CkPointer<Decomposition>(this), CkCallbackResumeThread((void*&)msg));
+    readers.countAssignments(states, isSubtree(), CkCallbackResumeThread((void*&)msg));
     int* counts = (int*)msg->getData();
     for (int i = 0; i < states.size(); i++) {
       auto&& count = counts[i];
@@ -243,7 +248,7 @@ void SfcDecomposition::alignSplitters(SfcDecomposition *decomp)
 }
 
 void SfcDecomposition::pup(PUP::er& p) {
-  PUP::able::pup(p);
+  Decomposition::pup(p);
   p | splitters;
   p | saved_n_total_particles;
 }
@@ -338,7 +343,7 @@ int OctDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &reader
       states.emplace_back();
       states.back().split_key = Utility::removeLeadingZeros(keys.get(i), log_branch_factor);
     }
-    readers.countAssignments(states, CkPointer<Decomposition>(this), CkCallbackResumeThread((void*&)msg));
+    readers.countAssignments(states, isSubtree(), CkCallbackResumeThread((void*&)msg));
     int* counts = (int*)msg->getData();
     int n_counts = msg->getSize() / sizeof(int);
     // Check counts and create splitters if necessary
@@ -468,7 +473,7 @@ int BinaryDecomposition::parallelFindSplitters(BoundingBox &universe, CProxy_Rea
   for (; (1 << depth) < min_n_splitters; depth++) {
     auto && level_splitters = this->sortAndGetSplitters(universe, readers);
     CkReductionMsg *msg;
-    readers.doSplit(level_splitters, CkPointer<Decomposition>(this), CkCallbackResumeThread((void*&)msg));
+    readers.doSplit(level_splitters, isSubtree(), CkCallbackResumeThread((void*&)msg));
     int* counts = (int*)msg->getData();
     bins_sizes.clear();
     bins_sizes.resize(2 * level_splitters.size());
@@ -518,6 +523,7 @@ int BinaryDecomposition::serialFindSplitters(BoundingBox &universe, CProxy_Reade
 }
 
 void BinaryDecomposition::pup(PUP::er& p) {
+  Decomposition::pup(p);
   p | splitters;
   p | depth;
   p | saved_n_total_particles;
@@ -560,7 +566,7 @@ std::vector<GenericSplitter> KdDecomposition::sortAndGetSplitters(BoundingBox &u
   int n_pending = states.size();
   while (n_pending > 0) {
     CkReductionMsg *msg;
-    readers.countAssignments(states, CkPointer<Decomposition>(this), CkCallbackResumeThread((void*&)msg));
+    readers.countAssignments(states, isSubtree(), CkCallbackResumeThread((void*&)msg));
     int* counts = (int*)msg->getData();
     for (int i = 0; i < states.size(); i++) {
       auto&& count = counts[i];
@@ -599,11 +605,6 @@ std::pair<int, Real> KdDecomposition::sortAndGetSplitter(int depth, Bin& bin) {
   return {dim, median};
 }
 
-void KdDecomposition::pup(PUP::er& p) {
-  PUP::able::pup(p);
-  BinaryDecomposition::pup(p);
-}
-
 void LongestDimDecomposition::assign(Bin& parent, Bin& left, Bin& right, BinarySplit split) {
   for (auto && pos : parent) {
     if (pos.second[split.first] > split.second) right.push_back(pos);
@@ -634,7 +635,7 @@ std::pair<int, Real> LongestDimDecomposition::sortAndGetSplitter(int depth, Bin&
 std::vector<GenericSplitter> LongestDimDecomposition::sortAndGetSplitters(BoundingBox &universe, CProxy_Reader &readers) {
   CkReductionMsg *msg;
   std::vector<GenericSplitter> empty;
-  readers.countAssignments(empty, CkPointer<Decomposition>(this), CkCallbackResumeThread((void*&)msg));
+  readers.countAssignments(empty, isSubtree(), CkCallbackResumeThread((void*&)msg));
   CkReduction::tupleElement* res = nullptr;
   int numRedn = 0;
   msg->toTuple(&res, &numRedn);
@@ -692,11 +693,6 @@ void LongestDimDecomposition::countAssignments(const std::vector<GenericSplitter
   CkReductionMsg * msg = CkReductionMsg::buildFromTuple(tupleRedn, numTuples);
   msg->setCallback(cb);
   reader->contribute(msg);
-}
-
-void LongestDimDecomposition::pup(PUP::er& p) {
-  PUP::able::pup(p);
-  BinaryDecomposition::pup(p);
 }
 
 void LongestDimDecomposition::setArrayOpts(CkArrayOptions& opts, const std::vector<int>& partition_locations, bool collocate) {

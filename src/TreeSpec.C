@@ -13,27 +13,27 @@ void TreeSpec::receiveDecomposition(const CkCallback& cb, Decomposition* d, bool
 
 Decomposition* TreeSpec::getSubtreeDecomposition() {
   auto decomp_type = paratreet::subtreeDecompForTree(config.tree_type);
-  getDecomposition(subtree_decomp, decomp_type);
+  getDecomposition(subtree_decomp, decomp_type, true);
   return subtree_decomp.get();
 }
 
 Decomposition* TreeSpec::getPartitionDecomposition() {
-  getDecomposition(partition_decomp, config.decomp_type);
+  getDecomposition(partition_decomp, config.decomp_type, false);
   return partition_decomp.get();
 }
 
-void TreeSpec::getDecomposition(std::unique_ptr<Decomposition>& decomp, paratreet::DecompType decomp_type) {
+void TreeSpec::getDecomposition(std::unique_ptr<Decomposition>& decomp, paratreet::DecompType decomp_type, bool is_subtree) {
   if (!decomp) {
     if (decomp_type == paratreet::DecompType::eOct) {
-      decomp.reset(new OctDecomposition());
+      decomp.reset(new OctDecomposition(is_subtree));
     } else if (decomp_type == paratreet::DecompType::eBinaryOct) {
-      decomp.reset(new BinaryOctDecomposition());
+      decomp.reset(new BinaryOctDecomposition(is_subtree));
     } else if (decomp_type == paratreet::DecompType::eSfc) {
-      decomp.reset(new SfcDecomposition());
+      decomp.reset(new SfcDecomposition(is_subtree));
     } else if (decomp_type == paratreet::DecompType::eKd) {
-      decomp.reset(new KdDecomposition());
+      decomp.reset(new KdDecomposition(is_subtree));
     } else if (decomp_type == paratreet::DecompType::eLongest) {
-      decomp.reset(new LongestDimDecomposition());
+      decomp.reset(new LongestDimDecomposition(is_subtree));
     } else {
       CkAbort("dont recognize decomposition type");
     }

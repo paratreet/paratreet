@@ -34,8 +34,8 @@ class Reader : public CBase_Reader {
     void computeUniverseBoundingBox(const CkCallback& cb);
     void assignKeys(BoundingBox, const CkCallback&);
 
-    void countAssignments(const std::vector<GenericSplitter>&, Decomposition* decomp, const CkCallback& cb);
-    void doSplit(const std::vector<GenericSplitter>&, Decomposition* decomp, const CkCallback&);
+    void countAssignments(const std::vector<GenericSplitter>&, bool is_subtree, const CkCallback& cb);
+    void doSplit(const std::vector<GenericSplitter>&, bool is_subtree, const CkCallback&);
 
     // SFC decomposition
     void getAllSfcKeys(const CkCallback& cb);
