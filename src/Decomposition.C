@@ -48,8 +48,8 @@ void Decomposition::pup(PUP::er& p) {
 
 void Decomposition::setArrayOpts(CkArrayOptions& opts, const std::vector<int>& partition_locations, bool collocate) {
   if (collocate) {
-    auto myMap = CProxy_CollocateMap::ckNew(this, partition_locations);
-    opts.setMap(myMap);
+    //auto myMap = CProxy_CollocateMap::ckNew(this, partition_locations);
+    //opts.setMap(myMap);
   }
 }
 
