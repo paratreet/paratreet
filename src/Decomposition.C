@@ -88,11 +88,10 @@ int SfcDecomposition::getNumParticles(int tp_index) {
 }
 
 int SfcDecomposition::getPartitionHome(int tp_index) {
-  return 0;
-  //return partition_idxs[tp_index];
+  return partition_idxs[tp_index];
 }
 
-void SfcDecomposition::countAssignments(const std::vector<GenericSplitter>& states, const std::vector<Particle>& particles, Reader* reader, const CkCallback& cb) {
+void SfcDecomposition::countAssignments(const std::vector<GenericSplitter>& states, const std::vector<Particle>& particles, Reader* reader, const CkCallback& cb, bool weight_by_partition) {
   std::vector<int> counts (states.size(), 0);
   std::function<bool(const Particle&, Key)> compGE = [] (const Particle& a, Key b) {return a.key >= b;};
   if (particles.size() > 0) {
@@ -101,6 +100,7 @@ void SfcDecomposition::countAssignments(const std::vector<GenericSplitter>& stat
       int begin = Utility::binarySearchComp(states[i].start_key, &particles[0], 0, particles.size(), compGE);
       int found = Utility::binarySearchComp(states[i].midKey(), &particles[0], begin, particles.size(), compGE);
       counts[i] = found - begin;
+      if (weight_by_partition) counts[i] *= particles[begin].partition_idx;
     }
   }
   reader->contribute(sizeof(int) * counts.size(), &counts[0], CkReduction::sum_int, cb);
@@ -133,7 +133,7 @@ int SfcDecomposition::parallelFindSplitters(BoundingBox &universe, CProxy_Reader
   int n_pending = states.size();
   while (n_pending > 0) {
     CkReductionMsg *msg;
-    readers.countAssignments(states, isSubtree(), CkCallbackResumeThread((void*&)msg));
+    readers.countAssignments(states, isSubtree(), CkCallbackResumeThread((void*&)msg), false);
     int* counts = (int*)msg->getData();
     for (int i = 0; i < states.size(); i++) {
       auto&& count = counts[i];
@@ -156,6 +156,14 @@ int SfcDecomposition::parallelFindSplitters(BoundingBox &universe, CProxy_Reader
       }
     }
   }
+
+  CkReductionMsg *msg;
+  readers.countAssignments(states, isSubtree(), CkCallbackResumeThread((void*&)msg), true);
+  int* counts = (int*)msg->getData();
+  int n_counts = msg->getSize() / sizeof(int);
+  partition_idxs = {counts, counts + n_counts};
+  delete msg;
+
   Key from (0), to;
   int prev = 0;
   for (auto && state : states) {
@@ -168,6 +176,8 @@ int SfcDecomposition::parallelFindSplitters(BoundingBox &universe, CProxy_Reader
     prev = state.goal_rank;
     from = to;
   }
+  CkAssert(partition_idxs.size() == splitters.size());
+  for (int i = 0; i < partition_idxs.size(); i++) partition_idxs[i] /= splitters[i].n_particles;
   return splitters.size();
 }
 
@@ -297,7 +307,7 @@ int OctDecomposition::flush(std::vector<Particle> &particles, const SendParticle
   return flush_count;
 }
 
-void OctDecomposition::countAssignments(const std::vector<GenericSplitter>& states, const std::vector<Particle>& particles, Reader* reader, const CkCallback& cb) {
+void OctDecomposition::countAssignments(const std::vector<GenericSplitter>& states, const std::vector<Particle>& particles, Reader* reader, const CkCallback& cb, bool weight_by_partition) {
   std::vector<int> counts (states.size()/2, 0);
 
   // Search for the first particle whose key is greater or equal to the input key,
@@ -315,6 +325,7 @@ void OctDecomposition::countAssignments(const std::vector<GenericSplitter>& stat
       int begin = Utility::binarySearchComp(from, &particles[0], start, finish, compGE);
       int end = Utility::binarySearchComp(to, &particles[0], begin, finish, compGE);
       counts[i] = end - begin;
+      if (weight_by_partition) counts[i] *= particles[begin].partition_idx;
 
       start = end;
     }
@@ -337,16 +348,17 @@ int OctDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &reader
   readers.localSort(CkCallbackResumeThread());
   int decomp_particle_sum = 0; // Used to check if all particles are decomposed
   int threshold = universe.n_particles / min_n_splitters;
+  std::vector<GenericSplitter> states;
   // Main decomposition loop
   while (keys.size() != 0) {
     // Send splitters to Readers for histogramming
     CkReductionMsg *msg;
-    std::vector<GenericSplitter> states;
+    states.clear();
     for (int i = 0; i < keys.size(); i++) {
       states.emplace_back();
       states.back().split_key = Utility::removeLeadingZeros(keys.get(i), log_branch_factor);
     }
-    readers.countAssignments(states, isSubtree(), CkCallbackResumeThread((void*&)msg));
+    readers.countAssignments(states, isSubtree(), CkCallbackResumeThread((void*&)msg), false);
     int* counts = (int*)msg->getData();
     int n_counts = msg->getSize() / sizeof(int);
     // Check counts and create splitters if necessary
@@ -387,6 +399,15 @@ int OctDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &reader
     keys.buffer();
     delete msg;
   }
+
+  CkReductionMsg *msg;
+  readers.countAssignments(states, isSubtree(), CkCallbackResumeThread((void*&)msg), true);
+  int* counts = (int*)msg->getData();
+  int n_counts = msg->getSize() / sizeof(int);
+  partition_idxs = {counts, counts + n_counts};
+  CkAssert(partition_idxs.size() == splitters.size());
+  for (int i = 0; i < partition_idxs.size(); i++) partition_idxs[i] /= splitters[i].n_particles;
+  delete msg;
 
   // Check if decomposition is correct
   if (decomp_particle_sum != universe.n_particles) {
@@ -540,7 +561,7 @@ void KdDecomposition::assign(Bin& parent, Bin& left, Bin& right, BinarySplit spl
   right.insert(right.end(), parent.begin() + medianIndex, parent.end());
 }
 
-void KdDecomposition::countAssignments(const std::vector<GenericSplitter>& states, const std::vector<Particle>& particles, Reader* reader, const CkCallback& cb) {
+void KdDecomposition::countAssignments(const std::vector<GenericSplitter>& states, const std::vector<Particle>& particles, Reader* reader, const CkCallback& cb, bool weight_by_partition) {
   if (bins.empty()) initBinarySplit(particles);
   std::vector<int> counts (states.size(), 0);
   for (int i = 0; i < states.size(); i++) {
@@ -569,7 +590,7 @@ std::vector<GenericSplitter> KdDecomposition::sortAndGetSplitters(BoundingBox &u
   int n_pending = states.size();
   while (n_pending > 0) {
     CkReductionMsg *msg;
-    readers.countAssignments(states, isSubtree(), CkCallbackResumeThread((void*&)msg));
+    readers.countAssignments(states, isSubtree(), CkCallbackResumeThread((void*&)msg), false);
     int* counts = (int*)msg->getData();
     for (int i = 0; i < states.size(); i++) {
       auto&& count = counts[i];
@@ -638,7 +659,7 @@ std::pair<int, Real> LongestDimDecomposition::sortAndGetSplitter(int depth, Bin&
 std::vector<GenericSplitter> LongestDimDecomposition::sortAndGetSplitters(BoundingBox &universe, CProxy_Reader &readers) {
   CkReductionMsg *msg;
   std::vector<GenericSplitter> empty;
-  readers.countAssignments(empty, isSubtree(), CkCallbackResumeThread((void*&)msg));
+  readers.countAssignments(empty, isSubtree(), CkCallbackResumeThread((void*&)msg), false);
   CkReduction::tupleElement* res = nullptr;
   int numRedn = 0;
   msg->toTuple(&res, &numRedn);
@@ -668,7 +689,7 @@ std::vector<GenericSplitter> LongestDimDecomposition::sortAndGetSplitters(Boundi
   return level_splitters;
 }
 
-void LongestDimDecomposition::countAssignments(const std::vector<GenericSplitter>& states, const std::vector<Particle>& particles, Reader* reader, const CkCallback& cb) {
+void LongestDimDecomposition::countAssignments(const std::vector<GenericSplitter>& states, const std::vector<Particle>& particles, Reader* reader, const CkCallback& cb, bool weight_by_partition) {
   if (bins.empty()) initBinarySplit(particles);
   std::vector<Vector3D<Real>> centers (bins.size(), (0,0,0));
   std::vector<int> counts (bins.size(), 0);

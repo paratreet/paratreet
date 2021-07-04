@@ -130,9 +130,9 @@ void Reader::assignKeys(BoundingBox universe_, const CkCallback& cb) {
   contribute(cb);
 }
 
-void Reader::countAssignments(const std::vector<GenericSplitter>& states, bool is_subtree, const CkCallback& cb) {
+void Reader::countAssignments(const std::vector<GenericSplitter>& states, bool is_subtree, const CkCallback& cb, bool weight_by_partition) {
   auto decomp = is_subtree ? treespec.ckLocalBranch()->getSubtreeDecomposition() : treespec.ckLocalBranch()->getPartitionDecomposition();
-  decomp->countAssignments(states, particles, this, cb);
+  decomp->countAssignments(states, particles, this, cb, weight_by_partition);
 }
 
 void Reader::doSplit(const std::vector<GenericSplitter>& splits, bool is_subtree, const CkCallback& cb) {

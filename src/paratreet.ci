@@ -144,7 +144,7 @@ module paratreet {
     entry void assignKeys(BoundingBox, const CkCallback&);
     template <typename Data>
     entry void request(CProxy_Subtree<Data>, int, int);
-    entry void countAssignments(const std::vector<GenericSplitter>&, bool, const CkCallback&);
+    entry void countAssignments(const std::vector<GenericSplitter>&, bool, const CkCallback&, bool);
     entry void doSplit(const std::vector<GenericSplitter>&, bool, const CkCallback&);
     entry void getAllSfcKeys(const CkCallback&);
     entry void getAllPositions(const CkCallback&);

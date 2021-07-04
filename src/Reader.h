@@ -34,7 +34,7 @@ class Reader : public CBase_Reader {
     void computeUniverseBoundingBox(const CkCallback& cb);
     void assignKeys(BoundingBox, const CkCallback&);
 
-    void countAssignments(const std::vector<GenericSplitter>&, bool is_subtree, const CkCallback& cb);
+    void countAssignments(const std::vector<GenericSplitter>&, bool is_subtree, const CkCallback& cb, bool weight_by_partition);
     void doSplit(const std::vector<GenericSplitter>&, bool is_subtree, const CkCallback&);
 
     // SFC decomposition
