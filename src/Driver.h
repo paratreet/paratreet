@@ -42,6 +42,7 @@ public:
   int n_subtrees;
   int n_partitions;
   double start_time;
+  std::vector<int> partition_locations;
 
   Driver(CProxy_CacheManager<Data> cache_manager_, CProxy_Resumer<Data> resumer_, CProxy_TreeCanopy<Data> calculator_) :
     cache_manager(cache_manager_), resumer(resumer_), calculator(calculator_), storage_sorted(false) {}
@@ -75,6 +76,10 @@ public:
       << universe.box.volume() << std::endl;
   }
 
+  void partitionLocation(int partition_idx, int home_pe) {
+     partition_locations[partition_idx] = home_pe;
+  }
+
   // Performs decomposition by distributing particles among Subtrees,
   // by either loading particle information from input file or re-computing
   // the universal bounding box
@@ -101,35 +106,52 @@ public:
         (CkWallTimer() - start_time) * 1000);
     } else CkWaitQD();
 
+    bool matching_decomps = config.decomp_type == paratreet::subtreeDecompForTree(config.tree_type);
     // Set up splitters for decomposition
     start_time = CkWallTimer();
-    n_subtrees = treespec.ckLocalBranch()->getSubtreeDecomposition()->findSplitters(universe, readers, config.min_n_subtrees);
+    n_partitions = treespec.ckLocalBranch()->getPartitionDecomposition()->findSplitters(universe, readers, config.min_n_partitions);
+    partition_locations.resize(n_partitions);
     treespec.receiveDecomposition(CkCallbackResumeThread(),
-      CkPointer<Decomposition>(treespec.ckLocalBranch()->getSubtreeDecomposition()), true);
-    CkPrintf("Setting up splitters for subtree decompositions: %.3lf ms\n",
-        (CkWallTimer() - start_time) * 1000);
-    bool matching_decomps = config.decomp_type == paratreet::subtreeDecompForTree(config.tree_type);
-    start_time = CkWallTimer();
-    if (matching_decomps) {
-      n_partitions = n_subtrees;
-      CkPrintf("Using same decomposition for subtrees and partitions\n");
-      treespec.receiveDecomposition(CkCallbackResumeThread(),
-        CkPointer<Decomposition>(treespec.ckLocalBranch()->getSubtreeDecomposition()), false);
-    }
-    else {
-      n_partitions = treespec.ckLocalBranch()->getPartitionDecomposition()->findSplitters(universe, readers, config.min_n_partitions);
-      // partition doFindSplitters + subtree doFind do not depend on each other
-      // only dependency is: partition flush must go before subtree flush
-      treespec.receiveDecomposition(CkCallbackResumeThread(),
         CkPointer<Decomposition>(treespec.ckLocalBranch()->getPartitionDecomposition()), false);
-    }
     CkPrintf("Setting up splitters for particle decompositions: %.3lf ms\n",
         (CkWallTimer() - start_time) * 1000);
+
+    // Create Partitions
+    CkArrayOptions partition_opts(n_partitions);
+    treespec.ckLocalBranch()->getPartitionDecomposition()->setArrayOpts(partition_opts, {}, false);
+    partitions = CProxy_Partition<Data>::ckNew(
+      n_partitions, cache_manager, resumer, calculator,
+      this->thisProxy, matching_decomps, partition_opts
+      );
+    CkPrintf("Created %d Partitions: %.3lf ms\n", n_partitions,
+        (CkWallTimer() - start_time) * 1000);
+
+    start_time = CkWallTimer();
+    readers.assignPartitions(n_partitions, partitions);
+    CkStartQD(CkCallbackResumeThread());
+    CkPrintf("Assigning particles to Partitions: %.3lf ms\n",
+        (CkWallTimer() - start_time) * 1000);
+
+    start_time = CkWallTimer();
+    if (matching_decomps) {
+      n_subtrees = n_partitions;
+      CkPrintf("Using same decomposition for subtrees and partitions\n");
+      treespec.receiveDecomposition(CkCallbackResumeThread(),
+        CkPointer<Decomposition>(treespec.ckLocalBranch()->getPartitionDecomposition()), true);
+    }
+    else {
+      n_subtrees = treespec.ckLocalBranch()->getSubtreeDecomposition()->findSplitters(universe, readers, config.min_n_subtrees);
+      treespec.receiveDecomposition(CkCallbackResumeThread(),
+        CkPointer<Decomposition>(treespec.ckLocalBranch()->getSubtreeDecomposition()), true);
+      CkPrintf("Setting up splitters for subtree decompositions: %.3lf ms\n",
+          (CkWallTimer() - start_time) * 1000);
+    }
 
     // Create Subtrees
     start_time = CkWallTimer();
     CkArrayOptions subtree_opts(n_subtrees);
-    treespec.ckLocalBranch()->getSubtreeDecomposition()->setArrayOpts(subtree_opts);
+    if (matching_decomps) subtree_opts.bindTo(partitions);
+    treespec.ckLocalBranch()->getSubtreeDecomposition()->setArrayOpts(subtree_opts, partition_locations, !matching_decomps);
     subtrees = CProxy_Subtree<Data>::ckNew(
       CkCallbackResumeThread(),
       universe.n_particles, n_subtrees, n_partitions,
@@ -137,26 +159,6 @@ public:
       cache_manager, this->thisProxy, matching_decomps, subtree_opts
       );
     CkPrintf("Created %d Subtrees: %.3lf ms\n", n_subtrees,
-        (CkWallTimer() - start_time) * 1000);
-
-    // Create Partitions
-    start_time = CkWallTimer();
-    CkArrayOptions partition_opts(n_partitions);
-    if (matching_decomps) partition_opts.bindTo(subtrees);
-    else treespec.ckLocalBranch()->getPartitionDecomposition()->setArrayOpts(partition_opts);
-    partitions = CProxy_Partition<Data>::ckNew(
-      n_partitions, cache_manager, resumer,
-      calculator, matching_decomps, partition_opts
-      );
-    CkPrintf("Created %d Partitions: %.3lf ms\n", n_partitions,
-        (CkWallTimer() - start_time) * 1000);
-
-    // Flush decomposed particles to home Subtrees and Partitions
-    // TODO Separate decomposition for Subtrees and Partitions
-    start_time = CkWallTimer();
-    readers.assignPartitions(n_partitions, partitions);
-    CkStartQD(CkCallbackResumeThread());
-    CkPrintf("Assigning particles to Partitions: %.3lf ms\n",
         (CkWallTimer() - start_time) * 1000);
 
     start_time = CkWallTimer();

@@ -130,117 +130,14 @@ void Reader::assignKeys(BoundingBox universe_, const CkCallback& cb) {
   contribute(cb);
 }
 
-void Reader::countSfc(const std::vector<QuickSelectSFCState>& states, size_t log_branch_factor, const CkCallback& cb) {
-  std::vector<int> counts (states.size(), 0);
-  std::function<bool(const Particle&, Key)> compGE = [] (const Particle& a, Key b) {return a.key >= b;};
-  if (particles.size() > 0) {
-    for (size_t i = 0u; i < states.size(); i++) {
-      if (!states[i].pending) continue;
-      int begin = Utility::binarySearchComp(states[i].start_range, &particles[0], 0, particles.size(), compGE);
-      int found = Utility::binarySearchComp(states[i].compare_to(), &particles[0], begin, particles.size(), compGE);
-      counts[i] = found - begin;
-    }
-  }
-  contribute(sizeof(int) * counts.size(), &counts[0], CkReduction::sum_int, cb);
+void Reader::countAssignments(const std::vector<GenericSplitter>& states, bool is_subtree, const CkCallback& cb) {
+  auto decomp = is_subtree ? treespec.ckLocalBranch()->getSubtreeDecomposition() : treespec.ckLocalBranch()->getPartitionDecomposition();
+  decomp->countAssignments(states, particles, this, cb);
 }
 
-void Reader::initBinarySplit(const CkCallback& cb) {
-  bins.clear();
-  bins.emplace_back();
-  for (auto && particle : particles) bins.back().push_back(particle.position);
-  contribute(cb);
-}
-
-void Reader::countKd(const std::vector<QuickSelectKDState>& states, const CkCallback& cb) {
-  std::vector<int> counts (states.size(), 0);
-  for (int i = 0; i < states.size(); i++) {
-    auto && state = states[i];
-    if (!state.pending) continue;
-    auto && bin = bins[i];
-    for (auto && pos : bin) {
-      if (pos[state.dim] > state.start_range &&
-          pos[state.dim] < state.compare_to()) counts[i]++;
-    }
-  }
-  contribute(sizeof(int) * counts.size(), &counts[0], CkReduction::sum_int, cb);
-}
-
-void Reader::countLongestDim(const CkCallback& cb) {
-  std::vector<Vector3D<Real>> centers (bins.size(), (0,0,0));
-  std::vector<int> counts (bins.size(), 0);
-  std::vector<Vector3D<Real>> lesser_corner (bins.size());
-  std::vector<Vector3D<Real>> greater_corner (bins.size());
-  for (int i = 0; i < bins.size(); i++) {
-    auto && bin = bins[i];
-    OrientedBox<Real> box;
-    for (auto && pos : bin) {
-      centers[i] += pos;
-      box.grow(pos);
-    }
-    counts[i] = bin.size();
-    lesser_corner[i] = box.lesser_corner;
-    greater_corner[i] = box.greater_corner;
-  }
-
-  const size_t numTuples = 4;
-  CkReduction::tupleElement tupleRedn[] = {
-    CkReduction::tupleElement(sizeof(Vector3D<Real>) * centers.size(), &centers[0], CkReduction::sum_float),
-    CkReduction::tupleElement(sizeof(int) * counts.size(), &counts[0], CkReduction::sum_int),
-    CkReduction::tupleElement(sizeof(Vector3D<Real>) * lesser_corner.size(), &lesser_corner[0], CkReduction::min_float),
-    CkReduction::tupleElement(sizeof(Vector3D<Real>) * greater_corner.size(), &greater_corner[0], CkReduction::max_float)
-  };
-  CkReductionMsg * msg = CkReductionMsg::buildFromTuple(tupleRedn, numTuples);
-  msg->setCallback(cb);
-  this->contribute(msg);
-}
-
-void Reader::doBinarySplit(const std::vector<std::pair<int, Real>>& splits, const CkCallback& cb) {
-  CkAssert(bins.size() == splits.size());
-  decltype(bins) binsCopy (2 * bins.size());
-  for (int i = 0; i < bins.size(); i++) {
-    std::vector<Vector3D<Real>> left, right;
-    for (auto && pos : bins[i]) {
-      if (pos[splits[i].first] > splits[i].second) {
-        binsCopy[2 * i + 1].push_back(pos);
-      }
-      else {
-        binsCopy[2 * i].push_back(pos); // left heavy
-      }
-    }
-  }
-  bins = binsCopy;
-  std::vector<int> counts (bins.size(), 0);
-  for (int i = 0; i < counts.size(); i++) counts[i] = bins[i].size();
-  contribute(sizeof(int) * counts.size(), &counts[0], CkReduction::sum_int, cb);
-}
-
-void Reader::countOct(std::vector<Key> splitter_keys, size_t log_branch_factor, const CkCallback& cb) {
-  std::vector<int> counts (splitter_keys.size()/2, 0);
-  for (int i = 0; i < splitter_keys.size(); i++) {
-    splitter_keys[i] = Utility::removeLeadingZeros(splitter_keys[i], log_branch_factor);
-  }
-
-  // Search for the first particle whose key is greater or equal to the input key,
-  // in the range [start, finish). This should also work for OCT as the particle
-  // keys are SFC keys.
-  int start = 0;
-  int finish = particles.size();
-  Key from, to;
-  std::function<bool(const Particle&, Key)> compGE = [] (const Particle& a, Key b) {return a.key >= b;};
-  if (particles.size() > 0) {
-    for (int i = 0; i < counts.size(); i++) {
-      from = splitter_keys[2*i];
-      to = splitter_keys[2*i+1];
-
-      int begin = Utility::binarySearchComp(from, &particles[0], start, finish, compGE);
-      int end = Utility::binarySearchComp(to, &particles[0], begin, finish, compGE);
-      counts[i] = end - begin;
-
-      start = end;
-    }
-  }
-
-  contribute(sizeof(int) * counts.size(), &counts[0], CkReduction::sum_int, cb);
+void Reader::doSplit(const std::vector<GenericSplitter>& splits, bool is_subtree, const CkCallback& cb) {
+  auto decomp = is_subtree ? treespec.ckLocalBranch()->getSubtreeDecomposition() : treespec.ckLocalBranch()->getPartitionDecomposition();
+  decomp->doSplit(splits, this, cb);
 }
 
 void Reader::getAllSfcKeys(const CkCallback& cb)
@@ -254,9 +151,9 @@ void Reader::getAllSfcKeys(const CkCallback& cb)
 
 void Reader::getAllPositions(const CkCallback& cb)
 {
-  std::vector<Vector3D<Real>> positions;
+  std::vector<std::pair<int, Vector3D<Real>>> positions;
   for (const auto& p : particles)
-    positions.push_back(p.position);
+    positions.emplace_back(p.partition_idx, p.position);
 
   contribute(positions.size() * sizeof(Vector3D<Real>), &positions[0], CkReduction::set, cb);
 }

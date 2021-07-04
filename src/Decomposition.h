@@ -3,7 +3,9 @@
 
 #include <functional>
 #include <vector>
+#include "Splitter.h"
 
+class Reader;
 class CProxy_Reader;
 class BoundingBox;
 class Splitter;
@@ -24,12 +26,24 @@ private:
   std::vector<size_t> pe_intervals;
 };
 
+class CollocateMap : public CkArrayMap {
+public:
+  CollocateMap(Decomposition*, const std::vector<int>& partition_locations);
+  int procNum(int, const CkArrayIndex &idx);
+
+private:
+  Decomposition* const decomp;
+  const std::vector<int> partition_locations;
+};
+
+
 struct Decomposition: public PUP::able {
   PUPable_abstract(Decomposition);
 
-  Decomposition() { }
-  Decomposition(CkMigrateMessage *m) : PUP::able(m) { }
+  Decomposition(bool is_subtree_) : is_subtree(is_subtree_) { }
+  Decomposition(CkMigrateMessage *m) : PUP::able(m) {}
   virtual ~Decomposition() = default;
+  virtual void pup(PUP::er& p) override;
 
   virtual int flush(std::vector<Particle> &particles, const SendParticlesFn &fn) = 0;
 
@@ -37,12 +51,17 @@ struct Decomposition: public PUP::able {
 
   virtual int getNumParticles(int tp_index) = 0;
 
+  virtual int getPartitionHome(int tp_index) = 0;
+
+  virtual void countAssignments(const std::vector<GenericSplitter>& states, const std::vector<Particle>& particles, Reader* reader, const CkCallback& cb) = 0;
+
+  virtual void doSplit(const std::vector<GenericSplitter>& splits, Reader* reader, const CkCallback& cb) {}
+
   virtual int findSplitters(BoundingBox &universe, CProxy_Reader &readers, int min_n_splitters) = 0;
 
   virtual Key getTpKey(int idx) = 0;
 
-  virtual void setArrayOpts(CkArrayOptions& opts) {
-  }
+  virtual void setArrayOpts(CkArrayOptions& opts, const std::vector<int>& partition_locations, bool collocate);
 
   std::vector<Key> getAllTpKeys(int n_partitions) {
     std::vector<Key> tp_keys (n_partitions);
@@ -51,18 +70,25 @@ struct Decomposition: public PUP::able {
     }
     return tp_keys;
   }
+
+protected:
+  bool isSubtree() const {return is_subtree;}
+private:
+  bool is_subtree = false; // cant use const cause pup()
 };
 
 struct SfcDecomposition : public Decomposition {
   PUPable_decl(SfcDecomposition);
 
-  SfcDecomposition() { }
+  SfcDecomposition(bool is_subtree) : Decomposition(is_subtree) {}
   SfcDecomposition(CkMigrateMessage *m) : Decomposition(m) { }
   virtual ~SfcDecomposition() = default;
 
   virtual Key getTpKey(int idx) override;
   virtual int flush(std::vector<Particle> &particles, const SendParticlesFn &fn) override;
   virtual int getNumParticles(int tp_index) override;
+  virtual int getPartitionHome(int tp_index) override;
+  virtual void countAssignments(const std::vector<GenericSplitter>& states, const std::vector<Particle>& particles, Reader* reader, const CkCallback& cb) override;
   virtual int findSplitters(BoundingBox &universe, CProxy_Reader &readers, int min_n_splitters) override;
   virtual void alignSplitters(SfcDecomposition *);
   std::vector<Splitter> getSplitters();
@@ -74,26 +100,28 @@ private:
 
 protected:
   std::vector<Splitter> splitters;
+  std::vector<int> partition_idxs;
   int saved_n_total_particles = 0;
 };
 
 struct OctDecomposition : public SfcDecomposition {
   PUPable_decl(OctDecomposition);
 
-  OctDecomposition() : SfcDecomposition() {}
+  OctDecomposition(bool is_subtree) : SfcDecomposition(is_subtree) {}
   OctDecomposition(CkMigrateMessage *m) : SfcDecomposition(m) { }
   virtual ~OctDecomposition() = default;
   virtual int getBranchFactor() const {return 8;}
 
   virtual int flush(std::vector<Particle> &particles, const SendParticlesFn &fn) override;
   virtual int findSplitters(BoundingBox &universe, CProxy_Reader &readers, int min_n_splitters) override;
-  virtual void setArrayOpts(CkArrayOptions& opts) override;
+  virtual void countAssignments(const std::vector<GenericSplitter>& states, const std::vector<Particle>& particles, Reader* reader, const CkCallback& cb) override;
+  virtual void setArrayOpts(CkArrayOptions& opts, const std::vector<int>& partition_locations, bool collocate) override;
 };
 
 struct BinaryOctDecomposition : public OctDecomposition {
   PUPable_decl(BinaryOctDecomposition);
 
-  BinaryOctDecomposition() : OctDecomposition() { }
+  BinaryOctDecomposition(bool is_subtree) : OctDecomposition(is_subtree) {}
   BinaryOctDecomposition(CkMigrateMessage *m) : OctDecomposition(m) { }
   virtual ~BinaryOctDecomposition() = default;
   virtual int getBranchFactor() const override {return 2;}
@@ -101,55 +129,62 @@ struct BinaryOctDecomposition : public OctDecomposition {
 
 
 struct BinaryDecomposition : public Decomposition {
-  BinaryDecomposition() = default;
+
+  BinaryDecomposition(bool is_subtree) : Decomposition(is_subtree) {}
   BinaryDecomposition(CkMigrateMessage *m) : Decomposition(m) { }
   virtual ~BinaryDecomposition() = default;
+
+  virtual void initBinarySplit(const std::vector<Particle>& particles);
 
   Key getTpKey(int idx) override;
   int flush(std::vector<Particle> &particles, const SendParticlesFn &fn) override;
   int getNumParticles(int tp_index) override;
+  int getPartitionHome(int tp_index) override;
   int findSplitters(BoundingBox &universe, CProxy_Reader &readers, int min_n_splitters) override;
+  void doSplit(const std::vector<GenericSplitter>& splits, Reader* reader, const CkCallback& cb) override;
 
   virtual void pup(PUP::er& p) override;
 
-  using Bin = std::vector<Vector3D<Real>>;
+  using Bin = std::vector<std::pair<int, Vector3D<Real>>>;
   using BinarySplit = std::pair<int, Real>;
   virtual BinarySplit sortAndGetSplitter(int depth, Bin& bin) = 0;
   virtual void assign(Bin& parent, Bin& left, Bin& right, std::pair<int, Real> split) = 0;
-  virtual std::vector<BinarySplit> sortAndGetSplitters(BoundingBox &universe, CProxy_Reader &readers) = 0;
+  virtual std::vector<GenericSplitter> sortAndGetSplitters(BoundingBox &universe, CProxy_Reader &readers) = 0;
 
 private:
   int serialFindSplitters(BoundingBox &universe, CProxy_Reader &readers, int min_n_splitters);
   int parallelFindSplitters(BoundingBox &universe, CProxy_Reader &readers, int min_n_splitters);
 
 protected:
-  std::vector<BinarySplit> splitters; //dim, splitter value
+  std::vector<GenericSplitter> splitters; //dim, splitter value
   size_t depth = 0;
   int saved_n_total_particles = 0;
   std::vector<int> bins_sizes;
+  std::vector<int> partition_idxs;
+  std::vector<Bin> bins;
 };
 
 struct KdDecomposition : public BinaryDecomposition {
   PUPable_decl(KdDecomposition);
-  KdDecomposition() = default;
+  KdDecomposition(bool is_subtree) : BinaryDecomposition(is_subtree) {}
   KdDecomposition(CkMigrateMessage *m) : BinaryDecomposition(m) { }
 
-  virtual void pup(PUP::er& p) override;
   virtual BinarySplit sortAndGetSplitter(int depth, Bin& bin) override;
+  virtual void countAssignments(const std::vector<GenericSplitter>& states, const std::vector<Particle>& particles, Reader* reader, const CkCallback& cb) override;
   virtual void assign(Bin& parent, Bin& left, Bin& right, std::pair<int, Real> split) override;
-  virtual std::vector<BinarySplit> sortAndGetSplitters(BoundingBox &universe, CProxy_Reader &readers) override;
+  virtual std::vector<GenericSplitter> sortAndGetSplitters(BoundingBox &universe, CProxy_Reader &readers) override;
 };
 
 struct LongestDimDecomposition : public BinaryDecomposition {
   PUPable_decl(LongestDimDecomposition);
-  LongestDimDecomposition() = default;
+  LongestDimDecomposition(bool is_subtree) : BinaryDecomposition(is_subtree) {}
   LongestDimDecomposition(CkMigrateMessage *m) : BinaryDecomposition(m) { }
 
-  virtual void pup(PUP::er& p) override;
   virtual BinarySplit sortAndGetSplitter(int depth, Bin& bin) override;
+  virtual void countAssignments(const std::vector<GenericSplitter>& states, const std::vector<Particle>& particles, Reader* reader, const CkCallback& cb) override;
   virtual void assign(Bin& parent, Bin& left, Bin& right, std::pair<int, Real> split) override;
-  virtual std::vector<BinarySplit> sortAndGetSplitters(BoundingBox &universe, CProxy_Reader &readers) override;
-  void setArrayOpts(CkArrayOptions& opts) override;
+  virtual std::vector<GenericSplitter> sortAndGetSplitters(BoundingBox &universe, CProxy_Reader &readers) override;
+  void setArrayOpts(CkArrayOptions& opts, const std::vector<int>& partition_locations, bool collocate) override;
 };
 
 

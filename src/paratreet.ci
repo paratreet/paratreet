@@ -77,7 +77,7 @@ module paratreet {
 
   template <typename Data>
   array [1d] Partition {
-    entry Partition(int, CProxy_CacheManager<Data>, CProxy_Resumer<Data>, TCHolder<Data>, bool);
+    entry Partition(int, CProxy_CacheManager<Data>, CProxy_Resumer<Data>, TCHolder<Data>, CProxy_Driver<Data>, bool);
     template <typename Visitor> entry void startDown();
     template <typename Visitor> entry void startUpAndDown();
     entry void interact(const CkCallback&);
@@ -131,6 +131,7 @@ module paratreet {
     entry [reductiontarget] void reportTime();
     entry void recvTC(std::pair<Key, SpatialNode<Data>>);
     entry void loadCache(CkCallback);
+    entry void partitionLocation(int, int);
     template <typename Visitor>
     entry void prefetch(Data, int, CkCallback);
     entry void request(Key request_list [list_size], int list_size, int, CkCallback);
@@ -143,12 +144,8 @@ module paratreet {
     entry void assignKeys(BoundingBox, const CkCallback&);
     template <typename Data>
     entry void request(CProxy_Subtree<Data>, int, int);
-    entry void countOct(std::vector<Key>, size_t, const CkCallback&);
-    entry void countSfc(const std::vector<QuickSelectSFCState>&, size_t, const CkCallback&);
-    entry void countKd(const std::vector<QuickSelectKDState>&, const CkCallback&);
-    entry void countLongestDim(const CkCallback&);
-    entry void initBinarySplit(const CkCallback&);
-    entry void doBinarySplit(const std::vector<std::pair<int, Real>>&, const CkCallback&);
+    entry void countAssignments(const std::vector<GenericSplitter>&, bool, const CkCallback&);
+    entry void doSplit(const std::vector<GenericSplitter>&, bool, const CkCallback&);
     entry void getAllSfcKeys(const CkCallback&);
     entry void getAllPositions(const CkCallback&);
     entry void pickSamples(const int, const CkCallback&);
@@ -177,6 +174,10 @@ module paratreet {
 
   group DecompArrayMap : CkArrayMap {
     entry DecompArrayMap(CkPointer<Decomposition>, int, int);
+  };
+
+  group CollocateMap : CkArrayMap {
+    entry CollocateMap(CkPointer<Decomposition>, const std::vector<int>&);
   };
 
   mainchare MainChare {

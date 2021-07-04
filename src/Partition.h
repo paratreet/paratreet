@@ -38,7 +38,7 @@ struct Partition : public CBase_Partition<Data> {
   CProxy_Resumer<Data> r_proxy;
   Resumer<Data>* r_local;
 
-  Partition(int, CProxy_CacheManager<Data>, CProxy_Resumer<Data>, TCHolder<Data>, bool);
+  Partition(int, CProxy_CacheManager<Data>, CProxy_Resumer<Data>, TCHolder<Data>, CProxy_Driver<Data> driver, bool);
   Partition(CkMigrateMessage * msg){delete msg;};
 
   template<typename Visitor> void startDown();
@@ -85,7 +85,7 @@ template <typename Data>
 Partition<Data>::Partition(
   int np, CProxy_CacheManager<Data> cm,
   CProxy_Resumer<Data> rp, TCHolder<Data> tc_holder,
-  bool matching_decomps_
+  CProxy_Driver<Data> driver, bool matching_decomps_
   )
 {
   this->usesAtSync = true;
@@ -96,6 +96,7 @@ Partition<Data>::Partition(
   matching_decomps = matching_decomps_;
   initLocalBranches();
   time_advanced = readers.ckLocalBranch()->start_time;
+  driver.partitionLocation(this->thisIndex, CkMyPe());
 }
 
 template <typename Data>

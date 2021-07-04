@@ -63,8 +63,8 @@ struct CentroidData {
             size_sm = size_universe/pow(2.0, depth/3);
             // size_sm = 1.0;  // Stopgap for now.
             tmp_box.grow(box.center() + size_sm);
-            return tmp_box;
         }
+        return tmp_box;
     }
     
     

@@ -66,7 +66,7 @@ protected:
     paratreet::Configuration config;
 
 private:
-  void getDecomposition(std::unique_ptr<Decomposition>& decomp, paratreet::DecompType decomp_type);
+  void getDecomposition(std::unique_ptr<Decomposition>& decomp, paratreet::DecompType decomp_type, bool is_subtree);
 };
 
 #endif
