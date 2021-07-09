@@ -28,7 +28,7 @@ private:
 
 class CollocateMap : public CkArrayMap {
 public:
-  CollocateMap(Decomposition*, const std::vector<int>& partition_locations);
+  CollocateMap(Decomposition* d, const std::vector<int>& partition_locations);
   int procNum(int, const CkArrayIndex &idx);
 
 private:
@@ -53,7 +53,7 @@ struct Decomposition: public PUP::able {
 
   virtual int getPartitionHome(int tp_index) = 0;
 
-  virtual void countAssignments(const std::vector<GenericSplitter>& states, const std::vector<Particle>& particles, Reader* reader, const CkCallback& cb) = 0;
+  virtual void countAssignments(const std::vector<GenericSplitter>& states, const std::vector<Particle>& particles, Reader* reader, const CkCallback& cb, bool weight_by_partition) = 0;
 
   virtual void doSplit(const std::vector<GenericSplitter>& splits, Reader* reader, const CkCallback& cb) {}
 
@@ -88,7 +88,7 @@ struct SfcDecomposition : public Decomposition {
   virtual int flush(std::vector<Particle> &particles, const SendParticlesFn &fn) override;
   virtual int getNumParticles(int tp_index) override;
   virtual int getPartitionHome(int tp_index) override;
-  virtual void countAssignments(const std::vector<GenericSplitter>& states, const std::vector<Particle>& particles, Reader* reader, const CkCallback& cb) override;
+  virtual void countAssignments(const std::vector<GenericSplitter>& states, const std::vector<Particle>& particles, Reader* reader, const CkCallback& cb, bool weight_by_partition) override;
   virtual int findSplitters(BoundingBox &universe, CProxy_Reader &readers, int min_n_splitters) override;
   virtual void alignSplitters(SfcDecomposition *);
   std::vector<Splitter> getSplitters();
@@ -113,8 +113,8 @@ struct OctDecomposition : public SfcDecomposition {
   virtual int getBranchFactor() const {return 8;}
 
   virtual int flush(std::vector<Particle> &particles, const SendParticlesFn &fn) override;
+  virtual void countAssignments(const std::vector<GenericSplitter>& states, const std::vector<Particle>& particles, Reader* reader, const CkCallback& cb, bool weight_by_partition) override;
   virtual int findSplitters(BoundingBox &universe, CProxy_Reader &readers, int min_n_splitters) override;
-  virtual void countAssignments(const std::vector<GenericSplitter>& states, const std::vector<Particle>& particles, Reader* reader, const CkCallback& cb) override;
   virtual void setArrayOpts(CkArrayOptions& opts, const std::vector<int>& partition_locations, bool collocate) override;
 };
 
@@ -170,7 +170,7 @@ struct KdDecomposition : public BinaryDecomposition {
   KdDecomposition(CkMigrateMessage *m) : BinaryDecomposition(m) { }
 
   virtual BinarySplit sortAndGetSplitter(int depth, Bin& bin) override;
-  virtual void countAssignments(const std::vector<GenericSplitter>& states, const std::vector<Particle>& particles, Reader* reader, const CkCallback& cb) override;
+  virtual void countAssignments(const std::vector<GenericSplitter>& states, const std::vector<Particle>& particles, Reader* reader, const CkCallback& cb, bool weight_by_partition) override;
   virtual void assign(Bin& parent, Bin& left, Bin& right, std::pair<int, Real> split) override;
   virtual std::vector<GenericSplitter> sortAndGetSplitters(BoundingBox &universe, CProxy_Reader &readers) override;
 };
@@ -181,7 +181,7 @@ struct LongestDimDecomposition : public BinaryDecomposition {
   LongestDimDecomposition(CkMigrateMessage *m) : BinaryDecomposition(m) { }
 
   virtual BinarySplit sortAndGetSplitter(int depth, Bin& bin) override;
-  virtual void countAssignments(const std::vector<GenericSplitter>& states, const std::vector<Particle>& particles, Reader* reader, const CkCallback& cb) override;
+  virtual void countAssignments(const std::vector<GenericSplitter>& states, const std::vector<Particle>& particles, Reader* reader, const CkCallback& cb, bool weight_by_partition) override;
   virtual void assign(Bin& parent, Bin& left, Bin& right, std::pair<int, Real> split) override;
   virtual std::vector<GenericSplitter> sortAndGetSplitters(BoundingBox &universe, CProxy_Reader &readers) override;
   void setArrayOpts(CkArrayOptions& opts, const std::vector<int>& partition_locations, bool collocate) override;
