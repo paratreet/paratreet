@@ -50,7 +50,7 @@ void Decomposition::pup(PUP::er& p) {
 
 void Decomposition::setArrayOpts(CkArrayOptions& opts, const std::vector<int>& partition_locations, bool collocate) {
   if (collocate) {
-    auto myMap = CProxy_CollocateMap::ckNew(this, partition_locations);
+    auto myMap = CProxy_CollocateMap::ckNew(CkPointer<Decomposition>(this), partition_locations);
     opts.setMap(myMap);
   }
 }
@@ -177,7 +177,11 @@ int SfcDecomposition::parallelFindSplitters(BoundingBox &universe, CProxy_Reader
     from = to;
   }
   CkAssert(partition_idxs.size() == splitters.size());
-  for (int i = 0; i < partition_idxs.size(); i++) partition_idxs[i] /= splitters[i].n_particles;
+  for (int i = 0; i < partition_idxs.size(); i++) {
+    if (partition_idxs[i] > 0) {
+      partition_idxs[i] /= splitters[i].n_particles;
+    }
+  }
   return splitters.size();
 }
 
@@ -263,6 +267,7 @@ void SfcDecomposition::alignSplitters(SfcDecomposition *decomp)
 void SfcDecomposition::pup(PUP::er& p) {
   Decomposition::pup(p);
   p | splitters;
+  p | partition_idxs;
   p | saved_n_total_particles;
 }
 
@@ -308,7 +313,7 @@ int OctDecomposition::flush(std::vector<Particle> &particles, const SendParticle
 }
 
 void OctDecomposition::countAssignments(const std::vector<GenericSplitter>& states, const std::vector<Particle>& particles, Reader* reader, const CkCallback& cb, bool weight_by_partition) {
-  std::vector<int> counts (states.size()/2, 0);
+  std::vector<int> counts (states.size(), 0);
 
   // Search for the first particle whose key is greater or equal to the input key,
   // in the range [start, finish). This should also work for OCT as the particle
@@ -319,8 +324,8 @@ void OctDecomposition::countAssignments(const std::vector<GenericSplitter>& stat
   std::function<bool(const Particle&, Key)> compGE = [] (const Particle& a, Key b) {return a.key >= b;};
   if (particles.size() > 0) {
     for (int i = 0; i < counts.size(); i++) {
-      from = states[2*i].split_key;
-      to = states[2*i+1].split_key;
+      from = states[i].start_key;
+      to = states[i].end_key;
 
       int begin = Utility::binarySearchComp(from, &particles[0], start, finish, compGE);
       int end = Utility::binarySearchComp(to, &particles[0], begin, finish, compGE);
@@ -353,9 +358,10 @@ int OctDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &reader
     // Send splitters to Readers for histogramming
     CkReductionMsg *msg;
     std::vector<GenericSplitter> states;
-    for (int i = 0; i < keys.size(); i++) {
+    for (int i = 0; i < keys.size(); i += 2) {
       states.emplace_back();
-      states.back().split_key = Utility::removeLeadingZeros(keys.get(i), log_branch_factor);
+      states.back().start_key = Utility::removeLeadingZeros(keys.get(i), log_branch_factor);
+      states.back().end_key = Utility::removeLeadingZeros(keys.get(i+1), log_branch_factor);
     }
     readers.countAssignments(states, isSubtree(), CkCallbackResumeThread((void*&)msg), false);
     int* counts = (int*)msg->getData();
@@ -401,9 +407,10 @@ int OctDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &reader
 
   {
     std::vector<GenericSplitter> states;
-    for (int i = 0; i < keys.size(); i++) {
+    for (auto& sp : splitters) {
       states.emplace_back();
-      states.back().split_key = Utility::removeLeadingZeros(keys.get(i), log_branch_factor);
+      states.back().start_key = sp.from;
+      states.back().end_key = sp.to;
     }
     CkReductionMsg *msg;
     readers.countAssignments(states, isSubtree(), CkCallbackResumeThread((void*&)msg), true);
@@ -413,7 +420,11 @@ int OctDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &reader
     delete msg;
   }
   CkAssert(partition_idxs.size() == splitters.size());
-  for (int i = 0; i < partition_idxs.size(); i++) partition_idxs[i] /= splitters[i].n_particles;
+  for (int i = 0; i < partition_idxs.size(); i++) {
+    if (partition_idxs[i] > 0) {
+      partition_idxs[i] /= splitters[i].n_particles;
+    }
+  }
 
   // Check if decomposition is correct
   if (decomp_particle_sum != universe.n_particles) {

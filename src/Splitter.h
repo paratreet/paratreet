@@ -41,7 +41,6 @@ struct GenericSplitter {
   Key 	start_key = Key(0);
   Key 	end_key = (~Key(0));
   Key 	midKey() const {return start_key + (end_key - start_key) / 2;}
-  Key 	split_key = Key(0);
   int 	goal_rank;
   bool 	pending = true;
   int 	dim = -1;
@@ -51,7 +50,6 @@ struct GenericSplitter {
   void pup(PUP::er &p) {
     p | start_key;
     p | end_key;
-    p | split_key;
     p | goal_rank;
     p | pending;
     p | dim;

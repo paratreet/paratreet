@@ -28,7 +28,7 @@ private:
 
 class CollocateMap : public CkArrayMap {
 public:
-  CollocateMap(Decomposition*, const std::vector<int>& partition_locations);
+  CollocateMap(Decomposition* d, const std::vector<int>& partition_locations);
   int procNum(int, const CkArrayIndex &idx);
 
 private:
