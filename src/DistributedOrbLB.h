@@ -26,9 +26,9 @@ public:
   void perLBStates(CkReductionMsg * msg);\
   void getUniverseDimensions(CkReductionMsg * msg);
   void recursiveLoadPartition();
-  void binaryLoadPartition(int dim, float load, Vector3D<Real> lower_coords, Vector3D<Real> upper_coords, const CkCallback &);
-  void getSumBinaryLoads(CkReductionMsg * msg);
-  void createPartitions(int dim, float load, Vector3D<Real> lower_coords, Vector3D<Real> upper_coords);
+  void binaryLoadPartitionWithOctalBins(int dim, float load, int left, int right, float low, float high, Vector3D<Real> lower_coords, Vector3D<Real> upper_coords, const CkCallback &);
+  void getSumOctalLoads(CkReductionMsg * msg);
+  void createPartitions(int dim, float load, int left, int right, Vector3D<Real> lower_coords, Vector3D<Real> upper_coords);
   void finishedPartitionOneDim(const CkCallback & curr_cb);
 
 
@@ -48,19 +48,22 @@ private:
   vector<LBCentroidAndIndexRecord> obj_collection;
 
   // Parition related data
-  vector <float> binary_loads;
+  vector <float> octal_loads;
   CkCallbackResumeThread * curr_cb;
 
   // Collect global load data
   float global_load;
   float global_max_obj_load;
   float granularity;
-  vector <float> global_binary_loads;
+  vector <float> global_octal_loads;
 
   vector <float> split_coords;
   int curr_dim, curr_depth;
-  float curr_load;
+  int left_idx, right_idx;
+  float lower_split, upper_split;
+  float curr_load, curr_left_load, curr_split_pt;
   bool went_right = true;
+  bool use_longest_dim;
   Vector3D<Real> curr_lower_coords;
   Vector3D<Real> curr_upper_coords;
 
@@ -75,8 +78,9 @@ private:
   void initVariables();
   void parseLBData();
   void reportPerLBStates();
+  int getDim();
   void reportUniverseDimensions();
-  void gatherBinaryLoads();
+  void gatherOctalLoads();
   void reset();
 };
 
