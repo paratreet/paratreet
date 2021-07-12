@@ -197,9 +197,10 @@ void DistributedOrbLB::getUniverseDimensions(CkReductionMsg * msg){
   }
   ckout << endl;
   delete [] results;
+  float margin = .0001;
 
-  curr_lower_coords = Vector3D<Real>(universe_coords[0], universe_coords[2], universe_coords[4]);
-  curr_upper_coords = Vector3D<Real>(universe_coords[1], universe_coords[3], universe_coords[5]);
+  curr_lower_coords = Vector3D<Real>(universe_coords[0] - margin, universe_coords[2] - margin, universe_coords[4] - margin);
+  curr_upper_coords = Vector3D<Real>(universe_coords[1] + margin, universe_coords[3] + margin, universe_coords[5] + margin);
   curr_dim = getDim();
   curr_depth = 0;
   //left_load_col.push_back(.0f);
@@ -273,12 +274,14 @@ void DistributedOrbLB::gatherOctalLoads(){
 void DistributedOrbLB::getSumOctalLoads(CkReductionMsg * msg){
   int numReductions;/*{{{*/
   CkReduction::tupleElement* results;
+  float total_load = .0f;
   msg->toTuple(&results, &numReductions);
   for (int i = 0; i < 8; i++){
     global_octal_loads[i] = *(float*)results[i].data;
+    total_load += global_octal_loads[i];
   }
   delete [] results;
-  CkPrintf("\tGlobal_octal_loads = %.8f, %.8f, %.8f, %.8f, %.8f, %.8f, %.8f, %.8f\n", my_pe,
+  CkPrintf("\tGlobal_octal_loads = total = %.8f; curr_load = %.8f, %.8f, %.8f, %.8f, %.8f, %.8f, %.8f, %.8f, %.8f\n", total_load, curr_load,
       global_octal_loads[0], global_octal_loads[1], global_octal_loads[2], global_octal_loads[3],
       global_octal_loads[4], global_octal_loads[5], global_octal_loads[6], global_octal_loads[7]);
   //left_load_col[curr_depth] = global_octal_loads[0];
@@ -290,9 +293,9 @@ void DistributedOrbLB::getSumOctalLoads(CkReductionMsg * msg){
   vector<float> prefix_octal_load(8, .0f);
   prefix_octal_load[0] = global_octal_loads[0] - half_load;
   for (int i = 1; i < 8; i++){
-    prefix_octal_load[i] += prefix_octal_load[i-1];
+    prefix_octal_load[i] = global_octal_loads[i] + prefix_octal_load[i-1];
   }
-  CkPrintf("\tprefix_octal_load = %.8f, %.8f, %.8f, %.8f, %.8f, %.8f, %.8f, %.8f\n", my_pe,
+  CkPrintf("\tprefix_octal_load = %.8f, %.8f, %.8f, %.8f, %.8f, %.8f, %.8f, %.8f\n",
       prefix_octal_load[0], prefix_octal_load[1], prefix_octal_load[2], prefix_octal_load[3],
       prefix_octal_load[4], prefix_octal_load[5], prefix_octal_load[6], prefix_octal_load[7]);
 
@@ -356,10 +359,10 @@ void DistributedOrbLB::finishedPartitionOneDim(const CkCallback & curr_cb){
 void DistributedOrbLB::reset(){
   universe_coords.clear();
   obj_coords.clear();
-  lower_coords_col.clear();
-  upper_coords_col.clear();
-  load_col.clear();
-  left_load_col.clear();
+  //lower_coords_col.clear();
+  //upper_coords_col.clear();
+  //load_col.clear();
+  //left_load_col.clear();
 }
 
 #include "DistributedOrbLB.def.h"
