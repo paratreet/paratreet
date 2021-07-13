@@ -30,12 +30,19 @@ public:
   void getSumOctalLoads(CkReductionMsg * msg);
   void createPartitions(int dim, float load, int left, int right, Vector3D<Real> lower_coords, Vector3D<Real> upper_coords);
   void finishedPartitionOneDim(const CkCallback & curr_cb);
+  void migrateObjects(std::vector<std::vector<Vector3D<Real>>> pe_splits);
+  void acknowledgeIncomingMigrations(int count);
 
 
 private:
-  int my_pe;
+  int debug_l1 = 2;
+  int debug_l2 = 3;
+  int my_pe, total_migrates, incoming_migrates, recv_ack;
   const DistBaseLB::LDStats* my_stats;
   double start_time;
+  vector<MigrateInfo*> migrate_records;
+  vector<int> send_nobjs_to_pes;
+  LBMigrateMsg * final_migration_msg;
 
   // Collect myPE load data
   float background_load, obj_load, bgload_per_obj, total_load, max_obj_load;
@@ -47,16 +54,15 @@ private:
 
   vector<LBCentroidAndIndexRecord> obj_collection;
 
-  // Parition related data
-  vector <float> octal_loads;
-  CkCallbackResumeThread * curr_cb;
-
   // Collect global load data
   float global_load;
   float global_max_obj_load;
   float granularity;
   vector <float> global_octal_loads;
 
+  // Parition related data
+  vector <float> octal_loads;
+  CkCallbackResumeThread * curr_cb;
   vector <float> split_coords;
   int curr_dim, curr_depth;
   int left_idx, right_idx;
@@ -69,8 +75,9 @@ private:
 
   vector <Vector3D<Real>> lower_coords_col;
   vector <Vector3D<Real>> upper_coords_col;
-  vector <float> load_col;
-  vector <float> left_load_col;
+
+  // Partition results
+  vector<vector<Vector3D<Real>>> pe_split_coords;
 
 
   void InitLB(const CkLBOptions &);
@@ -78,9 +85,10 @@ private:
   void initVariables();
   void parseLBData();
   void reportPerLBStates();
-  int getDim();
+  int getDim(int dim, Vector3D<Real>& lower_coords, Vector3D<Real>& upper_coords);
   void reportUniverseDimensions();
   void gatherOctalLoads();
+  void findPeSplitPoints();
   void reset();
 };
 

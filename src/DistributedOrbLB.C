@@ -63,6 +63,9 @@ void DistributedOrbLB::Strategy(const DistBaseLB::LDStats* const stats) {
 
 void DistributedOrbLB::initVariables(){
   total_load = .0f;
+  total_migrates = 0;
+  incoming_migrates = 0;
+  recv_ack = 0;
   n_partitions = 0;
   n_particles = 0;
   max_obj_load = .0f;
@@ -70,8 +73,11 @@ void DistributedOrbLB::initVariables(){
   curr_dim = -1;
   bool use_longest_dim = false;
   obj_coords = vector<vector<float>>(3, vector<float>());
+  pe_split_coords.resize(CkNumPes());
 
-  global_octal_loads = vector<float>(4, .0f);
+  global_octal_loads = vector<float>(8, .0f);
+
+  send_nobjs_to_pes = vector<int>(CkNumPes(), 0);
 }
 
 void DistributedOrbLB::parseLBData(){
@@ -123,9 +129,9 @@ void DistributedOrbLB::parseLBData(){
   //}}}}
 }
 
-int DistributedOrbLB::getDim(){
+int DistributedOrbLB::getDim(int dim, Vector3D<Real>& lower_coords, Vector3D<Real>& upper_coords){
   if (!use_longest_dim){/*{{{*/
-    return (curr_dim + 1) % 3;
+    return (dim + 1) % 3;
   }
 
   return -1;/*}}}*/
@@ -197,28 +203,60 @@ void DistributedOrbLB::getUniverseDimensions(CkReductionMsg * msg){
   }
   ckout << endl;
   delete [] results;
-  float margin = .0001;
 
-  curr_lower_coords = Vector3D<Real>(universe_coords[0] - margin, universe_coords[2] - margin, universe_coords[4] - margin);
-  curr_upper_coords = Vector3D<Real>(universe_coords[1] + margin, universe_coords[3] + margin, universe_coords[5] + margin);
-  curr_dim = getDim();
-  curr_depth = 0;
-  //left_load_col.push_back(.0f);
-  curr_load = global_load;
+  findPeSplitPoints();
 
-  createPartitions(curr_dim, curr_load, 0, CkNumPes(), curr_lower_coords, curr_upper_coords);
   /*}}}*/
 }
 
+void DistributedOrbLB::findPeSplitPoints(){
+  curr_lower_coords = Vector3D<Real>(universe_coords[0], universe_coords[2], universe_coords[4]);
+  curr_upper_coords = Vector3D<Real>(universe_coords[1], universe_coords[3], universe_coords[5]);
+  curr_dim = getDim(-1, curr_lower_coords, curr_upper_coords);
+  curr_depth = 0;
+
+  createPartitions(curr_dim, global_load, 0, CkNumPes(), curr_lower_coords, curr_upper_coords);
+
+  for (int i = 0; i < CkNumPes(); i++){
+    if (_lb_args.debug() >= debug_l2) ckout << "@@@@ Final [" <<i << "]"  << pe_split_coords[i][0] << pe_split_coords[i][1] << endl;
+  }
+
+  thisProxy.migrateObjects(pe_split_coords);
+}
+
 void DistributedOrbLB::createPartitions(int dim, float load, int left, int right, Vector3D<Real> lower_coords, Vector3D<Real> upper_coords){
-  CkPrintf("createPartitions dim %d load %.4f left %d right %d\n", dim, load, left, right);
+  CkPrintf("\n\n==== createPartitions dim %d load %.4f left %d right %d ====\n", dim, load, left, right);
+  ckout << lower_coords << " - " << upper_coords << endl;
   left_idx = left;
   right_idx = right;
+  curr_load = load;
   lower_split = lower_coords[dim];
   upper_split = upper_coords[dim];
-  curr_cb = new CkCallbackResumeThread();
-  thisProxy.binaryLoadPartitionWithOctalBins(dim, load, left, right, lower_split, upper_split, lower_coords, upper_coords, *curr_cb);
-  delete curr_cb;
+  curr_lower_coords = lower_coords;
+  curr_upper_coords = upper_coords;
+
+  // Base case, split into 1 PE
+  if (right_idx - left_idx <= 1){
+    pe_split_coords[left_idx] = vector<Vector3D<Real>>{lower_coords, upper_coords};
+  }
+  else // Recursive case
+  {/*{{{*/
+    curr_cb = new CkCallbackResumeThread();
+    thisProxy.binaryLoadPartitionWithOctalBins(dim, load, left_idx, right_idx, lower_split, upper_split, lower_coords, upper_coords, *curr_cb);
+    delete curr_cb;
+
+    CkPrintf("Split pt = %.8f\n", curr_split_pt);
+    int mid_idx  = (left + right) / 2;
+    Vector3D<Real> left_lower_coord = lower_coords;
+    Vector3D<Real> left_upper_coord = upper_coords;
+    left_upper_coord[dim] = curr_split_pt;
+    Vector3D<Real> right_lower_coord = lower_coords;
+    right_lower_coord[dim] = curr_split_pt;
+    Vector3D<Real> right_upper_coord = upper_coords;
+    float curr_right_load = load - curr_left_load;
+    createPartitions(getDim(dim, left_lower_coord,  left_upper_coord),  curr_left_load, left, mid_idx, left_lower_coord, left_upper_coord);
+    createPartitions(getDim(dim, right_lower_coord, right_upper_coord), curr_right_load, mid_idx, right, right_lower_coord, right_upper_coord);
+  }/*}}}*/
 }
 
 bool inCurrentBox(Vector3D<Real> & centroid, Vector3D<Real> & lower_coords, Vector3D<Real> & upper_coords){
@@ -233,8 +271,8 @@ bool inCurrentBox(Vector3D<Real> & centroid, Vector3D<Real> & lower_coords, Vect
 }
 
 void DistributedOrbLB::binaryLoadPartitionWithOctalBins(int dim, float load, int left, int right, float low, float high, Vector3D<Real> lower_coords, Vector3D<Real> upper_coords, const CkCallback & curr_cb){
-  if (my_pe == 0){
-    ckout << lower_coords << "--" << upper_coords << "; " << low << " - " << high << endl;
+  if (my_pe == 0){/*{{{*/
+    if(_lb_args.debug() >= debug_l1) ckout << lower_coords << "--" << upper_coords << "; " << low << " - " << high << endl;
   }
   octal_loads = vector<float>(8, .0f);
 
@@ -242,19 +280,21 @@ void DistributedOrbLB::binaryLoadPartitionWithOctalBins(int dim, float load, int
   for (auto & obj : obj_collection){
     if (inCurrentBox(obj.centroid, lower_coords, upper_coords)){
       int idx = (obj.centroid[dim] - low)/delta_coord;
+      if (idx > 7) idx = 7;
+      if (idx < 0) idx = 0;
       octal_loads[idx] += obj.load;
 
-      ckout << "\t\t++ Add to bin " << idx << "; " << obj.centroid << endl;
+      if(_lb_args.debug() >= debug_l2) ckout << "\t\t++ Add to bin " << idx << "; " << obj.centroid << endl;
     }
     else{
-      CkPrintf("\t\tNot in the current box\n");
+      if(_lb_args.debug() >= debug_l2) CkPrintf("\t\tNot in the current box\n");
     }
   }
 
-  CkPrintf("\t\tPE[%d] octal_loads = %.8f, %.8f, %.8f, %.8f, %.8f, %.8f, %.8f, %.8f\n", my_pe,
+  if(_lb_args.debug() >= debug_l2) CkPrintf("\t\tPE[%d] octal_loads = %.8f, %.8f, %.8f, %.8f, %.8f, %.8f, %.8f, %.8f\n", my_pe,
       octal_loads[0], octal_loads[1], octal_loads[2], octal_loads[3],
       octal_loads[4], octal_loads[5], octal_loads[6], octal_loads[7]);
-
+/*}}}*/
   gatherOctalLoads();
 }
 
@@ -274,18 +314,17 @@ void DistributedOrbLB::gatherOctalLoads(){
 void DistributedOrbLB::getSumOctalLoads(CkReductionMsg * msg){
   int numReductions;/*{{{*/
   CkReduction::tupleElement* results;
-  float total_load = .0f;
+  float acc_load = .0f;
   msg->toTuple(&results, &numReductions);
   for (int i = 0; i < 8; i++){
     global_octal_loads[i] = *(float*)results[i].data;
-    total_load += global_octal_loads[i];
+    acc_load += global_octal_loads[i];
   }
   delete [] results;
-  CkPrintf("\tGlobal_octal_loads = total = %.8f; curr_load = %.8f, %.8f, %.8f, %.8f, %.8f, %.8f, %.8f, %.8f, %.8f\n", total_load, curr_load,
+  if(_lb_args.debug() >= debug_l1) CkPrintf("\ttacc_load = %.8f; curr_load = %.8f;\n\tGlobal_octal_loads = %.8f, %.8f, %.8f, %.8f, %.8f, %.8f, %.8f, %.8f\n", acc_load, curr_load,
       global_octal_loads[0], global_octal_loads[1], global_octal_loads[2], global_octal_loads[3],
       global_octal_loads[4], global_octal_loads[5], global_octal_loads[6], global_octal_loads[7]);
   //left_load_col[curr_depth] = global_octal_loads[0];
-  curr_left_load = .0f;
   int curr_split_idx = 1;
   float half_load = curr_load / 2;
 
@@ -295,7 +334,7 @@ void DistributedOrbLB::getSumOctalLoads(CkReductionMsg * msg){
   for (int i = 1; i < 8; i++){
     prefix_octal_load[i] = global_octal_loads[i] + prefix_octal_load[i-1];
   }
-  CkPrintf("\tprefix_octal_load = %.8f, %.8f, %.8f, %.8f, %.8f, %.8f, %.8f, %.8f\n",
+  if(_lb_args.debug() >= debug_l1) CkPrintf("\tprefix_octal_load = %.8f, %.8f, %.8f, %.8f, %.8f, %.8f, %.8f, %.8f\n",
       prefix_octal_load[0], prefix_octal_load[1], prefix_octal_load[2], prefix_octal_load[3],
       prefix_octal_load[4], prefix_octal_load[5], prefix_octal_load[6], prefix_octal_load[7]);
 
@@ -308,44 +347,34 @@ void DistributedOrbLB::getSumOctalLoads(CkReductionMsg * msg){
     }
   }
 
-  float split_pt = (upper_split - lower_split)/8 * curr_split_idx;
+  float split_pt = ((upper_split - lower_split)/8) * (float)curr_split_idx;
   split_pt += lower_split;
 
-  CkPrintf("\tcurr_delta = %.8f, granularity = %.4f, curr_split_idx = %d, split_pt = %.8f\n", curr_delta, granularity, curr_split_idx, split_pt);
+  if(_lb_args.debug() >= debug_l1) CkPrintf("\tcurr_delta = %.8f, granularity = %.4f, curr_split_idx = %d, split_pt = %.8f\n", curr_delta, granularity, curr_split_idx, split_pt);
 
   // The split point is good enough
-  if (std::fabs(curr_delta) <= granularity){
+  if (std::fabs(curr_delta) <= granularity || (upper_split - lower_split) < 0.00001){
     split_coords.push_back(split_pt);
     curr_split_pt = split_pt;
+    curr_left_load = prefix_octal_load[curr_split_idx - 1] + half_load;
     lower_coords_col.push_back(curr_lower_coords);
     upper_coords_col.push_back(curr_upper_coords);
     thisProxy.finishedPartitionOneDim(*curr_cb);
   } else {
     // Keep partition the larger section to find better split point
-    int posi_idx = 0;
     if (curr_delta < 0){
       // Futher partition the right part
-      for (int i = 0; i < 8; i++){
-        if (prefix_octal_load[i] > 0.0){
-          posi_idx = i;
-          upper_split = lower_split + (upper_split - lower_split) * (i+1);
-          break;
-        }
-      }
+      upper_split = split_pt + (upper_split - lower_split)/8;
       lower_split = split_pt;
+      //curr_left_load = prefix_octal_load[curr_split_idx - 1] + half_load;
+      //curr_load = global_octal_loads[curr_split_idx];
     } else {
       // Futher patition the left part
-      for (int i = 0; i < 8; i++){
-        if (prefix_octal_load[i] > 0.0){
-          posi_idx = i;
-          lower_split = lower_split + (upper_split - lower_split) * i;
-          break;
-        }
-      }
+      lower_split = split_pt - (upper_split - lower_split)/8;
       upper_split = split_pt;
     }
 
-    CkPrintf("\tNEW idx (%d, %d) lower = %.8f upper = %.8f\n", curr_split_idx-1,posi_idx );
+    if(_lb_args.debug() >= debug_l1) CkPrintf("\tNEW dim = %d lower = %.8f upper = %.8f\n", curr_dim, lower_split, upper_split);
     thisProxy.binaryLoadPartitionWithOctalBins(curr_dim, curr_load, left_idx, right_idx, lower_split, upper_split, curr_lower_coords, curr_upper_coords, *curr_cb);
   }
   /*}}}*/
@@ -356,13 +385,67 @@ void DistributedOrbLB::finishedPartitionOneDim(const CkCallback & curr_cb){
   contribute(curr_cb);
 }
 
+void DistributedOrbLB::migrateObjects(std::vector<std::vector<Vector3D<Real>>> pe_splits){
+  // Find the expected PE for each object{{{
+  for (auto & obj : obj_collection){
+    for (int i = 0; i < pe_splits.size(); i++){
+      if (inCurrentBox(obj.centroid, pe_splits[i][0], pe_splits[i][1])){
+        obj.to_pe = i;
+        break;
+      }
+    }
+  }
+
+  // Create migration message for each migration
+  for (auto & obj : obj_collection){
+    if (obj.to_pe != my_pe){
+      total_migrates ++;
+      MigrateInfo * move = new MigrateInfo;
+      move->obj = obj.data_ptr->handle;
+      move->from_pe = my_pe;
+      move->to_pe = obj.to_pe;
+      migrate_records.push_back(move);
+      send_nobjs_to_pes[obj.to_pe] += 1;
+    }
+  }
+
+  for (int i = 0; i < CkNumPes(); i++){
+    thisProxy[i].acknowledgeIncomingMigrations(send_nobjs_to_pes[i]);
+    if(_lb_args.debug() >= 2) CkPrintf("[%d] send %d objs to [%d]\n", CkMyPe(), send_nobjs_to_pes[i], i);
+  }/*}}}*/
+}
+
+void DistributedOrbLB::acknowledgeIncomingMigrations(int count){
+  recv_ack ++;
+  incoming_migrates += count;
+  if(recv_ack == CkNumPes()){
+    migrates_expected = incoming_migrates;
+    final_migration_msg = new(total_migrates,CkNumPes(),CkNumPes(),0) LBMigrateMsg;
+    final_migration_msg->n_moves = total_migrates;
+    for (int i = 0; i < total_migrates; i++){
+      final_migration_msg->moves[i] = *migrate_records[i];
+      delete migrate_records[i];
+      migrate_records[i] = NULL;
+    }
+
+    if (_lb_args.debug() >= 1) CkPrintf("LB[%d] total move %d / %d  objects\n", my_pe, total_migrates, obj_collection.size());
+    //thisProxy[0].sendSummary(num_moves, total_ct);
+    reset();
+    ProcessMigrationDecision(final_migration_msg);
+  }
+}
+
 void DistributedOrbLB::reset(){
   universe_coords.clear();
   obj_coords.clear();
-  //lower_coords_col.clear();
-  //upper_coords_col.clear();
-  //load_col.clear();
-  //left_load_col.clear();
+  global_octal_loads.clear();
+  send_nobjs_to_pes.clear();
+  migrate_records.clear();
+  obj_collection.clear();
+  octal_loads.clear();
+  lower_coords_col.clear();
+  upper_coords_col.clear();
+  pe_split_coords.clear();
 }
 
 #include "DistributedOrbLB.def.h"
