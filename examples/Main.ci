@@ -12,6 +12,15 @@ mainmodule Main {
 
     initnode void initialize(void);
 
+    include "PerLeafFunctions.h";
+
+    PUPable FirstCollisionFn;
+    PUPable SecondCollisionFn;
+
+    PUPable FirstSphFn;
+    PUPable SecondSphFn;
+    PUPable ThirdSphFn;
+
     group CountManager {
         entry CountManager(double min, double max, int nbins);
         entry void sum(const CkCallback&);

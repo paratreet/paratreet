@@ -71,7 +71,7 @@ namespace paratreet {
         virtual void preTraversalFn(ProxyPack<T>&) = 0;
         virtual void traversalFn(BoundingBox&, ProxyPack<T>&, int) = 0;
         virtual void postIterationFn(BoundingBox&, ProxyPack<T>&, int) = 0;
-        virtual void perLeafFn(int indicator, SpatialNode<T>&, Partition<T>* partition) = 0;
+        // virtual void perLeafFn(int indicator, SpatialNode<T>&, Partition<T>* partition) = 0;
 
         virtual void __register(void) override {
             CkIndex_CacheManager<T>::__register(__makeName("CacheManager"), sizeof(CacheManager<T>));

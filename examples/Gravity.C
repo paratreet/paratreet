@@ -62,5 +62,4 @@ extern bool periodic;
     return universe_box_len / max_velocity / std::cbrt(universe.n_particles);
   }
 
-  void ExMain::perLeafFn(int indicator, SpatialNode<CentroidData>& leaf, Partition<CentroidData>* partition) {}
-
+  #include "NullSPH.h"
