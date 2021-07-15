@@ -22,12 +22,36 @@
 /* readonly */ extern CProxy_ThreadStateHolder thread_state_holder;
 /* readonly */ extern int n_readers;
 
-#define PARATREET_MAIN_VAR(m)   m##_impl
+#define PARATREET_MAIN_VAR(m)   m##_impl_
 
 #define PARATREET_REGISTER_MAIN(m) \
     namespace paratreet { \
     auto& PARATREET_MAIN_VAR(m) = __initMain<m>(); \
     }
+
+#define PARATREET_PER_LEAF_FN_CLASS(name)   name
+#define PARATREET_PER_LEAF_FN_TAG(name)     name##_tag_
+#define PARATREET_PER_LEAF_FN_INST(name)    name##_inst_
+
+// NOTE if placed in a .h file, this can lead to multiple definitions of the class
+//      (perhaps we can add a PARATREET_DECLARE_PER_LEAF_FN in the future?)
+#define PARATREET_REGISTER_PER_LEAF_FN(name, data, fn) \
+    class PARATREET_PER_LEAF_FN_CLASS(name) : public paratreet::PerLeafAble<data> { \
+    public: \
+    PARATREET_PER_LEAF_FN_CLASS(name)(void) = default; \
+    PARATREET_PER_LEAF_FN_CLASS(name)(CkMigrateMessage* m) : paratreet::PerLeafAble<data>(m) {} \
+    PUPable_decl(PARATREET_PER_LEAF_FN_CLASS(name)); \
+    virtual void perLeafFn(SpatialNode<data>& leaf, Partition<data>* partition) override { \
+    (fn)(leaf, partition); \
+    } \
+    }; \
+    PUPable_def(PARATREET_PER_LEAF_FN_CLASS(name)); \
+    PARATREET_PER_LEAF_FN_CLASS(name) PARATREET_PER_LEAF_FN_INST(name); \
+    auto PARATREET_PER_LEAF_FN_TAG(name) = \
+    paratreet::__addRegistrationFn(&PARATREET_PER_LEAF_FN_CLASS(name)::register_PUP_ID, #name); \
+
+
+#define PARATREET_PER_LEAF_FN(name, data) CkReference<paratreet::PerLeafAble<data>>(PARATREET_PER_LEAF_FN_INST(name))
 
 class MainChare: public CBase_MainChare {
   public:
@@ -90,6 +114,27 @@ namespace paratreet {
     using main_type_ = std::unique_ptr<MainBase>;
     CsvExtern(main_type_, main_);
 
+    using registration_fn_ = void (*)(const char*);
+    struct registration_node_ {
+        registration_node_* next;
+        registration_fn_ fn;
+        const char* name;
+
+        registration_node_(registration_node_* _1, const registration_fn_& _2, const char* _3)
+        : next(_1), fn(_2), name(_3) {}
+
+        registration_node_* progress(void) {
+            (*this->fn)(this->name);
+
+            return this->next;
+        }
+    };
+
+    using registration_list_type_ = registration_node_*;
+    CsvExtern(registration_list_type_, registration_list_);
+
+    std::intptr_t __addRegistrationFn(const registration_fn_& fn, const char* name);
+
     template<typename T>
     inline MainBase& __initMain(void) {
         auto& main = CsvAccess(main_);
@@ -99,6 +144,8 @@ namespace paratreet {
 
     inline void __registerMain(void) {
         if (CkMyRank() == 0) {
+            auto curr = CsvAccess(registration_list_);
+            while (curr) { curr = curr->progress(); }
             CsvAccess(main_)->__register();
         }
     }
