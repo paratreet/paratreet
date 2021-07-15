@@ -335,10 +335,10 @@ void Partition<Data>::flush(CProxy_Reader readers, std::vector<Particle>& partic
 }
 
 template <typename Data>
-void Partition<Data>::callPerLeafFn(paratreet::PerLeafAble<Data>& able, const CkCallback& cb)
+void Partition<Data>::callPerLeafFn(paratreet::PerLeafAble<Data>& perLeafFn, const CkCallback& cb)
 {
   for (auto && leaf : leaves) {
-    able.perLeafFn(*leaf, this);
+    perLeafFn(*leaf, this);
   }
 
   this->contribute(cb);

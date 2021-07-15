@@ -41,7 +41,7 @@
     PARATREET_PER_LEAF_FN_CLASS(name)(void) = default; \
     PARATREET_PER_LEAF_FN_CLASS(name)(CkMigrateMessage* m) : paratreet::PerLeafAble<data>(m) {} \
     PUPable_decl(PARATREET_PER_LEAF_FN_CLASS(name)); \
-    virtual void perLeafFn(SpatialNode<data>& leaf, Partition<data>* partition) override { \
+    virtual void operator()(SpatialNode<data>& leaf, Partition<data>* partition) override { \
     (fn)(leaf, partition); \
     } \
     }; \
@@ -95,7 +95,6 @@ namespace paratreet {
         virtual void preTraversalFn(ProxyPack<T>&) = 0;
         virtual void traversalFn(BoundingBox&, ProxyPack<T>&, int) = 0;
         virtual void postIterationFn(BoundingBox&, ProxyPack<T>&, int) = 0;
-        // virtual void perLeafFn(int indicator, SpatialNode<T>&, Partition<T>* partition) = 0;
 
         virtual void __register(void) override {
             CkIndex_CacheManager<T>::__register(__makeName("CacheManager"), sizeof(CacheManager<T>));
