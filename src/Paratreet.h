@@ -114,18 +114,20 @@ namespace paratreet {
     CsvExtern(main_type_, main_);
 
     using registration_fn_ = void (*)(const char*);
-    struct registration_node_ {
-        registration_node_* next;
-        registration_fn_ fn;
-        const char* name;
+    class registration_node_ {
+        registration_node_* next_;
+        registration_fn_ fn_;
+        const char* name_;
 
-        registration_node_(registration_node_* _1, const registration_fn_& _2, const char* _3)
-        : next(_1), fn(_2), name(_3) {}
+      public:
+        registration_node_(registration_node_* next, const registration_fn_& fn, const char* name)
+        : next_(next), fn_(fn), name_(name) {}
 
-        registration_node_* progress(void) {
-            (*this->fn)(this->name);
-
-            return this->next;
+        inline registration_node_* next(void) {
+            auto next = this->next_;
+            (*this->fn_)(this->name_);
+            delete this;
+            return next;
         }
     };
 
@@ -144,7 +146,7 @@ namespace paratreet {
     inline void __registerMain(void) {
         if (CkMyRank() == 0) {
             auto curr = CsvAccess(registration_list_);
-            while (curr) { curr = curr->progress(); }
+            while (curr) { curr = curr->next(); }
             CsvAccess(main_)->__register();
         }
     }
