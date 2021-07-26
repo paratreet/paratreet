@@ -1,0 +1,7 @@
+module AverageSmoothLB{
+    extern module CentralLB;
+    initnode void lbinit(void);
+    group [migratable] AverageSmoothLB : CentralLB{
+        entry void AverageSmoothLB(const CkLBOptions &);
+    }
+}
