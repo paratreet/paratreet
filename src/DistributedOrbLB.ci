@@ -1,0 +1,35 @@
+module DistributedOrbLB {
+extern module DistBaseLB;
+initnode void lbinit(void);
+
+include "common.h";
+
+group [migratable] DistributedOrbLB : DistBaseLB {
+  entry void DistributedOrbLB(const CkLBOptions &);
+  initnode void initnodeFn();
+  entry [reductiontarget] void perLBStates(CkReductionMsg * msg);
+  entry [reductiontarget] void getUniverseDimensions(CkReductionMsg * msg);
+  entry void binaryLoadPartitionWithOctalBins(int dim, float load, int left, int right, float low, float high, Vector3D<Real> lower_coords, Vector3D<Real> upper_coords, const CkCallback &);
+  entry [threaded] void createPartitions(int, float,int, int, Vector3D<Real>, Vector3D<Real>);
+  entry [reductiontarget] void getSumOctalLoads(CkReductionMsg * msg);
+  entry void finishedPartitionOneDim(const CkCallback & curr_cb);
+  entry void migrateObjects(std::vector<std::vector<Vector3D<Real>>> pe_splits);
+  entry void acknowledgeIncomingMigrations(int count);
+  entry void sendFinalMigrations(int count);
+  entry void summary(int nmove, int total);
+};
+
+};
+
+
+//struct LBCentroidAndIndexRecord{
+//  Vector3D<Real> centroid;/*{{{*/
+//  int idx;
+//  int particle_size;
+//  int from_pe;
+//  float load;
+//  float distance;
+//  int to_pe;
+//  const LDObjData* data_ptr;
+//  inline void pup(PUP::er &p);
+//};/*}}}*/
