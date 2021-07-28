@@ -184,11 +184,10 @@ void DistributedOrbLB::perLBStates(CkReductionMsg * msg){
   global_min_obj_load = *(float*)results[3].data;
   delete [] results;
   global_load = sum_load;
-  granularity = global_max_obj_load / global_load;
-
+  granularity = global_min_obj_load * 4;
   float avg_load = sum_load / (float)CkNumPes();
   CkPrintf("DistributedOrbLB >> Pre LB load sum = %.4f; max / avg load ratio = %.4f\n", sum_load, max_load / avg_load);/*}}}*/
-  CkPrintf("\t\t(%.8f, %.8f)\n", global_min_obj_load / global_load, granularity);/*}}}*/
+  CkPrintf("\t\t(%.8f, %.8f)\n", global_min_obj_load , global_max_obj_load);/*}}}*/
 }
 
 void DistributedOrbLB::reportUniverseDimensions(){
@@ -387,6 +386,9 @@ void DistributedOrbLB::getSumOctalLoads(CkReductionMsg * msg){
     if (abs_delta < std::fabs(curr_delta)){
       curr_delta = prefix_octal_load[i];
       curr_split_idx = i+1;
+    }
+    if (abs_delta == std::fabs(curr_delta) && prefix_octal_load[i] < 0.0f){
+      curr_split_idx  = i+1;
     }
   }
 
