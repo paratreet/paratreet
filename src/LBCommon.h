@@ -28,6 +28,40 @@ namespace LBCommon{
     };
   };/*}}}*/
 
+  struct LBObjToken{
+    Vector3D<Real> centroid;/*{{{*/
+    int idx;
+    int from_pe;
+    int to_pe;
+    float load;
+    float distance;
+    void pup(PUP::er &p){
+      p | centroid;
+      p | idx;
+      p | from_pe;
+      p | to_pe;
+      p | load;
+      p | distance;
+    };
+  };/*}}}*/
+
+  struct LBGroup{
+    Vector3D<Real> centroid;/*{{{*/
+    int id;
+    int size;
+    float load;
+    float distance;
+    float load_per_pe;
+    void pup(PUP::er &p){
+      p | centroid;
+      p | id;
+      p | size;
+      p | load;
+      p | distance;
+      p | load_per_pe;
+    };
+  };/*}}}*/
+
   struct LBCompareStats{
     int index; // index from objData{{{
     int chare_idx; // index from Subtree or Partition chare arrays
@@ -99,6 +133,18 @@ namespace{
 
   bool DiffusionCompareCentroidDistance(const LBCommon::LBCentroidAndIndexRecord & a, const LBCommon::LBCentroidAndIndexRecord & b){
     return a.distance < b.distance;
+  }
+
+  bool DiffusionCompareGroupDistance(const LBCommon::LBGroup & a, const LBCommon::LBGroup & b){
+    return a.distance < b.distance;
+  }
+
+  bool CompareTokenDistance(const LBCommon::LBObjToken & a, const LBCommon::LBObjToken & b){
+    return a.distance > b.distance;
+  }
+
+  bool DiffusionCompareGroupLoads(const LBCommon::LBGroup & a, const LBCommon::LBGroup & b){
+    return a.load_per_pe < b.load_per_pe;
   }
 
   struct NdComparator{

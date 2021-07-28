@@ -10,9 +10,12 @@ UTILITY_HEADERS = common.h Utility.h $(STRUCTURE_PATH)/Vector3D.h $(STRUCTURE_PA
 CORE_HEADERS = BoundingBox.h BufferedVec.h CentroidData.h MultiData.h Node.h NodeWrapper.h ParticleComp.h ParticleMsg.h Splitter.h
 IMPL_HEADERS = CacheManager.h Configuration.h Driver.h Partition.h Reader.h Resumer.h Splitter.h Subtree.h Traverser.h TreeCanopy.h LBCommon.h
 
+LBS = DistributedOrbLB
+LB_LIBS = $(foreach m, $(LBS), libmodule$(m).a)
+
 all: lib
 
-lib: $(OBJS) DistributedPrefixLB DistributedOrbLB AverageSmoothLB OrbLB DiffusionLB
+lib: $(OBJS) $(LB_LIBS)
 	ar x $(STRUCTURE_PATH)/libTipsy.a
 	ar cr libparatreet.a $(OBJS) $(TIPSY_OBJS)
 	rm -f $(TIPSY_OBJS)
@@ -27,35 +30,9 @@ Paratreet.o: $(UTILITY_HEADERS) $(CORE_HEADERS) $(IMPL_HEADERS) paratreet.decl.h
 %.o: %.C %.h paratreet.decl.h
 	$(CHARMC) -c $<
 
-DistributedPrefixLB: DistributedPrefixLB.C LBCommon.h DistributedPrefixLB.decl.h
-	$(CHARMC) -o libmoduleDistributedPrefixLB.a DistributedPrefixLB.C
-
-DistributedPrefixLB.decl.h: DistributedPrefixLB.ci
-	$(CHARMC) DistributedPrefixLB.ci
-
-DistributedOrbLB: DistributedOrbLB.C LBCommon.h DistributedOrbLB.decl.h
-	$(CHARMC) -o libmoduleDistributedOrbLB.a DistributedOrbLB.C
-
-DistributedOrbLB.decl.h: DistributedOrbLB.ci
-	$(CHARMC) DistributedOrbLB.ci
-
-AverageSmoothLB: AverageSmoothLB.C LBCommon.h AverageSmoothLB.decl.h
-	$(CHARMC) -o libmoduleAverageSmoothLB.a AverageSmoothLB.C
-
-AverageSmoothLB.decl.h: AverageSmoothLB.ci
-	$(CHARMC) AverageSmoothLB.ci
-
-OrbLB: OrbLB.C LBCommon.h OrbLB.decl.h
-	$(CHARMC) -o libmoduleOrbLB.a OrbLB.C
-
-OrbLB.decl.h: OrbLB.ci
-	$(CHARMC) OrbLB.ci
-
-DiffusionLB: DiffusionLB.C LBCommon.h DiffusionLB.decl.h
-	$(CHARMC) -o libmoduleDiffusionLB.a DiffusionLB.C
-
-DiffusionLB.decl.h: DiffusionLB.ci
-	$(CHARMC) DiffusionLB.ci
+libmodule%.a : %.ci %.C %.h LBCommon.h
+	$(CHARMC) $<
+	$(CHARMC) -o $@ $(word 2,$^)
 
 clean:
-	rm -f *.decl.h *.def.h conv-host *.o libmodulePrefixLB.a libmoduleDistributedPrefixLB.a libmoduleDistributedOrbLB.a libmoduleAverageSmoothLB.a libparatreet.a charmrun
+	rm -f *.decl.h *.def.h conv-host *.o libmodule*.a libparatreet.a charmrun
