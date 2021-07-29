@@ -46,13 +46,15 @@ void DistributedOrbLB::InitLB(const CkLBOptions &opt) {
 void DistributedOrbLB::Strategy(const DistBaseLB::LDStats* const stats) {
   start_time = CmiWallTimer();
   if (CkMyPe() == 0) {
-    CkPrintf("DistributedOrbLB>> In DistributedOrbLB strategy at %lf\n", start_time);
+    CkPrintf("DistributedOrbLB>> Seq %d In DistributedOrbLB strategy at %lf\n",lb_iter, start_time);
   }
+  lb_iter += 1;
 
   // Reset member variables for this LB iteration
   my_stats = stats;
   my_pe = CkMyPe();
   background_load = my_stats->bg_walltime * my_stats->pe_speed;
+  //if (lb_iter == 1) background_load = .0f;
 
   initVariables();
   parseLBData();
@@ -88,6 +90,7 @@ void DistributedOrbLB::initVariables(){
   global_octal_sizes = vector<int>(8, 0);
 
   send_nobjs_to_pes = vector<int>(CkNumPes(), 0);
+  send_nload_to_pes = vector<float>(CkNumPes(), .0f);
 }
 
 void DistributedOrbLB::parseLBData(){
@@ -135,6 +138,7 @@ void DistributedOrbLB::parseLBData(){
     if (obj.load > max_obj_load) max_obj_load = obj.load;
     if (obj.load < min_obj_load) min_obj_load = obj.load;
   }
+  post_lb_load = total_load;
   //if (_lb_args.debug() == 2 && my_pe == 0){
   //  CkPrintf("obj[0] load with bg: %f\n", obj_collection[0].load);
   //}}}}
@@ -184,10 +188,39 @@ void DistributedOrbLB::perLBStates(CkReductionMsg * msg){
   global_min_obj_load = *(float*)results[3].data;
   delete [] results;
   global_load = sum_load;
-  granularity = global_min_obj_load * 4;
+  granularity = global_min_obj_load * 2;
   float avg_load = sum_load / (float)CkNumPes();
   CkPrintf("DistributedOrbLB >> Pre LB load sum = %.4f; max / avg load ratio = %.4f\n", sum_load, max_load / avg_load);/*}}}*/
   CkPrintf("\t\t(%.8f, %.8f)\n", global_min_obj_load , global_max_obj_load);/*}}}*/
+}
+
+void DistributedOrbLB::reportPostLBStates(){
+  int tupleSize = 4;/*{{{*/
+  CkReduction::tupleElement tupleRedn[] = {
+    CkReduction::tupleElement(sizeof(float), &post_lb_load, CkReduction::max_float),
+    CkReduction::tupleElement(sizeof(float), &post_lb_load, CkReduction::sum_float),
+    CkReduction::tupleElement(sizeof(int), &total_migrates, CkReduction::sum_int),
+    CkReduction::tupleElement(sizeof(int), &n_partitions, CkReduction::sum_int),
+};
+  CkReductionMsg* msg = CkReductionMsg::buildFromTuple(tupleRedn, tupleSize);
+  CkCallback cb(CkIndex_DistributedOrbLB::postLBStates(NULL), thisProxy[0]);
+  msg->setCallback(cb);
+  contribute(msg);/*}}}*/
+}
+
+void DistributedOrbLB::postLBStates(CkReductionMsg * msg){
+  int numReductions;/*{{{*/
+  CkReduction::tupleElement* results;
+
+  msg->toTuple(&results, &numReductions);
+  float max_load = *(float*)results[0].data;
+  float sum_load = *(float*)results[1].data;
+  int n_moves = *(int*)results[2].data;
+  int n_total = *(int*)results[3].data;
+  delete [] results;
+  float avg_load = sum_load / (float)CkNumPes();
+  CkPrintf("DistributedOrbLB >> Summary::\n\tPost LB load sum = %.4f; moved %d/%d objs; max / avg load ratio = %.4f\n", sum_load, n_moves, n_total,  max_load / avg_load);
+  /*}}}*/
 }
 
 void DistributedOrbLB::reportUniverseDimensions(){
@@ -371,7 +404,11 @@ void DistributedOrbLB::getSumOctalLoads(CkReductionMsg * msg){
       global_octal_sizes[4], global_octal_sizes[5], global_octal_sizes[6], global_octal_sizes[7]);
 
   int curr_split_idx = 1;
-  float half_load = acc_load / 2;
+  int mid_idx = (left_idx + right_idx)/2;
+  float left_ratio = mid_idx - left_idx;
+  left_ratio /= (right_idx - left_idx);
+
+  float half_load = acc_load * left_ratio;
 
   // Find the split idx that cuts octal bin into two parts of even loads
   vector<float> prefix_octal_load(8, .0f);
@@ -392,7 +429,7 @@ void DistributedOrbLB::getSumOctalLoads(CkReductionMsg * msg){
     }
   }
 
-  if(_lb_args.debug() >= debug_l0) CkPrintf("\tcurr_split_idx = %d curr_delta = %.8f;\n\tprefix_octal_load = %.8f, %.8f, %.8f, %.8f, %.8f, %.8f, %.8f, %.8f\n", curr_split_idx, curr_delta,
+  if(_lb_args.debug() >= debug_l0) CkPrintf("\tleft_ratio = %.8f curr_split_idx = %d curr_delta = %.8f;\n\tprefix_octal_load = %.8f, %.8f, %.8f, %.8f, %.8f, %.8f, %.8f, %.8f\n", left_ratio, curr_split_idx, curr_delta,
       prefix_octal_load[0], prefix_octal_load[1], prefix_octal_load[2], prefix_octal_load[3],
       prefix_octal_load[4], prefix_octal_load[5], prefix_octal_load[6], prefix_octal_load[7]);
 
@@ -402,7 +439,7 @@ void DistributedOrbLB::getSumOctalLoads(CkReductionMsg * msg){
   if(_lb_args.debug() >= debug_l1) CkPrintf("\tcurr_delta = %.8f, granularity = %.4f, curr_split_idx = %d, split_pt = %.8f\n", curr_delta, granularity, curr_split_idx, split_pt);
 
   // The split point is good enough
-  if (std::fabs(curr_delta) <= granularity || (upper_split - lower_split) < 0.0000001){
+  if (std::fabs(curr_delta) <= granularity || (upper_split - lower_split) < 0.0000008){
     split_coords.push_back(split_pt);
     curr_split_pt = split_pt;
     curr_left_load = prefix_octal_load[curr_split_idx - 1] + half_load;
@@ -421,7 +458,7 @@ void DistributedOrbLB::getSumOctalLoads(CkReductionMsg * msg){
       upper_split = split_pt;
     }
 
-    if(_lb_args.debug() >= debug_l0) CkPrintf("\t****NEW dim = %d lower = %.8f upper = %.8f\n", curr_dim, lower_split, upper_split);
+    if(_lb_args.debug() >= debug_l0) CkPrintf("\t****NEW dim = %d lower = %.12f upper = %.12f\n", curr_dim, lower_split, upper_split);
     thisProxy.binaryLoadPartitionWithOctalBins(curr_dim, curr_load, left_idx, right_idx, lower_split, upper_split, curr_lower_coords, curr_upper_coords, *curr_cb);
   }
   /*}}}*/
@@ -457,17 +494,20 @@ void DistributedOrbLB::migrateObjects(std::vector<std::vector<Vector3D<Real>>> p
       move->to_pe = obj.to_pe;
       migrate_records.push_back(move);
       send_nobjs_to_pes[obj.to_pe] += 1;
+      send_nload_to_pes[obj.to_pe] += obj.load;
+      post_lb_load  -= obj.load;
     }
   }
 
   for (int i = 0; i < CkNumPes(); i++){
-    thisProxy[i].acknowledgeIncomingMigrations(send_nobjs_to_pes[i]);
+    thisProxy[i].acknowledgeIncomingMigrations(send_nobjs_to_pes[i], send_nload_to_pes[i]);
   }/*}}}*/
 }
 
-void DistributedOrbLB::acknowledgeIncomingMigrations(int count){
+void DistributedOrbLB::acknowledgeIncomingMigrations(int count, float in_load){
   recv_ack ++;
   incoming_migrates += count;
+  post_lb_load += in_load;
   if(recv_ack == CkNumPes()){
     // Make sure that final PE object count is not 0
     if (obj_collection.size() == total_migrates){
@@ -484,13 +524,12 @@ void DistributedOrbLB::acknowledgeIncomingMigrations(int count){
       migrate_records[i] = NULL;
     }
 
-    thisProxy[0].summary(total_migrates, n_partitions);
+    reportPostLBStates();
 
     for (int i = 0; i < CkNumPes(); i++){
       thisProxy[i].sendFinalMigrations(send_nobjs_to_pes[i]);
       if(_lb_args.debug() >= 2) CkPrintf("[%d] send %d objs to [%d]\n", CkMyPe(), send_nobjs_to_pes[i], i);
     }
-
   }
 }
 
@@ -502,15 +541,6 @@ void DistributedOrbLB::sendFinalMigrations(int count){
     if (_lb_args.debug() >= 1) CkPrintf("LB[%d] total move %d / %d  objects; incoming %d objs, final %d\n", my_pe, total_migrates, obj_collection.size(), incoming_final, obj_collection.size() - total_migrates + incoming_final);
     reset();
     ProcessMigrationDecision(final_migration_msg);
-  }
-}
-
-void DistributedOrbLB::summary(int nmove, int total){
-  recv_summary ++;
-  total_move += nmove;
-  total_objs += total;
-  if (recv_summary == CkNumPes()){
-    CkPrintf("DistributedOrbLB >> Summary:: moved %d / %d objects\n", total_move, total_objs);
   }
 }
 

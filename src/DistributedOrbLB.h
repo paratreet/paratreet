@@ -23,7 +23,8 @@ public:
   DistributedOrbLB(const CkLBOptions &);
   DistributedOrbLB(CkMigrateMessage *m);
   static void initnodeFn(void);
-  void perLBStates(CkReductionMsg * msg);\
+  void perLBStates(CkReductionMsg * msg);
+  void postLBStates(CkReductionMsg * msg);
   void getUniverseDimensions(CkReductionMsg * msg);
   void recursiveLoadPartition();
   void binaryLoadPartitionWithOctalBins(int dim, float load, int left, int right, float low, float high, Vector3D<Real> lower_coords, Vector3D<Real> upper_coords, const CkCallback &);
@@ -31,25 +32,27 @@ public:
   void createPartitions(int dim, float load, int left, int right, Vector3D<Real> lower_coords, Vector3D<Real> upper_coords);
   void finishedPartitionOneDim(const CkCallback & curr_cb);
   void migrateObjects(std::vector<std::vector<Vector3D<Real>>> pe_splits);
-  void acknowledgeIncomingMigrations(int count);
+  void acknowledgeIncomingMigrations(int count, float in_load);
   void sendFinalMigrations(int count);
-  void summary(int nmove, int total);
 
 
 private:
   int debug_l0 = 1;
   int debug_l1 = 2;
   int debug_l2 = 3;
+  int lb_iter = 0;
   int my_pe, total_migrates, incoming_migrates, recv_ack;
   int recv_final, incoming_final;
   const DistBaseLB::LDStats* my_stats;
   double start_time;
   vector<MigrateInfo*> migrate_records;
   vector<int> send_nobjs_to_pes;
+  vector<float> send_nload_to_pes;
   LBMigrateMsg * final_migration_msg;
 
   // Collect myPE load data
   float background_load, obj_load, bgload_per_obj, total_load, max_obj_load, min_obj_load;
+  float post_lb_load;
 
   int n_partitions, n_particles;
   int dim;
@@ -94,6 +97,7 @@ private:
   void initVariables();
   void parseLBData();
   void reportPerLBStates();
+  void reportPostLBStates();
   int getDim(int dim, Vector3D<Real>& lower_coords, Vector3D<Real>& upper_coords);
   void reportUniverseDimensions();
   void gatherOctalLoads();
