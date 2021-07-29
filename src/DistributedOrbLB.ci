@@ -9,6 +9,8 @@ group [migratable] DistributedOrbLB : DistBaseLB {
   initnode void initnodeFn();
   entry [reductiontarget] void perLBStates(CkReductionMsg * msg);
   entry [reductiontarget] void postLBStates(CkReductionMsg * msg);
+  entry void endLB();
+  entry void reportUniverseDimensions();
   entry [reductiontarget] void getUniverseDimensions(CkReductionMsg * msg);
   entry void binaryLoadPartitionWithOctalBins(int dim, float load, int left, int right, float low, float high, Vector3D<Real> lower_coords, Vector3D<Real> upper_coords, const CkCallback &);
   entry [threaded] void createPartitions(int, float,int, int, Vector3D<Real>, Vector3D<Real>);

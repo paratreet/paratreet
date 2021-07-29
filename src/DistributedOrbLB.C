@@ -59,7 +59,6 @@ void DistributedOrbLB::Strategy(const DistBaseLB::LDStats* const stats) {
   initVariables();
   parseLBData();
   reportPerLBStates();
-  reportUniverseDimensions();
 }
 
 
@@ -190,8 +189,23 @@ void DistributedOrbLB::perLBStates(CkReductionMsg * msg){
   global_load = sum_load;
   granularity = global_min_obj_load * 2;
   float avg_load = sum_load / (float)CkNumPes();
-  CkPrintf("DistributedOrbLB >> Pre LB load sum = %.4f; max / avg load ratio = %.4f\n", sum_load, max_load / avg_load);/*}}}*/
+  float max_avg_ratio = max_load / avg_load;
+  CkPrintf("DistributedOrbLB >> Pre LB load sum = %.4f; max / avg load ratio = %.4f\n", sum_load, max_avg_ratio);/*}}}*/
   CkPrintf("\t\t(%.8f, %.8f)\n", global_min_obj_load , global_max_obj_load);/*}}}*/
+
+  if (max_avg_ratio < 1.15){
+    CkPrintf("DistributedOrbLB >> Summary:: already balanced, skip\n");
+    thisProxy.endLB();
+  } else {
+    thisProxy.reportUniverseDimensions();
+  }
+}
+
+void DistributedOrbLB::endLB(){
+  migrates_expected = 0;
+  final_migration_msg = new(0,CkNumPes(),CkNumPes(),0) LBMigrateMsg;
+  final_migration_msg->n_moves = 0;
+  ProcessMigrationDecision(final_migration_msg);
 }
 
 void DistributedOrbLB::reportPostLBStates(){

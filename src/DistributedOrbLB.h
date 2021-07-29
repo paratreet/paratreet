@@ -25,6 +25,8 @@ public:
   static void initnodeFn(void);
   void perLBStates(CkReductionMsg * msg);
   void postLBStates(CkReductionMsg * msg);
+  void endLB();
+  void reportUniverseDimensions();
   void getUniverseDimensions(CkReductionMsg * msg);
   void recursiveLoadPartition();
   void binaryLoadPartitionWithOctalBins(int dim, float load, int left, int right, float low, float high, Vector3D<Real> lower_coords, Vector3D<Real> upper_coords, const CkCallback &);
@@ -99,7 +101,6 @@ private:
   void reportPerLBStates();
   void reportPostLBStates();
   int getDim(int dim, Vector3D<Real>& lower_coords, Vector3D<Real>& upper_coords);
-  void reportUniverseDimensions();
   void gatherOctalLoads();
   void findPeSplitPoints();
   void reset();
