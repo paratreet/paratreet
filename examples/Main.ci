@@ -70,8 +70,10 @@ mainmodule Main {
     extern entry void Partition<CentroidData> startDown<GravityVisitor<1,1,1>> ();
 
     extern entry void Subtree<CentroidData> startDual<GravityVisitor<0,0,0>> ();
+    extern entry void Partition<CentroidData> startBasicDown<GravityVisitor<0,0,0>> ();
     extern entry void Partition<CentroidData> startDown<CollisionVisitor> ();
     extern entry void Partition<CentroidData> startDown<VisitAllVisitor> ();
+    extern entry void Partition<CentroidData> startBasicDown<VisitAllVisitor> ();
     extern entry void Partition<CentroidData> startUpAndDown<DensityVisitor> ();
     //extern entry void Partition<CentroidData> startDown<PressureVisitor> ();
     extern entry void CacheManager<CentroidData> startPrefetch<GravityVisitor<0,0,0>>(DPHolder<CentroidData>, CkCallback);
