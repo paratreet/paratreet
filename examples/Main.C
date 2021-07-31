@@ -4,6 +4,7 @@
 #include "DensityVisitor.h"
 //#include "PressureVisitor.h"
 #include "CountVisitor.h"
+#include "VisitAllVisitor.h"
 #include "CollisionVisitor.h"
 
 PARATREET_REGISTER_MAIN(ExMain);
@@ -16,6 +17,7 @@ PARATREET_REGISTER_MAIN(ExMain);
 /* readonly */ CProxy_CountManager count_manager;
 /* readonly */ CProxy_NeighborListCollector neighbor_list_collector;
 /* readonly */ CProxy_CollisionTracker collision_tracker;
+/* readonly */ CProxy_VisitAllTracker visit_all_tracker;
 
   static void initialize() {
     BoundingBox::registerReducer();
@@ -163,6 +165,7 @@ PARATREET_REGISTER_MAIN(ExMain);
     count_manager = CProxy_CountManager::ckNew(0.00001, 10000, 5);
     neighbor_list_collector = CProxy_NeighborListCollector::ckNew();
     collision_tracker = CProxy_CollisionTracker::ckNew();
+    visit_all_tracker = CProxy_VisitAllTracker::ckNew();
 
     // Delegate to Driver
     // CkCallback runCB(CkIndex_Main::run(), thisProxy);
