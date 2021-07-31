@@ -59,10 +59,14 @@ struct NeighborListCollector : public CBase_NeighborListCollector {
     // send density forward
   }
   void saveSubtreeHome(int subtree_home_pe, Particle part) {
-    remote_particles[part.key].first.subtree_home_pe = subtree_home_pe;
+    auto& rp = remote_particles[part.key];
+    rp.first.subtree_home_pe = subtree_home_pe;
+    rp.second.key = part.key;
   }
   void savePartitionHome(int partition_home_pe, Particle part) {
-    remote_particles[part.key].first.partition_home_pe = partition_home_pe;
+    auto& rp = remote_particles[part.key];
+    rp.first.partition_home_pe = partition_home_pe;
+    rp.second.key = part.key;
   }
   void shareAccelerations() {
     for (auto && remote_part : remote_particles) {
