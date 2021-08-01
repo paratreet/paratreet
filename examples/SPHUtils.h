@@ -48,6 +48,19 @@ namespace paratreet {
     return adk;
   }
 
+typedef struct PressSmoothUpdateStruct {
+    double dvdotdr;
+    double visc;
+    double aFac;
+    Vector3D<double> dx;
+} PressSmoothUpdate;
+
+typedef struct PressSmoothParticleStruct {
+    double rNorm;
+    double PoverRho2;
+    double PoverRho2f;
+} PressSmoothParticle;
+
   static void doSPHCalc(SpatialNode<CentroidData>& leaf, int pi, Real fBall, Particle& b) {
     auto& a = leaf.particles()[pi];
     static constexpr const Real visc = 0.;
@@ -62,24 +75,62 @@ namespace paratreet {
     // poverrho2 = gammam1 * p.uPred() / density;
     // poverrho2f is the geometric mean of the two densities
 
+
     Real ph = 0.5 * fBall; // fBall is the smoothing length and also the search radius
     Real ih2 = 4. / (fBall * fBall); // invH2 in changa
     Real fNorm1 = 0.5 * M_1_PI * ih2 * ih2 / ph; // 1 over sum of all weights
     auto dx = b.position - a.position; // points from us to our neighbor
-    Real dsq = dx.lengthSquared();
-    Real rs1 = dkernelM4(dsq * ih2) * fNorm1 * fDivv_Corrector; // rsq / density
-    Real rNorm = rs1 * b.mass; // normalized kernel value
+    Real fDist2 = dx.lengthSquared();
+    Real r2 = fDist2*ih2;
+    Real rs1 = dkernelM4(r2);
+    rs1 *= fNorm1;
+    rs1 *= fDivv_Corrector;
+    PressSmoothUpdate params;
+    PressSmoothParticle aParams;
+    PressSmoothParticle bParams;
+    aParams.rNorm = rs1 * a.mass;
+    bParams.rNorm = rs1 * b.mass;
+    params.dx = dx;
     auto dv = b.velocity_predicted - a.velocity_predicted;
-    Real dvdotdr = vFac * dot(dv, dx) + dsq * H;
-    Real PoverRho2a = a.u_predicted * gammam1 / (a.density * a.density);
-    Real work = rNorm * dvdotdr * (PoverRho2a + visc * 0.5);
-    leaf.applyGasWork(pi, work);
-    b.pressure_dVolume += work;
-    auto && accSignless = rNorm * aFac * (PoverRho2a + visc) * dx;
-    auto acc = accSignless * (a.key == b.key ? 1 : -1);
-    leaf.applyAcceleration(pi, acc);
-    b.acceleration += acc;
+    params.dvdotdr = vFac*dot(dv, params.dx) + fDist2*H;
+    aParams.PoverRho2 = a.u_predicted*gammam1/(a.density*b.density);
+    bParams.PoverRho2 = b.u_predicted*gammam1/(a.density*b.density);
+    /***********************************
+     * SPH Pressure Terms Calculation
+     ***********************************/
+    /* Calculate Artificial viscosity term prefactor terms 
+     * 
+     * Updates:
+     *  params.visc
+     */
+    { // Begin SPH pressure terms calculation and scope the variables below
+    if (params.dvdotdr>=0.0) {
+        params.visc = 0.0;
+    } else {
+        /* mu multiply by a to be consistent with physical c */
+        Real absmu = -params.dvdotdr*aFac/sqrt(fDist2);
+        /* viscosity terms */
+        // params.visc = (varAlpha(alpha, p, q)*(p->c() + q->c())
+        //    + varBeta(beta, p, q)*1.5*absmu);
+        // params.visc = switchCombine(p,q)*params.visc*absmu/(p->fDensity + q->fDensity);
+        params.visc = 0.0;
+    }
+//    updateParticle(a, b, &params, &pParams, &qParams, 1);
+    Real PdV = bParams.rNorm * 0.5 * params.visc * params.dvdotdr;
+    PdV += bParams.rNorm*aParams.PoverRho2;
+    leaf.applyGasWork(pi, PdV);
+    auto && acc = (aParams.PoverRho2 + bParams.PoverRho2) + params.visc;
+    assert(isfinite(acc));
+    leaf.applyAcceleration(pi, acc*bParams.rNorm*params.dx);
+    
+//    updateParticle(a, b, &params, &qParams, &pParams, -1);
+    PdV = aParams.rNorm * 0.5 * params.visc * params.dvdotdr;
+    PdV += aParams.rNorm*aParams.PoverRho2;
+    b.pressure_dVolume += PdV;
+    b.acceleration -= acc;
   }
+}
 
 }
+
 
