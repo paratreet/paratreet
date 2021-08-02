@@ -29,8 +29,8 @@ public:
   void reportUniverseDimensions();
   void getUniverseDimensions(CkReductionMsg * msg);
   void recursiveLoadPartition();
-  void binaryLoadPartitionWithOctalBins(int dim, float load, int left, int right, float low, float high, Vector3D<Real> lower_coords, Vector3D<Real> upper_coords, const CkCallback &);
-  void getSumOctalLoads(CkReductionMsg * msg);
+  void binaryLoadPartitionWith64Bins(int dim, float load, int left, int right, double low, double high, Vector3D<Real> lower_coords, Vector3D<Real> upper_coords, const CkCallback &);
+  void getSumBinLoads(CkReductionMsg * msg);
   void createPartitions(int dim, float load, int left, int right, Vector3D<Real> lower_coords, Vector3D<Real> upper_coords);
   void finishedPartitionOneDim(const CkCallback & curr_cb);
   void migrateObjects(std::vector<std::vector<Vector3D<Real>>> pe_splits);
@@ -43,6 +43,8 @@ private:
   int debug_l1 = 2;
   int debug_l2 = 3;
   int lb_iter = 0;
+  int bin_size = 64;
+  double bin_size_double = 64.0;
   int my_pe, total_migrates, incoming_migrates, recv_ack;
   int recv_final, incoming_final;
   const DistBaseLB::LDStats* my_stats;
@@ -67,8 +69,8 @@ private:
   float global_load;
   float global_max_obj_load, global_min_obj_load;
   float granularity;
-  vector <float> global_octal_loads;
-  vector <int> global_octal_sizes;
+  vector <float> global_bin_loads;
+  vector <int> global_bin_sizes;
 
   int recv_summary, total_move, total_objs;
 
@@ -79,15 +81,12 @@ private:
   vector <float> split_coords;
   int curr_dim, curr_depth;
   int left_idx, right_idx;
-  float lower_split, upper_split;
+  double lower_split, upper_split;
   float curr_load, curr_left_load, curr_split_pt;
   bool went_right = true;
   bool use_longest_dim;
   Vector3D<Real> curr_lower_coords;
   Vector3D<Real> curr_upper_coords;
-
-  vector <Vector3D<Real>> lower_coords_col;
-  vector <Vector3D<Real>> upper_coords_col;
 
   // Partition results
   vector<vector<Vector3D<Real>>> pe_split_coords;
@@ -101,7 +100,7 @@ private:
   void reportPerLBStates();
   void reportPostLBStates();
   int getDim(int dim, Vector3D<Real>& lower_coords, Vector3D<Real>& upper_coords);
-  void gatherOctalLoads();
+  void gatherBinLoads();
   void findPeSplitPoints();
   void reset();
 };
