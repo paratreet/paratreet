@@ -61,13 +61,12 @@ typedef struct PressSmoothParticleStruct {
     double PoverRho2f;
 } PressSmoothParticle;
 
-  static void doSPHCalc(SpatialNode<CentroidData>& leaf, int pi, Real fBall, Particle& b) {
+static void doSPHCalc(SpatialNode<CentroidData>& leaf, int pi, Real fBall, Particle& b, Real fDivv_Corrector) {
     auto& a = leaf.particles()[pi];
     static constexpr const Real visc = 0.;
-    static constexpr const Real fDivv_Corrector = 1.; // corrects bias wrt the divergence of velocities // RTFORCE
     static constexpr const Real aFac = 1.; // both of these are cosmology
     static constexpr const Real vFac = 1.;
-    static constexpr const Real H = 1.; // hubble constant //expansion of the universe, dont need it
+    static constexpr const Real H = 0.0; // hubble constant //expansion of the universe, dont need it
     static constexpr const Real gammam1 = 5.0/3.0 - 1.;
     // scale factor of the universe treated as 1
     // poverrho2 = gammam1 / fDensity^2;
@@ -93,8 +92,8 @@ typedef struct PressSmoothParticleStruct {
     params.dx = dx;
     auto dv = b.velocity_predicted - a.velocity_predicted;
     params.dvdotdr = vFac*dot(dv, params.dx) + fDist2*H;
-    aParams.PoverRho2 = a.u_predicted*gammam1/(a.density*b.density);
-    bParams.PoverRho2 = b.u_predicted*gammam1/(a.density*b.density);
+    aParams.PoverRho2 = a.u_predicted*gammam1/b.density;
+    bParams.PoverRho2 = b.u_predicted*gammam1/a.density;
     /***********************************
      * SPH Pressure Terms Calculation
      ***********************************/
@@ -117,7 +116,7 @@ typedef struct PressSmoothParticleStruct {
     }
 //    updateParticle(a, b, &params, &pParams, &qParams, 1);
     Real PdV = bParams.rNorm * 0.5 * params.visc * params.dvdotdr;
-    PdV += bParams.rNorm*aParams.PoverRho2;
+    PdV += bParams.rNorm*aParams.PoverRho2*params.dvdotdr;
     leaf.applyGasWork(pi, PdV);
     auto && acc = (aParams.PoverRho2 + bParams.PoverRho2) + params.visc;
     assert(isfinite(acc));
@@ -125,9 +124,9 @@ typedef struct PressSmoothParticleStruct {
     
 //    updateParticle(a, b, &params, &qParams, &pParams, -1);
     PdV = aParams.rNorm * 0.5 * params.visc * params.dvdotdr;
-    PdV += aParams.rNorm*aParams.PoverRho2;
+    PdV += aParams.rNorm*aParams.PoverRho2*params.dvdotdr;
     b.pressure_dVolume += PdV;
-    b.acceleration -= acc;
+    b.acceleration -= acc*aParams.rNorm*params.dx;
   }
 }
 

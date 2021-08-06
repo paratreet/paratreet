@@ -11,3 +11,7 @@ echo Pressure test: expect smaller than 1e-6
 ../array/subarr test.pres changa_test.000000.pres > pres.diff
 ../array/absarr  < pres.diff | ../array/maxarr
 ../array/rmsarr < pres.diff
+echo acceleration test: expect smaller than 1e-6
+../array/subarr test.acc changa_test.000000.acc2 > acc.diff
+../array/absarr  < acc.diff | ../array/maxarr
+../array/rmsarr < acc.diff
