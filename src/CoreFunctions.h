@@ -34,8 +34,7 @@ namespace paratreet {
 
         virtual void pup(PUP::er &p) override { PUP::able::pup(p); }
 
-        // NOTE this could be renamed as ( operator() ) if it's preferable
-        virtual void perLeafFn(SpatialNode<T>& node, Partition<T>* partition) = 0;
+        virtual void operator()(SpatialNode<T>& node, Partition<T>* partition) = 0;
     };
 }
 
