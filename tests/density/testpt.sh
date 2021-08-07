@@ -1,7 +1,17 @@
 #!/bin/bash
 # Run density/SPH tests on paratreet
-./SPH -i 1 -f adiabtophat_glass_28721.bin -v test.acc
+./SPH -i 1 -f adiabtophat_glass_28721.bin -v test
 
-../array/subarr test.acc.den changa_test.000000.den > den.diff
-../array/maxarr < den.diff
+echo Density test: expect smaller than 1e-5
+../array/subarr test.den changa_test.000000.gasden > den.diff
+../array/absarr  < den.diff | ../array/maxarr
 ../array/rmsarr < den.diff
+
+echo Pressure test: expect smaller than 1e-6
+../array/subarr test.pres changa_test.000000.pres > pres.diff
+../array/absarr  < pres.diff | ../array/maxarr
+../array/rmsarr < pres.diff
+echo acceleration test: expect smaller than 1e-6
+../array/subarr test.acc changa_test.000000.acc2 > acc.diff
+../array/absarr  < acc.diff | ../array/maxarr
+../array/rmsarr < acc.diff

@@ -67,10 +67,27 @@ extern bool verify;
         nlc->densityFinished(part, leaf);
       }
       else if (indicator == 1) {
+          // Calculate divv correction
+        auto ih2 = 4.0/rsq;  // 1/h^2
+        double divvi = 0;
+        double divvj = 0;
+        for (int i = 0; i < Q.size(); i++) {
+          auto& fDist2 = Q[i].fKey;
+          auto r2 = fDist2*ih2;
+          Real rs1 = dkernelM4(r2);
+          auto nbrIt = nlc->remote_particles.find(Q[i].pKey);
+          CkAssert(nbrIt != nlc->remote_particles.end());
+          Particle& q = nbrIt->second.second;
+          rs1 *= fDist2*q.mass;
+          divvi += rs1;
+          divvj += rs1/q.density;
+        }
+        divvi /= part.density;
+        auto fDivv_Corrector = (divvj != 0.0 ? divvi/divvj : 1.0);
         for (int i = 0; i < Q.size(); i++) {
           auto nbrIt = nlc->remote_particles.find(Q[i].pKey);
           CkAssert(nbrIt != nlc->remote_particles.end());
-          doSPHCalc(leaf, pi, fBall, nbrIt->second.second);
+          doSPHCalc(leaf, pi, fBall, nbrIt->second.second, fDivv_Corrector);
         }
       }
       else {
@@ -78,9 +95,9 @@ extern bool verify;
         CkAssert(it != nlc->remote_particles.end());
         auto copy_part = part;
         auto && otherAcc = it->second.second.acceleration;
-        copy_part.acceleration = (otherAcc + part.acceleration) / 2;
+        copy_part.acceleration = (otherAcc + part.acceleration);
         auto otherWork = it->second.second.pressure_dVolume;
-        copy_part.pressure_dVolume = (otherWork + part.pressure_dVolume) / 2;
+        copy_part.pressure_dVolume = (otherWork + part.pressure_dVolume);
         leaf.changeParticle(pi, copy_part);
       }
     }
