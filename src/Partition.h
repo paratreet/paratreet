@@ -42,6 +42,7 @@ struct Partition : public CBase_Partition<Data> {
   Partition(CkMigrateMessage * msg){delete msg;};
 
   template<typename Visitor> void startDown();
+  template<typename Visitor> void startBasicDown();
   template<typename Visitor> void startUpAndDown();
   void goDown();
   void interact(const CkCallback& cb);
@@ -118,9 +119,20 @@ void Partition<Data>::startDown()
 {
   initLocalBranches();
   interactions.resize(leaves.size());
-  traverser.reset(new DownTraverser<Data, Visitor>(leaves, *this));
+  traverser.reset(new TransposedDownTraverser<Data, Visitor>(leaves, *this));
   traverser->start();
 }
+
+template <typename Data>
+template <typename Visitor>
+void Partition<Data>::startBasicDown()
+{
+  initLocalBranches();
+  interactions.resize(leaves.size());
+  traverser.reset(new BasicDownTraverser<Data, Visitor>(leaves, *this));
+  traverser->start();
+}
+
 
 template <typename Data>
 template <typename Visitor>

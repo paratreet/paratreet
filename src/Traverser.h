@@ -4,6 +4,7 @@
 #include "common.h"
 #include "paratreet.decl.h"
 #include <stack>
+#include <deque>
 #include <unordered_map>
 #include <vector>
 
@@ -66,7 +67,7 @@ public:
 };
 
 template <typename Data, typename Visitor>
-class DownTraverser : public Traverser<Data> {
+class TransposedDownTraverser : public Traverser<Data> {
 protected:
   std::vector<Node<Data>*> leaves;
   Partition<Data>& part;
@@ -84,10 +85,10 @@ protected:
   }
 
 public:
-  DownTraverser(std::vector<Node<Data>*> leavesi, Partition<Data>& parti, bool delay_leafi = false)
+  TransposedDownTraverser(std::vector<Node<Data>*> leavesi, Partition<Data>& parti, bool delay_leafi = false)
     : leaves(leavesi), part(parti), delay_leaf(delay_leafi)
   { }
-  virtual ~DownTraverser() = default;
+  virtual ~TransposedDownTraverser() = default;
   virtual bool isFinished() override {return curr_nodes.empty();}
   virtual void start() override {
     // Initialize with global root key and leaves
@@ -188,6 +189,126 @@ public:
     }
   }
 };
+
+template <typename Data, typename Visitor>
+class BasicDownTraverser : public Traverser<Data> {
+protected:
+  std::vector<Node<Data>*> leaves;
+  Partition<Data>& part;
+  std::unordered_map<Key, std::vector<int>> curr_nodes;
+  const bool delay_leaf;
+
+protected:
+  void startTrav(Node<Data>* new_payload) {
+    for (int i = 0; i < leaves.size(); i++) {
+      leaves[i]->data.widen();
+      doTrav(new_payload, i);
+    }
+  }
+
+public:
+  BasicDownTraverser(std::vector<Node<Data>*> leavesi, Partition<Data>& parti, bool delay_leafi = false)
+    : leaves(leavesi), part(parti), delay_leaf(delay_leafi)
+  { }
+  virtual ~BasicDownTraverser() = default;
+  virtual bool isFinished() override {return curr_nodes.empty();}
+  virtual void start() override {
+    // Initialize with global root key and leaves
+    startTrav(part.cm_local->root);
+  }
+  virtual void interact() override {this->template interactBase<Visitor> (part);}
+  void doTrav(Node<Data>* start_node, int bucket) {
+    CkAssert(start_node);
+#if DEBUG
+    CkPrintf("tp %d, key = 0x%" PRIx64 ", type = %d, pe %d\n", part.thisIndex, start_node->key, (int)start_node->type, CkMyPe());
+#endif
+    std::deque<Node<Data>*> nodes;
+    nodes.push_front(start_node);
+    while (!nodes.empty()) {
+      auto node = nodes.back(); // TODO fix
+      nodes.pop_back(); // TODO fix
+      switch (node->type) {
+        case Node<Data>::Type::Leaf:
+        case Node<Data>::Type::CachedRemoteLeaf:
+          {
+            // Store local and remote cached leaves for interactions
+            if (Visitor::CallSelfLeaf || leaves[bucket]->key != node->key) {
+              if (delay_leaf) part.interactions[bucket].push_back(node);
+              else doLeaf<Visitor>(node, leaves[bucket], part.r_local);
+            }
+            //if (!delay_leaf) node->finish(1);
+            break;
+          }
+        case Node<Data>::Type::Internal:
+        case Node<Data>::Type::CachedBoundary:
+        case Node<Data>::Type::CachedRemote:
+          {
+            // Check if the opening condition is fulfilled
+            // If so, need to go down deeper
+            const bool should_open = doOpen<Visitor>(node, leaves[bucket], part.r_local);
+            if (should_open) {
+              for (int idx = 0; idx < node->n_children; idx++) {
+                nodes.push_front(node->getChild(idx));
+              }
+            } else {
+              // maybe delay as an interaction
+              doNode<Visitor>(node, leaves[bucket], part.r_local);
+            }
+            //node->finish(1);
+            break;
+          }
+        case Node<Data>::Type::Boundary:
+        case Node<Data>::Type::RemoteAboveTPKey:
+        case Node<Data>::Type::Remote:
+        case Node<Data>::Type::RemoteLeaf:
+          {
+            curr_nodes[node->key].push_back(bucket);
+
+            // Submit a request if the node wasn't requested before
+            bool prev = node->requested.exchange(true);
+            if (!prev) {
+              if (node->type == Node<Data>::Type::Boundary || node->type == Node<Data>::Type::RemoteAboveTPKey) {
+                // Ask TreeCanopy for data
+                // If the canopy is at the same level as a TP, it asks the TP
+                // which eventually calls CacheManager::serviceRequest
+                // If the canopy is above TPs, it directly calls
+                // CacheManager::restoreData which fills in the cache
+                part.tc_proxy[node->key].requestData(part.cm_local->thisIndex);
+              }
+              else {
+                // The node is entirely remote, ask CacheManager for data
+                part.cm_proxy[node->cm_index].requestNodes(std::make_pair(node->key, part.cm_local->thisIndex));
+              }
+            }
+            // Add the Partition that initiated the traversal to the waiting list
+            // maintained in Resumer
+            part.r_local->waiting[node->key].push_back(part.thisIndex);
+            break;
+          }
+        default:
+          {
+            break;
+          }
+      }
+    }
+  }
+  virtual void resumeTrav() override {
+    auto && resume_nodes = part.r_local->resume_nodes_per_part[part.thisIndex];
+    CkAssert(!resume_nodes.empty()); // nothing to resume on?
+    while (!resume_nodes.empty()) {
+      auto start_node = resume_nodes.front();
+      resume_nodes.pop(); // TODO fix
+      auto key = start_node->key;
+#if DEBUG
+      CkPrintf("going down on key %d while its type is %d\n", key, (int)start_node->type);
+#endif
+      auto& now_ready = curr_nodes[key];
+      for (auto bucket : now_ready) doTrav(start_node, bucket);
+      curr_nodes.erase(key);
+    }
+  }
+};
+
 
 template <typename Data, typename Visitor>
 class UpnDTraverser : public Traverser<Data> {
