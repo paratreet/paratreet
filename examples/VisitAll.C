@@ -21,6 +21,3 @@
   Real ExMain::getTimestep(BoundingBox& universe, Real max_velocity) {
     return 0.01570796326;
   }
-
-  void ExMain::perLeafFn(int indicator, SpatialNode<CentroidData>& leaf, Partition<CentroidData>* partition) {
-  }
