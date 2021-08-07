@@ -11,40 +11,8 @@ extern bool verify;
 
   using namespace paratreet;
 
-  void ExMain::preTraversalFn(ProxyPack<CentroidData>& proxy_pack) {
-    proxy_pack.driver.loadCache(CkCallbackResumeThread());
-  }
-
-  void ExMain::traversalFn(BoundingBox& universe, ProxyPack<CentroidData>& proxy_pack, int iter) {
-    neighbor_list_collector.reset(CkCallbackResumeThread());
-    double start_time = CkWallTimer();
-    proxy_pack.partition.template startUpAndDown<DensityVisitor>();
-    CkWaitQD();
-    CkPrintf("K-nearest neighbors traversal: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
-    start_time = CkWallTimer();
-    DensityFn fnDensity;
-    proxy_pack.partition.callPerLeafFn(PerLeafRef(fnDensity), CkCallbackResumeThread()); // calculates density, fills requests
-    CkWaitQD();
-    start_time = CkWallTimer();
-    neighbor_list_collector.shareDensities();
-    CkWaitQD();
-    ShareDensityFn fnShare;
-    proxy_pack.partition.callPerLeafFn(PerLeafRef(fnShare),
-        CkCallbackResumeThread()); // adds in scatter density
-    CkPrintf("Averaging densities: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
-  }
-  void ExMain::postIterationFn(BoundingBox& universe, ProxyPack<CentroidData>& proxy_pack, int iter) {
-    if (iter == 0 && verify) {
-      paratreet::outputParticleAccelerations(universe, proxy_pack.partition);
-    }
-  }
-
-  Real ExMain::getTimestep(BoundingBox& universe, Real max_velocity) {
-    return 0.0002;
-  }
-
-void DensityFn::perLeafFn(SpatialNode<CentroidData>& leaf,
-      Partition<CentroidData>* partition) {
+PARATREET_REGISTER_PER_LEAF_FN(DensityFn, CentroidData, (
+  [](SpatialNode<CentroidData>& leaf, Partition<CentroidData>* partition) {
     auto nlc = neighbor_list_collector.ckLocalBranch();
     for (int pi = 0; pi < leaf.n_particles; pi++) {
         auto& part = leaf.particles()[pi];
@@ -69,10 +37,11 @@ void DensityFn::perLeafFn(SpatialNode<CentroidData>& leaf,
         leaf.changeParticle(pi, copy_part);
         nlc->densityFinished(part, leaf);  // get particle back to home?
     }
-  }
+  }));
 
-void ShareDensityFn::perLeafFn(SpatialNode<CentroidData>& leaf,
-                               Partition<CentroidData>* partition) {
+
+PARATREET_REGISTER_PER_LEAF_FN(ShareDensityFn, CentroidData, (
+  [](SpatialNode<CentroidData>& leaf, Partition<CentroidData>* partition) {
     auto nlc = neighbor_list_collector.ckLocalBranch();
     for (int pi = 0; pi < leaf.n_particles; pi++) {
         auto& part = leaf.particles()[pi];
@@ -83,4 +52,39 @@ void ShareDensityFn::perLeafFn(SpatialNode<CentroidData>& leaf,
         copy_part.density += otherDen;
         leaf.changeParticle(pi, copy_part);
     }
+  }));
+
+  void ExMain::preTraversalFn(ProxyPack<CentroidData>& proxy_pack) {
+    proxy_pack.driver.loadCache(CkCallbackResumeThread());
   }
+
+  void ExMain::traversalFn(BoundingBox& universe, ProxyPack<CentroidData>& proxy_pack, int iter) {
+    neighbor_list_collector.reset(CkCallbackResumeThread());
+    double start_time = CkWallTimer();
+    proxy_pack.partition.template startUpAndDown<DensityVisitor>();
+    CkWaitQD();
+    CkPrintf("K-nearest neighbors traversal: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
+    start_time = CkWallTimer();
+    proxy_pack.partition.callPerLeafFn(
+      PARATREET_PER_LEAF_FN(DensityFn, CentroidData), // calculates density, fills requests
+      CkCallbackResumeThread()
+    );
+    CkWaitQD();
+    start_time = CkWallTimer();
+    neighbor_list_collector.shareDensities();
+    CkWaitQD();
+    proxy_pack.partition.callPerLeafFn(
+      PARATREET_PER_LEAF_FN(ShareDensityFn, CentroidData),
+        CkCallbackResumeThread()); // adds in scatter density
+    CkPrintf("Averaging densities: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
+  }
+  void ExMain::postIterationFn(BoundingBox& universe, ProxyPack<CentroidData>& proxy_pack, int iter) {
+    if (iter == 0 && verify) {
+      paratreet::outputParticleAccelerations(universe, proxy_pack.partition);
+    }
+  }
+
+  Real ExMain::getTimestep(BoundingBox& universe, Real max_velocity) {
+    return 0.0002;
+  }
+

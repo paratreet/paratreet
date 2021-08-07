@@ -8,11 +8,6 @@ mainmodule Main {
 
     initnode void initialize(void);
 
-    include "PerLeafFunctions.h";
-
-    PUPable DensityFn;
-    PUPable ShareDensityFn;
-
     group NeighborListCollector {
         entry NeighborListCollector();
         entry void addRequest(int, Key);
