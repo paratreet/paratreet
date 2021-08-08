@@ -42,7 +42,7 @@ $ make test
 
 ## Examples
 
-Under the `examples/` directory, one can find several example ParaTreeT applications, like:
+Under the `examples/` directory, one can find example ParaTreeT applications, like:
 
 - _Gravity_ &mdash; Implements an n-body simulation of gravitational dynamics.
 - _SPH_ &mdash; Simulates hydrodynamics using the Smooth Particle Hydrodynamics (SPH) technique.
@@ -57,5 +57,5 @@ $ ./charmrun +p3 ./Gravity -f ../inputgen/1k.tipsy -p 100 ++ppn 3 +pemap 1-3 +co
 
 On `jsrun` machines (e.g. LLNL Lassen, OLCF Summit) without a dedicated communications thread:
 ```
-$ jsrun -n1 -a1 -c4 ./paratreet -f ../inputgen/1k.tipsy -p 100 +ppn 4 +pemap L0-12:4
+$ jsrun -n1 -a1 -c4 ./Gravity -f ../inputgen/1k.tipsy -p 100 +ppn 4 +pemap L0-12:4
 ```
