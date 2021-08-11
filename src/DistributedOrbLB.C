@@ -414,11 +414,30 @@ void DistributedOrbLB::getSumBinLoads(CkReductionMsg * msg){
   }
   delete [] results;
   if(_lb_args.debug() >= debug_l0) CkPrintf("\tacc_load = %.8f; curr_load = %.8f; acc_size = %d;\n", acc_load, curr_load, acc_size);
-  if(_lb_args.debug() >= debug_l1) CkPrintf("\tacc_load = %.8f; curr_load = %.8f; acc_size = %d;\n\tglobal_bin_loads = %.8f, %.8f, %.8f, %.8f, %.8f, %.8f, %.8f, %.8f\n\tglobal_bin_sizes = %d, %d, %d, %d, %d, %d, %d, %d\n", acc_load, curr_load, acc_size,
-      global_bin_loads[0], global_bin_loads[1], global_bin_loads[2], global_bin_loads[3],
-      global_bin_loads[4], global_bin_loads[5], global_bin_loads[6], global_bin_loads[7],
-      global_bin_sizes[0], global_bin_sizes[1], global_bin_sizes[2], global_bin_sizes[3],
-      global_bin_sizes[4], global_bin_sizes[5], global_bin_sizes[6], global_bin_sizes[7]);
+
+  if (_lb_args.debug() >= debug_l1) {
+    // Print global_bin_sizes
+    ckout << "\tglobal_bin_size::";
+    for (int i = 0; i < bin_size; i++){
+      if (i % 8 == 0){
+        ckout << "\n\t";
+      }
+      ckout << global_bin_sizes[i] << " ";
+    }
+
+    ckout << "\n\tglobal_bin_loads";
+    for (int i = 0; i < bin_size; i++){
+      if (i % 8 == 0){
+        ckout << "\n\t";
+      }
+      ckout << global_bin_loads[i] << " ";
+    }
+  }
+//  if(_lb_args.debug() >= debug_l1) CkPrintf("\tacc_load = %.8f; curr_load = %.8f; acc_size = %d;\n\tglobal_bin_loads = %.8f, %.8f, %.8f, %.8f, %.8f, %.8f, %.8f, %.8f\n\tglobal_bin_sizes = %d, %d, %d, %d, %d, %d, %d, %d\n", acc_load, curr_load, acc_size,
+//      global_bin_loads[0], global_bin_loads[1], global_bin_loads[2], global_bin_loads[3],
+//      global_bin_loads[4], global_bin_loads[5], global_bin_loads[6], global_bin_loads[7],
+//      global_bin_sizes[0], global_bin_sizes[1], global_bin_sizes[2], global_bin_sizes[3],
+//      global_bin_sizes[4], global_bin_sizes[5], global_bin_sizes[6], global_bin_sizes[7]);
 
   int curr_split_idx = 1;
   int mid_idx = (left_idx + right_idx)/2;
