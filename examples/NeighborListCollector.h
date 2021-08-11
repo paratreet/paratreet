@@ -14,6 +14,7 @@ struct NeighborListCollector : public CBase_NeighborListCollector {
   struct HomeState {
     int subtree_home_pe = -1;
     int partition_home_pe = -1;
+    HomeState() = default;
     HomeState(int s, int p) : subtree_home_pe(s), partition_home_pe(p) {}
   };
   using RemoteParticleMap = std::map<Key, std::pair<HomeState, Particle> >;
@@ -39,8 +40,7 @@ struct NeighborListCollector : public CBase_NeighborListCollector {
   void fillRequest(int pe_home, Particle part) {
     part.acceleration = Vector3D<Real>(0,0,0);
     part.pressure_dVolume = 0;
-    HomeState home_state {-1, -1};
-    remote_particles.emplace(part.key, std::make_pair(home_state, part));
+    remote_particles[part.key].second = part;
   }
   void makeRequest(int pe, Key key) {
     if (already_requested.insert(key).second) {
@@ -54,22 +54,19 @@ struct NeighborListCollector : public CBase_NeighborListCollector {
   // in the simple Regime, we use densityFinished to forward densities from
   // the particles partition pe to its subtree pe, which is its leaf.home_pe
   void densityFinished(const Particle& part, const SpatialNode<CentroidData>& leaf) {
-    // thisProxy[leaf.home_pe].forwardRequest(thisIndex, part); // needed for RTFORCE
+    thisProxy[leaf.home_pe].forwardRequest(thisIndex, part); // needed for RTFORCE
     thisProxy[leaf.home_pe].savePartitionHome(thisIndex, part);
     // send density forward
   }
   void saveSubtreeHome(int subtree_home_pe, Particle part) {
-    part.acceleration = Vector3D<Real>(0,0,0);
-    part.pressure_dVolume = 0;
-    HomeState state {subtree_home_pe, -1};
-    remote_particles.emplace(part.key, std::make_pair(state, part));
+    auto& rp = remote_particles[part.key];
+    rp.first.subtree_home_pe = subtree_home_pe;
+    rp.second.key = part.key;
   }
   void savePartitionHome(int partition_home_pe, Particle part) {
-    part.acceleration = Vector3D<Real>(0,0,0);
-    part.pressure_dVolume = 0;
-    HomeState state {-1, partition_home_pe};
-    auto out = remote_particles.emplace(part.key, std::make_pair(state, part));
-    out.first->second.first.partition_home_pe = partition_home_pe;
+    auto& rp = remote_particles[part.key];
+    rp.first.partition_home_pe = partition_home_pe;
+    rp.second.key = part.key;
   }
   void shareAccelerations() {
     for (auto && remote_part : remote_particles) {

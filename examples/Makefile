@@ -8,8 +8,8 @@ OPTS = -g -Ofast -I$(STRUCTURE_PATH) -I$(PARATREET_PATH) -DCOUNT_INTERACTIONS=0 
 CHARMC = $(CHARM_HOME)/bin/charmc $(OPTS)
 LD_LIBS = -L$(PARATREET_PATH) -lparatreet
 
-all: Gravity SPH Collision
-VISITORS = DensityVisitor.h PressureVisitor.h GravityVisitor.h CollisionVisitor.h
+all: Gravity SPH Collision VisitAll
+VISITORS = DensityVisitor.h PressureVisitor.h GravityVisitor.h CollisionVisitor.h NeighborListCollector.h VisitAllVisitor.h
 OTHERS = CountManager.h
 
 debug:
@@ -18,14 +18,17 @@ debug:
 Main.decl.h: Main.ci
 	$(CHARMC) $<
 
-Gravity: Main.decl.h Main.o Gravity.o moments.o
+Gravity: Main.decl.h Main.o Gravity.o moments.o ../src/libparatreet.a
 	$(CHARMC) -language charm++ $(LB_LIBS) -o Gravity Gravity.o moments.o Main.o $(LD_LIBS)
 
-Collision: Main.decl.h Main.o Collision.o moments.o
+Collision: Main.decl.h Main.o Collision.o moments.o ../src/libparatreet.a
 	$(CHARMC) -language charm++ $(LB_LIBS) -o Collision Collision.o Main.o moments.o $(LD_LIBS)
 
-SPH: Main.decl.h Main.o SPH.o moments.o
+SPH: Main.decl.h Main.o SPH.o moments.o ../src/libparatreet.a
 	$(CHARMC) -language charm++ $(LB_LIBS) -o SPH SPH.o Main.o moments.o $(LD_LIBS)
+
+VisitAll: Main.decl.h Main.o VisitAll.o moments.o ../src/libparatreet.a
+	$(CHARMC) -language charm++ -module CommonLBs -o VisitAll VisitAll.o Main.o moments.o $(LD_LIBS)
 
 Gravity.o: Gravity.C Main.decl.h
 	$(CHARMC) -c $<
@@ -33,7 +36,10 @@ Gravity.o: Gravity.C Main.decl.h
 Collision.o: Collision.C Main.decl.h
 	$(CHARMC) -c $<
 
-SPH.o: SPH.C SPHUtils.h NeighborListCollector.h Main.decl.h
+SPH.o: SPH.C SPHUtils.h Main.decl.h
+	$(CHARMC) -c $<
+
+VisitAll.o: VisitAll.C Main.decl.h
 	$(CHARMC) -c $<
 
 Main.o: Main.C CentroidData.h moments.h MultipoleMoments.h $(VISITORS) $(OTHERS) Main.decl.h

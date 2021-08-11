@@ -45,6 +45,7 @@ struct Partition : public CBase_Partition<Data> {
   Partition(CkMigrateMessage * msg){delete msg;};
 
   template<typename Visitor> void startDown();
+  template<typename Visitor> void startBasicDown();
   template<typename Visitor> void startUpAndDown();
   void goDown();
   void interact(const CkCallback& cb);
@@ -58,7 +59,7 @@ struct Partition : public CBase_Partition<Data> {
   void rebuild(BoundingBox, TPHolder<Data>, bool);
   void output(CProxy_Writer w, int n_total_particles, CkCallback cb);
   void output(CProxy_TipsyWriter w, int n_total_particles, CkCallback cb);
-  void callPerLeafFn(int indicator, const CkCallback& cb);
+  void callPerLeafFn(paratreet::PerLeafAble<Data>&, const CkCallback&);
   void deleteParticleOfOrder(int order) {particle_delete_order.insert(order);}
   void pup(PUP::er& p);
   void makeLeaves(int);
@@ -121,9 +122,20 @@ void Partition<Data>::startDown()
 {
   initLocalBranches();
   interactions.resize(leaves.size());
-  traverser.reset(new DownTraverser<Data, Visitor>(leaves, *this));
+  traverser.reset(new TransposedDownTraverser<Data, Visitor>(leaves, *this));
   traverser->start();
 }
+
+template <typename Data>
+template <typename Visitor>
+void Partition<Data>::startBasicDown()
+{
+  initLocalBranches();
+  interactions.resize(leaves.size());
+  traverser.reset(new BasicDownTraverser<Data, Visitor>(leaves, *this));
+  traverser->start();
+}
+
 
 template <typename Data>
 template <typename Visitor>
@@ -362,11 +374,12 @@ void Partition<Data>::flush(CProxy_Reader readers, std::vector<Particle>& partic
 }
 
 template <typename Data>
-void Partition<Data>::callPerLeafFn(int indicator, const CkCallback& cb)
+void Partition<Data>::callPerLeafFn(paratreet::PerLeafAble<Data>& perLeafFn, const CkCallback& cb)
 {
   for (auto && leaf : leaves) {
-    paratreet::perLeafFn(indicator, *leaf, this);
+    perLeafFn(*leaf, this);
   }
+
   this->contribute(cb);
 }
 
