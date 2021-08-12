@@ -5,7 +5,7 @@ STRUCTURE_PATH = $(BASE_PATH)/utility/structures
 OPTS = -g -Ofast -I$(STRUCTURE_PATH) -I$(PARATREET_PATH) -DCOUNT_INTERACTIONS=0 -DCMK_LB_USER_DATA -DDEBUG=0 $(MAKE_OPTS)
 CHARMC = $(CHARM_HOME)/bin/charmc $(OPTS)
 LD_LIBS = -L$(PARATREET_PATH) -lparatreet
-LB_LIBS = -module DistributedOrbLB
+LB_LIBS = -module CommonLBs -module DistributedOrbLB
 PROJ_LIBS = -tracemode projections
 SMRY_LIBS = -tracemode summary
 
@@ -16,7 +16,7 @@ OTHERS = CountManager.h
 Main.decl.h: Main.ci
 	$(CHARMC) $<
 
-Gravity: Main.decl.h Main.o Gravity.o
+Gravity: Main.decl.h Main.o Gravity.o ../src/libparatreet.a
 	$(CHARMC) -language charm++ $(LB_LIBS) -o Gravity Gravity.o Main.o $(LD_LIBS)
 	$(CHARMC) -language charm++ $(LB_LIBS) $(PROJ_LIBS) -o Gravity_proj Gravity.o Main.o $(LD_LIBS)
 	$(CHARMC) -language charm++ $(LB_LIBS) $(SMRY_LIBS) -o Gravity_smry Gravity.o Main.o $(LD_LIBS)

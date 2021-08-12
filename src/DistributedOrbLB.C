@@ -187,7 +187,7 @@ void DistributedOrbLB::perLBStates(CkReductionMsg * msg){
   global_min_obj_load = *(float*)results[3].data;
   delete [] results;
   global_load = sum_load;
-  granularity = global_min_obj_load;
+  granularity = global_min_obj_load * 2;
   float avg_load = sum_load / (float)CkNumPes();
   float max_avg_ratio = max_load / avg_load;
   CkPrintf("DistributedOrbLB >> Pre LB load sum = %.4f; max / avg load ratio = %.4f\n", sum_load, max_avg_ratio);/*}}}*/
@@ -356,7 +356,7 @@ void DistributedOrbLB::binaryLoadPartitionWith64Bins(int dim, float load, int le
   double delta_coord = (high - low) / bin_size_double;
   for (auto & obj : obj_collection){
     if (inCurrentBox(obj.centroid, lower_coords, upper_coords)){
-      int idx = (obj.centroid[dim] - low)/delta_coord;
+      int idx = ((double)obj.centroid[dim] - low)/delta_coord;
       if (idx > (bin_size - 1)) {
         //CkPrintf("*** idx %d lower %.8f upper %.8f my %.8f\n", idx, low, high, obj.centroid[dim]);
         idx = bin_size - 1;
@@ -405,39 +405,17 @@ void DistributedOrbLB::getSumBinLoads(CkReductionMsg * msg){
   CkReduction::tupleElement* results;
   float acc_load = .0f;
   int acc_size = 0;
+  int zero_size_count = 0;
   msg->toTuple(&results, &numReductions);
   for (int i = 0; i < bin_size; i++){
     global_bin_loads[i] = *(float*)results[i].data;
     acc_load += global_bin_loads[i];
     global_bin_sizes[i] = *(int*)results[bin_size + i].data;
     acc_size += global_bin_sizes[i];
+    if (global_bin_sizes[i] == 0) zero_size_count++;
   }
   delete [] results;
   if(_lb_args.debug() >= debug_l0) CkPrintf("\tacc_load = %.8f; curr_load = %.8f; acc_size = %d;\n", acc_load, curr_load, acc_size);
-
-  if (_lb_args.debug() >= debug_l1) {
-    // Print global_bin_sizes
-    ckout << "\tglobal_bin_size::";
-    for (int i = 0; i < bin_size; i++){
-      if (i % 8 == 0){
-        ckout << "\n\t";
-      }
-      ckout << global_bin_sizes[i] << " ";
-    }
-
-    ckout << "\n\tglobal_bin_loads";
-    for (int i = 0; i < bin_size; i++){
-      if (i % 8 == 0){
-        ckout << "\n\t";
-      }
-      ckout << global_bin_loads[i] << " ";
-    }
-  }
-//  if(_lb_args.debug() >= debug_l1) CkPrintf("\tacc_load = %.8f; curr_load = %.8f; acc_size = %d;\n\tglobal_bin_loads = %.8f, %.8f, %.8f, %.8f, %.8f, %.8f, %.8f, %.8f\n\tglobal_bin_sizes = %d, %d, %d, %d, %d, %d, %d, %d\n", acc_load, curr_load, acc_size,
-//      global_bin_loads[0], global_bin_loads[1], global_bin_loads[2], global_bin_loads[3],
-//      global_bin_loads[4], global_bin_loads[5], global_bin_loads[6], global_bin_loads[7],
-//      global_bin_sizes[0], global_bin_sizes[1], global_bin_sizes[2], global_bin_sizes[3],
-//      global_bin_sizes[4], global_bin_sizes[5], global_bin_sizes[6], global_bin_sizes[7]);
 
   int curr_split_idx = 1;
   int mid_idx = (left_idx + right_idx)/2;
@@ -453,6 +431,26 @@ void DistributedOrbLB::getSumBinLoads(CkReductionMsg * msg){
     prefix_bin_loads[i] = global_bin_loads[i] + prefix_bin_loads[i-1];
   }
 
+  if (_lb_args.debug() >= debug_l1) {
+    // Print global_bin_sizes
+    ckout << "\tglobal_bin_size::";
+    for (int i = 0; i < bin_size; i++){
+      if (i % 8 == 0){
+        ckout << "\n\t";
+      }
+      ckout << global_bin_sizes[i] << " ";
+    }
+
+    ckout << "\n\tprefix_bin_loads";
+    for (int i = 0; i < bin_size; i++){
+      if (i % 8 == 0){
+        ckout << "\n\t";
+      }
+      ckout << prefix_bin_loads[i] << " ";
+    }
+  }
+  ckout << endl;
+
   float curr_delta = prefix_bin_loads[0];
   for (int i = 0; i < bin_size; i++){
     if (prefix_bin_loads[i] > .0) {
@@ -460,7 +458,7 @@ void DistributedOrbLB::getSumBinLoads(CkReductionMsg * msg){
       break;
     }
   }
-  if (std::fabs(prefix_bin_loads[curr_split_idx - 1]) < std::fabs(prefix_bin_loads[curr_split_idx])){
+  if (curr_split_idx > 0 && std::fabs(prefix_bin_loads[curr_split_idx - 1]) < std::fabs(prefix_bin_loads[curr_split_idx])){
     curr_delta = prefix_bin_loads[curr_split_idx - 1];
   }else{
     curr_delta = prefix_bin_loads[curr_split_idx];
@@ -474,22 +472,24 @@ void DistributedOrbLB::getSumBinLoads(CkReductionMsg * msg){
   if(_lb_args.debug() >= debug_l1) CkPrintf("\tcurr_delta = %.8f, granularity = %.4f, curr_split_idx = %d, split_pt = %.8f\n", curr_delta, granularity, curr_split_idx, split_pt);
 
   // The split point is good enough
-  if (std::fabs(curr_delta) <= granularity || curr_depth > 3 ){
+  if (std::fabs(curr_delta) <= granularity || (upper_split - lower_split) < 0.0000001 ){
     curr_split_pt = split_pt;
     curr_left_load = prefix_bin_loads[curr_split_idx - 1] + half_load;
     prefix_bin_loads.clear();
+    if (_lb_args.debug() >= debug_l0) CkPrintf("$$$ End partition curr_delta = %.8f, depth = %d\n",curr_delta, curr_depth); 
     thisProxy.finishedPartitionOneDim(*curr_cb);
   } else {
     prefix_bin_loads.clear();
     // Keep partition the larger section to find better split point
-    if (curr_delta < 0){
+    if (curr_split_idx ==0){
       // Futher partition the right part
-      upper_split = split_pt + (upper_split - lower_split)/bin_size_double;
+      upper_split = lower_split + (upper_split - lower_split)/bin_size_double;
+    } else if (curr_split_idx == bin_size - 1){
       lower_split = split_pt;
     } else {
       // Futher patition the left part
-      lower_split = split_pt - (upper_split - lower_split)/bin_size_double;
-      upper_split = split_pt;
+      lower_split = split_pt;
+      upper_split = split_pt + (upper_split - lower_split)/bin_size_double;
     }
 
     if(_lb_args.debug() >= debug_l0) CkPrintf("\t****NEW dim = %d lower = %.12f upper = %.12f\n", curr_dim, lower_split, upper_split);
@@ -562,7 +562,7 @@ void DistributedOrbLB::acknowledgeIncomingMigrations(int count, float in_load){
 
     for (int i = 0; i < CkNumPes(); i++){
       thisProxy[i].sendFinalMigrations(send_nobjs_to_pes[i]);
-      if(_lb_args.debug() >= 2) CkPrintf("[%d] send %d objs to [%d]\n", CkMyPe(), send_nobjs_to_pes[i], i);
+      if(_lb_args.debug() >= 3) CkPrintf("[%d] send %d objs to [%d]\n", CkMyPe(), send_nobjs_to_pes[i], i);
     }
   }
 }
@@ -572,7 +572,7 @@ void DistributedOrbLB::sendFinalMigrations(int count){
   incoming_final += count;
   if (recv_final == CkNumPes()){
     migrates_expected = incoming_final;
-    if (_lb_args.debug() >= 1) CkPrintf("LB[%d] total move %d / %d  objects; incoming %d objs, final %d\n", my_pe, total_migrates, obj_collection.size(), incoming_final, obj_collection.size() - total_migrates + incoming_final);
+    if (_lb_args.debug() >= 3) CkPrintf("LB[%d] total move %d / %d  objects; incoming %d objs, final %d\n", my_pe, total_migrates, obj_collection.size(), incoming_final, obj_collection.size() - total_migrates + incoming_final);
     reset();
     ProcessMigrationDecision(final_migration_msg);
   }
