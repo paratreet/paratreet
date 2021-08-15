@@ -1,6 +1,6 @@
 CHARM_HOME ?= $(HOME)/charm-paratreet
 STRUCTURE_PATH = ../utility/structures
-OPTS = -g -Ofast -I$(STRUCTURE_PATH) -DCOUNT_INTERACTIONS=0 -DDEBUG=0 -DBARNESHUT $(MAKE_OPTS)
+OPTS = -g -Ofast -I$(STRUCTURE_PATH) -DCOUNT_INTERACTIONS=0 -DDEBUG=0 $(MAKE_OPTS)
 CHARMC = $(CHARM_HOME)/bin/charmc $(OPTS)
 
 OBJS = Paratreet.o Reader.o Writer.o Particle.o BoundingBox.o Decomposition.o Modularization.o TreeSpec.o ThreadStateHolder.o
@@ -28,4 +28,4 @@ Paratreet.o: $(UTILITY_HEADERS) $(CORE_HEADERS) $(IMPL_HEADERS) paratreet.decl.h
 	$(CHARMC) -c $<
 
 clean:
-	rm -f *.decl.h *.def.h conv-host *.o libparatreet.a charmrun
+	rm -f *.decl.h *.def.h conv-host *.o libparatreet.a
