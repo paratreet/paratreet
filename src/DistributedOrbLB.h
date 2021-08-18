@@ -43,8 +43,8 @@ private:
   int debug_l1 = 2;
   int debug_l2 = 3;
   int lb_iter = 0;
-  int bin_size = 8;
-  double bin_size_double = 8.0;
+  int bin_size = 16;
+  double bin_size_double = 16.0;
   int my_pe, total_migrates, incoming_migrates, recv_ack;
   int recv_final, incoming_final;
   const DistBaseLB::LDStats* my_stats;

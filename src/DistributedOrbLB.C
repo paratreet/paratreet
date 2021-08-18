@@ -46,7 +46,7 @@ void DistributedOrbLB::InitLB(const CkLBOptions &opt) {
 void DistributedOrbLB::Strategy(const DistBaseLB::LDStats* const stats) {
   start_time = CmiWallTimer();/*{{{*/
   if (CkMyPe() == 0) {
-    CkPrintf("DistributedOrbLB>> Seq %d In DistributedOrbLB strategy at %lf\n",lb_iter, start_time);
+    CkPrintf("DistributedOrbLB>> Seq %d In DistributedOrbLB strategy at %lf; bin_size = $d;\n",lb_iter, start_time, bin_size);
   }
   lb_iter += 1;
 
@@ -448,12 +448,12 @@ void DistributedOrbLB::getSumBinLoads(CkReductionMsg * msg){
       }
       ckout << prefix_bin_loads[i] << " ";
     }
+    ckout << endl;
   }
-  ckout << endl;
 
   float curr_delta = prefix_bin_loads[0];
   for (int i = 0; i < bin_size; i++){
-    if (prefix_bin_loads[i] > .0) {
+    if (prefix_bin_loads[i] > .0f) {
       curr_split_idx = i;
       break;
     }
@@ -466,30 +466,30 @@ void DistributedOrbLB::getSumBinLoads(CkReductionMsg * msg){
 
   if(_lb_args.debug() >= debug_l0) CkPrintf("\tleft_ratio = %.8f curr_split_idx = %d curr_delta = %.8f; max prefix_bin_loads = %.8f\n", left_ratio, curr_split_idx, curr_delta, prefix_bin_loads[bin_size - 1]);
 
-  double split_pt = ((upper_split - lower_split)/bin_size_double) * (double)curr_split_idx;
-  split_pt += lower_split;
+  double split_pt = lower_split + ((upper_split - lower_split)/bin_size_double) * (double)curr_split_idx;
 
   if(_lb_args.debug() >= debug_l1) CkPrintf("\tcurr_delta = %.8f, granularity = %.4f, curr_split_idx = %d, split_pt = %.8f\n", curr_delta, granularity, curr_split_idx, split_pt);
 
   // The split point is good enough
-  if (std::fabs(curr_delta) <= granularity || (upper_split - lower_split) < 0.0000001 ){
+  if (std::fabs(curr_delta) <= granularity || (upper_split - lower_split) < 0.0000008 ){
     curr_split_pt = split_pt;
+    if (curr_delta > .0f) curr_split_pt += (upper_split - lower_split)/bin_size_double;
     curr_left_load = prefix_bin_loads[curr_split_idx - 1] + half_load;
     prefix_bin_loads.clear();
-    if (_lb_args.debug() >= debug_l0) CkPrintf("$$$ End partition curr_delta = %.8f, depth = %d\n",curr_delta, curr_depth); 
+    if (_lb_args.debug() >= debug_l0) CkPrintf("$$$ End partition curr_delta = %.8f, depth = %d, left_load_prefix = %.8f\n",curr_delta, curr_depth, prefix_bin_loads[curr_split_idx - 1]); 
     thisProxy.finishedPartitionOneDim(*curr_cb);
   } else {
     prefix_bin_loads.clear();
     // Keep partition the larger section to find better split point
-    if (curr_split_idx ==0){
+    if (curr_split_idx == 0){
       // Futher partition the right part
       upper_split = lower_split + (upper_split - lower_split)/bin_size_double;
     } else if (curr_split_idx == bin_size - 1){
       lower_split = split_pt;
     } else {
       // Futher patition the left part
-      lower_split = split_pt;
       upper_split = split_pt + (upper_split - lower_split)/bin_size_double;
+      lower_split = split_pt;
     }
 
     if(_lb_args.debug() >= debug_l0) CkPrintf("\t****NEW dim = %d lower = %.12f upper = %.12f\n", curr_dim, lower_split, upper_split);
@@ -591,6 +591,9 @@ void DistributedOrbLB::reset(){
   octal_loads.clear();
   pe_split_coords.clear();
   pe_split_loads.clear();
+  if (CkMyPe() == 0) {
+    CkPrintf("DistributedOrbLB>> DistributedOrbLB strategy end at %lf\n", CmiWallTimer()-start_time);
+  }
 }
 
 #include "DistributedOrbLB.def.h"
