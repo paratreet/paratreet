@@ -7,7 +7,7 @@
 struct Particle {
   Key key;
   int order;
-  int partition_idx; // Only used when Subtree and Patition have different decomp types
+  int partition_idx = 0; // Only used when Subtree and Patition have different decomp types
 
   Real mass;
   Real density;
