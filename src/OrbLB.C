@@ -98,7 +98,8 @@ void OrbLB::collectUserData(){
 
 void OrbLB::collectPELoads(){
   float sum = 0.0;
-  for(int i = 0; i < my_stats->procs.size(); i++){
+  int n_pes = my_stats -> nprocs();
+  for(int i = 0; i < n_pes; i++){
     auto p = my_stats->procs[i];
     pe_loads[p.pe] = p.pe_speed * (p.total_walltime - p.idletime);
     sum += pe_loads[p.pe];
