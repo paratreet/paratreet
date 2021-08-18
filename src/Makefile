@@ -10,7 +10,7 @@ UTILITY_HEADERS = common.h Utility.h $(STRUCTURE_PATH)/Vector3D.h $(STRUCTURE_PA
 CORE_HEADERS = BoundingBox.h BufferedVec.h MultiData.h Node.h NodeWrapper.h ParticleComp.h ParticleMsg.h Splitter.h
 IMPL_HEADERS = CacheManager.h Configuration.h Driver.h Partition.h Reader.h Resumer.h Splitter.h Subtree.h Traverser.h TreeCanopy.h
 
-LBS = PrefixLB OrbLB AverageSmoothLB DiffusionLB DistributedPrefixLB DistributedOrbLB
+LBS = PrefixLB #OrbLB AverageSmoothLB DiffusionLB DistributedPrefixLB DistributedOrbLB
 LB_LIBS = $(foreach m, $(LBS), libmodule$(m).a)
 
 all: lib
