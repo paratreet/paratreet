@@ -1,8 +1,6 @@
 #include "elements.h"
 #include "ckheap.h"
 #include "OrbLB.h"
-using std::begin;
-using std::end;
 
 extern int quietModeRequested;
 CkpvExtern(int, _lb_obj_index);
@@ -100,7 +98,8 @@ void OrbLB::collectUserData(){
 
 void OrbLB::collectPELoads(){
   float sum = 0.0;
-  for(auto & p : my_stats->procs){
+  for(int i = 0; i < my_stats->procs.size(); i++){
+    auto p = my_stats->procs[i];
     pe_loads[p.pe] = p.pe_speed * (p.total_walltime - p.idletime);
     sum += pe_loads[p.pe];
   }

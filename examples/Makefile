@@ -2,7 +2,7 @@ CHARM_HOME ?= $(HOME)/charm-paratreet
 BASE_PATH=$(shell realpath "$(shell pwd)/..")
 PARATREET_PATH = $(BASE_PATH)/src
 STRUCTURE_PATH = $(BASE_PATH)/utility/structures
-LBS = CommonLBs PrefixLB OrbLB AverageSmoothLB DiffusionLB DistributedPrefixLB DistributedOrbLB
+LBS = CommonLBs PrefixLB OrbLB #AverageSmoothLB DiffusionLB DistributedPrefixLB DistributedOrbLB
 LB_LIBS = $(foreach m, $(LBS), -module $(m))
 OPTS = -g -Ofast -I$(STRUCTURE_PATH) -I$(PARATREET_PATH) -DCOUNT_INTERACTIONS=0 -DDEBUG=0 -DHEXADECAPOLE $(MAKE_OPTS)
 CHARMC = $(CHARM_HOME)/bin/charmc $(OPTS)
