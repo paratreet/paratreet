@@ -1,7 +1,5 @@
 #include "elements.h"
 #include "AverageSmoothLB.h"
-using std::begin;
-using std::end;
 
 extern int quietModeRequested;
 CkpvExtern(int, _lb_obj_index);
@@ -58,7 +56,8 @@ void AverageSmoothLB::initVariables(){
 }
 
 void AverageSmoothLB::calcBackgroundLoads(){
-  for(auto & p : my_stats->procs){
+  for(int i = 0; i < n_pes; i++){
+    auto p = my_stats->procs[i]; 
     background_loads[p.pe] = p.pe_speed * p.bg_walltime;
     total_load += background_loads[p.pe];
     double tmp_total_load = p.pe_speed * p.total_walltime;

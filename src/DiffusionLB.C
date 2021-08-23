@@ -1,8 +1,6 @@
 #include "elements.h"
 #include "ckheap.h"
 #include "DiffusionLB.h"
-using std::begin;
-using std::end;
 
 extern int quietModeRequested;
 CkpvExtern(int, _lb_obj_index);
@@ -65,7 +63,8 @@ void DiffusionLB::initVariables(){
 
 void DiffusionLB::collectPELoads(){
   float sum = 0.0;
-  for(auto & p : my_stats->procs){
+  for(int i = 0; i < n_pes; i++){
+    auto p = my_stats->procs[i];
     pe_loads[p.pe] = p.pe_speed * (p.total_walltime - p.idletime);
     sum += pe_loads[p.pe];
     pe_diffused_loads[p.pe] = pe_loads[p.pe];
