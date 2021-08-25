@@ -321,6 +321,9 @@ void DistributedOrbLB::setPeSpliters(DorbPartitionRec rec){
     CkPrintf("Splitter %d/%d\n", recv_spliters, CkNumPes());
   }
   if (recv_spliters == CkNumPes()){
+    for (int i = 0; i < CkNumPes(); i++){
+      ckout << "PE"<<i<< " load "<< pe_split_loads[i] << " " << pe_split_coords[i][0] << " " << pe_split_coords[i][1] <<endl;
+    }
     thisProxy.migrateObjects(pe_split_coords);
   }
 }
