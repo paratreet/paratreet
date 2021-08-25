@@ -119,9 +119,22 @@ namespace LBCommon{
     int from_pe;
     inline void pup(PUP::er &p);
   };/*}}}*/
+
+  struct LBShortCmp{
+    float coord;
+    float load;
+    void pup(PUP::er &p){
+      p | coord;
+      p | load;
+    }
+  };
 };
 
 namespace{
+  bool CompareLBShortCmp(const LBCommon::LBShortCmp & a, const LBCommon::LBShortCmp & b){
+    return a.coord < b.coord;
+  }
+
   bool CompareLBStats(const LBCommon::LBCompareStats & a, const LBCommon::LBCompareStats & b)
   {/*{{{*/
     // compare chare array index

@@ -18,7 +18,10 @@ group [migratable] DistributedOrbLB : DistBaseLB {
   entry void setPeSpliters(LBCommon::DorbPartitionRec rec);
   entry void reportBinLoads(LBCommon::DorbPartitionRec, std::vector<float>, std::vector<int>);
   entry [reductiontarget] void getSumBinLoads(CkReductionMsg * msg);
-  entry void finishedPartitionOneDim(const CkCallback & curr_cb);
+  entry void finalPartitionStep(LBCommon::DorbPartitionRec);
+  entry void reportFinalStepData(LBCommon::DorbPartitionRec, std::vector<LBCommon::LBShortCmp>);
+
+  entry void finishedPartitionOneDim(LBCommon::DorbPartitionRec, float, float);
   entry void migrateObjects(std::vector<std::vector<Vector3D<Real>>> pe_splits);
   entry void acknowledgeIncomingMigrations(int count, float in_load);
   entry void sendFinalMigrations(int count);

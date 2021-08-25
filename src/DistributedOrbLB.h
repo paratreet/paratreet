@@ -24,6 +24,7 @@ using std::get;
 using LBCommon::LBUserData;
 using LBCommon::LBCentroidAndIndexRecord;
 using LBCommon::DorbPartitionRec;
+using LBCommon::LBShortCmp;
 
 void CreateDistributedOrbLB();
 
@@ -43,10 +44,13 @@ public:
   void createPartitions(DorbPartitionRec rec);
   void setPeSpliters(DorbPartitionRec rec);
   void reportBinLoads(DorbPartitionRec, vector<float>, vector<int>);
+  void finalPartitionStep(DorbPartitionRec);
+  void reportFinalStepData(DorbPartitionRec, vector<LBShortCmp>);
+
   void migrateObjects(std::vector<std::vector<Vector3D<Real>>> pe_splits);
   void acknowledgeIncomingMigrations(int count, float in_load);
   void sendFinalMigrations(int count);
-  void finishedPartitionOneDim(const CkCallback & curr_cb);
+  void finishedPartitionOneDim(DorbPartitionRec, float, float);
 
 
 private:
@@ -103,6 +107,8 @@ private:
   map<pair<int, int>,
     tuple<int, vector<float>, vector<int>>> bin_data_map;
 
+  map<pair<int, int>,
+    tuple<int, float, vector<LBShortCmp>, float>> final_step_map;
 
   // Partition results
   int recv_spliters = 0;
