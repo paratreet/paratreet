@@ -476,7 +476,7 @@ void DistributedOrbLB::reportBinLoads(DorbPartitionRec rec, vector<float> bin_lo
       // Keep partition the larger section to find better split point
       if (curr_split_idx == 0){
         // Futher partition the right part
-        new_rec.high = new_rec.low + (new_rec.high - new_rec.low)/bin_size_double;
+        new_rec.high = rec.low + (rec.high - rec.low)/bin_size_double;
       } else if (curr_split_idx == bin_size - 1){
         new_rec.low = split_pt;
       } else {
@@ -486,6 +486,7 @@ void DistributedOrbLB::reportBinLoads(DorbPartitionRec rec, vector<float> bin_lo
       }
 
       if (split_size < 64 || (new_rec.high - new_rec.low) < 0.0000008){
+        CkPrintf("Final step old (%.8f, %.8f) new (%.8f, %.8f)\n", rec.low, rec.high, new_rec.low, new_rec.high);
         final_step_map[pair<int, int>(new_rec.left, new_rec.right)] = tuple<int, float, vector<LBShortCmp>, float>(0, .0f, vector<LBShortCmp>(), curr_delta + half_load);
         thisProxy.finalPartitionStep(new_rec);
       } else {
@@ -507,8 +508,10 @@ void DistributedOrbLB::finalPartitionStep(DorbPartitionRec rec){
   double delta_coord = (rec.high - rec.low) / bin_size_double;
   for (auto & obj : obj_collection){
     if (inCurrentBox(obj.centroid, rec.lower_coords, rec.upper_coords)){
-      fdata.push_back(LBShortCmp{obj.centroid[rec.dim], obj.load});
-      if(_lb_args.debug() >= debug_l2) ckout << "\t\t++ Add to final " << "; " << obj.centroid << endl;
+      if (obj.centroid[rec.dim] >= rec.low && obj.centroid[rec.dim] < rec.high){
+        fdata.push_back(LBShortCmp{obj.centroid[rec.dim], obj.load});
+        if(_lb_args.debug() >= debug_l2) ckout << "\t\t++ Add to final " << "; " << obj.centroid << endl;
+      }
     }
   }
 
