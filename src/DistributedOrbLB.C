@@ -308,22 +308,10 @@ void DistributedOrbLB::createPartitions(DorbPartitionRec rec){
     thisProxy[0].setPeSpliters(rec);
   }
   else // Recursive case
-  {/*{{{*/
+  {
     bin_data_map[pair<int, int>(rec.left, rec.right)] = tuple<int, vector<float>, vector<int>>(0, vector<float>(bin_size, .0f), vector<int>(bin_size, 0));
     thisProxy.binaryLoadPartitionWithBins(rec);
-
-    //if(_lb_args.debug() >= debug_l0) CkPrintf("Split pt = %.8f\n", curr_split_pt);
-    //int mid_idx  = (left + right) / 2;
-    //Vector3D<Real> left_lower_coord = lower_coords;
-    //Vector3D<Real> left_upper_coord = upper_coords;
-    //left_upper_coord[dim] = curr_split_pt;
-    //Vector3D<Real> right_lower_coord = lower_coords;
-    //right_lower_coord[dim] = curr_split_pt;
-    //Vector3D<Real> right_upper_coord = upper_coords;
-    //float curr_right_load = load - curr_left_load;
-    //thisProxy[left].createPartitions(getDim(dim, left_lower_coord,  left_upper_coord),  curr_left_load, left, mid_idx, left_lower_coord, left_upper_coord);
-    //thisProxy[mid_idx].createPartitions(getDim(dim, right_lower_coord, right_upper_coord), curr_right_load, mid_idx, right, right_lower_coord, right_upper_coord);
-  }/*}}}*/
+  }
 }
 
 void DistributedOrbLB::setPeSpliters(DorbPartitionRec rec){
@@ -354,8 +342,8 @@ void DistributedOrbLB::binaryLoadPartitionWithBins(DorbPartitionRec rec){
   if (my_pe == 0){/*{{{*/
     if(_lb_args.debug() >= debug_l1) ckout << rec.lower_coords << "--" << rec.upper_coords << "; " << rec.low << " - " << rec.high << endl;
   }
-  octal_loads = vector<float>(bin_size, .0f);
-  octal_sizes = vector<int> (bin_size, 0);
+  vector<float> octal_loads = vector<float>(bin_size, .0f);
+  vector<int>   octal_sizes = vector<int> (bin_size, 0);
 
   double delta_coord = (rec.high - rec.low) / bin_size_double;
   for (auto & obj : obj_collection){
@@ -548,30 +536,56 @@ void DistributedOrbLB::reportFinalStepData(DorbPartitionRec rec, vector<LBShortC
       half_load -= d.load;
     }
 
+    CkPrintf("Final step for (%d, %d) size = %d split point = %8f\n", rec.left, rec.right, final_data.size(), split_point);
+
     thisProxy[rec.left].finishedPartitionOneDim(rec, split_point, get<3>(data) + (get<1>(data)/2.0) - half_load);
   }
 }
 
-void DistributedOrbLB::gatherBinLoads(){
-  int tupleSize = bin_size * 2;/*{{{*/
-  CkReduction::tupleElement tupleRedn[tupleSize];
-  for (int i = 0; i < bin_size; i++){
-    tupleRedn[i] = CkReduction::tupleElement(sizeof(float), &octal_loads[i], CkReduction::sum_float);
-    tupleRedn[bin_size + i] = CkReduction::tupleElement(sizeof(int), &octal_sizes[i], CkReduction::sum_int);
-  }
-
-  CkReductionMsg* msg = CkReductionMsg::buildFromTuple(tupleRedn, tupleSize);
-  CkCallback cb(CkIndex_DistributedOrbLB::getSumBinLoads(0), thisProxy[0]);
-  msg->setCallback(cb);
-  contribute(msg);/*}}}*/
-}
-
-void DistributedOrbLB::getSumBinLoads(CkReductionMsg * msg){
-}
+//void DistributedOrbLB::gatherBinLoads(){
+//  int tupleSize = bin_size * 2;/*{{{*/
+//  CkReduction::tupleElement tupleRedn[tupleSize];
+//  for (int i = 0; i < bin_size; i++){
+//    tupleRedn[i] = CkReduction::tupleElement(sizeof(float), &octal_loads[i], CkReduction::sum_float);
+//    tupleRedn[bin_size + i] = CkReduction::tupleElement(sizeof(int), &octal_sizes[i], CkReduction::sum_int);
+//  }
+//
+//  CkReductionMsg* msg = CkReductionMsg::buildFromTuple(tupleRedn, tupleSize);
+//  CkCallback cb(CkIndex_DistributedOrbLB::getSumBinLoads(0), thisProxy[0]);
+//  msg->setCallback(cb);
+//  contribute(msg);/*}}}*/
+//}
+//
+//void DistributedOrbLB::getSumBinLoads(CkReductionMsg * msg){
+//}
 
 
 void DistributedOrbLB::finishedPartitionOneDim(DorbPartitionRec rec, float split_point, float split_load){
+    int mid_idx  = (rec.left + rec.right) / 2;
+    Vector3D<Real> left_lower_coord = rec.lower_coords;
+    Vector3D<Real> left_upper_coord = rec.upper_coords;
+    left_upper_coord[rec.dim] = split_point;
+    Vector3D<Real> right_lower_coord = rec.lower_coords;
+    right_lower_coord[rec.dim] = split_point;
+    Vector3D<Real> right_upper_coord = rec.upper_coords;
+    float curr_right_load = rec.load - split_load;
 
+    int left_dim = getDim(rec.dim, left_lower_coord, left_upper_coord);
+    DorbPartitionRec left_rec{
+      left_dim, split_load,
+      rec.left, mid_idx,
+      left_lower_coord[left_dim], left_upper_coord[left_dim],
+      left_lower_coord, left_upper_coord};
+
+    int right_dim = getDim(rec.dim, right_lower_coord, right_upper_coord);
+    DorbPartitionRec right_rec{
+      right_dim, curr_right_load,
+      mid_idx, rec.right,
+      right_lower_coord[right_dim], right_upper_coord[right_dim],
+      right_lower_coord, right_upper_coord};
+
+    thisProxy[rec.left].createPartitions(left_rec);
+    thisProxy[mid_idx].createPartitions(right_rec);
 }
 
 void DistributedOrbLB::migrateObjects(std::vector<std::vector<Vector3D<Real>>> pe_splits){
@@ -659,7 +673,6 @@ void DistributedOrbLB::reset(){
   send_nobjs_to_pes.clear();
   migrate_records.clear();
   obj_collection.clear();
-  octal_loads.clear();
   pe_split_coords.clear();
   pe_split_loads.clear();
   if (CkMyPe() == 0) {

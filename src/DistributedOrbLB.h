@@ -40,7 +40,7 @@ public:
   void getUniverseDimensions(CkReductionMsg * msg);
   void recursiveLoadPartition();
   void binaryLoadPartitionWithBins(DorbPartitionRec rec);
-  void getSumBinLoads(CkReductionMsg * msg);
+  //void getSumBinLoads(CkReductionMsg * msg);
   void createPartitions(DorbPartitionRec rec);
   void setPeSpliters(DorbPartitionRec rec);
   void reportBinLoads(DorbPartitionRec, vector<float>, vector<int>);
@@ -90,9 +90,6 @@ private:
   int recv_summary, total_move, total_objs;
 
   // Parition related data
-  vector <float> octal_loads;
-  vector <int> octal_sizes;
-  CkCallbackResumeThread * curr_cb;
   vector <float> split_coords;
   int curr_dim, curr_depth;
   int left_idx, right_idx;
@@ -123,7 +120,7 @@ private:
   void reportPerLBStates();
   void reportPostLBStates();
   int getDim(int dim, Vector3D<Real>& lower_coords, Vector3D<Real>& upper_coords);
-  void gatherBinLoads();
+  //void gatherBinLoads();
   void findPeSplitPoints();
   void reset();
 };
