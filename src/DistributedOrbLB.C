@@ -73,8 +73,6 @@ void DistributedOrbLB::initVariables(){
   n_particles = 0;
   max_obj_load = .0f;
   min_obj_load = 10.0;
-  dim = 0;
-  curr_dim = -1;
   use_longest_dim = true;
   obj_coords = vector<vector<float>>(3, vector<float>());
   pe_split_coords.resize(CkNumPes());
@@ -348,7 +346,7 @@ void DistributedOrbLB::binaryLoadPartitionWithBins(DorbPartitionRec rec){
   double delta_coord = (rec.high - rec.low) / bin_size_double;
   for (auto & obj : obj_collection){
     if (inCurrentBox(obj.centroid, rec.lower_coords, rec.upper_coords)){
-      int idx = ((double)obj.centroid[dim] - rec.low)/delta_coord;
+      int idx = ((double)obj.centroid[rec.dim] - rec.low)/delta_coord;
       if (idx > (bin_size - 1)) {
         //CkPrintf("*** idx %d lower %.8f upper %.8f my %.8f\n", idx, low, high, obj.centroid[dim]);
         idx = bin_size - 1;
@@ -444,12 +442,15 @@ void DistributedOrbLB::reportBinLoads(DorbPartitionRec rec, vector<float> bin_lo
     }
 
     float curr_delta = prefix_bin_loads[0];
+    float left_load = - half_load;
     for (int i = 0; i < bin_size; i++){
       if (prefix_bin_loads[i] > .0f) {
         curr_split_idx = i;
         break;
       }
     }
+
+    if (curr_split_idx > 0) left_load = prefix_bin_loads[curr_split_idx - 1];
 
     int split_size = col_sizes[curr_split_idx];
 
@@ -470,6 +471,10 @@ void DistributedOrbLB::reportBinLoads(DorbPartitionRec rec, vector<float> bin_lo
       if (curr_delta > .0f) split_pt += (upper_split - lower_split)/bin_size_double;
       if (_lb_args.debug() >= debug_l0) CkPrintf("$$$ End partition curr_delta = %.8f, left_load_prefix = %.8f\n",curr_delta, prefix_bin_loads[curr_split_idx - 1]);
       thisProxy.finishedPartitionOneDim(rec, split_pt, curr_delta + half_load);
+    } else if (split_size < 64 || (rec.high - rec.low) < 0.0000008) {
+      CkPrintf("Final step curr_split_idx = %d, left_load = %.8f\n", curr_split_idx, left_load);
+      final_step_map[pair<int, int>(rec.left, rec.right)] = tuple<int, float, vector<LBShortCmp>, float>(0, .0f, vector<LBShortCmp>(), left_load);
+      thisProxy.finalPartitionStep(rec, curr_split_idx);
     } else {
       prefix_bin_loads.clear();
       DorbPartitionRec new_rec = rec;
@@ -485,21 +490,15 @@ void DistributedOrbLB::reportBinLoads(DorbPartitionRec rec, vector<float> bin_lo
         new_rec.low = split_pt;
       }
 
-      if (split_size < 64 || (new_rec.high - new_rec.low) < 0.0000008){
-        CkPrintf("Final step old (%.8f, %.8f) new (%.8f, %.8f)\n", rec.low, rec.high, new_rec.low, new_rec.high);
-        final_step_map[pair<int, int>(new_rec.left, new_rec.right)] = tuple<int, float, vector<LBShortCmp>, float>(0, .0f, vector<LBShortCmp>(), curr_delta + half_load);
-        thisProxy.finalPartitionStep(new_rec);
-      } else {
-        if(_lb_args.debug() >= debug_l0) CkPrintf("\t****NEW dim = %d lower = %.12f upper = %.12f\n", new_rec.dim, new_rec.low, new_rec.high);
-        thisProxy.binaryLoadPartitionWithBins(new_rec);
-      }
+      if(_lb_args.debug() >= debug_l0) CkPrintf("\t****NEW dim = %d lower = %.12f upper = %.12f\n", new_rec.dim, new_rec.low, new_rec.high);
+      thisProxy.binaryLoadPartitionWithBins(new_rec);
     }
   /*}}}*/
   }
 }
 
 
-void DistributedOrbLB::finalPartitionStep(DorbPartitionRec rec){
+void DistributedOrbLB::finalPartitionStep(DorbPartitionRec rec, int bin_idx){
   if (my_pe == 0){/*{{{*/
     if(_lb_args.debug() >= debug_l1) ckout << rec.lower_coords << "--" << rec.upper_coords << "; " << rec.low << " - " << rec.high << endl;
   }
@@ -508,7 +507,8 @@ void DistributedOrbLB::finalPartitionStep(DorbPartitionRec rec){
   double delta_coord = (rec.high - rec.low) / bin_size_double;
   for (auto & obj : obj_collection){
     if (inCurrentBox(obj.centroid, rec.lower_coords, rec.upper_coords)){
-      if (obj.centroid[rec.dim] >= rec.low && obj.centroid[rec.dim] < rec.high){
+      int idx = ((double)obj.centroid[rec.dim] - rec.low) / delta_coord;
+      if (idx == bin_idx){
         fdata.push_back(LBShortCmp{obj.centroid[rec.dim], obj.load});
         if(_lb_args.debug() >= debug_l2) ckout << "\t\t++ Add to final " << "; " << obj.centroid << endl;
       }

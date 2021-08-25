@@ -44,7 +44,7 @@ public:
   void createPartitions(DorbPartitionRec rec);
   void setPeSpliters(DorbPartitionRec rec);
   void reportBinLoads(DorbPartitionRec, vector<float>, vector<int>);
-  void finalPartitionStep(DorbPartitionRec);
+  void finalPartitionStep(DorbPartitionRec, int);
   void reportFinalStepData(DorbPartitionRec, vector<LBShortCmp>);
 
   void migrateObjects(std::vector<std::vector<Vector3D<Real>>> pe_splits);
@@ -74,7 +74,6 @@ private:
   float post_lb_load;
 
   int n_partitions, n_particles;
-  int dim;
   vector<vector<float>> obj_coords; // corrodination limits at all directions
   vector<float> universe_coords; // size 6, min, max coord of 3 dimensions
 
@@ -91,7 +90,7 @@ private:
 
   // Parition related data
   vector <float> split_coords;
-  int curr_dim, curr_depth;
+  int curr_depth;
   int left_idx, right_idx;
   double lower_split, upper_split;
   float curr_load, curr_left_load, curr_split_pt;
