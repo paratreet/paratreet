@@ -403,6 +403,25 @@ void DistributedOrbLB::reportBinLoads(DorbPartitionRec rec, vector<float> bin_lo
 
   if (get<0>(data) == CkNumPes()){
     CkPrintf("Collected all Data!!\n");
+  if (_lb_args.debug() >= debug_l1) {
+    // Print global_bin_sizes
+    ckout << "\tbin_size::";
+    for (int i = 0; i < bin_size; i++){
+      if (i % 8 == 0){
+        ckout << "\n\t";
+      }
+      ckout << get<2>(data)[i] << " ";
+    }
+
+    ckout << "\n\tbin_loads";
+    for (int i = 0; i < bin_size; i++){
+      if (i % 8 == 0){
+        ckout << "\n\t";
+      }
+      ckout << get<1>(data)[i] << " ";
+    }
+    ckout << endl;
+  }
   }
 }
 
