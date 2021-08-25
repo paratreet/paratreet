@@ -3,6 +3,7 @@ extern module DistBaseLB;
 initnode void lbinit(void);
 
 include "common.h";
+include "LBCommon.h";
 
 group [migratable] DistributedOrbLB : DistBaseLB {
   entry void DistributedOrbLB(const CkLBOptions &);
@@ -12,9 +13,10 @@ group [migratable] DistributedOrbLB : DistBaseLB {
   entry void endLB();
   entry void reportUniverseDimensions();
   entry [reductiontarget] void getUniverseDimensions(CkReductionMsg * msg);
-  entry void binaryLoadPartitionWith64Bins(int dim, float load, int left, int right, double low, double high, Vector3D<Real> lower_coords, Vector3D<Real> upper_coords, const CkCallback &);
-  entry [threaded] void createPartitions(int, float,int, int, Vector3D<Real>, Vector3D<Real>);
-  entry void setPeSpliters(int, float, Vector3D<Real>, Vector3D<Real>);
+  entry void binaryLoadPartitionWithBins(LBCommon::DorbPartitionRec rec);
+  entry void createPartitions(LBCommon::DorbPartitionRec rec);
+  entry void setPeSpliters(LBCommon::DorbPartitionRec rec);
+  entry void reportBinLoads(LBCommon::DorbPartitionRec, std::vector<float>, std::vector<int>);
   entry [reductiontarget] void getSumBinLoads(CkReductionMsg * msg);
   entry void finishedPartitionOneDim(const CkCallback & curr_cb);
   entry void migrateObjects(std::vector<std::vector<Vector3D<Real>>> pe_splits);

@@ -28,8 +28,30 @@ namespace LBCommon{
     };
   };/*}}}*/
 
+  struct DorbPartitionRec{
+    int dim;
+    float load;
+    int left;
+    int right;
+    double low;
+    double high;
+    Vector3D<Real> lower_coords;
+    Vector3D<Real> upper_coords;
+    void pup(PUP::er &p){
+      p | dim;
+      p | load;
+      p | left;
+      p | right;
+      p | low;
+      p | high;
+      p | lower_coords;
+      p | upper_coords;
+    };
+  };
+
   struct LBObjToken{
     Vector3D<Real> centroid;/*{{{*/
+    LDObjHandle handle;
     int idx;
     int from_pe;
     int to_pe;
@@ -37,6 +59,7 @@ namespace LBCommon{
     float distance;
     void pup(PUP::er &p){
       p | centroid;
+      p | handle;
       p | idx;
       p | from_pe;
       p | to_pe;

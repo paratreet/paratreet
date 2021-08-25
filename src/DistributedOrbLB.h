@@ -12,9 +12,18 @@
 #include "LBCommon.h"
 
 #include <vector>
+#include <tuple>
+#include <utility>
+#include <map>
+
 using std::vector;
+using std::map;
+using std::tuple;
+using std::pair;
+using std::get;
 using LBCommon::LBUserData;
 using LBCommon::LBCentroidAndIndexRecord;
+using LBCommon::DorbPartitionRec;
 
 void CreateDistributedOrbLB();
 
@@ -29,14 +38,15 @@ public:
   void reportUniverseDimensions();
   void getUniverseDimensions(CkReductionMsg * msg);
   void recursiveLoadPartition();
-  void binaryLoadPartitionWith64Bins(int dim, float load, int left, int right, double low, double high, Vector3D<Real> lower_coords, Vector3D<Real> upper_coords, const CkCallback &);
+  void binaryLoadPartitionWithBins(DorbPartitionRec rec);
   void getSumBinLoads(CkReductionMsg * msg);
-  void createPartitions(int dim, float load, int left, int right, Vector3D<Real> lower_coords, Vector3D<Real> upper_coords);
-  void setPeSpliters(int, float, Vector3D<Real>, Vector3D<Real>);
-  void finishedPartitionOneDim(const CkCallback & curr_cb);
+  void createPartitions(DorbPartitionRec rec);
+  void setPeSpliters(DorbPartitionRec rec);
+  void reportBinLoads(DorbPartitionRec, vector<float>, vector<int>);
   void migrateObjects(std::vector<std::vector<Vector3D<Real>>> pe_splits);
   void acknowledgeIncomingMigrations(int count, float in_load);
   void sendFinalMigrations(int count);
+  void finishedPartitionOneDim(const CkCallback & curr_cb);
 
 
 private:
@@ -88,6 +98,11 @@ private:
   bool use_longest_dim;
   Vector3D<Real> curr_lower_coords;
   Vector3D<Real> curr_upper_coords;
+
+  // Bin data
+  map<pair<int, int>,
+    tuple<int, vector<float>, vector<int>>> bin_data_map;
+
 
   // Partition results
   int recv_spliters = 0;
