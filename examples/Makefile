@@ -6,7 +6,7 @@ LBS = CommonLBs PrefixLB OrbLB #AverageSmoothLB DiffusionLB DistributedPrefixLB 
 LB_LIBS = $(foreach m, $(LBS), -module $(m))
 OPTS = -g -Ofast -I$(STRUCTURE_PATH) -I$(PARATREET_PATH) -DCOUNT_INTERACTIONS=0 -DDEBUG=0 -DHEXADECAPOLE $(MAKE_OPTS)
 CHARMC = $(CHARM_HOME)/bin/charmc $(OPTS)
-LD_LIBS = -L$(PARATREET_PATH) -lparatreet
+LD_LIBS = -L$(PARATREET_PATH) -lparatreet -ltirpc # Need tirpc for Summit
 
 all: Gravity SPH Collision VisitAll
 VISITORS = DensityVisitor.h PressureVisitor.h GravityVisitor.h CollisionVisitor.h NeighborListCollector.h VisitAllVisitor.h
