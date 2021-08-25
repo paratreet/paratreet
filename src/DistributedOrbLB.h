@@ -104,7 +104,7 @@ private:
     tuple<int, vector<float>, vector<int>>> bin_data_map;
 
   map<pair<int, int>,
-    tuple<int, float, vector<LBShortCmp>, float>> final_step_map;
+    tuple<int, float, vector<LBShortCmp>, float, float>> final_step_map;
 
   // Partition results
   int recv_spliters = 0;

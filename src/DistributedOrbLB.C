@@ -391,6 +391,7 @@ void DistributedOrbLB::reportBinLoads(DorbPartitionRec rec, vector<float> bin_lo
     CkPrintf("Collected all Data!!\n");
     auto col_loads = get<1>(data);
     auto col_sizes = get<2>(data);
+    bin_data_map[pair<int, int>(rec.left, rec.right)] = tuple<int, vector<float>, vector<int>>(0, vector<float>(bin_size, .0f), vector<int>(bin_size, 0));
     if (_lb_args.debug() >= debug_l1) {
       // Print global_bin_sizes{{{
       ckout << "\tbin_size::";
@@ -473,7 +474,7 @@ void DistributedOrbLB::reportBinLoads(DorbPartitionRec rec, vector<float> bin_lo
       thisProxy.finishedPartitionOneDim(rec, split_pt, curr_delta + half_load);
     } else if (split_size < 64 || (rec.high - rec.low) < 0.0000008) {
       CkPrintf("Final step curr_split_idx = %d, left_load = %.8f\n", curr_split_idx, left_load);
-      final_step_map[pair<int, int>(rec.left, rec.right)] = tuple<int, float, vector<LBShortCmp>, float>(0, .0f, vector<LBShortCmp>(), left_load);
+      final_step_map[pair<int, int>(rec.left, rec.right)] = tuple<int, float, vector<LBShortCmp>, float, float>(0, .0f, vector<LBShortCmp>(), left_load, half_load);
       thisProxy.finalPartitionStep(rec, curr_split_idx);
     } else {
       prefix_bin_loads.clear();
@@ -528,20 +529,20 @@ void DistributedOrbLB::reportFinalStepData(DorbPartitionRec rec, vector<LBShortC
 
   if (get<0>(data) == CkNumPes()){
     vector<LBShortCmp> final_data = get<2>(data);
-    float half_load = get<1>(data) / 2.0;
+    float left_load = get<3>(data);
     float split_point = .0f;
     std::sort(final_data.begin(), final_data.end(), CompareLBShortCmp);
     for (auto d : final_data){
-      if (half_load - d.load < .0f){
+      if (left_load + d.load > .0f){
         split_point = d.coord;
         break;
       }
-      half_load -= d.load;
+      left_load += d.load;
     }
 
-    CkPrintf("Final step for (%d, %d) size = %d split point = %8f\n", rec.left, rec.right, final_data.size(), split_point);
+    CkPrintf("Final step for (%d, %d) size = %d split point = %8f left_load = %.8f -> %.8f\n", rec.left, rec.right, final_data.size(), split_point, get<3>(data), left_load);
 
-    thisProxy[rec.left].finishedPartitionOneDim(rec, split_point, get<3>(data) + (get<1>(data)/2.0) - half_load);
+    thisProxy[rec.left].finishedPartitionOneDim(rec, split_point, get<4>(data) + left_load);
   }
 }
 
