@@ -56,8 +56,11 @@ PARATREET_REGISTER_MAIN(ExMain);
     // Process command line arguments
     int c;
     std::string input_str;
-    while ((c = getopt(m->argc, m->argv, "f:n:p:l:d:t:i:s:u:r:b:v:amec:")) != -1) {
+    while ((c = getopt(m->argc, m->argv, "x:f:n:p:l:d:t:i:s:u:r:b:v:amec:")) != -1) {
       switch (c) {
+        case 'x':
+          conf.load(optarg);
+          break;
         case 'f':
           conf.input_file = optarg;
           break;

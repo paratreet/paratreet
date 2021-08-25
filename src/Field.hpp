@@ -1,0 +1,35 @@
+#ifndef __PARATREET_FIELD_HPP__
+#define __PARATREET_FIELD_HPP__
+
+#include "Value.hpp"
+
+namespace paratreet {
+class GenericField {
+  std::string name_;
+  bool required_;
+
+ public:
+  GenericField(const std::string& name, const bool& reqd)
+      : name_(name), required_(reqd) {}
+
+  const std::string& name(void) const { return this->name_; }
+  const bool& required(void) const { return this->required_; }
+
+  virtual void accept(const value& value) = 0;
+};
+
+template <typename T>
+class Field : public GenericField {
+  T& storage_;
+
+ public:
+  Field(const std::string& name, const bool& reqd, T& storage)
+      : GenericField(name, reqd), storage_(storage) {}
+
+  virtual void accept(const value& value) override {
+    new (&this->storage_) T((T)value);
+  }
+};
+}  // namespace paratreet
+
+#endif
