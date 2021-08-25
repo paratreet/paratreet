@@ -32,6 +32,7 @@ public:
   void binaryLoadPartitionWith64Bins(int dim, float load, int left, int right, double low, double high, Vector3D<Real> lower_coords, Vector3D<Real> upper_coords, const CkCallback &);
   void getSumBinLoads(CkReductionMsg * msg);
   void createPartitions(int dim, float load, int left, int right, Vector3D<Real> lower_coords, Vector3D<Real> upper_coords);
+  void setPeSpliters(int, float, Vector3D<Real>, Vector3D<Real>);
   void finishedPartitionOneDim(const CkCallback & curr_cb);
   void migrateObjects(std::vector<std::vector<Vector3D<Real>>> pe_splits);
   void acknowledgeIncomingMigrations(int count, float in_load);
@@ -89,6 +90,7 @@ private:
   Vector3D<Real> curr_upper_coords;
 
   // Partition results
+  int recv_spliters = 0;
   vector<vector<Vector3D<Real>>> pe_split_coords;
   vector<float> pe_split_loads;
 

@@ -85,6 +85,8 @@ void DistributedOrbLB::initVariables(){
   total_move = 0;
   total_objs = 0;
 
+  recv_spliters = 0;
+
   global_bin_loads = vector<float>(bin_size, .0f);
   global_bin_sizes = vector<int>(bin_size, 0);
 
@@ -289,12 +291,12 @@ void DistributedOrbLB::findPeSplitPoints(){
 
   createPartitions(getDim(-1, curr_lower_coords, curr_upper_coords), global_load, 0, CkNumPes(), curr_lower_coords, curr_upper_coords);
 
-  for (int i = 0; i < CkNumPes(); i++){
-    if(_lb_args.debug() >= debug_l0) ckout << "@@@@ Final [" <<i << "] " << pe_split_loads[i]
-      << " (" << pe_split_coords[i][0] << " , "<< pe_split_coords[i][1] << ")" <<endl;
-  }
+  //for (int i = 0; i < CkNumPes(); i++){
+  //  if(_lb_args.debug() >= debug_l0) ckout << "@@@@ Final [" <<i << "] " << pe_split_loads[i]
+  //    << " (" << pe_split_coords[i][0] << " , "<< pe_split_coords[i][1] << ")" <<endl;
+  //}
 
-  thisProxy.migrateObjects(pe_split_coords);
+  //thisProxy.migrateObjects(pe_split_coords);
 }
 
 void DistributedOrbLB::createPartitions(int dim, float load, int left, int right, Vector3D<Real> lower_coords, Vector3D<Real> upper_coords){
@@ -312,8 +314,9 @@ void DistributedOrbLB::createPartitions(int dim, float load, int left, int right
 
   // Base case, split into 1 PE
   if (right_idx - left_idx <= 1){
-    pe_split_coords[left] = vector<Vector3D<Real>>{lower_coords, upper_coords};
-    pe_split_loads[left] = load;
+    thisProxy[0].setPeSpliters(left, load, lower_coords, upper_coords);
+    //pe_split_coords[left] = vector<Vector3D<Real>>{lower_coords, upper_coords};
+    //pe_split_loads[left] = load;
 }
   else // Recursive case
   {/*{{{*/
@@ -330,9 +333,22 @@ void DistributedOrbLB::createPartitions(int dim, float load, int left, int right
     right_lower_coord[dim] = curr_split_pt;
     Vector3D<Real> right_upper_coord = upper_coords;
     float curr_right_load = load - curr_left_load;
-    createPartitions(getDim(dim, left_lower_coord,  left_upper_coord),  curr_left_load, left, mid_idx, left_lower_coord, left_upper_coord);
-    createPartitions(getDim(dim, right_lower_coord, right_upper_coord), curr_right_load, mid_idx, right, right_lower_coord, right_upper_coord);
+    thisProxy[left].createPartitions(getDim(dim, left_lower_coord,  left_upper_coord),  curr_left_load, left, mid_idx, left_lower_coord, left_upper_coord);
+    thisProxy[mid_idx].createPartitions(getDim(dim, right_lower_coord, right_upper_coord), curr_right_load, mid_idx, right, right_lower_coord, right_upper_coord);
   }/*}}}*/
+}
+
+void DistributedOrbLB::setPeSpliters(int idx, float load, Vector3D<Real> lower, Vector3D<Real>upper){
+  recv_spliters ++;
+  pe_split_coords[idx] = vector<Vector3D<Real>>{lower, upper};
+  pe_split_loads[idx] = load;
+
+  if (_lb_args.debug() == debug_l0){
+    CkPrintf("Splitter %d/%d\n", recv_spliters, CkNumPes());
+  }
+  if (recv_spliters == CkNumPes()){
+    thisProxy.migrateObjects(pe_split_coords);
+  }
 }
 
 bool inCurrentBox(Vector3D<Real> & centroid, Vector3D<Real> & lower_coords, Vector3D<Real> & upper_coords){
@@ -458,13 +474,17 @@ void DistributedOrbLB::getSumBinLoads(CkReductionMsg * msg){
       break;
     }
   }
+
+  int split_size = global_bin_sizes[curr_split_idx];
+
   if (curr_split_idx > 0 && std::fabs(prefix_bin_loads[curr_split_idx - 1]) < std::fabs(prefix_bin_loads[curr_split_idx])){
     curr_delta = prefix_bin_loads[curr_split_idx - 1];
+    split_size = global_bin_sizes[curr_split_idx - 1];
   }else{
     curr_delta = prefix_bin_loads[curr_split_idx];
   }
 
-  if(_lb_args.debug() >= debug_l0) CkPrintf("\tleft_ratio = %.8f curr_split_idx = %d curr_delta = %.8f; max prefix_bin_loads = %.8f\n", left_ratio, curr_split_idx, curr_delta, prefix_bin_loads[bin_size - 1]);
+  if(_lb_args.debug() >= debug_l0) CkPrintf("\tleft_ratio = %.8f curr_split_idx = %d curr_delta = %.8f split_size = %d; max prefix_bin_loads = %.8f\n", left_ratio, curr_split_idx, curr_delta, split_size, prefix_bin_loads[bin_size - 1]);
 
   double split_pt = lower_split + ((upper_split - lower_split)/bin_size_double) * (double)curr_split_idx;
 
@@ -476,7 +496,7 @@ void DistributedOrbLB::getSumBinLoads(CkReductionMsg * msg){
     if (curr_delta > .0f) curr_split_pt += (upper_split - lower_split)/bin_size_double;
     curr_left_load = prefix_bin_loads[curr_split_idx - 1] + half_load;
     prefix_bin_loads.clear();
-    if (_lb_args.debug() >= debug_l0) CkPrintf("$$$ End partition curr_delta = %.8f, depth = %d, left_load_prefix = %.8f\n",curr_delta, curr_depth, prefix_bin_loads[curr_split_idx - 1]); 
+    if (_lb_args.debug() >= debug_l0) CkPrintf("$$$ End partition curr_delta = %.8f, depth = %d, left_load_prefix = %.8f\n",curr_delta, curr_depth, prefix_bin_loads[curr_split_idx - 1]);
     thisProxy.finishedPartitionOneDim(*curr_cb);
   } else {
     prefix_bin_loads.clear();
