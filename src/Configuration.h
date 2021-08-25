@@ -29,7 +29,7 @@ namespace paratreet {
     };
 
     template <>
-    inline void Field<DecompType>::accept(const value& value) {
+    inline void Field<DecompType>::accept(const Value& value) {
       auto s = (std::string)value;
       using T = DecompType;
       if (s == "oct") {
@@ -48,7 +48,7 @@ namespace paratreet {
     }
 
     template <>
-    inline void Field<TreeType>::accept(const value& value) {
+    inline void Field<TreeType>::accept(const Value& value) {
       auto s = (std::string)value;
       using T = TreeType;
       if (s == "oct") {

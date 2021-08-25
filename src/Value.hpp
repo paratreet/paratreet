@@ -4,7 +4,7 @@
 #include <pup_stl.h>
 
 namespace paratreet {
-struct value {
+struct Value {
   enum type : char {
     kBool = 'b',
     kDouble = 'd',
@@ -49,22 +49,22 @@ struct value {
   }
 
  public:
-  // only construct with a valid value
-  value(void) = delete;
-  value(const value&) = delete;
-  value(value&&) = delete;
+  // only construct with a valid Value
+  Value(void) = delete;
+  Value(const Value&) = delete;
+  Value(Value&&) = delete;
 
   // used for deserialization
-  value(PUP::reconstruct tag) : value_(tag) {}
+  Value(PUP::reconstruct tag) : value_(tag) {}
 
-  // constructs a value of a given type
-  value(const bool& b) : type_(kBool), value_(b) {}
-  value(const double& d) : type_(kDouble), value_(d) {}
-  value(const int& i) : type_(kInteger), value_(i) {}
-  value(const std::string& s) : type_(kString), value_(s) {}
+  // constructs a Value of a given type
+  Value(const bool& b) : type_(kBool), value_(b) {}
+  Value(const double& d) : type_(kDouble), value_(d) {}
+  Value(const int& i) : type_(kInteger), value_(i) {}
+  Value(const std::string& s) : type_(kString), value_(s) {}
 
   // calls the appropriate destructor
-  ~value() {
+  ~Value() {
     switch (this->type_) {
       case kBool:
         destruct(this->value_.b);
@@ -85,8 +85,8 @@ struct value {
 
   inline bool is_type(const type& ty) const { return ty == this->type_; }
 
-  // checks whether lhs and rhs have the same type and value
-  bool operator==(const value& rhs) const {
+  // checks whether lhs and rhs have the same type and Value
+  bool operator==(const Value& rhs) const {
     const auto& lhs = *this;
     return (lhs.type_ == rhs.type_) && ([&](void) -> bool {
              switch (lhs.type_) {
@@ -127,7 +127,7 @@ struct value {
     }
   }
 
-  // converts this value's value to a string (e.g., for output)
+  // converts this Value's Value to a string (e.g., for output)
   std::string to_string(void) const {
     switch (this->type_) {
       case kBool:
@@ -143,13 +143,13 @@ struct value {
     }
   }
 
-  // check whether a value can be cast to a given type
+  // check whether a Value can be cast to a given type
   template <typename T>
   bool is(void) const {
     return false;
   }
 
-  // cast this value to the specified type
+  // cast this Value to the specified type
   explicit operator bool() const;
   explicit operator double() const;
   explicit operator int() const;
@@ -157,41 +157,41 @@ struct value {
 };
 
 template <>
-inline bool value::is<bool>(void) const {
+inline bool Value::is<bool>(void) const {
   return this->type_ == kBool;
 }
 
-inline value::operator bool() const {
+inline Value::operator bool() const {
   CmiAssert(this->is<bool>());
   return this->value_.b;
 }
 
 template <>
-inline bool value::is<double>(void) const {
+inline bool Value::is<double>(void) const {
   return this->type_ == kDouble;
 }
 
-inline value::operator double() const {
+inline Value::operator double() const {
   CmiAssert(this->is<double>());
   return this->value_.d;
 }
 
 template <>
-inline bool value::is<int>(void) const {
+inline bool Value::is<int>(void) const {
   return this->type_ == kInteger;
 }
 
-inline value::operator int() const {
+inline Value::operator int() const {
   CmiAssert(this->is<int>());
   return this->value_.i;
 }
 
 template <>
-inline bool value::is<std::string>(void) const {
+inline bool Value::is<std::string>(void) const {
   return this->type_ == kString;
 }
 
-inline value::operator std::string() const {
+inline Value::operator std::string() const {
   CmiAssert(this->is<std::string>());
   return this->value_.s;
 }

@@ -25,10 +25,10 @@ parameters load_parameters(const char* file) {
       auto& key = m[1];
       auto& val = m[2];
       // determine the type from the key
-      auto ty = value::get_type(key);
+      auto ty = Value::get_type(key);
       // emplace the value with the appropriate conversion
       auto ins = ([&](void) {
-        using T = value::type;
+        using T = Value::type;
         switch (ty) {
           case T::kBool:
             return map.emplace(key, (bool)std::stoi(val));

@@ -15,7 +15,7 @@ class GenericField {
   const std::string& name(void) const { return this->name_; }
   const bool& required(void) const { return this->required_; }
 
-  virtual void accept(const value& value) = 0;
+  virtual void accept(const Value& val) = 0;
 };
 
 template <typename T>
@@ -26,8 +26,8 @@ class Field : public GenericField {
   Field(const std::string& name, const bool& reqd, T& storage)
       : GenericField(name, reqd), storage_(storage) {}
 
-  virtual void accept(const value& value) override {
-    new (&this->storage_) T((T)value);
+  virtual void accept(const Value& val) override {
+    new (&this->storage_) T((T)val);
   }
 };
 }  // namespace paratreet

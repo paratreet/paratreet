@@ -4,7 +4,7 @@
 #include "Field.hpp"
 
 namespace paratreet {
-using parameters = std::map<std::string, value>;
+using parameters = std::map<std::string, Value>;
 
 parameters load_parameters(const char* file);
 
