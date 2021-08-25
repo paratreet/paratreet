@@ -394,7 +394,7 @@ void DistributedOrbLB::reportBinLoads(DorbPartitionRec rec, vector<float> bin_lo
     bin_data_map[pair<int, int>(rec.left, rec.right)] = tuple<int, vector<float>, vector<int>>(0, vector<float>(bin_size, .0f), vector<int>(bin_size, 0));
     if (_lb_args.debug() >= debug_l1) {
       // Print global_bin_sizes{{{
-      ckout << "\tbin_size::";
+      ckout << "\t rec(" << rec.left << "," << rec.right << ")bin_size::";
       for (int i = 0; i < bin_size; i++){
         if (i % 8 == 0){
           ckout << "\n\t";
@@ -432,7 +432,7 @@ void DistributedOrbLB::reportBinLoads(DorbPartitionRec rec, vector<float> bin_lo
 
     if (_lb_args.debug() >= debug_l1) {
       // Print global_bin_sizes
-      ckout << "\tprefix_bin_loads";
+      ckout << "\trec(" << rec.left << "," << rec.right << ") prefix_bin_loads";
       for (int i = 0; i < bin_size; i++){
         if (i % 8 == 0){
           ckout << "\n\t";
@@ -461,11 +461,11 @@ void DistributedOrbLB::reportBinLoads(DorbPartitionRec rec, vector<float> bin_lo
       curr_delta = prefix_bin_loads[curr_split_idx];
     }
 
-    if(_lb_args.debug() >= debug_l0) CkPrintf("\tleft_ratio = %.8f curr_split_idx = %d curr_delta = %.8f split_size = %d; max prefix_bin_loads = %.8f\n", left_ratio, curr_split_idx, curr_delta, split_size, prefix_bin_loads[bin_size - 1]);
+    if(_lb_args.debug() >= debug_l0) CkPrintf("\trec (%d, %d) left_ratio = %.8f curr_split_idx = %d curr_delta = %.8f split_size = %d; max prefix_bin_loads = %.8f\n", rec.left, rec.right, left_ratio, curr_split_idx, curr_delta, split_size, prefix_bin_loads[bin_size - 1]);
 
     double split_pt = rec.low + ((rec.high - rec.low)/bin_size_double) * (double)curr_split_idx;
 
-    if(_lb_args.debug() >= debug_l1) CkPrintf("\tcurr_delta = %.8f, granularity = %.4f, curr_split_idx = %d, split_pt = %.8f\n", curr_delta, granularity, curr_split_idx, split_pt);
+    //if(_lb_args.debug() >= debug_l1) CkPrintf("\tcurr_delta = %.8f, granularity = %.4f, curr_split_idx = %d, split_pt = %.8f\n", curr_delta, granularity, curr_split_idx, split_pt);
 
     // The split point is good enough
     if (std::fabs(curr_delta) <= granularity ){
@@ -473,7 +473,7 @@ void DistributedOrbLB::reportBinLoads(DorbPartitionRec rec, vector<float> bin_lo
       if (_lb_args.debug() >= debug_l0) CkPrintf("$$$ End partition curr_delta = %.8f, left_load_prefix = %.8f\n",curr_delta, prefix_bin_loads[curr_split_idx - 1]);
       thisProxy.finishedPartitionOneDim(rec, split_pt, curr_delta + half_load);
     } else if (split_size < 64 || (rec.high - rec.low) < 0.0000008) {
-      CkPrintf("Final step curr_split_idx = %d, left_load = %.8f\n", curr_split_idx, left_load);
+      CkPrintf("Final step for (%d, %d) curr_split_idx = %d, left_load = %.8f\n", rec.left, rec.right, curr_split_idx, left_load);
       final_step_map[pair<int, int>(rec.left, rec.right)] = tuple<int, float, vector<LBShortCmp>, float, float>(0, .0f, vector<LBShortCmp>(), left_load, half_load);
       thisProxy.finalPartitionStep(rec, curr_split_idx);
     } else {
@@ -534,35 +534,21 @@ void DistributedOrbLB::reportFinalStepData(DorbPartitionRec rec, vector<LBShortC
     std::sort(final_data.begin(), final_data.end(), CompareLBShortCmp);
     for (auto d : final_data){
       if (left_load + d.load > .0f){
-        split_point = d.coord;
+        if (-left_load > (left_load + d.load)){
+          split_point = d.coord;
+          left_load += d.load;
+        }
         break;
       }
+      split_point = d.coord;
       left_load += d.load;
     }
 
-    CkPrintf("Final step for (%d, %d) size = %d split point = %8f left_load = %.8f -> %.8f\n", rec.left, rec.right, final_data.size(), split_point, get<3>(data), left_load);
+    CkPrintf("Final step for (%d, %d) size = %d acc_load = %.8f split point = %8f left_load = %.8f -> %.8f\n", rec.left, rec.right, final_data.size(), get<1>(data), split_point, get<3>(data), left_load);
 
     thisProxy[rec.left].finishedPartitionOneDim(rec, split_point, get<4>(data) + left_load);
   }
 }
-
-//void DistributedOrbLB::gatherBinLoads(){
-//  int tupleSize = bin_size * 2;/*{{{*/
-//  CkReduction::tupleElement tupleRedn[tupleSize];
-//  for (int i = 0; i < bin_size; i++){
-//    tupleRedn[i] = CkReduction::tupleElement(sizeof(float), &octal_loads[i], CkReduction::sum_float);
-//    tupleRedn[bin_size + i] = CkReduction::tupleElement(sizeof(int), &octal_sizes[i], CkReduction::sum_int);
-//  }
-//
-//  CkReductionMsg* msg = CkReductionMsg::buildFromTuple(tupleRedn, tupleSize);
-//  CkCallback cb(CkIndex_DistributedOrbLB::getSumBinLoads(0), thisProxy[0]);
-//  msg->setCallback(cb);
-//  contribute(msg);/*}}}*/
-//}
-//
-//void DistributedOrbLB::getSumBinLoads(CkReductionMsg * msg){
-//}
-
 
 void DistributedOrbLB::finishedPartitionOneDim(DorbPartitionRec rec, float split_point, float split_load){
     int mid_idx  = (rec.left + rec.right) / 2;
