@@ -1,7 +1,6 @@
 #include "Loadable.h"
 
 #include <fstream>
-#include <iostream>
 #include <regex>
 
 namespace paratreet {
@@ -13,7 +12,7 @@ parameters load_parameters(const char* file) {
 
   std::string line;
   std::regex line_regex(
-      "^([_a-zA-Z0-9]+)\\s*=\\s*(.*)\\s*$");  // matches (id) = (value)
+      "([_a-zA-Z0-9]+)\\s*=\\s*([^\\s#]+).*");  // matches (id) = (value)
   while (std::getline(fs, line)) {
     // skip comments and empty lines
     if (line.empty() || line[0] == '#') {
@@ -45,7 +44,7 @@ parameters load_parameters(const char* file) {
       })();
       // validate that a correct insertion occured
       if (!ins.second) {
-        CmiAbort("insertion did not occur; was valueeter %s defined twice?\n",
+        CmiAbort("insertion did not occur; was parameter %s defined twice?\n",
                  (key.str()).c_str());
       }
       CmiEnforce((ins.first->second).is_type(ty));
