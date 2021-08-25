@@ -403,25 +403,107 @@ void DistributedOrbLB::reportBinLoads(DorbPartitionRec rec, vector<float> bin_lo
 
   if (get<0>(data) == CkNumPes()){
     CkPrintf("Collected all Data!!\n");
-  if (_lb_args.debug() >= debug_l1) {
-    // Print global_bin_sizes
-    ckout << "\tbin_size::";
-    for (int i = 0; i < bin_size; i++){
-      if (i % 8 == 0){
-        ckout << "\n\t";
+    auto col_loads = get<1>(data);
+    auto col_sizes = get<2>(data);
+    if (_lb_args.debug() >= debug_l1) {
+      // Print global_bin_sizes{{{
+      ckout << "\tbin_size::";
+      for (int i = 0; i < bin_size; i++){
+        if (i % 8 == 0){
+          ckout << "\n\t";
+        }
+        ckout << col_sizes[i] << " ";
       }
-      ckout << get<2>(data)[i] << " ";
+
+      ckout << "\n\tbin_loads";
+      for (int i = 0; i < bin_size; i++){
+        if (i % 8 == 0){
+          ckout << "\n\t";
+        }
+        ckout << col_loads[i] << " ";
+      }
+      ckout << endl;/*}}}*/
     }
 
-    ckout << "\n\tbin_loads";
+    float acc_load = .0f;
     for (int i = 0; i < bin_size; i++){
-      if (i % 8 == 0){
-        ckout << "\n\t";
-      }
-      ckout << get<1>(data)[i] << " ";
+      acc_load += col_loads[i];
     }
-    ckout << endl;
-  }
+    int curr_split_idx = 1;
+    int mid_idx = (rec.left + rec.right)/2;
+    float left_ratio = mid_idx - rec.left;
+    left_ratio /= (rec.right - left_idx);
+
+    float half_load = acc_load * left_ratio;
+
+    // Find the split idx that cuts octal bin into two parts of even loads
+    vector<float> prefix_bin_loads(bin_size, .0f);
+    prefix_bin_loads[0] = col_loads[0] - half_load;
+    for (int i = 1; i < bin_size; i++){
+      prefix_bin_loads[i] = col_loads[i] + col_loads[i-1];
+    }
+
+    if (_lb_args.debug() >= debug_l1) {
+      // Print global_bin_sizes
+      ckout << "\tprefix_bin_loads";
+      for (int i = 0; i < bin_size; i++){
+        if (i % 8 == 0){
+          ckout << "\n\t";
+        }
+        ckout << prefix_bin_loads[i] << " ";
+      }
+      ckout << endl;
+    }
+
+    float curr_delta = prefix_bin_loads[0];
+    for (int i = 0; i < bin_size; i++){
+      if (prefix_bin_loads[i] > .0f) {
+        curr_split_idx = i;
+        break;
+      }
+    }
+
+    int split_size = col_sizes[curr_split_idx];
+
+    if (curr_split_idx > 0 && std::fabs(prefix_bin_loads[curr_split_idx - 1]) < std::fabs(prefix_bin_loads[curr_split_idx])){
+      curr_delta = prefix_bin_loads[curr_split_idx - 1];
+      split_size = col_sizes[curr_split_idx - 1];
+    }else{
+      curr_delta = prefix_bin_loads[curr_split_idx];
+    }
+
+    if(_lb_args.debug() >= debug_l0) CkPrintf("\tleft_ratio = %.8f curr_split_idx = %d curr_delta = %.8f split_size = %d; max prefix_bin_loads = %.8f\n", left_ratio, curr_split_idx, curr_delta, split_size, prefix_bin_loads[bin_size - 1]);
+
+    double split_pt = rec.low + ((rec.high - rec.low)/bin_size_double) * (double)curr_split_idx;
+
+    if(_lb_args.debug() >= debug_l1) CkPrintf("\tcurr_delta = %.8f, granularity = %.4f, curr_split_idx = %d, split_pt = %.8f\n", curr_delta, granularity, curr_split_idx, split_pt);
+
+    // The split point is good enough
+    //if (std::fabs(curr_delta) <= granularity )(upper_split - lower_split) < 0.0000008 ){
+    //  curr_split_pt = split_pt;
+    //  if (curr_delta > .0f) curr_split_pt += (upper_split - lower_split)/bin_size_double;
+    //  curr_left_load = prefix_bin_loads[curr_split_idx - 1] + half_load;
+    //  prefix_bin_loads.clear();
+    //  if (_lb_args.debug() >= debug_l0) CkPrintf("$$$ End partition curr_delta = %.8f, depth = %d, left_load_prefix = %.8f\n",curr_delta, curr_depth, prefix_bin_loads[curr_split_idx - 1]);
+    //  thisProxy.finishedPartitionOneDim(*curr_cb);
+    //} else {
+    //  prefix_bin_loads.clear();
+    //  // Keep partition the larger section to find better split point
+    //  if (curr_split_idx == 0){
+    //    // Futher partition the right part
+    //    upper_split = lower_split + (upper_split - lower_split)/bin_size_double;
+    //  } else if (curr_split_idx == bin_size - 1){
+    //    lower_split = split_pt;
+    //  } else {
+    //    // Futher patition the left part
+    //    upper_split = split_pt + (upper_split - lower_split)/bin_size_double;
+    //    lower_split = split_pt;
+    //  }
+
+    //  if(_lb_args.debug() >= debug_l0) CkPrintf("\t****NEW dim = %d lower = %.12f upper = %.12f\n", curr_dim, lower_split, upper_split);
+    //  thisProxy.binaryLoadPartitionWithBins(curr_dim, curr_load, left_idx, right_idx, lower_split, upper_split, curr_lower_coords, curr_upper_coords, *curr_cb);
+    //}
+  /*}}}*/
   }
 }
 
