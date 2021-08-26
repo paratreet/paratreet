@@ -1,7 +1,6 @@
-CHARM_HOME ?= $(HOME)/charm-paratreet
-STRUCTURE_PATH = ../utility/structures
-TIRPC_PATH = /usr/include/tirpc # For Summit
-OPTS = -g -Ofast -I$(STRUCTURE_PATH) -I$(TIRPC_PATH) -DCOUNT_INTERACTIONS=0 -DDEBUG=0 $(MAKE_OPTS)
+include Makefile.common
+
+OPTS = -g -Ofast $(INCLUDES) -DCOUNT_INTERACTIONS=0 -DDEBUG=0 $(MAKE_OPTS)
 CHARMC = $(CHARM_HOME)/bin/charmc $(OPTS)
 
 OBJS = Paratreet.o Reader.o Writer.o Particle.o BoundingBox.o Decomposition.o Modularization.o TreeSpec.o ThreadStateHolder.o

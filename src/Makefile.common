@@ -1,0 +1,15 @@
+BASE_PATH=$(shell realpath "$(shell pwd)/..")
+PARATREET_PATH = $(BASE_PATH)/src
+STRUCTURE_PATH = $(BASE_PATH)/utility/structures
+
+INCLUDES:=$(INCLUDES) -I$(STRUCTURE_PATH) -I$(PARATREET_PATH)
+CHARM_HOME ?= $(HOME)/charm-paratreet
+
+LD_LIBS:=$(LD_LIBS) -L$(PARATREET_PATH) -lparatreet
+
+# TIRPC is required on Summit
+TIRPC_PATH?=/usr/include/tirpc
+ifneq (,$(wildcard $(TIRPC_PATH)))
+	INCLUDES:=$(INCLUDES) -I$(TIRPC_PATH)
+	LD_LIBS:=$(LD_LIBS) -ltirpc 
+endif
