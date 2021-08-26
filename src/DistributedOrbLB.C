@@ -388,10 +388,8 @@ void DistributedOrbLB::reportBinLoads(DorbPartitionRec rec, vector<float> bin_lo
     get<2>(data)[i] += bin_sizes[i];
   }
 
-  CkPrintf("Old %d -> %d\n", old, get<0>(data));
-
   if (get<0>(data) == CkNumPes()){
-    CkPrintf("Collected all Data!!\n");
+    //CkPrintf("Collected all Data!!\n");
     auto col_loads = get<1>(data);
     auto col_sizes = get<2>(data);
     bin_data_map[pair<int, int>(rec.left, rec.right)] = tuple<int, vector<float>, vector<int>>(0, vector<float>(bin_size, .0f), vector<int>(bin_size, 0));
@@ -422,7 +420,7 @@ void DistributedOrbLB::reportBinLoads(DorbPartitionRec rec, vector<float> bin_lo
     int curr_split_idx = 1;
     int mid_idx = (rec.left + rec.right)/2;
     float left_ratio = mid_idx - rec.left;
-    left_ratio /= (rec.right - left_idx);
+    left_ratio /= (rec.right - rec.left);
 
     float half_load = acc_load * left_ratio;
 
@@ -476,7 +474,7 @@ void DistributedOrbLB::reportBinLoads(DorbPartitionRec rec, vector<float> bin_lo
       if (_lb_args.debug() >= debug_l0) CkPrintf("$$$ End partition curr_delta = %.8f, left_load_prefix = %.8f\n",curr_delta, prefix_bin_loads[curr_split_idx - 1]);
       thisProxy.finishedPartitionOneDim(rec, split_pt, curr_delta + half_load);
     } else if (split_size < 64 || (rec.high - rec.low) < 0.0000008) {
-      CkPrintf("Final step for (%d, %d) curr_split_idx = %d, left_load = %.8f\n", rec.left, rec.right, curr_split_idx, left_load);
+      CkPrintf("Final step for (%d, %d) curr_split_idx = %d, left_load = %.8f acc_load = %.8f half_load = %.8f\n", rec.left, rec.right, curr_split_idx, left_load, acc_load, half_load);
       final_step_map[pair<int, int>(rec.left, rec.right)] = tuple<int, float, vector<LBShortCmp>, float, float>(0, .0f, vector<LBShortCmp>(), left_load, half_load);
       thisProxy.finalPartitionStep(rec, curr_split_idx);
     } else {
@@ -534,22 +532,28 @@ void DistributedOrbLB::reportFinalStepData(DorbPartitionRec rec, vector<LBShortC
     vector<LBShortCmp> final_data = get<2>(data);
     float left_load = get<3>(data);
     float split_point = .0f;
+    float other_load = .0f;
     std::sort(final_data.begin(), final_data.end(), CompareLBShortCmp);
     for (auto d : final_data){
       if (left_load + d.load > .0f){
         if (-left_load > (left_load + d.load)){
           split_point = d.coord;
+	  other_load = left_load;
           left_load += d.load;
-        }
+        } else {
+	  other_load = left_load + d.load;
+	}
         break;
       }
       split_point = d.coord;
       left_load += d.load;
     }
+    float left_total = get<4>(data) + left_load;
+    float right_total = rec.load - left_total;
 
-    CkPrintf("Final step for (%d, %d) size = %d acc_load = %.8f split point = %8f left_load = %.8f -> %.8f\n", rec.left, rec.right, final_data.size(), get<1>(data), split_point, get<3>(data), left_load);
+    CkPrintf("Final step for (%d, %d) size = %d acc_load = %.8f split point = %8f left_load = %.8f -> %.8f (other  = %.8f) left_acc = %.8f left_total = %.8f right_total = %.8f\n", rec.left, rec.right, final_data.size(), get<1>(data), split_point, get<3>(data), left_load, other_load,  get<4>(data), left_total, right_total);
 
-    thisProxy[rec.left].finishedPartitionOneDim(rec, split_point, get<4>(data) + left_load);
+    finishedPartitionOneDim(rec, split_point, left_total);
   }
 }
 
