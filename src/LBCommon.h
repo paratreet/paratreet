@@ -35,6 +35,7 @@ namespace LBCommon{
     int right;
     double low;
     double high;
+    float granularity;
     Vector3D<Real> lower_coords;
     Vector3D<Real> upper_coords;
     void pup(PUP::er &p){
@@ -44,6 +45,7 @@ namespace LBCommon{
       p | right;
       p | low;
       p | high;
+      p | granularity;
       p | lower_coords;
       p | upper_coords;
     };
