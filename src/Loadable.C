@@ -64,9 +64,15 @@ void Loadable::load(const char* file) {
     auto search = params.find(name);
     if (search != std::end(params)) {
       field->accept(search->second);
+
+      params.erase(search);
     } else if (field->required()) {
       CmiAbort("fatal> missing required parameter %s!", name.c_str());
     }
+  }
+
+  for (auto& param : params) {
+    CmiError("warning> unused parameter %s.", param.first.c_str());
   }
 }
 }  // namespace paratreet
