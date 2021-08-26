@@ -89,10 +89,9 @@ private:
   int recv_summary, total_move, total_objs;
 
   // Parition related data
+  vector <bool> partition_flags;
   vector <float> split_coords;
   int curr_depth;
-  int left_idx, right_idx;
-  double lower_split, upper_split;
   float curr_load, curr_left_load, curr_split_pt;
   bool went_right = true;
   bool use_longest_dim;
