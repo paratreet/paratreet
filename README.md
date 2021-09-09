@@ -48,7 +48,7 @@ Under the `examples/` directory, one can find example ParaTreeT applications, li
 - _SPH_ &mdash; Simulates hydrodynamics using the Smooth Particle Hydrodynamics (SPH) technique.
 - _Collision_ &mdash; Simulates collisions between particles.
 
-### Execution
+## Execution
 
 Assuming one has an SMP-enabled build of Charm++, one can run a miniscule gravity simulation that splits 1000 particles into partitions of at most 100 particles on four PEs using:
 ```
