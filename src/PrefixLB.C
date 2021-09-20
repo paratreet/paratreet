@@ -35,6 +35,8 @@ void PrefixLB::work(LDStats* stats)
   double total_partition_load = 0.0;
   int total_partical = 0;
   std::vector<int> size_map (stats->objData.size(), 0);
+  auto type_to_balance = LBCommon::pt;
+  if (!balance_partitions) type_to_balance = LBCommon::st;
 
   for (int obj_idx = 0; obj_idx < stats->objData.size(); obj_idx++){
     LDObjData &oData = stats->objData[obj_idx];
@@ -43,13 +45,13 @@ void PrefixLB::work(LDStats* stats)
     #if CMK_LB_USER_DATA
     int idx = CkpvAccess(_lb_obj_index);
     LBUserData usr_data = *(LBUserData *)oData.getUserData(CkpvAccess(_lb_obj_index));
-    if (usr_data.lb_type == LBCommon::pt){
+    if (usr_data.lb_type == type_to_balance){
       // Assign chare_idx at the position of to_proc
       objMap.push_back(LDObjStats{obj_idx, oData, pe, usr_data.chare_idx});
       size_map[obj_idx] = usr_data.particle_size;
       total_partition_load += oData.wallTime * stats->procs[pe].pe_speed;
       total_partical += usr_data.particle_size;
-      //CkPrintf("ST %d: size = %d\n", usr_data.chare_idx, usr_data.particle_size);
+      //CkPrintf("Type %d: size = %d\n", usr_data.lb_type, usr_data.particle_size);
     }else{
       // For non Parition objects, keep the PE
       stats->assign(obj_idx, pe);
@@ -71,7 +73,7 @@ void PrefixLB::work(LDStats* stats)
     prefix_particle_size += size_map[oStat.index];
     int to_pe_load = std::floor(prefixed_load / avg_load);
     int to_pe_size = std::floor(prefix_particle_size / avg_particals);
-    int to_pe = std::min(to_pe_size, n_pes-1);
+    int to_pe = std::min(to_pe_load, n_pes-1);
     stats->assign(oStat.index, to_pe);
     if (pe != to_pe){
       migrate_ct ++;
@@ -79,6 +81,7 @@ void PrefixLB::work(LDStats* stats)
     }
   }
 
+  balance_partitions = !balance_partitions;
   double end_time = CmiWallTimer();
   //CkPrintf("[%d] PrefixLB strategy moved %d objs\n n_pes = %d; n_objs = %d; n_migrateobjs = %d\n total migratable ct= %d load =  %f; total nonmig ct = %d load = %f\n",CkMyPe(),  migrate_ct, n_pes, stats->objData.size(), stats->n_migrateobjs, migratable_obj_ct, total_load, nonmig_obj_ct, total_nonmig_load);
   CkPrintf("CharmLB> PrefixLB: PE [%d] moved %d objects. Elapse time = %.4f ms\n", CkMyPe(), migrate_ct, (end_time - start_time)*1000);

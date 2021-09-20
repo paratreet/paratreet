@@ -58,6 +58,7 @@ extern bool periodic;
   }
 
   Real ExMain::getTimestep(BoundingBox& universe, Real max_velocity) {
-    Real universe_box_len = universe.box.greater_corner.x - universe.box.lesser_corner.x;
-    return universe_box_len / max_velocity / std::cbrt(universe.n_particles);
+    return .3e-4;
+    //Real universe_box_len = universe.box.greater_corner.x - universe.box.lesser_corner.x;
+    //return universe_box_len / max_velocity / std::cbrt(universe.n_particles);
   }

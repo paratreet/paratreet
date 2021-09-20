@@ -31,11 +31,15 @@ void OrbLB::work(LDStats* stats)
   collectUserData();
   orbCentroids();
   summary();
+  balance_partitions = !balance_partitions;
   cleanUp();
 }
 
 void OrbLB::collectUserData(){
   int sum = 0;
+  auto type_to_balance = LBCommon::pt;
+  if (!balance_partitions) type_to_balance = LBCommon::st;
+
   for(int obj_idx = 0; obj_idx < my_stats->objData.size(); obj_idx++){
     LDObjData &oData = my_stats->objData[obj_idx];
     int pe = my_stats->from_proc[obj_idx];
@@ -44,7 +48,7 @@ void OrbLB::collectUserData(){
     #if CMK_LB_USER_DATA
     int idx = CkpvAccess(_lb_obj_index);
     LBUserData usr_data = *(LBUserData *)oData.getUserData(CkpvAccess(_lb_obj_index));
-    if (usr_data.lb_type == LBCommon::pt){
+    if (usr_data.lb_type == type_to_balance){
       //CkPrintf("Obj load = %.8f\n", obj_load);
       pe_obj_size[pe] += 1;
       pe_particle_size[pe] += usr_data.particle_size;
@@ -227,7 +231,9 @@ void OrbLB::orbCentroidsForEvenLoadRecursiveHelper(int start_pe, int end_pe, int
     dim = findLongestDimInCentroids(start_cent, end_cent);
   float partial_load = calcPartialLoadSum(start_cent, end_cent);
   std::sort(centroids.begin()+start_cent, centroids.begin()+end_cent, NdComparator(dim));
-  float half_partial_load = partial_load / 2;
+  float left_ratio = mid_pe - start_pe;
+  left_ratio /= (end_pe - start_pe);
+  float half_partial_load = partial_load * left_ratio;
 
   int half_load_idx = 0;
   for (int idx = start_cent; idx < end_cent; idx ++){

@@ -19,6 +19,7 @@
 #include <vector>
 #include <fstream>
 
+CkpvExtern(int, _lb_obj_index);
 extern CProxy_TreeSpec treespec;
 extern CProxy_Reader readers;
 
@@ -250,6 +251,28 @@ template <typename Data>
 void Subtree<Data>::buildTree(CProxy_Partition<Data> part, CkCallback cb) {
   // Copy over received particles
   std::swap(particles, incoming_particles);
+  #if CMK_LB_USER_DATA
+  Real zero = 0.0;
+  Vector3D<Real> centroid(zero, zero, zero);
+
+  int size = particles.size();
+  for (auto& p : particles){
+    centroid += p.position;
+  }
+  if (size > 0){
+    centroid /= (Real) size;
+  }
+  if (CkpvAccess(_lb_obj_index) != -1) {
+    void *data = this->getObjUserData(CkpvAccess(_lb_obj_index));
+    LBUserData lb_data{
+      st, this->thisIndex,
+      size, 0,
+      centroid
+    };
+
+    *(LBUserData *) data = lb_data;
+  }
+  #endif
 
   // Sort particles
   std::sort(particles.begin(), particles.end());

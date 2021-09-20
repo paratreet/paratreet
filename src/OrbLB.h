@@ -17,6 +17,7 @@ class OrbLB : public CBase_OrbLB {
 protected:
 
     bool use_longest_dim = true;
+    bool balance_partitions = true;
     float start_time;
     float total_load;// = obj load + bg_load
     float max_load, min_load, average_load;

@@ -146,6 +146,7 @@ void DistributedPrefixLB::createObjMaps(){
       }
     }
     #endif
+    //CkPrintf("st_ct = %d; pt_ct = %d\n", st_ct, pt_ct);
   }
   background_load += (total_pe_load - total_partition_load);
   background_load *= background_load_ratio;
@@ -153,7 +154,7 @@ void DistributedPrefixLB::createObjMaps(){
     pe_avg_partition_centroid = avg_centroid / (Real) pt_ct;
   }
 
-  //if(_lb_args.debug() >= 1) CkPrintf("PE[%d] st_ct = %d; subtree load = %.2f;  pt_ct = %d; partition load = %.2f; total pe load = %.2f; background_load = %.2f\n", my_pe, st_ct, total_subtree_load, pt_ct, total_partition_load, total_pe_load, background_load);
+  //if(_lb_args.debug() >= 0) CkPrintf("PE[%d] st_ct = %d; subtree load = %.2f;  pt_ct = %d; partition load = %.2f; total pe load = %.2f; background_load = %.2f\n", my_pe, st_ct, total_subtree_load, pt_ct, total_partition_load, total_pe_load, background_load);
 }
 
 void DistributedPrefixLB::prefixInit(){

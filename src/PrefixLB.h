@@ -20,6 +20,7 @@ protected:
   int P;
   int numComputes;
   double averageLoad;
+  bool balance_partitions = true;
 
   double overLoad;
   double start_time;
