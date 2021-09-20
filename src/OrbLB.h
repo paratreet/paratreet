@@ -41,6 +41,7 @@ protected:
     vector<float> pe_bgload;
     vector<float> pe_objload;
     vector<float> pe_bgload_share;
+    vector<float> pre_lb_pe_loads;
     vector<float> post_lb_pe_loads; // non_idle loads for each PE after LB
     vector<LBCentroidAndIndexRecord> centroids; // centroid for each PE
     vector<int> pe_particle_size; // inital particle size for each PE

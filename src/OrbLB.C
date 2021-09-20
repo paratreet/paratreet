@@ -75,7 +75,7 @@ void OrbLB::collectUserData(){
   max_avg_particle_ratio = max_particle_size / average_particle_size;
 
 
-  if(_lb_args.debug()) CkPrintf("OrbLB >> Pre LB particle size:: range (%d, %d); average = %.2f; max_avg_ratio = %.4f\n", min_particle_size, max_particle_size, average_particle_size, max_avg_particle_ratio);
+  //if(_lb_args.debug()) CkPrintf("OrbLB >> Pre LB particle size:: range (%d, %d); average = %.2f; max_avg_ratio = %.4f\n", min_particle_size, max_particle_size, average_particle_size, max_avg_particle_ratio);
 
   for (int i  = 0; i < n_pes; i++){
     pe_bgload[i] = pe_loads[i] - pe_objload[i];
@@ -86,7 +86,7 @@ void OrbLB::collectUserData(){
   // split bgload evenly to each object Parititon
   for (auto & rec : centroids){
     rec.load += pe_bgload_share[rec.from_pe];
-    //CkPrintf("Rec:: load = %.8f\n", rec.load);
+    CkPrintf("Rec:: load = %.8f\n", rec.load);
   }
 
   // debug prints
@@ -107,13 +107,13 @@ void OrbLB::collectPELoads(){
     pe_loads[p.pe] = p.pe_speed * (p.total_walltime - p.idletime);
     sum += pe_loads[p.pe];
   }
-  max_load = *std::max_element(pe_loads.begin(), pe_loads.end());
-  min_load = *std::min_element(pe_loads.begin(), pe_loads.end());
-  average_load = sum / (float)n_pes;
-  max_avg_ratio = max_load / average_load;
-  max_min_ratio = max_load / min_load;
+  //max_load = *std::max_element(pe_loads.begin(), pe_loads.end());
+  //min_load = *std::min_element(pe_loads.begin(), pe_loads.end());
+  //average_load = sum / (float)n_pes;
+  //max_avg_ratio = max_load / average_load;
+  //max_min_ratio = max_load / min_load;
 
-  if(_lb_args.debug()) CkPrintf("OrbLB >> Pre LB load:: range (%.4f, %.4f); sum = %.4f, average = %.4f; max_avg_ratio = %.4f, max_min_ratio = %.4f\n", min_load, max_load, sum, average_load, max_avg_ratio, max_min_ratio);
+  //if(_lb_args.debug()) CkPrintf("OrbLB >> Pre LB load:: range (%.4f, %.4f); sum = %.4f, average = %.4f; max_avg_ratio = %.4f, max_min_ratio = %.4f\n", min_load, max_load, sum, average_load, max_avg_ratio, max_min_ratio);
 }
 
 int OrbLB::findLongestDimInCentroids(int start, int end){
@@ -154,6 +154,7 @@ float OrbLB::calcPartialLoadSum(int start, int end){
 void OrbLB::assign(int idx, int to_pe){
   my_stats->assign(centroids[idx].idx, to_pe);
   post_lb_pe_loads[to_pe] += centroids[idx].load;
+  pre_lb_pe_loads[centroids[idx].from_pe] += centroids[idx].load;
   post_lb_pe_particle_size[to_pe] += centroids[idx].particle_size;
   if (_lb_args.debug() >= 3)
     ckout << "PE " << to_pe << " <- " << centroids[idx].from_pe << " Centroid : " << centroids[idx].centroid << endl;
@@ -275,6 +276,7 @@ void OrbLB::initVariables(){
   pe_bgload_share = vector<float>(n_pes, 0.0);
   pe_obj_size = vector<int>(n_pes, 0);
   pe_particle_size = vector<int>(n_pes, 0);
+  pre_lb_pe_loads = vector<float>(n_pes, 0.0);
   post_lb_pe_loads = vector<float>(n_pes, 0.0);
   post_lb_pe_particle_size = vector<int>(n_pes, 0);
   map_sorted_idx_to_pe = vector<int>(n_pes, 0);
@@ -282,29 +284,31 @@ void OrbLB::initVariables(){
 
 void OrbLB::summary(){
   float load_sum = 0.0;
-  int particle_size_sum = 0;
   for(int i = 0; i < n_pes; i++){
     load_sum += post_lb_pe_loads[i];
-    particle_size_sum += post_lb_pe_particle_size[i];
-
     //CkPrintf("[%d] pe load = %.4f; bg = %.4f, obj = %.4f, rest = %.4f\n", i, pe_loads[i], pe_bgload[i], pe_objload[i], (pe_loads[i] - pe_bgload[i] - pe_objload[i]));
   }
+  average_load = load_sum / n_pes;
 
-  post_lb_max_load = *std::max_element(post_lb_pe_loads.begin(), post_lb_pe_loads.end());
-  post_lb_min_load = *std::min_element(post_lb_pe_loads.begin(), post_lb_pe_loads.end());
+  float post_lb_ratio = *std::max_element(post_lb_pe_loads.begin(), post_lb_pe_loads.end()) / average_load;
+  float pre_lb_ratio = *std::max_element(pre_lb_pe_loads.begin(), pre_lb_pe_loads.end()) / average_load;
 
-  post_lb_max_size = *std::max_element(post_lb_pe_particle_size.begin(), post_lb_pe_particle_size.end());
-  post_lb_min_size = *std::min_element(post_lb_pe_particle_size.begin(), post_lb_pe_particle_size.end());
-  post_lb_size_max_avg_ratio = (float)post_lb_max_size / average_particle_size;
+  //post_lb_max_size = *std::max_element(post_lb_pe_particle_size.begin(), post_lb_pe_particle_size.end());
+  //post_lb_min_size = *std::min_element(post_lb_pe_particle_size.begin(), post_lb_pe_particle_size.end());
+  //post_lb_size_max_avg_ratio = (float)post_lb_max_size / average_particle_size;
 
-  post_lb_average_load = load_sum / (float)n_pes;
-  post_lb_max_avg_ratio = post_lb_max_load / post_lb_average_load;
-  post_lb_max_min_ratio = post_lb_max_load / post_lb_min_load;
+  //post_lb_average_load = load_sum / (float)n_pes;
+  //post_lb_max_avg_ratio = post_lb_max_load / post_lb_average_load;
+  //post_lb_max_min_ratio = post_lb_max_load / post_lb_min_load;
   migrate_ratio = migration_ct;
   migrate_ratio /= (float) centroids.size();
   double end_time = CmiWallTimer();
 
-  if(_lb_args.debug()) CkPrintf("OrbLB >> Post LB load:: range (%.4f, %.4f); average = %.4f; max_avg_ratio = %.4f, max_min_ratio = %.4f\nOrbLB >> Post LB particle size:: range(%d, %d); max_avg_ratio = %.4f\nOrbLB >>> Summary:: moved %d/%d objs, ratio = %.2f (strategy time = %.2f ms)\n", post_lb_min_load, post_lb_max_load, post_lb_average_load, post_lb_max_avg_ratio, post_lb_max_min_ratio, post_lb_min_size, post_lb_max_size, post_lb_size_max_avg_ratio, migration_ct, centroids.size(), migrate_ratio, (end_time - start_time)*1000 );
+
+  CkPrintf("CharmLB> OrbLB on %s : moved %d /%d objects (%.2f). Elapse time = %.4f ms\n\t before and after lb max/avg ratio: %.4f -> %.4f \n", (balance_partitions? "partitions" : "subtrees"), migration_ct, centroids.size(), migrate_ratio, (end_time - start_time)*1000, pre_lb_ratio, post_lb_ratio);
+
+
+  //if(_lb_args.debug()) CkPrintf("OrbLB >> Post LB load:: range (%.4f, %.4f); average = %.4f; max_avg_ratio = %.4f, max_min_ratio = %.4f\nOrbLB >> Post LB particle size:: range(%d, %d); max_avg_ratio = %.4f\nOrbLB >>> Summary:: moved %d/%d objs, ratio = %.2f (strategy time = %.2f ms)\n", post_lb_min_load, post_lb_max_load, post_lb_average_load, post_lb_max_avg_ratio, post_lb_max_min_ratio, post_lb_min_size, post_lb_max_size, post_lb_size_max_avg_ratio, migration_ct, centroids.size(), migrate_ratio, (end_time - start_time)*1000 );
 }
 
 void OrbLB::cleanUp(){

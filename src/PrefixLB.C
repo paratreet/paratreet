@@ -67,25 +67,35 @@ void PrefixLB::work(LDStats* stats)
   double prefixed_load = 0.0;
   int prefix_particle_size = 0;
   int migrate_ct = 0;
+  vector<double> before_lb_pe_load(n_pes, .0);
+  vector<double> after_lb_pe_load(n_pes, .0);
   for (LDObjStats & oStat : objMap){
     int pe = oStat.from_proc;
-    prefixed_load += oStat.data.wallTime * stats -> procs[pe].pe_speed;
+    double myload = oStat.data.wallTime * stats -> procs[pe].pe_speed;
+    prefixed_load += myload;
     prefix_particle_size += size_map[oStat.index];
     int to_pe_load = std::floor(prefixed_load / avg_load);
     int to_pe_size = std::floor(prefix_particle_size / avg_particals);
     int to_pe = std::min(to_pe_load, n_pes-1);
+    oStat.to_proc = to_pe;
     stats->assign(oStat.index, to_pe);
+    before_lb_pe_load[pe] += myload;
+    after_lb_pe_load[to_pe] += myload;
     if (pe != to_pe){
       migrate_ct ++;
       //CkPrintf("Move obj[%d] from PE[%d] to PE[%d]\n", oStat.index, pe, to_pe);
     }
   }
 
-  balance_partitions = !balance_partitions;
+  double before_lb_ratio = *std::max_element(before_lb_pe_load.begin(), before_lb_pe_load.end()) / avg_load;
+  double after_lb_ratio = *std::max_element(after_lb_pe_load.begin(), after_lb_pe_load.end()) / avg_load;
+
+
   double end_time = CmiWallTimer();
   //CkPrintf("[%d] PrefixLB strategy moved %d objs\n n_pes = %d; n_objs = %d; n_migrateobjs = %d\n total migratable ct= %d load =  %f; total nonmig ct = %d load = %f\n",CkMyPe(),  migrate_ct, n_pes, stats->objData.size(), stats->n_migrateobjs, migratable_obj_ct, total_load, nonmig_obj_ct, total_nonmig_load);
-  CkPrintf("CharmLB> PrefixLB: PE [%d] moved %d objects. Elapse time = %.4f ms\n", CkMyPe(), migrate_ct, (end_time - start_time)*1000);
+  CkPrintf("CharmLB> PrefixLB on %s : moved %d /%d objects. Elapse time = %.4f ms\n\t before and after lb max/avg ratio: %.4f -> %.4f \n", (balance_partitions? "partitions" : "subtrees"),migrate_ct, objMap.size(), (end_time - start_time)*1000, before_lb_ratio, after_lb_ratio);
   //CkPrintf("Partition load =  %f, else = %f\n", total_partition_load, total_load - total_partition_load);
+  balance_partitions = !balance_partitions;
   #endif
 }
 

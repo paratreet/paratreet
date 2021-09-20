@@ -5,9 +5,8 @@
 #include "CentralLB.h"
 #include "PrefixLB.decl.h"
 
-class minheap;
-class maxheap;
 
+using std::vector;
 void CreatePrefixLB();
 BaseLB *AllocatePrefixLB();
 
