@@ -56,10 +56,19 @@ PARATREET_REGISTER_MAIN(ExMain);
     // Process command line arguments
     int c;
     std::string input_str;
-    while ((c = getopt(m->argc, m->argv, "x:f:n:p:l:d:t:i:s:u:r:b:v:amec:")) != -1) {
+
+    // Seek configuration files ahead of the rest of the arguments
+    // (to ensure they are overriden by command-line arguments!)
+    auto& n_args = m->argc;
+    for (auto i = 0; i < n_args; i += 1) {
+      if ((strcmp(m->argv[i], "-x") == 0) && ((i + 1) < n_args)) {
+        conf.load(m->argv[i + 1]);
+      }
+    }
+
+    while ((c = getopt(n_args, m->argv, "x:f:n:p:l:d:t:i:s:u:r:b:v:amec:")) != -1) {
       switch (c) {
         case 'x':
-          conf.load(optarg);
           break;
         case 'f':
           conf.input_file = optarg;
