@@ -1,7 +1,7 @@
-#ifndef __PARATREET_FIELD_HPP__
-#define __PARATREET_FIELD_HPP__
+#ifndef __PARATREET_FIELD_H__
+#define __PARATREET_FIELD_H__
 
-#include "Value.hpp"
+#include "Value.h"
 
 namespace paratreet {
 class GenericField {

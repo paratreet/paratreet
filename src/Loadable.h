@@ -1,12 +1,12 @@
-#ifndef _PARATREET_LOADABLE_HPP_
-#define _PARATREET_LOADABLE_HPP_
+#ifndef _PARATREET_LOADABLE_H_
+#define _PARATREET_LOADABLE_H_
 
-#include "Field.hpp"
+#include "Field.h"
 
 namespace paratreet {
-using parameters = std::map<std::string, Value>;
+using parameter_map = std::map<std::string, Value>;
 
-parameters load_parameters(const char* file);
+parameter_map load_parameters(const char* file);
 
 class Loadable {
   std::vector<std::unique_ptr<GenericField>> fields_;

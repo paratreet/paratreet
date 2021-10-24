@@ -5,8 +5,8 @@
 
 namespace paratreet {
 
-parameters load_parameters(const char* file) {
-  parameters map;
+parameter_map load_parameters(const char* file) {
+  parameter_map map;
   std::fstream fs(file, std::ios::in);
   CmiAssert(fs.is_open());
 
@@ -37,7 +37,7 @@ parameters load_parameters(const char* file) {
           case T::kInteger:
             return map.emplace(key, std::stoi(val));
           case T::kString:
-            return map.emplace(key, val);
+            return map.emplace(key, (std::string)val);
           default:
             return std::make_pair(std::end(map), false);
         }

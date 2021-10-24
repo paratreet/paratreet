@@ -1,5 +1,5 @@
-#ifndef __PARATREET_PARAMETER_HPP__
-#define __PARATREET_PARAMETER_HPP__
+#ifndef __PARATREET_PARAMETER_H__
+#define __PARATREET_PARAMETER_H__
 
 #include <pup_stl.h>
 
@@ -49,10 +49,24 @@ struct Value {
   }
 
  public:
-  // only construct with a valid Value
-  Value(void) = delete;
-  Value(const Value&) = delete;
-  Value(Value&&) = delete;
+  // copy the value of another value
+  Value(const Value& other)
+  : type_(other.type_), value_(PUP::reconstruct()) {
+    switch (this->type_) {
+      case kBool:
+        new (&this->value_) u_value_((bool)other);
+        break;
+      case kDouble:
+        new (&this->value_) u_value_((double)other);
+        break;
+      case kInteger:
+        new (&this->value_) u_value_((int)other);
+        break;
+      case kString:
+        new (&this->value_) u_value_((std::string)other);
+        break;
+    }
+  }
 
   // used for deserialization
   Value(PUP::reconstruct tag) : value_(tag) {}
