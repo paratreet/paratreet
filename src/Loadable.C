@@ -1,9 +1,34 @@
 #include "Loadable.h"
 
 #include <fstream>
-#include <regex>
+#include <ctype.h>
 
 namespace paratreet {
+
+bool split_line_(const std::string& line, std::string& left,
+                 std::string& right) {
+  char first = '\0';
+  bool found = false;
+
+  for (auto i = 0; i < line.size(); i += 1) {
+    auto& curr = line[i];
+    if (isspace(curr)) {
+      continue;
+    } else if (first == '\0') {
+      first = curr;
+    }
+
+    if (line[i] == '=') {
+      found = true;
+    } else if (found) {
+      right += curr;
+    } else {
+      left += curr;
+    }
+  }
+
+  return found && (first != '#');
+}
 
 parameter_map load_parameters(const char* file) {
   parameter_map map;
@@ -11,19 +36,14 @@ parameter_map load_parameters(const char* file) {
   CmiAssert(fs.is_open());
 
   std::string line;
-  std::regex line_regex(
-      "([_a-zA-Z0-9]+)\\s*=\\s*([^\\s#]+).*");  // matches (id) = (value)
   while (std::getline(fs, line)) {
     // skip comments and empty lines
     if (line.empty() || line[0] == '#') {
       continue;
     }
-    std::smatch m;
-    // try to match the line
-    if (std::regex_match(line, m, line_regex)) {
-      // extract key and value if successful
-      auto& key = m[1];
-      auto& val = m[2];
+    std::string key, val;
+    // try to match the line, if successful:
+    if (split_line_(line, key, val)) {
       // determine the type from the key
       auto ty = Value::get_type(key);
       // emplace the value with the appropriate conversion
@@ -37,7 +57,7 @@ parameter_map load_parameters(const char* file) {
           case T::kInteger:
             return map.emplace(key, std::stoi(val));
           case T::kString:
-            return map.emplace(key, (std::string)val);
+            return map.emplace(key, val);
           default:
             return std::make_pair(std::end(map), false);
         }
@@ -45,7 +65,7 @@ parameter_map load_parameters(const char* file) {
       // validate that a correct insertion occured
       if (!ins.second) {
         CmiAbort("insertion did not occur; was parameter %s defined twice?\n",
-                 (key.str()).c_str());
+                 key.c_str());
       }
       CmiEnforce((ins.first->second).is_type(ty));
     }
