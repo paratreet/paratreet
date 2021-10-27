@@ -1,0 +1,9 @@
+module DiffusionLB {
+
+    extern module CentralLB;
+    initnode void lbinit(void);
+    group [migratable] DiffusionLB : CentralLB {
+      entry void DiffusionLB(const CkLBOptions &);
+    };
+
+};

@@ -11,10 +11,13 @@
 #include "MultiData.h"
 #include "ThreadStateHolder.h"
 #include "paratreet.decl.h"
+#include "LBCommon.h"
 
+CkpvExtern(int, _lb_obj_index);
 extern CProxy_TreeSpec treespec;
 extern CProxy_Reader readers;
 extern CProxy_ThreadStateHolder thread_state_holder;
+using namespace LBCommon;
 
 template <typename Data>
 struct Partition : public CBase_Partition<Data> {
@@ -303,6 +306,30 @@ void Partition<Data>::perturb(Real timestep, CkCallback cb)
   iter += 1;
   BoundingBox box;
   copyParticles(saved_particles, true);
+
+  #if CMK_LB_USER_DATA
+  Real zero = 0.0;
+  Vector3D<Real> centroid(zero, zero, zero);
+
+  int size = saved_particles.size();
+  for (auto& p : saved_particles){
+    centroid += p.position;
+  }
+  if (size > 0){
+    centroid /= (Real) size;
+  }
+  if (CkpvAccess(_lb_obj_index) != -1) {
+    void *data = this->getObjUserData(CkpvAccess(_lb_obj_index));
+    LBUserData lb_data{
+      pt, this->thisIndex,
+      size, 0,
+      centroid
+    };
+
+    *(LBUserData *) data = lb_data;
+  }
+  #endif
+
   for (auto && p : saved_particles) {
     p.perturb(timestep);
     box.grow(p.position);
