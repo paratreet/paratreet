@@ -64,7 +64,7 @@ namespace paratreet {
       }
     }
 
-    struct Configuration : public Loadable {
+    struct Configuration : public Loadable, public PUP::able {
         int min_n_subtrees;
         int min_n_partitions;
         int max_particles_per_leaf; // For local tree build
@@ -80,16 +80,7 @@ namespace paratreet {
         std::string output_file;
 
         Configuration(void) { this->register_fields(); }
-
-        Configuration& operator=(const Configuration& other) {
-          // destroy the existing object
-          this->~Configuration();
-          // re-initialize via copy
-          new (this) Configuration(other);
-          this->register_fields();
-          // return this
-          return *this;
-        }
+        Configuration(CkMigrateMessage *m): PUP::able(m) {}
 
         void register_fields(void) {
           this->register_field("nSubtreesMin", false, min_n_subtrees);
@@ -109,7 +100,8 @@ namespace paratreet {
 
 #ifdef __CHARMC__
 #include "pup.h"
-        void pup(PUP::er &p) {
+        virtual void pup(PUP::er &p) override {
+            PUP::able::pup(p);
             p | min_n_subtrees;
             p | min_n_partitions;
             p | max_particles_per_leaf;
@@ -125,6 +117,8 @@ namespace paratreet {
             p | output_file;
         }
 #endif //__CHARMC__
+
+        PUPable_decl_inside(Configuration);
     };
 
     static std::string asString(TreeType t) {
@@ -175,7 +169,7 @@ namespace paratreet {
     }
 
     inline const Configuration& getConfiguration(void);
-    inline void setConfiguration(const Configuration&);
+    inline void setConfiguration(Configuration*);
 }
 
 #include "paratreet.decl.h"

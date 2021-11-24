@@ -12,7 +12,7 @@ public:
       partition_decomp(nullptr),
       tree(nullptr) { }
 
-    void check(const CkCallback &cb);
+    void receiveConfiguration(const CkCallback&, paratreet::Configuration*);
     void receiveDecomposition(const CkCallback&, Decomposition*, bool if_subtree);
     Decomposition* getSubtreeDecomposition();
     Decomposition* getPartitionDecomposition();

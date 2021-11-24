@@ -48,11 +48,10 @@ public:
     cache_manager(cache_manager_), resumer(resumer_), calculator(calculator_), storage_sorted(false) {}
 
   // Performs initial decomposition
-  void init(const CkCallback& cb, const paratreet::Configuration& cfg) {
+  void init(const CkCallback& cb, paratreet::Configuration* cfg) {
     // Ensure all treespecs have been created
     CkPrintf("* Validating tree specifications.\n");
-    paratreet::setConfiguration(cfg);
-    treespec.check(CkCallbackResumeThread());
+    treespec.receiveConfiguration(CkCallbackResumeThread(), cfg);
     // Then, initialize the cache managers
     CkPrintf("* Initializing cache managers.\n");
     cache_manager.initialize(CkCallbackResumeThread());

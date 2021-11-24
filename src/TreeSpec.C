@@ -1,7 +1,8 @@
 #include "TreeSpec.h"
 #include "Paratreet.h"
 
-void TreeSpec::check(const CkCallback &cb) {
+void TreeSpec::receiveConfiguration(const CkCallback& cb, paratreet::Configuration* cfg) {
+  paratreet::setConfiguration(cfg);
   CkAssert(this->getTree() && this->getSubtreeDecomposition() && this->getPartitionDecomposition());
   this->contribute(cb);
 }

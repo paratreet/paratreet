@@ -27,7 +27,8 @@
 #define PARATREET_REGISTER_MAIN(m) \
     namespace paratreet { \
     auto& PARATREET_MAIN_VAR(m) = __initMain<m>(); \
-    }
+    } \
+    PUPable_def(paratreet::configuration_of_t<m>);
 
 #define PARATREET_PER_LEAF_FN_CLASS(name)   name
 #define PARATREET_PER_LEAF_FN_TAG(name)     name##_tag_
@@ -71,6 +72,10 @@ namespace paratreet {
         MainBase(Configuration* config): config_(config) {}
 
       public:
+        inline void setConfiguration(Configuration* cfg) {
+            this->config_ = cfg;
+        }
+
         inline paratreet::Configuration& configuration(void) {
             return *(this->config_);
         }
@@ -81,19 +86,21 @@ namespace paratreet {
 
         virtual Real getTimestep(BoundingBox&, Real) = 0;
         virtual void initializeDriver(const CkCallback&) = 0;
-        virtual void setConfiguration(const Configuration& cfg) = 0;
     };
 
     // NOTE because this is called Main, the user's instantiation cannot be
     //      named Main for now...
-    template<typename T>
+    template<typename T, typename C = Configuration>
     class Main : public MainBase {
         static const char* __makeName(const char* ty) {
             return (std::string(ty) + "<" + std::string(typeid(T).name()) + ">").c_str();
         }
       public:
+        using data_type = T;
+        using configuration_type = C;
+
         CProxy_Driver<T> driver;
-        Configuration conf;
+        configuration_type conf;
 
         Main(void) : MainBase(&conf) {}
 
@@ -106,6 +113,8 @@ namespace paratreet {
         virtual void postIterationFn(BoundingBox&, ProxyPack<T>&, int) = 0;
 
         virtual void __register(void) override {
+            PUPable_reg(configuration_type);
+
             CkIndex_CacheManager<T>::__register(__makeName("CacheManager"), sizeof(CacheManager<T>));
             CkIndex_Resumer<T>::__register(__makeName("Resumer"), sizeof(Resumer<T>));
             CkIndex_Partition<T>::__register(__makeName("Partition"), sizeof(Partition<T>));
@@ -117,11 +126,13 @@ namespace paratreet {
             CkIndex_Reader::idx_flush<T>( static_cast<void (Reader::*)(int, const CProxy_Subtree<T> &)>(NULL));
             CkIndex_Reader::idx_assignPartitions<T>( static_cast<void (Reader::*)(int, const CProxy_Partition<T> &)>(NULL));
         }
-
-        virtual void setConfiguration(const Configuration& cfg) override {
-            this->conf = cfg;
-        }
     };
+
+    template<typename T, typename C>
+    typename Main<T, C>::configuration_type findConfiguration_(Main<T, C>&);
+
+    template <typename T>
+    using configuration_of_t = decltype(findConfiguration_(std::declval<T&>()));
 
     using main_type_ = std::unique_ptr<MainBase>;
     CsvExtern(main_type_, main_);
@@ -188,7 +199,7 @@ namespace paratreet {
         ((Main<T>&)*CsvAccess(main_)).perLeafFn(indicator, node, partition);
     }
 
-    inline void setConfiguration(const Configuration& cfg) {
+    inline void setConfiguration(Configuration* cfg) {
         CsvAccess(main_)->setConfiguration(cfg);
     }
 
@@ -212,7 +223,8 @@ namespace paratreet {
 
         CProxy_Driver<Data> driver = CProxy_Driver<Data>::ckNew(cache, resumer, canopy, CkMyPe());
         // Call the driver initialization routine (performs decomposition)
-        driver.init(cb, paratreet::getConfiguration());
+        const auto* cfg = &(paratreet::getConfiguration());
+        driver.init(cb, const_cast<paratreet::Configuration*>(cfg));
 
         return driver;
     }
