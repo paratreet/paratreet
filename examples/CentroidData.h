@@ -8,6 +8,7 @@
 #include "ParticleComp.h"
 #include "OrientedBox.h"
 #include "MultipoleMoments.h"
+#include "Main.h"
 
 struct CentroidData {
   Vector3D<Real> moment;
@@ -28,7 +29,7 @@ struct CentroidData {
   int count;
   Real rsq;                     ///< Opening radius
   static constexpr const Real opening_geometry_factor_squared = 4.0 / 3.0;
-  static constexpr const Real theta = 0.7;
+    // static constexpr const Real theta = 0.7;
 
   CentroidData() :
   moment(Vector3D<Real> (0,0,0)), sum_mass(0), count(0), rsq(0.) {}
@@ -77,6 +78,8 @@ struct CentroidData {
     delta1.y = (delta1.y > delta2.y ? delta1.y : delta2.y);
     delta1.z = (delta1.z > delta2.z ? delta1.z : delta2.z);
     rsq = delta1.lengthSquared();
+    GravityConfiguration& config = (GravityConfiguration&) paratreet::getConfiguration();
+    auto theta = config.dTheta;
     rsq *= opening_geometry_factor_squared / (theta * theta);
     size_sm = 0.5*(box.size()).length();
   }

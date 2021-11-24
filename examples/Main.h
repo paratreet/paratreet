@@ -3,9 +3,27 @@
 
 #include "Main.decl.h"
 #include "Paratreet.h"
+
+struct GravityConfiguration: public paratreet::Configuration {
+     double dTheta = 0.7;
+     
+     GravityConfiguration(void) {
+          this->register_field("dTheta", false, dTheta);
+     }
+
+     GravityConfiguration(CkMigrateMessage* m) : paratreet::Configuration(m) {}
+
+     virtual void pup(PUP::er &p) override {
+          paratreet::Configuration::pup(p);
+          p | dTheta;
+     }
+
+     PUPable_decl_inside(GravityConfiguration);
+};
+
 #include "CentroidData.h"
 
-class ExMain: public paratreet::Main<CentroidData> {
+class ExMain: public paratreet::Main<CentroidData, GravityConfiguration> {
   virtual Real getTimestep(BoundingBox&, Real) override;
   virtual void preTraversalFn(ProxyPack<CentroidData>&) override;
   virtual void traversalFn(BoundingBox&, ProxyPack<CentroidData>&, int) override;
