@@ -2,7 +2,7 @@ include ../src/Makefile.common
 
 LBS = CommonLBs PrefixLB OrbLB #AverageSmoothLB DiffusionLB DistributedPrefixLB DistributedOrbLB
 LB_LIBS = $(foreach m, $(LBS), -module $(m))
-OPTS = -g -Ofast $(INCLUDES) -DCOUNT_INTERACTIONS=0 -DDEBUG=0 -DHEXADECAPOLE $(MAKE_OPTS)
+OPTS = -g -O3 $(INCLUDES) -DCOUNT_INTERACTIONS=0 -DDEBUG=0 $(MAKE_OPTS)
 CHARMC = $(CHARM_HOME)/bin/charmc $(OPTS)
 
 all: Gravity SPH Collision VisitAll

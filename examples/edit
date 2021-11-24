@@ -1,0 +1,2 @@
+deleting particles of order 3532 and 1711 that collide at dt 0.005691. First has position (0.537609, -0.813899, -0.000152) velocity (0.840898, 0.566224, 0.001039). Second has position (0.537609, -0.813866, -0.000114) velocity (0.840765, 0.563612, -0.000912)
+deleting particles of order 1711 and 3532 that collide at dt 0.005691. First has position (0.537609, -0.813866, -0.000114) velocity (0.840765, 0.563612, -0.000912). Second has position (0.537609, -0.813899, -0.000152) velocity (0.840898, 0.566224, 0.001039)

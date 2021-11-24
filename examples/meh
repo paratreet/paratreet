@@ -1,0 +1,43 @@
+CHARM_HOME ?= $(HOME)/charm-paratreet
+BASE_PATH=$(shell realpath "$(shell pwd)/..")
+PARATREET_PATH = $(BASE_PATH)/src
+STRUCTURE_PATH = $(BASE_PATH)/utility/structures
+OPTS = -g -Ofast -I$(STRUCTURE_PATH) -I$(PARATREET_PATH) -DCOUNT_INTERACTIONS=0 -DDEBUG=0 $(MAKE_OPTS)
+CHARMC = $(CHARM_HOME)/bin/charmc $(OPTS)
+LD_LIBS = -L$(PARATREET_PATH) -lparatreet
+
+all: Gravity SPH Collision
+VISITORS = DensityVisitor.h PressureVisitor.h GravityVisitor.h CollisionVisitor.h
+OTHERS = CountManager.h
+
+Main.decl.h: Main.ci
+	$(CHARMC) $<
+
+Gravity: Main.decl.h Main.o Gravity.o
+	$(CHARMC) -language charm++ -module CommonLBs -o Gravity Gravity.o Main.o $(LD_LIBS)
+
+Collision: Main.decl.h Main.o Collision.o
+	$(CHARMC) -language charm++ -module CommonLBs -o Collision Collision.o Main.o $(LD_LIBS)
+
+SPH: Main.decl.h Main.o SPH.o
+	$(CHARMC) -language charm++ -module CommonLBs -o SPH SPH.o Main.o $(LD_LIBS)
+
+Gravity.o: Gravity.C Main.decl.h
+	$(CHARMC) -c $<
+
+Collision.o: Collision.C Main.decl.h
+	$(CHARMC) -c $<
+
+SPH.o: SPH.C SPHUtils.h NeighborListCollector.h Main.decl.h
+	$(CHARMC) -c $<
+
+Main.o: Main.C $(VISITORS) $(OTHERS) Main.decl.h
+	$(CHARMC) -c $<
+
+test: Gravity
+	./charmrun ./Gravity -f ../inputgen/100k.tipsy +p46 ++ppn 23 +pemap 1-23,25-47 +commap 0,24 +commap 0 -i 10 -t bin -d kd
+	#./charmrun ./SPH -f /work/05750/tg850493/stampede2/cosmo50cmb.256g.00512 +p47 ++ppn 47 +pemap 1-47 +commap 0 -i 1 -t kd -d kd
+	#./charmrun ./Collision -f /work/05750/tg850493/stampede2/disk4000.ic +p46 ++ppn 23 +pemap 1-23,25-47 +commap 0,24 -i 10 -c 1 -t longest -d longest
+
+clean:
+	rm -f *.decl.h *.def.h conv-host *.o Gravity SPH Collision charmrun

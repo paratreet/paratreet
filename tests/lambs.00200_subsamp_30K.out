@@ -1,0 +1,155 @@
+
+Running on 2 processors:  ../examples/Gravity -f lambs.00200_subsamp_30K -v test +ppn 2 +setcpuaffinity 
+charmrun>  /bin/setarch x86_64 -R  mpirun -np 2  ../examples/Gravity -f lambs.00200_subsamp_30K -v test +ppn 2 +setcpuaffinity 
+Charm++>ofi> provider: psm2
+Charm++>ofi> control progress: 2
+Charm++>ofi> data progress: 2
+Charm++>ofi> maximum inject message size: 64
+Charm++>ofi> eager maximum message size: 65536 (maximum header size: 40)
+Charm++>ofi> cq entries count: 8
+Charm++>ofi> use inject: 1
+Charm++>ofi> maximum rma size: 4294967295
+Charm++>ofi> mr mode: 0x1
+Charm++>ofi> use memory pool: 0
+Charm++>ofi> use request cache: 0
+Charm++>ofi> number of pre-allocated recvs: 8
+Charm++>ofi> exchanging addresses over OFI
+Charm++> Running in SMP mode: 2 processes, 2 worker threads (PEs) + 1 comm threads per process, 4 PEs total
+Charm++> The comm. thread both sends and receives messages
+Converse/Charm++ Commit ID: v6.8.2-1228-g27d754c2f
+Warning> Randomization of virtual memory (ASLR) is turned on in the kernel, thread migration may not work! Run 'echo 0 > /proc/sys/kernel/randomize_va_space' as root to disable it, or try running with '+isomalloc_sync'.
+CharmLB> Load balancer assumes all CPUs are same.
+Charm++> cpu affinity enabled. 
+Charm++> Running on 1 hosts (1 sockets x 68 cores x 4 PUs = 272-way SMP)
+Charm++> cpu topology info is gathered in 0.026 seconds.
+
+[PARATREET]
+Input file: lambs.00200_subsamp_30K
+Decomposition type: BinaryOctDecomp
+Tree type: BinaryOctTree
+Minimum number of subtrees: 32
+Minimum number of partitions: 32
+Maximum number of particles per leaf: 12
+
+* Validating tree specifications.
+* Initializing cache managers.
+* Initialization
+Loading Tipsy data and building universe: 8.584 ms
+Universal bounding box: <30000, 0.300, 0.012, {(-0.500 -0.500 -0.500),(0.500 0.500 0.500)}> with volume 1.000
+Assigning keys and sorting particles: 1.627 ms
+Setting up splitters for subtree decompositions: 3.773 ms
+Using same decomposition for subtrees and partitions
+Setting up splitters for particle decompositions: 0.125 ms
+Created 54 Subtrees: 3.319 ms
+Created 54 Partitions: 0.443 ms
+Assigning particles to Partitions: 2.358 ms
+Flushing particles to Subtrees: 9.982 ms
+**Total Decomposition time: 31.015 ms
+
+* Iteration 0
+------------- Processor 0 Exiting: Called CmiAbort ------------
+Reason: Unhandled C++ exception in user code.
+
+------------- Processor 2 Exiting: Called CmiAbort ------------
+Reason: Unhandled C++ exception in user code.
+
+------------- Processor 1 Exiting: Called CmiAbort ------------
+Reason: Unhandled C++ exception in user code.
+
+------------- Processor 3 Exiting: Called CmiAbort ------------
+Reason: Unhandled C++ exception in user code.
+
+[1] Stack Traceback:
+  [1:0] _Z14CmiAbortHelperPKcS0_S0_ii+0x4f  [0x63d6ff]
+  [1:1]   [0x63d76b]
+  [1:2]   [0x55566e]
+  [1:3] +0x8e386  [0x2b2c0bc17386]
+  [1:4] +0x8e3d1  [0x2b2c0bc173d1]
+  [1:5] +0x8e5e9  [0x2b2c0bc175e9]
+  [1:6] +0xb6982  [0x2b2c0bc3f982]
+  [1:7] _ZN12CentroidDataC1ERKS_+0x478  [0x4f7f58]
+  [1:8] _ZN7SubtreeI12CentroidDataE9buildTreeE16CProxy_PartitionIS0_E10CkCallback+0x586  [0x6e04f6]
+  [1:9] _ZN15CkIndex_SubtreeI12CentroidDataE25_call_buildTree_marshall3EPvS2_+0x112  [0x6e09c2]
+  [1:10] CkDeliverMessageReadonly+0x42  [0x55f912]
+  [1:11] _ZN8CkLocRec11invokeEntryEP12CkMigratablePvib+0x85  [0x585bb5]
+  [1:12] _ZN18CkArrayBroadcaster7deliverEP14CkArrayMessageP12ArrayElementb+0xea  [0x5a6d7a]
+  [1:13] _ZN7CkArray13recvBroadcastEP9CkMessage+0xa3  [0x5a7373]
+  [1:14] CkDeliverMessageFree+0x1f  [0x55f88f]
+  [1:15] _Z15_processHandlerPvP11CkCoreState+0xafa  [0x56756a]
+  [1:16] CsdScheduleForever+0x85  [0x647015]
+  [1:17] CsdScheduler+0x2d  [0x64738d]
+  [1:18]   [0x644008]
+  [1:19]   [0x644836]
+  [1:20] +0x7dd5  [0x2b2c0af33dd5]
+  [1:21] clone+0x6d  [0x2b2c0c21eead]
+[2] Stack Traceback:
+  [2:0] _Z14CmiAbortHelperPKcS0_S0_ii+0x4f  [0x63d6ff]
+  [2:1]   [0x63d76b]
+  [2:2]   [0x55566e]
+  [2:3] +0x8e386  [0x2b7ee7e24386]
+  [2:4] +0x8e3d1  [0x2b7ee7e243d1]
+  [2:5] +0x8e5e9  [0x2b7ee7e245e9]
+  [2:6] +0xb6982  [0x2b7ee7e4c982]
+  [2:7] _ZN12CentroidDataC1ERKS_+0x478  [0x4f7f58]
+  [2:8] _ZN7SubtreeI12CentroidDataE9buildTreeE16CProxy_PartitionIS0_E10CkCallback+0x586  [0x6e04f6]
+  [2:9] _ZN15CkIndex_SubtreeI12CentroidDataE25_call_buildTree_marshall3EPvS2_+0x112  [0x6e09c2]
+  [2:10] CkDeliverMessageReadonly+0x42  [0x55f912]
+  [2:11] _ZN8CkLocRec11invokeEntryEP12CkMigratablePvib+0x85  [0x585bb5]
+  [2:12] _ZN18CkArrayBroadcaster7deliverEP14CkArrayMessageP12ArrayElementb+0xea  [0x5a6d7a]
+  [2:13] _ZN7CkArray13recvBroadcastEP9CkMessage+0xa3  [0x5a7373]
+  [2:14] CkDeliverMessageFree+0x1f  [0x55f88f]
+  [2:15] _Z15_processHandlerPvP11CkCoreState+0xafa  [0x56756a]
+  [2:16] CsdScheduleForever+0x85  [0x647015]
+  [2:17] CsdScheduler+0x2d  [0x64738d]
+  [2:18]   [0x644008]
+  [2:19] ConverseInit+0x3c1  [0x644411]
+  [2:20] charm_main+0x27  [0x556527]
+  [2:21] __libc_start_main+0xf5  [0x2b7ee83503d5]
+  [2:22]   [0x4f364c]
+[0] Stack Traceback:
+  [0:0] _Z14CmiAbortHelperPKcS0_S0_ii+0x4f  [0x63d6ff]
+  [0:1]   [0x63d76b]
+  [0:2]   [0x55566e]
+  [0:3] +0x8e386  [0x2b2c0bc17386]
+[3] Stack Traceback:
+  [3:0] _Z14CmiAbortHelperPKcS0_S0_ii+0x4f  [0x63d6ff]
+  [3:1]   [0x63d76b]
+  [3:2]   [0x55566e]
+  [3:3] +0x8e386  [0x2b7ee7e24386]
+  [3:4] +0x8e3d1  [0x2b7ee7e243d1]
+  [3:5] +0x8e5e9  [0x2b7ee7e245e9]
+  [3:6] +0xb6982  [0x2b7ee7e4c982]
+  [3:7] _ZN12CentroidDataC1ERKS_+0x478  [0x4f7f58]
+  [3:8] _ZN7SubtreeI12CentroidDataE9buildTreeE16CProxy_PartitionIS0_E10CkCallback+0x586  [0x6e04f6]
+  [3:9] _ZN15CkIndex_SubtreeI12CentroidDataE25_call_buildTree_marshall3EPvS2_+0x112  [0x6e09c2]
+  [3:10] CkDeliverMessageReadonly+0x42  [0x55f912]
+  [3:11] _ZN8CkLocRec11invokeEntryEP12CkMigratablePvib+0x85  [0x585bb5]
+  [3:12] _ZN18CkArrayBroadcaster7deliverEP14CkArrayMessageP12ArrayElementb+0xea  [0x5a6d7a]
+  [3:13] _ZN7CkArray13recvBroadcastEP9CkMessage+0xa3  [0x5a7373]
+  [3:14] CkDeliverMessageFree+0x1f  [0x55f88f]
+  [3:15] _Z15_processHandlerPvP11CkCoreState+0xafa  [0x56756a]
+  [3:16] CsdScheduleForever+0x85  [0x647015]
+  [3:17] CsdScheduler+0x2d  [0x64738d]
+  [3:18]   [0x644008]
+  [3:19]   [0x644836]
+  [3:20] +0x7dd5  [0x2b7ee7140dd5]
+  [3:21] clone+0x6d  [0x2b7ee842bead]
+  [0:4] +0x8e3d1  [0x2b2c0bc173d1]
+  [0:5] +0x8e5e9  [0x2b2c0bc175e9]
+  [0:6] +0xb6982  [0x2b2c0bc3f982]
+  [0:7] _ZN12CentroidDataC1ERKS_+0x478  [0x4f7f58]
+  [0:8] _ZN7SubtreeI12CentroidDataE9buildTreeE16CProxy_PartitionIS0_E10CkCallback+0x586  [0x6e04f6]
+  [0:9] _ZN15CkIndex_SubtreeI12CentroidDataE25_call_buildTree_marshall3EPvS2_+0x112  [0x6e09c2]
+  [0:10] CkDeliverMessageReadonly+0x42  [0x55f912]
+  [0:11] _ZN8CkLocRec11invokeEntryEP12CkMigratablePvib+0x85  [0x585bb5]
+  [0:12] _ZN18CkArrayBroadcaster7deliverEP14CkArrayMessageP12ArrayElementb+0xea  [0x5a6d7a]
+  [0:13] _ZN7CkArray13recvBroadcastEP9CkMessage+0xa3  [0x5a7373]
+  [0:14] CkDeliverMessageFree+0x1f  [0x55f88f]
+  [0:15] _Z15_processHandlerPvP11CkCoreState+0xafa  [0x56756a]
+  [0:16] CsdScheduleForever+0x85  [0x647015]
+  [0:17] CsdScheduler+0x2d  [0x64738d]
+  [0:18]   [0x644008]
+  [0:19] ConverseInit+0x3c1  [0x644411]
+  [0:20] charm_main+0x27  [0x556527]
+  [0:21] __libc_start_main+0xf5  [0x2b2c0c1433d5]
+  [0:22]   [0x4f364c]

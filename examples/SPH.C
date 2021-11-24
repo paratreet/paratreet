@@ -125,5 +125,5 @@ PARATREET_REGISTER_PER_LEAF_FN(SymmetricForceFn, CentroidData, (
   }
 
   Real ExMain::getTimestep(BoundingBox& universe, Real max_velocity) {
-    return 0.0002;
+    return 1e-8;
   }
