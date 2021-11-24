@@ -64,7 +64,7 @@ namespace paratreet {
       }
     }
 
-    struct Configuration : public Loadable, public PUP::able {
+    struct Configuration : public PUP::able, public Loadable {
         int min_n_subtrees;
         int min_n_partitions;
         int max_particles_per_leaf; // For local tree build
@@ -173,7 +173,5 @@ namespace paratreet {
 
     inline void setConfiguration(std::shared_ptr<Configuration>&&);
 }
-
-#include "paratreet.decl.h"
 
 #endif //PARATREET_CONFIGURATION_H_
