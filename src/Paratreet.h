@@ -62,20 +62,26 @@ class MainChare: public CBase_MainChare {
 namespace paratreet {
 
     template<typename Data>
-    CProxy_Driver<Data> initialize(const Configuration& conf, CkCallback cb);
+    CProxy_Driver<Data> initialize(const CkCallback& cb);
 
     class MainBase {
+        Configuration* config_;
+
+      protected:
+        MainBase(Configuration* config): config_(config) {}
+
       public:
-        paratreet::Configuration conf;
+        inline paratreet::Configuration& configuration(void) {
+            return *(this->config_);
+        }
 
         virtual void __register(void) = 0;
-
         virtual void main(CkArgMsg*) = 0;
         virtual void run(void) = 0;
 
         virtual Real getTimestep(BoundingBox&, Real) = 0;
-
         virtual void initializeDriver(const CkCallback&) = 0;
+        virtual void setConfiguration(const Configuration& cfg) = 0;
     };
 
     // NOTE because this is called Main, the user's instantiation cannot be
@@ -87,9 +93,12 @@ namespace paratreet {
         }
       public:
         CProxy_Driver<T> driver;
+        Configuration conf;
+
+        Main(void) : MainBase(&conf) {}
 
         virtual void initializeDriver(const CkCallback& cb) override {
-            this->driver = initialize<T>(this->conf, cb);
+            this->driver = initialize<T>(cb);
         }
 
         virtual void preTraversalFn(ProxyPack<T>&) = 0;
@@ -107,6 +116,10 @@ namespace paratreet {
             CkIndex_Reader::idx_request<T>( static_cast<void (Reader::*)(const CProxy_Subtree<T> &, int, int)>(NULL));
             CkIndex_Reader::idx_flush<T>( static_cast<void (Reader::*)(int, const CProxy_Subtree<T> &)>(NULL));
             CkIndex_Reader::idx_assignPartitions<T>( static_cast<void (Reader::*)(int, const CProxy_Partition<T> &)>(NULL));
+        }
+
+        virtual void setConfiguration(const Configuration& cfg) override {
+            this->conf = cfg;
         }
     };
 
@@ -175,12 +188,20 @@ namespace paratreet {
         ((Main<T>&)*CsvAccess(main_)).perLeafFn(indicator, node, partition);
     }
 
+    inline void setConfiguration(const Configuration& cfg) {
+        CsvAccess(main_)->setConfiguration(cfg);
+    }
+
+    inline const Configuration& getConfiguration(void) {
+        return CsvAccess(main_)->configuration();
+    }
+
     template<typename Data>
-    CProxy_Driver<Data> initialize(const Configuration& conf, CkCallback cb) {
+    CProxy_Driver<Data> initialize(const CkCallback& cb) {
         // Create readers
         n_readers = CkNumPes();
         readers = CProxy_Reader::ckNew();
-        treespec = CProxy_TreeSpec::ckNew(conf);
+        treespec = CProxy_TreeSpec::ckNew();
         thread_state_holder = CProxy_ThreadStateHolder::ckNew();
 
         // Create library chares
@@ -191,16 +212,14 @@ namespace paratreet {
 
         CProxy_Driver<Data> driver = CProxy_Driver<Data>::ckNew(cache, resumer, canopy, CkMyPe());
         // Call the driver initialization routine (performs decomposition)
-        driver.init(cb);
+        driver.init(cb, paratreet::getConfiguration());
 
         return driver;
     }
 
-    void updateConfiguration(const Configuration&, CkCallback);
-
     template<typename Data>
     void outputParticleAccelerations(BoundingBox& universe, CProxy_Partition<Data>& partitions) {
-        auto& output_file = treespec.ckLocalBranch()->getConfiguration().output_file;
+        auto& output_file = paratreet::getConfiguration().output_file;
         CProxy_Writer w = CProxy_Writer::ckNew(output_file, universe.n_particles);
         CkPrintf("Outputting particle accelerations for verification...\n");
         partitions.output(w, universe.n_particles, CkCallback::ignore);
@@ -210,7 +229,7 @@ namespace paratreet {
 
     template<typename Data>
     void outputTipsy(BoundingBox& universe, CProxy_Partition<Data>& partitions) {
-        auto& output_file = treespec.ckLocalBranch()->getConfiguration().output_file;
+        auto& output_file = paratreet::getConfiguration().output_file;
         CProxy_TipsyWriter tw = CProxy_TipsyWriter::ckNew(output_file, universe);
         CkPrintf("Outputting to Tipsy file...\n");
         partitions.output(tw, universe.n_particles, CkCallback::ignore);

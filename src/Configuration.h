@@ -152,7 +152,7 @@ namespace paratreet {
           return "SfcDecomp";
         case DecompType::eKd:
           return "KdDecomp";
-	case DecompType::eLongest:
+	      case DecompType::eLongest:
           return "LongestDimDecomp";
         default:
          return "InvalidDecompType";
@@ -174,6 +174,8 @@ namespace paratreet {
       }
     }
 
+    inline const Configuration& getConfiguration(void);
+    inline void setConfiguration(const Configuration&);
 }
 
 #include "paratreet.decl.h"

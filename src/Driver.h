@@ -48,9 +48,10 @@ public:
     cache_manager(cache_manager_), resumer(resumer_), calculator(calculator_), storage_sorted(false) {}
 
   // Performs initial decomposition
-  void init(CkCallback cb) {
+  void init(const CkCallback& cb, const paratreet::Configuration& cfg) {
     // Ensure all treespecs have been created
     CkPrintf("* Validating tree specifications.\n");
+    paratreet::setConfiguration(cfg);
     treespec.check(CkCallbackResumeThread());
     // Then, initialize the cache managers
     CkPrintf("* Initializing cache managers.\n");
@@ -84,7 +85,7 @@ public:
   // by either loading particle information from input file or re-computing
   // the universal bounding box
   void decompose(int iter) {
-    auto config = treespec.ckLocalBranch()->getConfiguration();
+    auto& config = paratreet::getConfiguration();
     double decomp_time = CkWallTimer();
     if (iter == 0) {
       // Build universe
@@ -172,7 +173,7 @@ public:
 
   // Core iterative loop of the simulation
   void run(CkCallback cb) {
-    auto config = treespec.ckLocalBranch()->getConfiguration();
+    auto& config = paratreet::getConfiguration();
     double total_time = 0;
     for (int iter = 0; iter < config.num_iterations; iter++) {
       CkPrintf("\n* Iteration %d\n", iter);
@@ -290,7 +291,7 @@ public:
   }
 
   void loadCache(CkCallback cb) {
-    auto config = treespec.ckLocalBranch()->getConfiguration();
+    auto& config = paratreet::getConfiguration();
     CkPrintf("Received data from %d TreeCanopies\n", (int) storage.size());
     // Sort data received from TreeCanopies (by their indices)
     if (!storage_sorted) sortStorage();
