@@ -168,8 +168,10 @@ namespace paratreet {
       }
     }
 
-    inline const Configuration& getConfiguration(void);
-    inline void setConfiguration(Configuration*);
+    template<typename T = Configuration>
+    inline const T& getConfiguration(void);
+
+    inline void setConfiguration(std::shared_ptr<Configuration>&&);
 }
 
 #include "paratreet.decl.h"

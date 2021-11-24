@@ -66,14 +66,18 @@ namespace paratreet {
     CProxy_Driver<Data> initialize(const CkCallback& cb);
 
     class MainBase {
-        Configuration* config_;
+        // use a shared ptr to enable custom deleters
+        // and ensure the object's lifecycle is managed
+        using configuration_ptr = std::shared_ptr<Configuration>;
+        configuration_ptr config_;
 
       protected:
-        MainBase(Configuration* config): config_(config) {}
+        MainBase(configuration_ptr&& config)
+        : config_(std::forward<configuration_ptr>(config)) {}
 
       public:
-        inline void setConfiguration(Configuration* cfg) {
-            this->config_ = cfg;
+        inline void setConfiguration(configuration_ptr&& cfg) {
+            this->config_ = std::forward<configuration_ptr>(cfg);
         }
 
         inline paratreet::Configuration& configuration(void) {
@@ -102,7 +106,9 @@ namespace paratreet {
         CProxy_Driver<T> driver;
         configuration_type conf;
 
-        Main(void) : MainBase(&conf) {}
+        // pass the configuration without a deleter by default
+        Main(void)
+        : MainBase(std::shared_ptr<Configuration>(&conf, [](void*){})) {}
 
         virtual void initializeDriver(const CkCallback& cb) override {
             this->driver = initialize<T>(cb);
@@ -199,12 +205,13 @@ namespace paratreet {
         ((Main<T>&)*CsvAccess(main_)).perLeafFn(indicator, node, partition);
     }
 
-    inline void setConfiguration(Configuration* cfg) {
-        CsvAccess(main_)->setConfiguration(cfg);
+    inline void setConfiguration(std::shared_ptr<Configuration>&& cfg) {
+        CsvAccess(main_)->setConfiguration(std::move(cfg));
     }
 
-    inline const Configuration& getConfiguration(void) {
-        return CsvAccess(main_)->configuration();
+    template <typename T>
+    inline const T& getConfiguration(void) {
+        return static_cast<const T&>(CsvAccess(main_)->configuration());
     }
 
     template<typename Data>
@@ -223,8 +230,8 @@ namespace paratreet {
 
         CProxy_Driver<Data> driver = CProxy_Driver<Data>::ckNew(cache, resumer, canopy, CkMyPe());
         // Call the driver initialization routine (performs decomposition)
-        const auto* cfg = &(paratreet::getConfiguration());
-        driver.init(cb, const_cast<paratreet::Configuration*>(cfg));
+        auto& cfg = const_cast<paratreet::Configuration&>(paratreet::getConfiguration());
+        driver.init(cb, CkReference<Configuration>(cfg));
 
         return driver;
     }

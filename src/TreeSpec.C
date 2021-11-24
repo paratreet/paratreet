@@ -2,7 +2,7 @@
 #include "Paratreet.h"
 
 void TreeSpec::receiveConfiguration(const CkCallback& cb, paratreet::Configuration* cfg) {
-  paratreet::setConfiguration(cfg);
+  paratreet::setConfiguration(std::shared_ptr<paratreet::Configuration>(cfg));
   CkAssert(this->getTree() && this->getSubtreeDecomposition() && this->getPartitionDecomposition());
   this->contribute(cb);
 }
