@@ -94,7 +94,7 @@ namespace paratreet {
 
     // NOTE because this is called Main, the user's instantiation cannot be
     //      named Main for now...
-    template<typename T, typename C = Configuration>
+    template<typename T, typename C = DefaultConfiguration>
     class Main : public MainBase {
         static const char* __makeName(const char* ty) {
             return (std::string(ty) + "<" + std::string(typeid(T).name()) + ">").c_str();

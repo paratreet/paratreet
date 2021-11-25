@@ -117,8 +117,16 @@ namespace paratreet {
             p | output_file;
         }
 #endif //__CHARMC__
+    };
 
-        PUPable_decl_inside(Configuration);
+    // workaround to enable custom configuration types
+    // contains "PUPable_decl_inside" so Configuration
+    // does not have to -- will be undefined if users
+    // provide their own!
+    struct DefaultConfiguration : Configuration {
+      DefaultConfiguration(void) = default;
+      DefaultConfiguration(CkMigrateMessage* m) : Configuration(m) {}
+      PUPable_decl_inside(DefaultConfiguration);
     };
 
     static std::string asString(TreeType t) {
