@@ -311,7 +311,7 @@ void CacheManager<Data>::requestNodes(std::pair<Key, int> param) {
 template <typename Data>
 void CacheManager<Data>::makeMsgPerNode(int start_depth, std::vector<Node<Data>*>& sending_nodes, std::vector<Particle>& sending_particles, Node<Data>* to_process)
 {
-  auto config = treespec.ckLocalBranch()->getConfiguration();
+  auto& config = paratreet::getConfiguration();
   sending_nodes.push_back(to_process);
   if (to_process->type == Node<Data>::Type::Leaf) {
     std::copy(to_process->particles(), to_process->particles() + to_process->n_particles, std::back_inserter(sending_particles));

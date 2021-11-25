@@ -289,7 +289,7 @@ void Subtree<Data>::recursiveBuild(Node<Data>* node, Particle* node_particles, s
 #endif
   // store reference to splitters
   //static std::vector<Splitter>& splitters = readers.ckLocalBranch()->splitters;
-  auto config = treespec.ckLocalBranch()->getConfiguration();
+  auto& config = paratreet::getConfiguration();
   auto tree   = treespec.ckLocalBranch()->getTree();
   bool is_light = (node->n_particles <= config.max_particles_per_leaf);
 

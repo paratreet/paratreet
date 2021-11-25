@@ -4,6 +4,7 @@
 #include <functional>
 #include <string>
 
+#include "Loadable.h"
 #include "BoundingBox.h"
 
 template<typename T>
@@ -27,7 +28,43 @@ namespace paratreet {
       eInvalid = 100
     };
 
-    struct Configuration {
+    template <>
+    inline void Field<DecompType>::accept(const Value& value) {
+      auto s = (std::string)value;
+      using T = DecompType;
+      if (s == "oct") {
+        this->storage_ = T::eOct;
+      } else if (s == "binoct") {
+        this->storage_ = T::eBinaryOct;
+      } else if (s == "sfc") {
+        this->storage_ = T::eSfc;
+      } else if (s == "kd") {
+        this->storage_ = T::eKd;
+      } else if (s == "longest") {
+        this->storage_ = T::eLongest;
+      } else {
+        CmiAbort("invalid value %s for %s!", s.c_str(), this->name().c_str());
+      }
+    }
+
+    template <>
+    inline void Field<TreeType>::accept(const Value& value) {
+      auto s = (std::string)value;
+      using T = TreeType;
+      if (s == "oct") {
+        this->storage_ = T::eOct;
+      } else if (s == "binoct") {
+        this->storage_ = T::eBinaryOct;
+      } else if (s == "kd") {
+        this->storage_ = T::eKd;
+      } else if (s == "longest") {
+        this->storage_ = T::eLongest;
+      } else {
+        CmiAbort("invalid value %s for %s!", s.c_str(), this->name().c_str());
+      }
+    }
+
+    struct Configuration : public PUP::able, public Loadable {
         int min_n_subtrees;
         int min_n_partitions;
         int max_particles_per_leaf; // For local tree build
@@ -41,9 +78,30 @@ namespace paratreet {
         int lb_period;
         std::string input_file;
         std::string output_file;
+
+        Configuration(void) { this->register_fields(); }
+        Configuration(CkMigrateMessage *m): PUP::able(m) {}
+
+        void register_fields(void) {
+          this->register_field("nSubtreesMin", false, min_n_subtrees);
+          this->register_field("nPartitionsMin", false, min_n_partitions);
+          this->register_field("nParticlesPerLeafMax", false, max_particles_per_leaf);
+          this->register_field("achDecompType", false, decomp_type);
+          this->register_field("achTreeType", false, tree_type);
+          this->register_field("nIterations", false, num_iterations);
+          this->register_field("nShareNodes", false, num_share_nodes);
+          this->register_field("iCacheShareDepth", false, cache_share_depth);
+          this->register_field("iFlushPeriod", false, flush_period);
+          this->register_field("iFlushPeriodMaxAvgRatio", false, flush_max_avg_ratio);
+          this->register_field("iLbPeriod", false, lb_period);
+          this->register_field("achInputFile", false, input_file);
+          this->register_field("achOutputFile", false, output_file);
+        }
+
 #ifdef __CHARMC__
 #include "pup.h"
-        void pup(PUP::er &p) {
+        virtual void pup(PUP::er &p) override {
+            PUP::able::pup(p);
             p | min_n_subtrees;
             p | min_n_partitions;
             p | max_particles_per_leaf;
@@ -59,6 +117,16 @@ namespace paratreet {
             p | output_file;
         }
 #endif //__CHARMC__
+    };
+
+    // workaround to enable custom configuration types
+    // contains "PUPable_decl_inside" so Configuration
+    // does not have to -- will be undefined if users
+    // provide their own!
+    struct DefaultConfiguration : Configuration {
+      DefaultConfiguration(void) = default;
+      DefaultConfiguration(CkMigrateMessage* m) : Configuration(m) {}
+      PUPable_decl_inside(DefaultConfiguration);
     };
 
     static std::string asString(TreeType t) {
@@ -86,7 +154,7 @@ namespace paratreet {
           return "SfcDecomp";
         case DecompType::eKd:
           return "KdDecomp";
-	case DecompType::eLongest:
+	      case DecompType::eLongest:
           return "LongestDimDecomp";
         default:
          return "InvalidDecompType";
@@ -108,8 +176,10 @@ namespace paratreet {
       }
     }
 
-}
+    template<typename T = Configuration>
+    inline const T& getConfiguration(void);
 
-#include "paratreet.decl.h"
+    inline void setConfiguration(std::shared_ptr<Configuration>&&);
+}
 
 #endif //PARATREET_CONFIGURATION_H_
