@@ -15,6 +15,8 @@ struct CollisionVisitor {
 public:
   static constexpr const bool CallSelfLeaf = true;
 
+  void pup(PUP::er& p) {}
+
   static Real getCollideTime(const Particle& a, const Particle& b) {
     auto dx = a.position - b.position;
     auto vRel = a.velocity - b.velocity + (0.01570796326 / 2.) * (a.acceleration - b.acceleration); // this is kinda wrong cause accelerations are not updated properly

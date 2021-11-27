@@ -79,9 +79,9 @@ module paratreet {
   template <typename Data>
   array [1d] Partition {
     entry Partition(int, CProxy_CacheManager<Data>, CProxy_Resumer<Data>, TCHolder<Data>, CProxy_Driver<Data>, bool);
-    template <typename Visitor> entry void startDown();
-    template <typename Visitor> entry void startBasicDown();
-    template <typename Visitor> entry void startUpAndDown();
+    template <typename Visitor> entry void startDown(Visitor v);
+    template <typename Visitor> entry void startBasicDown(Visitor v);
+    template <typename Visitor> entry void startUpAndDown(Visitor v);
     entry void interact(const CkCallback&);
     entry void goDown();
     entry void receiveLeaves(std::vector<Key>, Key, int, TPHolder<Data>);
@@ -108,7 +108,7 @@ module paratreet {
     entry void destroy();
     entry void reset();
     entry void sendLeaves(CProxy_Partition<Data>);
-    template <typename Visitor> entry void startDual();
+    template <typename Visitor> entry void startDual(Visitor v);
     entry void goDown();
     entry void checkParticlesChanged(const CkCallback&);
     entry void collectMetaData(const CkCallback & cb);

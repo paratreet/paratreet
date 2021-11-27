@@ -22,6 +22,7 @@ struct VisitAllVisitor {
 public:
   static constexpr const bool CallSelfLeaf = true;
 
+  void pup(PUP::er& p) {}
 public:
   static bool open(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
     auto vat = visit_all_tracker.ckLocalBranch();

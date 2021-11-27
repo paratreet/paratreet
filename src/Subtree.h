@@ -60,7 +60,7 @@ public:
   void populateTree();
   inline void initCache();
   void sendLeaves(CProxy_Partition<Data>);
-  template <typename Visitor> void startDual();
+  template <typename Visitor> void startDual(Visitor v);
   void goDown();
   void requestNodes(Key, int);
   void requestCopy(int, PPHolder<Data>);
@@ -216,13 +216,13 @@ void Subtree<Data>::sendLeaves(CProxy_Partition<Data> part)
 
 template <typename Data>
 template <typename Visitor>
-void Subtree<Data>::startDual() {
+void Subtree<Data>::startDual(Visitor v) {
   r_local = r_proxy.ckLocalBranch();
   r_local->resume_nodes_per_part.resize(n_subtrees);
   r_local->subtree_proxy = this->thisProxy;
   r_local->use_subtree = true;
   cm_local = cm_proxy.ckLocalBranch();
-  traverser.reset(new DualTraverser<Data, Visitor>(*this));
+  traverser.reset(new DualTraverser<Data, Visitor>(v, *this));
   traverser->start();
 }
 
