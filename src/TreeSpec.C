@@ -1,6 +1,8 @@
 #include "TreeSpec.h"
+#include "Paratreet.h"
 
-void TreeSpec::check(const CkCallback &cb) {
+void TreeSpec::receiveConfiguration(const CkCallback& cb, paratreet::Configuration* cfg) {
+  paratreet::setConfiguration(std::shared_ptr<paratreet::Configuration>(cfg));
   CkAssert(this->getTree() && this->getSubtreeDecomposition() && this->getPartitionDecomposition());
   this->contribute(cb);
 }
@@ -12,12 +14,14 @@ void TreeSpec::receiveDecomposition(const CkCallback& cb, Decomposition* d, bool
 }
 
 Decomposition* TreeSpec::getSubtreeDecomposition() {
+  auto& config = paratreet::getConfiguration();
   auto decomp_type = paratreet::subtreeDecompForTree(config.tree_type);
   getDecomposition(subtree_decomp, decomp_type, true);
   return subtree_decomp.get();
 }
 
 Decomposition* TreeSpec::getPartitionDecomposition() {
+  auto& config = paratreet::getConfiguration();
   getDecomposition(partition_decomp, config.decomp_type, false);
   return partition_decomp.get();
 }
@@ -41,6 +45,7 @@ void TreeSpec::getDecomposition(std::unique_ptr<Decomposition>& decomp, paratree
 }
 
 Tree* TreeSpec::getTree() {
+  auto& config = paratreet::getConfiguration();
   if (!tree) {
     if (config.tree_type == paratreet::TreeType::eOct) {
       tree.reset(new OctTree());
@@ -55,13 +60,4 @@ Tree* TreeSpec::getTree() {
     }
   }
   return tree.get();
-}
-
-void TreeSpec::receiveConfiguration(const paratreet::Configuration& cfg, CkCallback cb) {
-  setConfiguration(cfg);
-  contribute(cb);
-}
-
-paratreet::Configuration& TreeSpec::getConfiguration() {
-  return config;
 }

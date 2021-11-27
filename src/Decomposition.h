@@ -3,16 +3,15 @@
 
 #include <functional>
 #include <vector>
+
 #include "Splitter.h"
+#include "Configuration.h"
 
 class Reader;
 class CProxy_Reader;
 class BoundingBox;
 class Splitter;
 class Particle;
-namespace paratreet {
-  class Configuration;
-}
 
 using SendProxyFn = std::function<void(Key,int)>;
 using SendParticlesFn = std::function<void(int,int,Particle*)>;

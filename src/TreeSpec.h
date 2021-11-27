@@ -7,21 +7,16 @@
 
 class TreeSpec : public CBase_TreeSpec {
 public:
-    TreeSpec(const paratreet::Configuration& config_)
-    : config(config_),
-      subtree_decomp(nullptr),
+    TreeSpec(void)
+    : subtree_decomp(nullptr),
       partition_decomp(nullptr),
       tree(nullptr) { }
 
-    void check(const CkCallback &cb);
+    void receiveConfiguration(const CkCallback&, paratreet::Configuration*);
     void receiveDecomposition(const CkCallback&, Decomposition*, bool if_subtree);
     Decomposition* getSubtreeDecomposition();
     Decomposition* getPartitionDecomposition();
     Tree* getTree();
-
-    void receiveConfiguration(const paratreet::Configuration&,CkCallback);
-    paratreet::Configuration& getConfiguration();
-    void setConfiguration(const paratreet::Configuration& config_) { config = config_; }
 
     template <typename Data>
     Node<Data>* makeNode(Key key, int depth, int n_particles, Particle* particles, int owner_tp_start, int owner_tp_end, bool is_leaf, Node<Data>* parent, int tp_index) {
@@ -63,7 +58,6 @@ protected:
     std::unique_ptr<Tree> tree;
     std::unique_ptr<Decomposition> subtree_decomp;
     std::unique_ptr<Decomposition> partition_decomp;
-    paratreet::Configuration config;
 
 private:
   void getDecomposition(std::unique_ptr<Decomposition>& decomp, paratreet::DecompType decomp_type, bool is_subtree);

@@ -127,7 +127,7 @@ module paratreet {
   template <typename Data>
   chare Driver {
     entry Driver(CProxy_CacheManager<Data>, CProxy_Resumer<Data>, CProxy_TreeCanopy<Data>);
-    entry [threaded] void init(CkCallback cb);
+    entry [threaded] void init(CkCallback cb, CkReference<paratreet::Configuration>);
     entry [threaded] void run(CkCallback cb);
     entry [reductiontarget] void countInts(unsigned long long intrn_counts [4]);
     entry [reductiontarget] void reportTime();
@@ -163,15 +163,12 @@ module paratreet {
   };
 
   group TreeSpec {
-    entry TreeSpec(const paratreet::Configuration&);
-    entry void check(const CkCallback&);
+    entry TreeSpec(void);
     entry void reset();
+    entry void receiveConfiguration(const CkCallback&, CkPointer<paratreet::Configuration>);
     entry void receiveDecomposition(const CkCallback&, CkPointer<Decomposition>, bool);
     entry [local] Decomposition* getSubtreeDecomposition();
     entry [local] Decomposition* getPartitionDecomposition();
-    entry void receiveConfiguration(const paratreet::Configuration&,CkCallback);
-    entry [local] paratreet::Configuration& getConfiguration();
-    entry [local] void setConfiguration(const paratreet::Configuration&);
   }
 
   group DecompArrayMap : CkArrayMap {
