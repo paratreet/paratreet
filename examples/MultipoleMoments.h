@@ -246,9 +246,9 @@ public:
 		if (radius > 0) momShiftFmomr(&mom, radius, dr.x, dr.y, dr.z);
 		FMOMR mom2 = m.mom;
 		dr = m.cm - cm;
-		if (radius > 0) {
+		if (m.radius > 0) {
 		  momShiftFmomr(&mom2, m.radius, dr.x, dr.y, dr.z);
-		  momScaledAddFmomr(&mom, radius, &mom2, m.radius);
+		  if (radius > 0) momScaledAddFmomr(&mom, radius, &mom2, m.radius);
 		}
 #else
 		//add higher order components here
@@ -371,9 +371,9 @@ public:
 		if (radius > 0) momShiftFmomr(&mom, radius, dr.x, dr.y, dr.z);
 		FMOMR mom2 = m.mom;
 		dr = m.cm - newMoments.cm;
-		if (radius > 0) {
+		if (m.radius > 0) {
 		  momShiftFmomr(&mom2, m.radius, dr.x, dr.y, dr.z);
-		  momScaledSubFmomr(&newMoments.mom, radius, &mom2, m.radius);
+		  if (radius > 0) momScaledSubFmomr(&newMoments.mom, radius, &mom2, m.radius);
 		}
 #else
 		//subtract off higher order components here
@@ -463,7 +463,7 @@ inline void calculateRadiusFarthestCorner(MultipoleMoments& m, const OrientedBox
 	delta1.z = (delta1.z > delta2.z ? delta1.z : delta2.z);
 	Real newradius = delta1.length();
 #ifdef HEXADECAPOLE
-	if (newradius > 0.0) momRescaleFmomr(&m.mom, newradius, m.radius);
+	if (m.radius > 0 && newradius > 0.0) momRescaleFmomr(&m.mom, newradius, m.radius);
 #endif
 	m.radius = newradius;
 }
