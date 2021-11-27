@@ -30,9 +30,9 @@ Paratreet.o: $(UTILITY_HEADERS) $(CORE_HEADERS) $(IMPL_HEADERS) paratreet.decl.h
 %.o: %.C %.h paratreet.decl.h
 	$(CHARMC) -c $<
 
-libmodule%.a : %.ci %.C %.h LBCommon.h
+libmodule%.a : loadbalancers/%.ci loadbalancers/%.C loadbalancers/%.h LBCommon.h
 	$(CHARMC) $<
 	$(CHARMC) -o $@ $(word 2,$^)
 
 clean:
-	rm -f *.decl.h *.def.h conv-host *.o libparatreet.a
+	rm -f *.decl.h *.def.h conv-host *.o *.a
