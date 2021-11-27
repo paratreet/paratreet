@@ -463,7 +463,7 @@ inline void calculateRadiusFarthestCorner(MultipoleMoments& m, const OrientedBox
 	delta1.z = (delta1.z > delta2.z ? delta1.z : delta2.z);
 	Real newradius = delta1.length();
 #ifdef HEXADECAPOLE
-	if (m.radius > 0 && newradius > 0.0) momRescaleFmomr(&m.mom, newradius, m.radius);
+	if (newradius > 0.0) momRescaleFmomr(&m.mom, newradius, m.radius);
 #endif
 	m.radius = newradius;
 }

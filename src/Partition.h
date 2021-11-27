@@ -44,9 +44,9 @@ struct Partition : public CBase_Partition<Data> {
   Partition(int, CProxy_CacheManager<Data>, CProxy_Resumer<Data>, TCHolder<Data>, CProxy_Driver<Data> driver, bool);
   Partition(CkMigrateMessage * msg){delete msg;};
 
-  template<typename Visitor> void startDown();
-  template<typename Visitor> void startBasicDown();
-  template<typename Visitor> void startUpAndDown();
+  template<typename Visitor> void startDown(Visitor v);
+  template<typename Visitor> void startBasicDown(Visitor v);
+  template<typename Visitor> void startUpAndDown(Visitor v);
   void goDown();
   void interact(const CkCallback& cb);
 
@@ -118,32 +118,32 @@ void Partition<Data>::initLocalBranches() {
 
 template <typename Data>
 template <typename Visitor>
-void Partition<Data>::startDown()
+void Partition<Data>::startDown(Visitor v)
 {
   initLocalBranches();
   interactions.resize(leaves.size());
-  traverser.reset(new TransposedDownTraverser<Data, Visitor>(leaves, *this));
+  traverser.reset(new TransposedDownTraverser<Data, Visitor>(v, leaves, *this));
   traverser->start();
 }
 
 template <typename Data>
 template <typename Visitor>
-void Partition<Data>::startBasicDown()
+void Partition<Data>::startBasicDown(Visitor v)
 {
   initLocalBranches();
   interactions.resize(leaves.size());
-  traverser.reset(new BasicDownTraverser<Data, Visitor>(leaves, *this));
+  traverser.reset(new BasicDownTraverser<Data, Visitor>(v, leaves, *this));
   traverser->start();
 }
 
 
 template <typename Data>
 template <typename Visitor>
-void Partition<Data>::startUpAndDown()
+void Partition<Data>::startUpAndDown(Visitor v)
 {
   initLocalBranches();
   interactions.resize(leaves.size());
-  traverser.reset(new UpnDTraverser<Data, Visitor>(*this));
+  traverser.reset(new UpnDTraverser<Data, Visitor>(v, *this));
   traverser->start();
 }
 

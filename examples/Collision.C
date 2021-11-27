@@ -53,7 +53,7 @@ PARATREET_REGISTER_PER_LEAF_FN(CollisionResolveFn, CentroidData, (
   }
 
   void ExMain::traversalFn(BoundingBox& universe, ProxyPack<CentroidData>& proxy_pack, int iter) {
-    proxy_pack.partition.template startDown<GravityVisitor<0,0,0>>();
+    proxy_pack.partition.template startDown<GravityVisitor>(GravityVisitor(Vector3D<Real>(0, 0, 0)));
   }
 
   void ExMain::postIterationFn(BoundingBox& universe, ProxyPack<CentroidData>& proxy_pack, int iter) {
@@ -65,7 +65,7 @@ PARATREET_REGISTER_PER_LEAF_FN(CollisionResolveFn, CentroidData, (
     if (iter >= iter_start_collision) {
       proxy_pack.cache.resetCachedParticles(CkCallbackResumeThread());
       double start_time = CkWallTimer();
-      proxy_pack.partition.template startDown<CollisionVisitor>();
+      proxy_pack.partition.template startDown<CollisionVisitor>(CollisionVisitor());
       CkWaitQD();
       CkPrintf("Collision traversal: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
       // Collision is a little funky because were going to edit the mass and position of particles after a collision

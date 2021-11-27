@@ -6,13 +6,14 @@ OPTS = -g -O3 $(INCLUDES) -DCOUNT_INTERACTIONS=0 -DDEBUG=0 -DHEXADECAPOLE $(MAKE
 CHARMC = $(CHARM_HOME)/bin/charmc $(OPTS)
 
 all: Gravity SPH Collision VisitAll
+DATA = CentroidData.h MultipoleMoments.h
 VISITORS = DensityVisitor.h PressureVisitor.h GravityVisitor.h CollisionVisitor.h NeighborListCollector.h VisitAllVisitor.h
 OTHERS = CountManager.h
 
 debug:
 	echo $(LB_LIBS)
 
-Main.decl.h: Main.ci
+Main.decl.h: Main.ci $(DATA)
 	$(CHARMC) $<
 
 Gravity: Main.decl.h Main.o Gravity.o moments.o ../src/libparatreet.a
@@ -39,7 +40,7 @@ SPH.o: SPH.C SPHUtils.h Main.decl.h
 VisitAll.o: VisitAll.C Main.decl.h
 	$(CHARMC) -c $<
 
-Main.o: Main.C CentroidData.h moments.h MultipoleMoments.h $(VISITORS) $(OTHERS) Main.decl.h
+Main.o: Main.C $(VISITORS) $(OTHERS) Main.decl.h
 	$(CHARMC) -c $<
 
 moments.o: moments.C

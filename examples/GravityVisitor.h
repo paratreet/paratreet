@@ -6,17 +6,25 @@
 #include "Space.h"
 #include <cmath>
 
-template <int repX = 0, int repY = 0, int repZ = 0>
 class GravityVisitor {
 public:
   static constexpr const bool CallSelfLeaf = true;
+  GravityVisitor() : offset(0, 0, 0) {}
+  GravityVisitor(Vector3D<Real> offseti) : offset(offseti) {}
+
+  void pup(PUP::er& p) {
+    p | offset;
+  }
+
+private:
+  Vector3D<Real> offset;
 
 private:
   // note gconst = 1
   // note: theta defined elsewhere
   static constexpr int  nMinParticleNode = 6;
 
-  static inline void SPLINEQ(Real invr, Real r2, Real twoh, Real& a, Real& b, Real& c, Real& d)
+  inline void SPLINEQ(Real invr, Real r2, Real twoh, Real& a, Real& b, Real& c, Real& d)
 {
   Real u,dih,dir=(invr);
   if ((r2) < (twoh)*(twoh)) {
@@ -61,17 +69,17 @@ private:
   }
 }
 
-  static inline bool openSoftening(const CentroidData& source, const CentroidData& target)
+  inline bool openSoftening(const CentroidData& source, const CentroidData& target)
   {
-    Sphere<Real> sourceSphere(source.multipoles.cm + Vector3D<Real>{repX, repY, repZ}, 2.0 * source.multipoles.soft);
+    Sphere<Real> sourceSphere(source.multipoles.cm + offset, 2.0 * source.multipoles.soft);
     Sphere<Real> targetSphere(target.multipoles.cm, 2.0 * target.multipoles.soft);
     if (Space::intersect(sourceSphere, targetSphere)) return true;
     return Space::intersect(target.box, sourceSphere);
   }
 
-  static void addGravity(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
+  void addGravity(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
     for (int i = 0; i < target.n_particles; i++) {
-      Vector3D<Real> diff = source.data.centroid + Vector3D<Real>{repX, repY, repZ} - target.particles()[i].position;
+      Vector3D<Real> diff = source.data.centroid + offset - target.particles()[i].position;
       Real rsq = diff.lengthSquared();
       if (rsq != 0) {
         Vector3D<Real> accel = diff * (source.data.sum_mass / (rsq * sqrt(rsq)));
@@ -83,11 +91,11 @@ private:
 public:
   /// @brief We've hit a leaf: N^2 interactions between all particles
   /// in the target and node.
-  static void leaf(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
+  void leaf(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
     for (int i = 0; i < target.n_particles; i++) {
       Vector3D<Real> accel(0.0);
       for (int j = 0; j < source.n_particles; j++) {
-          Vector3D<Real> diff = source.particles()[j].position + Vector3D<Real>{repX, repY, repZ} - target.particles()[i].position;
+          Vector3D<Real> diff = source.particles()[j].position + offset - target.particles()[i].position;
           Real rsq = diff.lengthSquared();
           if (rsq != 0) {
               accel += diff * (source.particles()[j].mass / (rsq * sqrt(rsq)));
@@ -97,12 +105,12 @@ public:
     }
   }
 
-  static bool open(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
+  bool open(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
     if (source.n_particles <= nMinParticleNode) return true;
-    return Space::intersect(target.data.box, source.data.centroid + Vector3D<Real>{repX, repY, repZ}, source.data.rsq);
+    return Space::intersect(target.data.box, source.data.centroid + offset, source.data.rsq);
   }
 
-  static void node(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
+  void node(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
     if (source.n_particles == 0) return;
 #ifdef BARNESHUT
     addGravity(source, target);
@@ -114,7 +122,7 @@ public:
     auto& m = source.data.multipoles;
     for (int i = 0; i < target.n_particles; i++) {
       auto& part = target.particles()[i];
-      auto r = part.position - m.cm - Vector3D<Real>{repX, repY, repZ};
+      auto r = part.position - m.cm - offset;
       auto rsq = r.lengthSquared();
       Real dir = 1.0 / sqrt(rsq);
 #ifdef HEXADECAPOLE
@@ -144,7 +152,7 @@ public:
 #endif
   }
 
-  static bool cell(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
+  bool cell(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
     // cell means: do we want to open up target
     // for example, if source is root, we dont want to open up target
     return !Space::enclose(source.data.box, target.data.box);

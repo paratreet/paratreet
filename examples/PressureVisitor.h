@@ -12,6 +12,8 @@ struct PressureVisitor {
 public:
   static constexpr const bool CallSelfLeaf = true;
 
+  void pup(PUP::er& p) {}
+
   static Real dkernelM4(Real ar2) {
     Real adk = sqrt(ar2);
     if (ar2 < 1.0) {
