@@ -243,11 +243,13 @@ public:
 #endif /*COOLING_MOLECULARH*/
 #ifdef HEXADECAPOLE
 		Vector3D<Real> dr = cm1 - cm;
-		momShiftFmomr(&mom, radius, dr.x, dr.y, dr.z);
+		if (radius > 0) momShiftFmomr(&mom, radius, dr.x, dr.y, dr.z);
 		FMOMR mom2 = m.mom;
 		dr = m.cm - cm;
-		momShiftFmomr(&mom2, m.radius, dr.x, dr.y, dr.z);
-		momScaledAddFmomr(&mom, radius, &mom2, m.radius);
+		if (radius > 0) {
+		  momShiftFmomr(&mom2, m.radius, dr.x, dr.y, dr.z);
+		  momScaledAddFmomr(&mom, radius, &mom2, m.radius);
+		}
 #else
 		//add higher order components here
 		Vector3D<double> dr = cm1 - cm;
@@ -366,11 +368,13 @@ public:
 #ifdef HEXADECAPOLE
 		Vector3D<Real> dr = cm - newMoments.cm;
 		newMoments.mom = mom;
-		momShiftFmomr(&mom, radius, dr.x, dr.y, dr.z);
+		if (radius > 0) momShiftFmomr(&mom, radius, dr.x, dr.y, dr.z);
 		FMOMR mom2 = m.mom;
 		dr = m.cm - newMoments.cm;
-		momShiftFmomr(&mom2, m.radius, dr.x, dr.y, dr.z);
-		momScaledSubFmomr(&newMoments.mom, radius, &mom2, m.radius);
+		if (radius > 0) {
+		  momShiftFmomr(&mom2, m.radius, dr.x, dr.y, dr.z);
+		  momScaledSubFmomr(&newMoments.mom, radius, &mom2, m.radius);
+		}
 #else
 		//subtract off higher order components here
 		Vector3D<double> dr = cm - newMoments.cm;
