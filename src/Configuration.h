@@ -43,7 +43,8 @@ namespace paratreet {
       } else if (s == "longest") {
         this->storage_ = T::eLongest;
       } else {
-        CmiAbort("invalid value %s for %s!", s.c_str(), this->name().c_str());
+        CmiPrintf("Invalid value %s for %s!", s.c_str(), this->name().c_str());
+        CmiAbort("Invalid value -- see above");
       }
     }
 
@@ -60,7 +61,8 @@ namespace paratreet {
       } else if (s == "longest") {
         this->storage_ = T::eLongest;
       } else {
-        CmiAbort("invalid value %s for %s!", s.c_str(), this->name().c_str());
+        CmiPrintf("Invalid value %s for %s!", s.c_str(), this->name().c_str());
+        CmiAbort("Invalid value -- see above");
       }
     }
 
