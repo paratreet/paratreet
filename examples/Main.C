@@ -46,7 +46,7 @@ PARATREET_REGISTER_MAIN(ExMain);
 
     verify = false;
     dual_tree = false;
-    periodic = true;
+    periodic = false;
     peanoKey = 3;
     iter_start_collision = 0;
 

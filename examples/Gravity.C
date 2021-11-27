@@ -25,7 +25,6 @@ extern bool periodic;
           for (int Y = -N; Y <= N; Y++) {
             for (int Z = -N; Z <= N; Z++) {
               Vector3D<Real> offset (X * univ.x, Y * univ.y, Z * univ.z);
-              CkPrintf("starting it with offset %f, %f %f\n", offset.x, offset.y, offset.z);
               proxy_pack.partition.template startDown<GravityVisitor>(GravityVisitor(offset));
               CkWaitQD();
             }

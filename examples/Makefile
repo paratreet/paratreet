@@ -46,7 +46,7 @@ Main.o: Main.C $(VISITORS) $(OTHERS) Main.decl.h
 moments.o: moments.C
 	$(CHARMC) -c $<
 
-test: Gravity
+test: all
 	./charmrun ./Gravity -f $(BASE_PATH)/inputgen/100k.tipsy -d sfc +p3 ++ppn 3 +pemap 1-3 +commap 0 ++local
 
 clean:
