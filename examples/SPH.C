@@ -91,7 +91,7 @@ PARATREET_REGISTER_PER_LEAF_FN(SymmetricForceFn, CentroidData, (
   void ExMain::traversalFn(BoundingBox& universe, ProxyPack<CentroidData>& proxy_pack, int iter) {
     neighbor_list_collector.reset(CkCallbackResumeThread());
     double start_time = CkWallTimer();
-    proxy_pack.partition.template startUpAndDown<DensityVisitor>();
+    proxy_pack.partition.template startUpAndDown<DensityVisitor>(DensityVisitor());
     CkWaitQD();
     CkPrintf("K-nearest neighbors traversal: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
     start_time = CkWallTimer();
@@ -125,5 +125,5 @@ PARATREET_REGISTER_PER_LEAF_FN(SymmetricForceFn, CentroidData, (
   }
 
   Real ExMain::getTimestep(BoundingBox& universe, Real max_velocity) {
-    return 0.0002;
+    return 1e-6;
   }

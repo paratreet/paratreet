@@ -23,10 +23,9 @@ mainmodule Main {
         entry void addRequest(int, Key);
         entry [inline] void forwardRequest(int, Particle);
         entry [inline] void fillRequest(int, Particle);
-        entry [inline] void savePartitionHome(int, Particle);
         entry void shareAccelerations();
-        entry void addAcceleration(Particle);
-        entry void forwardAcceleration(Particle);
+        entry void addAccelerations(const std::vector<Particle>&);
+        entry void forwardAccelerations(const std::vector<Particle>&);
         entry void reset(const CkCallback&);
     }
 
@@ -41,41 +40,15 @@ mainmodule Main {
         entry void reset(const CkCallback&);
     }
 
-    extern entry void Partition<CentroidData> startDown<GravityVisitor<0,0,0>> ();
-    extern entry void Partition<CentroidData> startDown<GravityVisitor<-1,-1,-1>> ();
-    extern entry void Partition<CentroidData> startDown<GravityVisitor<-1,-1,0>> ();
-    extern entry void Partition<CentroidData> startDown<GravityVisitor<-1,-1,1>> ();
-    extern entry void Partition<CentroidData> startDown<GravityVisitor<-1,0,-1>> ();
-    extern entry void Partition<CentroidData> startDown<GravityVisitor<-1,0,0>> ();
-    extern entry void Partition<CentroidData> startDown<GravityVisitor<-1,0,1>> ();
-    extern entry void Partition<CentroidData> startDown<GravityVisitor<-1,1,-1>> ();
-    extern entry void Partition<CentroidData> startDown<GravityVisitor<-1,1,0>> ();
-    extern entry void Partition<CentroidData> startDown<GravityVisitor<-1,1,1>> ();
-    extern entry void Partition<CentroidData> startDown<GravityVisitor<0,-1,-1>> ();
-    extern entry void Partition<CentroidData> startDown<GravityVisitor<0,-1,0>> ();
-    extern entry void Partition<CentroidData> startDown<GravityVisitor<0,-1,1>> ();
-    extern entry void Partition<CentroidData> startDown<GravityVisitor<0,0,-1>> ();
-    extern entry void Partition<CentroidData> startDown<GravityVisitor<0,0,1>> ();
-    extern entry void Partition<CentroidData> startDown<GravityVisitor<0,1,-1>> ();
-    extern entry void Partition<CentroidData> startDown<GravityVisitor<0,1,0>> ();
-    extern entry void Partition<CentroidData> startDown<GravityVisitor<0,1,1>> ();
-    extern entry void Partition<CentroidData> startDown<GravityVisitor<1,-1,-1>> ();
-    extern entry void Partition<CentroidData> startDown<GravityVisitor<1,-1,0>> ();
-    extern entry void Partition<CentroidData> startDown<GravityVisitor<1,-1,1>> ();
-    extern entry void Partition<CentroidData> startDown<GravityVisitor<1,0,-1>> ();
-    extern entry void Partition<CentroidData> startDown<GravityVisitor<1,0,0>> ();
-    extern entry void Partition<CentroidData> startDown<GravityVisitor<1,0,1>> ();
-    extern entry void Partition<CentroidData> startDown<GravityVisitor<1,1,-1>> ();
-    extern entry void Partition<CentroidData> startDown<GravityVisitor<1,1,0>> ();
-    extern entry void Partition<CentroidData> startDown<GravityVisitor<1,1,1>> ();
+    extern entry void Partition<CentroidData> startDown<GravityVisitor> (GravityVisitor v);
 
-    extern entry void Subtree<CentroidData> startDual<GravityVisitor<0,0,0>> ();
-    extern entry void Partition<CentroidData> startBasicDown<GravityVisitor<0,0,0>> ();
-    extern entry void Partition<CentroidData> startDown<CollisionVisitor> ();
-    extern entry void Partition<CentroidData> startDown<VisitAllVisitor> ();
-    extern entry void Partition<CentroidData> startBasicDown<VisitAllVisitor> ();
-    extern entry void Partition<CentroidData> startUpAndDown<DensityVisitor> ();
-    //extern entry void Partition<CentroidData> startDown<PressureVisitor> ();
-    extern entry void CacheManager<CentroidData> startPrefetch<GravityVisitor<0,0,0>>(DPHolder<CentroidData>, CkCallback);
-    extern entry void Driver<CentroidData> prefetch<GravityVisitor<0,0,0>> (CentroidData, int, CkCallback);
+    extern entry void Subtree<CentroidData> startDual<GravityVisitor> (GravityVisitor v);
+    extern entry void Partition<CentroidData> startBasicDown<GravityVisitor> (GravityVisitor v);
+    extern entry void Partition<CentroidData> startDown<CollisionVisitor> (CollisionVisitor v);
+    extern entry void Partition<CentroidData> startDown<VisitAllVisitor> (VisitAllVisitor v);
+    extern entry void Partition<CentroidData> startBasicDown<VisitAllVisitor> (VisitAllVisitor v);
+    extern entry void Partition<CentroidData> startUpAndDown<DensityVisitor> (DensityVisitor v);
+    //extern entry void Partition<CentroidData> startDown<PressureVisitor> (PressureVisitor v);
+    extern entry void CacheManager<CentroidData> startPrefetch<GravityVisitor>(DPHolder<CentroidData>, CkCallback);
+    extern entry void Driver<CentroidData> prefetch<GravityVisitor> (CentroidData, int, CkCallback);
 }

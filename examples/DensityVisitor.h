@@ -15,6 +15,8 @@ struct DensityVisitor {
 public:
   static constexpr const bool CallSelfLeaf = true;
 
+  void pup(PUP::er& p) {}
+
 // in leaf check for not same particle plz
 private:
   static constexpr const int k = 32;

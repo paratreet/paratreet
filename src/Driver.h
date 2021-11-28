@@ -249,6 +249,7 @@ public:
         CkPrintf("Load balancing: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
       }
       // Destroy subtrees and perform decomposition from scratch
+      resumer.reset();
       if (complete_rebuild) {
         treespec.reset();
         subtrees.destroy();

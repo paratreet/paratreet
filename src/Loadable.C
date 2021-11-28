@@ -64,8 +64,8 @@ parameter_map load_parameters(const char* file) {
       })();
       // validate that a correct insertion occured
       if (!ins.second) {
-        CmiAbort("insertion did not occur; was parameter %s defined twice?\n",
-                 key.c_str());
+        CmiPrintf("insertion did not occur; was parameter %s defined twice?\n", key.c_str());
+        CmiAbort("Value error -- see above");
       }
       CmiEnforce((ins.first->second).is_type(ty));
     }
@@ -87,7 +87,8 @@ void Loadable::load(const char* file) {
 
       params.erase(search);
     } else if (field->required()) {
-      CmiAbort("fatal> missing required parameter %s!", name.c_str());
+      CmiPrintf("fatal> missing required parameter %s!", name.c_str());
+      CmiAbort("Required missing parameter -- see above");
     }
   }
 

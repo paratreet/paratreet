@@ -11,7 +11,7 @@
   }
 
   void ExMain::traversalFn(BoundingBox& universe, ProxyPack<CentroidData>& proxy_pack, int iter) {
-    proxy_pack.partition.template startDown<VisitAllVisitor>();
+    proxy_pack.partition.template startDown<VisitAllVisitor>(VisitAllVisitor());
   }
 
   void ExMain::postIterationFn(BoundingBox& universe, ProxyPack<CentroidData>& proxy_pack, int iter) {
