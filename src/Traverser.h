@@ -231,6 +231,7 @@ protected:
   int num_requested = 0;
   int saved_start_idx = 0;
   int request_pause_interval = 0;
+  int next_stop_index = 0;
   const bool delay_leaf;
 
 protected:
@@ -247,6 +248,8 @@ public:
     : v(vi), trav_idx(ti), leaves(leavesi), part(parti), delay_leaf(delay_leafi)
   {
     request_pause_interval = paratreet::getConfiguration().request_pause_interval;
+    auto iter_pause_interval = paratreet::getConfiguration().iter_pause_interval;
+    next_stop_index += iter_pause_interval > 0 ? iter_pause_interval : leaves.size();
   }
   virtual ~BasicDownTraverser() = default;
   virtual bool isFinished() override {return curr_nodes.empty();}
@@ -258,9 +261,11 @@ public:
     startTrav();
   }
   virtual void interact() override {this->template interactBase<Visitor> (v, part);}
-  virtual bool wantsPause() const override {return num_requested > request_pause_interval;}
+  virtual bool wantsPause() const override {return saved_start_idx > next_stop_index || num_requested > request_pause_interval;}
   virtual void resumeAfterPause() override {
     num_requested = 0;
+    auto iter_pause_interval = paratreet::getConfiguration().iter_pause_interval;
+    next_stop_index += iter_pause_interval > 0 ? iter_pause_interval : leaves.size();
     startTrav();
   }
   void doTrav(Node<Data>* start_node, int bucket) {
