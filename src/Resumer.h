@@ -28,6 +28,7 @@ public: // these need to be seen by other local chares
     }
     CkAssert(waiting.empty()); // should have gotten rid of them
 #endif
+    all_resume_nodes.clear();
   }
 
   void process(Key key) {

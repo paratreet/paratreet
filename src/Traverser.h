@@ -406,7 +406,7 @@ private:
                 else part.cm_proxy[node->cm_index].requestNodes(std::make_pair(node->key, part.cm_local->thisIndex));
               }
               auto& list = part.r_local->waiting[node->key];
-             if (list.empty() || (list.back().first == trav_idx && list.back().second == part.thisIndex)) list.emplace_back(trav_idx, part.thisIndex);
+              if (list.empty() || (list.back().first == trav_idx && list.back().second == part.thisIndex)) list.emplace_back(trav_idx, part.thisIndex);
               break;
             }
           default:

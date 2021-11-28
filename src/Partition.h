@@ -81,8 +81,10 @@ private:
   void erasePartition();
   void copyParticles(std::vector<Particle>& particles, bool check_delete);
   void startNewTraverser() {
-    r_local->all_resume_nodes.emplace_back();
-    r_local->all_resume_nodes.back().resize(n_partitions);
+    if (r_local->all_resume_nodes.size() < traversers.size()) {
+      r_local->all_resume_nodes.emplace_back();
+      r_local->all_resume_nodes.back().resize(n_partitions);
+    }
     traversers.back()->start();
   }
   void flush(CProxy_Reader, std::vector<Particle>&);

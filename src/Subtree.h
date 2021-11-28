@@ -218,8 +218,10 @@ template <typename Data>
 template <typename Visitor>
 void Subtree<Data>::startDual(Visitor v) {
   r_local = r_proxy.ckLocalBranch();
-  r_local->all_resume_nodes.emplace_back();
-  r_local->all_resume_nodes.back().resize(n_partitions);
+  if (r_local->all_resume_nodes.empty()) {
+    r_local->all_resume_nodes.emplace_back();
+    r_local->all_resume_nodes.back().resize(n_subtrees);
+  }
   r_local->subtree_proxy = this->thisProxy;
   r_local->use_subtree = true;
   cm_local = cm_proxy.ckLocalBranch();
