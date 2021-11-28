@@ -194,7 +194,7 @@ public:
         }
     }
     if (!new_active_buckets.empty()) {
-      if (!node->is_leaf && wantsPause()) {
+      if (node->type == Node<Data>::Type::Internal && wantsPause()) {
         paused_curr_nodes.emplace_back(node, new_active_buckets);
       } else {
         for (int idx = 0; idx < node->n_children; idx++) {
