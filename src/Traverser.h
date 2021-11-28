@@ -239,7 +239,7 @@ protected:
       if (wantsPause()) break;
       doTrav(part.cm_local->root, saved_start_idx);
     }
-    if (saved_start_idx < leaves.size()) CkPrintf("quitting ssi at %d\n", saved_start_idx);
+    //if (saved_start_idx < leaves.size()) CkPrintf("quitting ssi at %d\n", saved_start_idx);
   }
 
 public:

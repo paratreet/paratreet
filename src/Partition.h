@@ -88,7 +88,7 @@ private:
     }
     traversers.back()->start();
     if (traversers.back()->wantsPause()) {
-      CkPrintf("pausing trav %d\n", this->thisIndex);
+      //CkPrintf("pausing trav %d\n", this->thisIndex);
       this->thisProxy[this->thisIndex].resumeAfterPause(traversers.size() - 1);
     }
   }
@@ -142,7 +142,7 @@ void Partition<Data>::resumeAfterPause(size_t travIdx)
 {
   traversers[travIdx]->resumeAfterPause();
   if (traversers[travIdx]->wantsPause()) {
-    CkPrintf("pausing trav %d\n", this->thisIndex);
+    //CkPrintf("pausing trav %d\n", this->thisIndex);
     this->thisProxy[this->thisIndex].resumeAfterPause(travIdx);
   }
 }
