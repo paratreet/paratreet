@@ -251,6 +251,7 @@ public:
       // Destroy subtrees and perform decomposition from scratch
       if (complete_rebuild) {
         treespec.reset();
+        resumer.reset();
         subtrees.destroy();
         partitions.destroy();
         decompose(iter+1);

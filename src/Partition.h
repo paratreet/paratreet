@@ -27,7 +27,7 @@ struct Partition : public CBase_Partition<Data> {
   std::vector<Particle> saved_particles;
   bool matching_decomps;
 
-  std::unique_ptr<Traverser<Data>> traverser;
+  std::vector<std::unique_ptr<Traverser<Data>>> traversers;
   int n_partitions;
 
   std::map<int, std::vector<Key>> lookup_leaf_keys;
@@ -47,7 +47,7 @@ struct Partition : public CBase_Partition<Data> {
   template<typename Visitor> void startDown(Visitor v);
   template<typename Visitor> void startBasicDown(Visitor v);
   template<typename Visitor> void startUpAndDown(Visitor v);
-  void goDown();
+  void goDown(size_t travIdx);
   void interact(const CkCallback& cb);
 
   void addLeaves(const std::vector<Node<Data>*>&, int);
@@ -80,6 +80,13 @@ private:
   void initLocalBranches();
   void erasePartition();
   void copyParticles(std::vector<Particle>& particles, bool check_delete);
+  void startNewTraverser() {
+    if (r_local->all_resume_nodes.size() < traversers.size()) {
+      r_local->all_resume_nodes.emplace_back();
+      r_local->all_resume_nodes.back().resize(n_partitions);
+    }
+    traversers.back()->start();
+  }
   void flush(CProxy_Reader, std::vector<Particle>&);
   void makeLeaves(const std::vector<Key>&, int);
   template <typename WriterProxy> void doOutput(WriterProxy w, int n_total_particles, CkCallback cb);
@@ -107,7 +114,6 @@ template <typename Data>
 void Partition<Data>::initLocalBranches() {
   r_local = r_proxy.ckLocalBranch();
   r_local->part_proxy = this->thisProxy;
-  r_local->resume_nodes_per_part.resize(n_partitions);
   cm_local = cm_proxy.ckLocalBranch();
   cm_local->lockMaps();
   cm_local->partition_lookup.emplace(this->thisIndex, this);
@@ -122,8 +128,8 @@ void Partition<Data>::startDown(Visitor v)
 {
   initLocalBranches();
   interactions.resize(leaves.size());
-  traverser.reset(new TransposedDownTraverser<Data, Visitor>(v, leaves, *this));
-  traverser->start();
+  traversers.emplace_back(new TransposedDownTraverser<Data, Visitor>(v, traversers.size(), leaves, *this));
+  startNewTraverser();
 }
 
 template <typename Data>
@@ -132,8 +138,8 @@ void Partition<Data>::startBasicDown(Visitor v)
 {
   initLocalBranches();
   interactions.resize(leaves.size());
-  traverser.reset(new BasicDownTraverser<Data, Visitor>(v, leaves, *this));
-  traverser->start();
+  traversers.emplace_back(new BasicDownTraverser<Data, Visitor>(v, traversers.size(), leaves, *this));
+  startNewTraverser();
 }
 
 
@@ -143,20 +149,20 @@ void Partition<Data>::startUpAndDown(Visitor v)
 {
   initLocalBranches();
   interactions.resize(leaves.size());
-  traverser.reset(new UpnDTraverser<Data, Visitor>(v, *this));
-  traverser->start();
+  traversers.emplace_back(new UpnDTraverser<Data, Visitor>(v, traversers.size(), *this));
+  startNewTraverser();
 }
 
 template <typename Data>
-void Partition<Data>::goDown()
+void Partition<Data>::goDown(size_t travIdx)
 {
-  traverser->resumeTrav();
+  traversers[travIdx]->resumeTrav();
 }
 
 template <typename Data>
 void Partition<Data>::interact(const CkCallback& cb)
 {
-  if (traverser) traverser->interact();
+  for (auto& trav : traversers) trav->interact();
   this->contribute(cb);
 }
 
@@ -254,7 +260,7 @@ void Partition<Data>::destroy()
 template <typename Data>
 void Partition<Data>::reset()
 {
-  traverser.reset();
+  traversers.clear();
   for (int i = 0; i < leaves.size(); i++) {
     if (leaves[i] != tree_leaves[i]) {
       leaves[i]->freeParticles();
