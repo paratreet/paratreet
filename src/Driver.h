@@ -256,6 +256,7 @@ public:
         partitions.destroy();
         decompose(iter+1);
       } else {
+        resumer.reset();
         partitions.reset();
         subtrees.reset();
       }
