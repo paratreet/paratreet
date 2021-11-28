@@ -70,6 +70,7 @@ template <typename Data, typename Visitor>
 class TransposedDownTraverser : public Traverser<Data> {
 protected:
   Visitor v;
+  size_t trav_idx = 0;
   std::vector<Node<Data>*> leaves;
   Partition<Data>& part;
   std::unordered_map<Key, std::vector<int>> curr_nodes;
@@ -86,8 +87,8 @@ protected:
   }
 
 public:
-  TransposedDownTraverser(Visitor& vi, std::vector<Node<Data>*> leavesi, Partition<Data>& parti, bool delay_leafi = false)
-    : v(vi), leaves(leavesi), part(parti), delay_leaf(delay_leafi)
+  TransposedDownTraverser(Visitor& vi, size_t ti, std::vector<Node<Data>*> leavesi, Partition<Data>& parti, bool delay_leafi = false)
+    : v(vi), trav_idx(ti), leaves(leavesi), part(parti), delay_leaf(delay_leafi)
   { }
   virtual ~TransposedDownTraverser() = default;
   virtual bool isFinished() override {return curr_nodes.empty();}
@@ -160,7 +161,7 @@ public:
           }
           // Add the Partition that initiated the traversal to the waiting list
           // maintained in Resumer
-          part.r_local->waiting[node->key].push_back(part.thisIndex);
+          part.r_local->waiting[node->key].emplace_back(trav_idx, part.thisIndex);
           break;
         }
       default:
@@ -175,7 +176,7 @@ public:
     }
   }
   virtual void resumeTrav() override {
-    auto && resume_nodes = part.r_local->resume_nodes_per_part[part.thisIndex];
+    auto && resume_nodes = part.r_local->all_resume_nodes[trav_idx][part.thisIndex];
     CkAssert(!resume_nodes.empty()); // nothing to resume on?
     while (!resume_nodes.empty()) {
       auto start_node = resume_nodes.front();
@@ -195,6 +196,7 @@ template <typename Data, typename Visitor>
 class BasicDownTraverser : public Traverser<Data> {
 protected:
   Visitor v;
+  size_t trav_idx;
   std::vector<Node<Data>*> leaves;
   Partition<Data>& part;
   std::unordered_map<Key, std::vector<int>> curr_nodes;
@@ -209,8 +211,8 @@ protected:
   }
 
 public:
-  BasicDownTraverser(Visitor& vi, std::vector<Node<Data>*> leavesi, Partition<Data>& parti, bool delay_leafi = false)
-    : v(vi), leaves(leavesi), part(parti), delay_leaf(delay_leafi)
+  BasicDownTraverser(Visitor& vi, size_t ti, std::vector<Node<Data>*> leavesi, Partition<Data>& parti, bool delay_leafi = false)
+    : v(vi), trav_idx(ti), leaves(leavesi), part(parti), delay_leaf(delay_leafi)
   { }
   virtual ~BasicDownTraverser() = default;
   virtual bool isFinished() override {return curr_nodes.empty();}
@@ -284,7 +286,7 @@ public:
             }
             // Add the Partition that initiated the traversal to the waiting list
             // maintained in Resumer
-            part.r_local->waiting[node->key].push_back(part.thisIndex);
+            part.r_local->waiting[node->key].emplace_back(trav_idx, part.thisIndex);
             break;
           }
         default:
@@ -295,7 +297,7 @@ public:
     }
   }
   virtual void resumeTrav() override {
-    auto && resume_nodes = part.r_local->resume_nodes_per_part[part.thisIndex];
+    auto && resume_nodes = part.r_local->all_resume_nodes[trav_idx][part.thisIndex];
     CkAssert(!resume_nodes.empty()); // nothing to resume on?
     while (!resume_nodes.empty()) {
       auto start_node = resume_nodes.front();
@@ -316,12 +318,13 @@ template <typename Data, typename Visitor>
 class UpnDTraverser : public Traverser<Data> {
 private:
   Visitor v;
+  size_t trav_idx;
   Partition<Data>& part;
   std::unordered_map<Key, std::vector<int>> curr_nodes;
   std::vector<int> num_waiting;
   std::vector<Node<Data>*> trav_tops;
 public:
-  UpnDTraverser(Visitor& vi, Partition<Data>& parti) : v(vi), part(parti) {
+  UpnDTraverser(Visitor& vi, size_t ti, Partition<Data>& parti) : v(vi), trav_idx(ti), part(parti) {
     trav_tops.resize(part.leaves.size());
     for (int i = 0; i < part.leaves.size(); i++) {
       auto tree_leaf = part.tree_leaves[i];
@@ -341,7 +344,7 @@ public:
   }
 
   virtual void resumeTrav() {
-    auto && resume_nodes = part.r_local->resume_nodes_per_part[part.thisIndex];
+    auto && resume_nodes = part.r_local->all_resume_nodes[trav_idx][part.thisIndex];
     while (!resume_nodes.empty()) {
       auto start_node = resume_nodes.front();
       resume_nodes.pop();
@@ -402,8 +405,8 @@ private:
                   part.tc_proxy[node->key].requestData(part.cm_local->thisIndex);
                 else part.cm_proxy[node->cm_index].requestNodes(std::make_pair(node->key, part.cm_local->thisIndex));
               }
-              std::vector<int>& list = part.r_local->waiting[node->key];
-              if (!list.size() || list.back() != part.thisIndex) list.push_back(part.thisIndex);
+              auto& list = part.r_local->waiting[node->key];
+             if (list.empty() || (list.back().first == trav_idx && list.back().second == part.thisIndex)) list.emplace_back(trav_idx, part.thisIndex);
               break;
             }
           default:
@@ -435,7 +438,7 @@ private:
     }
     curr_nodes.erase(key);
     for (auto cn : curr_nodes_insertions) curr_nodes[cn.first].push_back(cn.second);
-    auto && resume_nodes = part.r_local->resume_nodes_per_part[part.thisIndex];
+    auto && resume_nodes = part.r_local->all_resume_nodes[trav_idx][part.thisIndex];
     for (auto && new_node : new_nodes) resume_nodes.push(new_node);
   }
 };
@@ -446,10 +449,11 @@ class DualTraverser : public Traverser<Data> {
 // we start by assigning one payload to each treepiece
 private:
   Visitor v;
+  size_t trav_idx;
   Subtree<Data>& tp;
   std::unordered_map<Key, std::vector<Node<Data>*>> curr_nodes; // source nodes to target nodes
 public:
-  DualTraverser(Visitor& vi, Subtree<Data>& tpi) : v(vi), tp(tpi)
+  DualTraverser(Visitor& vi, size_t ti, Subtree<Data>& tpi) : v(vi), trav_idx(ti), tp(tpi)
   {}
   void start() override {
     curr_nodes[1].push_back(tp.local_root);
@@ -481,7 +485,7 @@ public:
   }
 
   virtual void resumeTrav() override {
-    auto && resume_nodes = tp.r_local->resume_nodes_per_part[tp.thisIndex];
+    auto && resume_nodes = tp.r_local->all_resume_nodes[trav_idx][tp.thisIndex];
     while (!resume_nodes.empty()) {
       doTrav(resume_nodes.front());
       resume_nodes.pop();
@@ -547,8 +551,8 @@ public:
                 tp.tc_proxy[node->key].requestData(tp.cm_local->thisIndex);
               else tp.cm_proxy[node->cm_index].requestNodes(std::make_pair(node->key, tp.cm_local->thisIndex));
             }
-            std::vector<int>& list = tp.r_local->waiting[node->key];
-            if (!list.size() || list.back() != tp.thisIndex) list.push_back(tp.thisIndex);
+            auto& list = tp.r_local->waiting[node->key];
+            if (list.empty() || (list.back().first == trav_idx && list.back().second == tp.thisIndex)) list.emplace_back(trav_idx, tp.thisIndex);
             break;
           }
         default: break;
