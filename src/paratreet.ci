@@ -84,6 +84,7 @@ module paratreet {
     template <typename Visitor> entry void startUpAndDown(Visitor v);
     entry void interact(const CkCallback&);
     entry void goDown(size_t travIdx);
+    entry void resumeAfterPause(size_t travIdx);
     entry void receiveLeaves(std::vector<Key>, Key, int, TPHolder<Data>);
     entry void makeLeaves(int);
     entry void destroy();
