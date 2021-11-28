@@ -32,7 +32,6 @@ public: // these need to be seen by other local chares
   }
 
   void process(Key key) {
-    CkAssert(!all_resume_nodes.empty());
     auto node = cm_local->root->getDescendant(key);
     CkAssert(node && node->key == key);
     auto it = waiting.find(key);
