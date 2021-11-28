@@ -78,6 +78,7 @@ namespace paratreet {
         int flush_period;
         int flush_max_avg_ratio;
         int lb_period;
+        int request_pause_interval;
         std::string input_file;
         std::string output_file;
 
@@ -115,6 +116,7 @@ namespace paratreet {
             p | flush_period;
             p | flush_max_avg_ratio;
             p | lb_period;
+            p | request_pause_interval;
             p | input_file;
             p | output_file;
         }

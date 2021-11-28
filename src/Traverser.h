@@ -55,6 +55,9 @@ public:
   virtual void start() = 0;
   virtual bool isFinished() = 0;
 
+  virtual bool wantsPause() const {return false;}
+  virtual void resumeAfterPause() {}
+
   template <typename Visitor>
   void interactBase(Visitor& v, Partition<Data>& part)
   {
@@ -74,6 +77,9 @@ protected:
   std::vector<Node<Data>*> leaves;
   Partition<Data>& part;
   std::unordered_map<Key, std::vector<int>> curr_nodes;
+  std::vector<std::pair<Node<Data>*, std::vector<int>>> paused_curr_nodes;
+  int num_requested = 0;
+  int request_pause_interval = 0;
   const bool delay_leaf;
 
 protected:
@@ -89,14 +95,30 @@ protected:
 public:
   TransposedDownTraverser(Visitor& vi, size_t ti, std::vector<Node<Data>*> leavesi, Partition<Data>& parti, bool delay_leafi = false)
     : v(vi), trav_idx(ti), leaves(leavesi), part(parti), delay_leaf(delay_leafi)
-  { }
+  {
+    request_pause_interval = paratreet::getConfiguration().request_pause_interval;
+  }
   virtual ~TransposedDownTraverser() = default;
   virtual bool isFinished() override {return curr_nodes.empty();}
   virtual void start() override {
     // Initialize with global root key and leaves
     startTrav(part.cm_local->root);
   }
-  virtual void interact() override {this->template interactBase(v, part);}
+  virtual void interact() override {this->template interactBase<Visitor> (v, part);}
+  virtual bool wantsPause() const override {return num_requested > request_pause_interval;}
+  virtual void resumeAfterPause() override{
+    num_requested = 0;
+    size_t idx = 0u;
+    for (; idx < paused_curr_nodes.size(); idx++) {
+      if (wantsPause()) break;
+      auto& paused = paused_curr_nodes[idx];
+      for (size_t childIdx = 0; childIdx < paused.first->getBranchFactor(); childIdx++) {
+        recurse(paused.first->getChild(childIdx), paused.second);
+      }
+    }
+    paused_curr_nodes.erase(paused_curr_nodes.begin(), paused_curr_nodes.begin() + idx); // erase all up until idx
+  }
+
   void recurse(Node<Data>* node, std::vector<int>& active_buckets) {
     CkAssert(node);
     std::vector<int> new_active_buckets;
@@ -146,6 +168,8 @@ public:
           // Submit a request if the node wasn't requested before
           bool prev = node->requested.exchange(true);
           if (!prev) {
+            //CkPrintf("part idx %d requested node %d\n", part.thisIndex, node->key);
+            num_requested++;
             if (node->type == Node<Data>::Type::Boundary || node->type == Node<Data>::Type::RemoteAboveTPKey) {
               // Ask TreeCanopy for data
               // If the canopy is at the same level as a TP, it asks the TP
@@ -170,8 +194,12 @@ public:
         }
     }
     if (!new_active_buckets.empty()) {
-      for (int idx = 0; idx < node->n_children; idx++) {
-        recurse(node->getChild(idx), new_active_buckets);
+      if (!node->is_leaf && wantsPause()) {
+        paused_curr_nodes.emplace_back(node, new_active_buckets);
+      } else {
+        for (int idx = 0; idx < node->n_children; idx++) {
+          recurse(node->getChild(idx), new_active_buckets);
+        }
       }
     }
   }
@@ -200,27 +228,41 @@ protected:
   std::vector<Node<Data>*> leaves;
   Partition<Data>& part;
   std::unordered_map<Key, std::vector<int>> curr_nodes;
+  int num_requested = 0;
+  int saved_start_idx = 0;
+  int request_pause_interval = 0;
   const bool delay_leaf;
 
 protected:
-  void startTrav(Node<Data>* new_payload) {
-    for (int i = 0; i < leaves.size(); i++) {
-      leaves[i]->data.widen();
-      doTrav(new_payload, i);
+  void startTrav() {
+    for (; saved_start_idx < leaves.size(); saved_start_idx++) {
+      if (wantsPause()) break;
+      doTrav(part.cm_local->root, saved_start_idx);
     }
+    if (saved_start_idx < leaves.size()) CkPrintf("quitting ssi at %d\n", saved_start_idx);
   }
 
 public:
   BasicDownTraverser(Visitor& vi, size_t ti, std::vector<Node<Data>*> leavesi, Partition<Data>& parti, bool delay_leafi = false)
     : v(vi), trav_idx(ti), leaves(leavesi), part(parti), delay_leaf(delay_leafi)
-  { }
+  {
+    request_pause_interval = paratreet::getConfiguration().request_pause_interval;
+  }
   virtual ~BasicDownTraverser() = default;
   virtual bool isFinished() override {return curr_nodes.empty();}
   virtual void start() override {
+    for (int i = 0; i < leaves.size(); i++) {
+      leaves[i]->data.widen();
+    }
     // Initialize with global root key and leaves
-    startTrav(part.cm_local->root);
+    startTrav();
   }
   virtual void interact() override {this->template interactBase<Visitor> (v, part);}
+  virtual bool wantsPause() const override {return num_requested > request_pause_interval;}
+  virtual void resumeAfterPause() override {
+    num_requested = 0;
+    startTrav();
+  }
   void doTrav(Node<Data>* start_node, int bucket) {
     CkAssert(start_node);
 #if DEBUG
@@ -229,8 +271,8 @@ public:
     std::deque<Node<Data>*> nodes;
     nodes.push_front(start_node);
     while (!nodes.empty()) {
-      auto node = nodes.back(); // TODO fix
-      nodes.pop_back(); // TODO fix
+      auto node = nodes.back(); // maybe make it to do front or back.
+      nodes.pop_back(); // same as above
       switch (node->type) {
         case Node<Data>::Type::Leaf:
         case Node<Data>::Type::CachedRemoteLeaf:
@@ -271,6 +313,8 @@ public:
             // Submit a request if the node wasn't requested before
             bool prev = node->requested.exchange(true);
             if (!prev) {
+              //CkPrintf("part idx %d requested node %d\n", part.thisIndex, node->key);
+              num_requested++;
               if (node->type == Node<Data>::Type::Boundary || node->type == Node<Data>::Type::RemoteAboveTPKey) {
                 // Ask TreeCanopy for data
                 // If the canopy is at the same level as a TP, it asks the TP

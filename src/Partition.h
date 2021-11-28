@@ -48,6 +48,7 @@ struct Partition : public CBase_Partition<Data> {
   template<typename Visitor> void startBasicDown(Visitor v);
   template<typename Visitor> void startUpAndDown(Visitor v);
   void goDown(size_t travIdx);
+  void resumeAfterPause(size_t travIdx);
   void interact(const CkCallback& cb);
 
   void addLeaves(const std::vector<Node<Data>*>&, int);
@@ -86,6 +87,10 @@ private:
       r_local->all_resume_nodes.back().resize(n_partitions);
     }
     traversers.back()->start();
+    if (traversers.back()->wantsPause()) {
+      CkPrintf("pausing trav %d\n", this->thisIndex);
+      this->thisProxy[this->thisIndex].resumeAfterPause(traversers.size() - 1);
+    }
   }
   void flush(CProxy_Reader, std::vector<Particle>&);
   void makeLeaves(const std::vector<Key>&, int);
@@ -133,6 +138,16 @@ void Partition<Data>::startDown(Visitor v)
 }
 
 template <typename Data>
+void Partition<Data>::resumeAfterPause(size_t travIdx)
+{
+  traversers[travIdx]->resumeAfterPause();
+  if (traversers[travIdx]->wantsPause()) {
+    CkPrintf("pausing trav %d\n", this->thisIndex);
+    this->thisProxy[this->thisIndex].resumeAfterPause(travIdx);
+  }
+}
+
+template <typename Data>
 template <typename Visitor>
 void Partition<Data>::startBasicDown(Visitor v)
 {
@@ -141,7 +156,6 @@ void Partition<Data>::startBasicDown(Visitor v)
   traversers.emplace_back(new BasicDownTraverser<Data, Visitor>(v, traversers.size(), leaves, *this));
   startNewTraverser();
 }
-
 
 template <typename Data>
 template <typename Visitor>

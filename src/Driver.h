@@ -251,7 +251,6 @@ public:
       // Destroy subtrees and perform decomposition from scratch
       if (complete_rebuild) {
         treespec.reset();
-        resumer.reset();
         subtrees.destroy();
         partitions.destroy();
         decompose(iter+1);
@@ -260,6 +259,7 @@ public:
         subtrees.reset();
       }
 
+      resumer.reset();
       // Clear cache and other storages used in this iteration
       cache_manager.destroy(true);
       CkCallback statsCb (CkReductionTarget(Driver<Data>, countInts), this->thisProxy);

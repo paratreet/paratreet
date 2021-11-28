@@ -43,6 +43,7 @@ PARATREET_REGISTER_MAIN(ExMain);
     conf.flush_period = 0;
     conf.flush_max_avg_ratio = 10.;
     conf.lb_period = 5;
+    conf.request_pause_interval = 20;
 
     verify = false;
     dual_tree = false;
