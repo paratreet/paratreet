@@ -4,6 +4,7 @@
 extern bool verify;
 extern bool dual_tree;
 extern bool periodic;
+extern Real theta;
 
   using namespace paratreet;
 
@@ -15,9 +16,9 @@ extern bool periodic;
 
   void ExMain::traversalFn(BoundingBox& universe, ProxyPack<CentroidData>& proxy_pack, int iter) {
     if (dual_tree && periodic) CkAbort("Not sure about this -- dual_tree and periodic both set");
-    if (dual_tree) proxy_pack.subtree.startDual<GravityVisitor>(GravityVisitor(Vector3D<Real>(0, 0, 0)));
+    if (dual_tree) proxy_pack.subtree.startDual<GravityVisitor>(GravityVisitor(Vector3D<Real>(0, 0, 0), theta));
     if (!periodic) {
-      proxy_pack.partition.template startDown<GravityVisitor>(GravityVisitor(Vector3D<Real>(0, 0, 0)));
+      proxy_pack.partition.template startBasicDown<GravityVisitor>(GravityVisitor(Vector3D<Real>(0, 0, 0), theta));
     } else {
       auto replicas = [&] (int N) {
         auto univ = thread_state_holder.ckLocalBranch()->universe.box.size();
@@ -25,7 +26,7 @@ extern bool periodic;
           for (int Y = -N; Y <= N; Y++) {
             for (int Z = -N; Z <= N; Z++) {
               Vector3D<Real> offset (X * univ.x, Y * univ.y, Z * univ.z);
-              proxy_pack.partition.template startDown<GravityVisitor>(GravityVisitor(offset));
+              proxy_pack.partition.template startDown<GravityVisitor>(GravityVisitor(offset, theta));
             }
           }
         }
