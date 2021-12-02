@@ -18,7 +18,7 @@ extern Real theta;
     if (dual_tree && periodic) CkAbort("Not sure about this -- dual_tree and periodic both set");
     if (dual_tree) proxy_pack.subtree.startDual<GravityVisitor>(GravityVisitor(Vector3D<Real>(0, 0, 0), theta));
     if (!periodic) {
-      proxy_pack.partition.template startBasicDown<GravityVisitor>(GravityVisitor(Vector3D<Real>(0, 0, 0), theta));
+      proxy_pack.partition.template startDown<GravityVisitor>(GravityVisitor(Vector3D<Real>(0, 0, 0), theta));
     } else {
       auto replicas = [&] (int N) {
         auto univ = thread_state_holder.ckLocalBranch()->universe.box.size();
