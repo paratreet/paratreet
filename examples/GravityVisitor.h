@@ -9,19 +9,21 @@
 class GravityVisitor {
 public:
   static constexpr const bool CallSelfLeaf = true;
+  static constexpr const Real opening_geometry_factor_squared = 4.0 / 3.0;
   GravityVisitor() : offset(0, 0, 0) {}
-  GravityVisitor(Vector3D<Real> offseti) : offset(offseti) {}
+  GravityVisitor(Vector3D<Real> offseti, Real theta) : offset(offseti), gravity_factor(opening_geometry_factor_squared / (theta * theta)) {}
 
   void pup(PUP::er& p) {
     p | offset;
+    p | gravity_factor;
   }
 
 private:
   Vector3D<Real> offset;
+  Real gravity_factor;
 
 private:
   // note gconst = 1
-  // note: theta defined elsewhere
   static constexpr int  nMinParticleNode = 6;
 
   inline void SPLINEQ(Real invr, Real r2, Real twoh, Real& a, Real& b, Real& c, Real& d)
@@ -107,7 +109,8 @@ public:
 
   bool open(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
     if (source.n_particles <= nMinParticleNode) return true;
-    return Space::intersect(target.data.box, source.data.centroid + offset, source.data.rsq);
+    Real dataRsq = source.data.rsq * gravity_factor;
+    return Space::intersect(target.data.box, source.data.centroid + offset, dataRsq);
   }
 
   void node(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
