@@ -6,6 +6,7 @@
 
 extern bool verify;
 extern int iter_start_collision;
+extern Real theta;
 
 PARATREET_REGISTER_PER_LEAF_FN(CropFn, CentroidData, (
   [](SpatialNode<CentroidData>& leaf, Partition<CentroidData>* partition) {
@@ -53,7 +54,7 @@ PARATREET_REGISTER_PER_LEAF_FN(CollisionResolveFn, CentroidData, (
   }
 
   void ExMain::traversalFn(BoundingBox& universe, ProxyPack<CentroidData>& proxy_pack, int iter) {
-    proxy_pack.partition.template startDown<GravityVisitor>(GravityVisitor(Vector3D<Real>(0, 0, 0)));
+    proxy_pack.partition.template startDown<GravityVisitor>(GravityVisitor(Vector3D<Real>(0, 0, 0), theta));
   }
 
   void ExMain::postIterationFn(BoundingBox& universe, ProxyPack<CentroidData>& proxy_pack, int iter) {

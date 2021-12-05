@@ -13,6 +13,7 @@ PARATREET_REGISTER_MAIN(ExMain);
 /* readonly */ bool dual_tree;
 /* readonly */ bool periodic;
 /* readonly */ int peanoKey;
+/* readonly */ Real theta;
 /* readonly */ int iter_start_collision;
 /* readonly */ CProxy_CountManager count_manager;
 /* readonly */ CProxy_NeighborListCollector neighbor_list_collector;
@@ -44,11 +45,13 @@ PARATREET_REGISTER_MAIN(ExMain);
     conf.flush_max_avg_ratio = 10.;
     conf.lb_period = 5;
     conf.request_pause_interval = 20;
+    conf.iter_pause_interval = 1000;
 
     verify = false;
     dual_tree = false;
     periodic = false;
     peanoKey = 3;
+    theta = 0.7;
     iter_start_collision = 0;
 
     // Initialize member variables
