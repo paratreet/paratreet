@@ -92,14 +92,14 @@ namespace paratreet {
           this->register_field("nParticlesPerLeafMax", false, max_particles_per_leaf);
           this->register_field("achDecompType", false, decomp_type);
           this->register_field("achTreeType", false, tree_type);
-          this->register_field("nIterations", false, num_iterations);
+          this->register_field("nSteps", false, num_iterations);
           this->register_field("nShareNodes", false, num_share_nodes);
           this->register_field("iCacheShareDepth", false, cache_share_depth);
           this->register_field("iFlushPeriod", false, flush_period);
           this->register_field("iFlushPeriodMaxAvgRatio", false, flush_max_avg_ratio);
           this->register_field("iLbPeriod", false, lb_period);
-          this->register_field("achInputFile", false, input_file);
-          this->register_field("achOutputFile", false, output_file);
+          this->register_field("achInFile", false, input_file);
+          this->register_field("achOutName", false, output_file);
         }
 
 #ifdef __CHARMC__

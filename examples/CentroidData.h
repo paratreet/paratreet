@@ -8,7 +8,6 @@
 #include "ParticleComp.h"
 #include "OrientedBox.h"
 #include "MultipoleMoments.h"
-#include "Main.h"
 
 struct CentroidData {
   Vector3D<Real> moment;

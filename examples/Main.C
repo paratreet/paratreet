@@ -70,7 +70,7 @@ PARATREET_REGISTER_MAIN(ExMain);
       }
     }
 
-    while ((c = getopt(n_args, m->argv, "x:f:n:p:l:d:t:i:s:u:r:b:v:amec:")) != -1) {
+    while ((c = getopt(n_args, m->argv, "x:f:n:p:l:T:d:t:i:s:u:r:b:v:amec:")) != -1) {
       switch (c) {
         case 'x':
           break;
@@ -85,6 +85,9 @@ PARATREET_REGISTER_MAIN(ExMain);
           break;
         case 'l':
           conf.max_particles_per_leaf = atoi(optarg);
+          break;
+        case 'T':
+          conf.dTheta = atof(optarg);
           break;
         case 'd':
           input_str = optarg;
@@ -168,6 +171,8 @@ PARATREET_REGISTER_MAIN(ExMain);
     }
     delete m;
 
+    theta = conf.dTheta;
+    conf.num_iterations++;  // There is always one more iteration than step.
     // Print configuration
     CkPrintf("\n[PARATREET]\n");
     if (conf.input_file.empty()) CkAbort("Input file unspecified");
