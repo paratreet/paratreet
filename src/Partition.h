@@ -33,7 +33,6 @@ struct Partition : public CBase_Partition<Data> {
   std::map<int, std::vector<Key>> lookup_leaf_keys;
 
   // filled in during traversal
-  std::vector<std::vector<Node<Data>*>> interactions;
 
   CProxy_TreeCanopy<Data> tc_proxy;
   CProxy_CacheManager<Data> cm_proxy;
@@ -132,7 +131,6 @@ template <typename Visitor>
 void Partition<Data>::startDown(Visitor v)
 {
   initLocalBranches();
-  interactions.resize(leaves.size());
   traversers.emplace_back(new TransposedDownTraverser<Data, Visitor>(v, traversers.size(), leaves, *this));
   startNewTraverser();
 }
@@ -152,7 +150,6 @@ template <typename Visitor>
 void Partition<Data>::startBasicDown(Visitor v)
 {
   initLocalBranches();
-  interactions.resize(leaves.size());
   traversers.emplace_back(new BasicDownTraverser<Data, Visitor>(v, traversers.size(), leaves, *this));
   startNewTraverser();
 }
@@ -162,7 +159,6 @@ template <typename Visitor>
 void Partition<Data>::startUpAndDown(Visitor v)
 {
   initLocalBranches();
-  interactions.resize(leaves.size());
   traversers.emplace_back(new UpnDTraverser<Data, Visitor>(v, traversers.size(), *this));
   startNewTraverser();
 }
@@ -284,7 +280,6 @@ void Partition<Data>::reset()
   lookup_leaf_keys.clear();
   leaves.clear();
   tree_leaves.clear();
-  interactions.clear();
 }
 
 template <typename Data>
