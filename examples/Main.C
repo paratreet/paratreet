@@ -15,6 +15,7 @@ PARATREET_REGISTER_MAIN(ExMain);
 /* readonly */ int peanoKey;
 /* readonly */ Real theta;
 /* readonly */ int iter_start_collision;
+/* readonly */ Real max_timestep;
 /* readonly */ CProxy_CountManager count_manager;
 /* readonly */ CProxy_NeighborListCollector neighbor_list_collector;
 /* readonly */ CProxy_CollisionTracker collision_tracker;
@@ -53,6 +54,7 @@ PARATREET_REGISTER_MAIN(ExMain);
     peanoKey = 3;
     theta = 0.7;
     iter_start_collision = 0;
+    max_timestep = 1e-5;
 
     // Initialize member variables
     cur_iteration = 0;
@@ -70,7 +72,7 @@ PARATREET_REGISTER_MAIN(ExMain);
       }
     }
 
-    while ((c = getopt(n_args, m->argv, "x:f:n:p:l:d:t:i:s:u:r:b:v:amec:")) != -1) {
+    while ((c = getopt(n_args, m->argv, "x:f:n:p:l:d:t:i:s:u:r:b:v:amec:j:")) != -1) {
       switch (c) {
         case 'x':
           break;
@@ -149,6 +151,10 @@ PARATREET_REGISTER_MAIN(ExMain);
         case 'c':
           iter_start_collision = atoi(optarg);
           break;
+        case 'j':
+          max_timestep = atof(optarg);
+          break;
+
         default:
           CkPrintf("Usage: %s\n", m->argv[0]);
           CkPrintf("\t-f [input file]\n");
@@ -163,6 +169,7 @@ PARATREET_REGISTER_MAIN(ExMain);
           CkPrintf("\t-r [flush threshold for Subtree max_average ratio]\n");
           CkPrintf("\t-b [load balancing period]\n");
           CkPrintf("\t-v [filename prefix]\n");
+          CkPrintf("\t-j [max timestep]\n");
           CkExit();
       }
     }
@@ -176,7 +183,8 @@ PARATREET_REGISTER_MAIN(ExMain);
     CkPrintf("Tree type: %s\n", paratreet::asString(conf.tree_type).c_str());
     CkPrintf("Minimum number of subtrees: %d\n", conf.min_n_subtrees);
     CkPrintf("Minimum number of partitions: %d\n", conf.min_n_partitions);
-    CkPrintf("Maximum number of particles per leaf: %d\n\n", conf.max_particles_per_leaf);
+    CkPrintf("Maximum number of particles per leaf: %d\n", conf.max_particles_per_leaf);
+    CkPrintf("Max timestep: %lf\n\n", max_timestep);
 
     count_manager = CProxy_CountManager::ckNew(0.00001, 10000, 5);
     neighbor_list_collector = CProxy_NeighborListCollector::ckNew();

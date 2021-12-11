@@ -5,6 +5,7 @@
 #include "DensityVisitor.h"
 
 extern bool verify;
+extern Real max_timestep;
 using namespace paratreet;
 
 PARATREET_REGISTER_PER_LEAF_FN(DensityFn, CentroidData, (
@@ -125,5 +126,5 @@ PARATREET_REGISTER_PER_LEAF_FN(SymmetricForceFn, CentroidData, (
   }
 
   Real ExMain::getTimestep(BoundingBox& universe, Real max_velocity) {
-    return 1e-6;
+    return max_timestep;
   }

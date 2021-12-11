@@ -5,6 +5,7 @@ extern bool verify;
 extern bool dual_tree;
 extern bool periodic;
 extern Real theta;
+extern Real max_timestep;
 
   using namespace paratreet;
 
@@ -47,5 +48,6 @@ extern Real theta;
 
   Real ExMain::getTimestep(BoundingBox& universe, Real max_velocity) {
     Real universe_box_len = universe.box.greater_corner.x - universe.box.lesser_corner.x;
-    return universe_box_len / max_velocity / std::cbrt(universe.n_particles);
+    Real temp = universe_box_len / max_velocity / std::cbrt(universe.n_particles);
+    return std::min(temp, max_timestep);
   }
