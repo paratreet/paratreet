@@ -111,6 +111,7 @@ Subtree<Data>::Subtree(const CkCallback& cb, int n_total_particles_,
 
   tc_proxy = tc_holder.proxy;
   cm_proxy = cm_proxy_;
+  cm_local = cm_proxy.ckLocalBranch();
   r_proxy  = r_proxy_;
 
   matching_decomps = matching_decomps_;
@@ -224,7 +225,6 @@ void Subtree<Data>::startDual(Visitor v) {
   }
   r_local->subtree_proxy = this->thisProxy;
   r_local->use_subtree = true;
-  cm_local = cm_proxy.ckLocalBranch();
   traverser.reset(new DualTraverser<Data, Visitor>(v, 0, *this));
   traverser->start();
 }
@@ -266,9 +266,9 @@ void Subtree<Data>::buildTree(CProxy_Partition<Data> part, CkCallback cb) {
 #if DEBUG
   CkPrintf("[TP %d] key: 0x%" PRIx64 " particles: %d\n", this->thisIndex, tp_key, particles.size());
 #endif
-  local_root = treespec.ckLocalBranch()->template makeNode<Data>(tp_key, 0,
-        particles.size(), particles.data(), 0, n_subtrees - 1, true, nullptr, this->thisIndex);
-  Key lbf = log2(local_root->getBranchFactor()); // have to use treespec to get BF
+  local_root = cm_local->makeNode(tp_key, 0, particles.size(),
+        particles.data(), true, nullptr, this->thisIndex);
+  Key lbf = log2(paratreet::getConfiguration().branchFactor());
   local_root->depth = Utility::getDepthFromKey(tp_key, lbf);
   recursiveBuild(local_root, &particles[0], lbf);
 
@@ -327,11 +327,11 @@ void Subtree<Data>::recursiveBuild(Node<Data>* node, Particle* node_particles, s
     int n_particles = first_ge_idx - start;
 
     // Create child and store in vector
-    Node<Data>* child = treespec.ckLocalBranch()->template makeNode<Data>(child_key, node->depth + 1,
-        n_particles, node_particles + start, 0, n_subtrees - 1, true, node, this->thisIndex);
+    Node<Data>* child = cm_local->makeNode(child_key, node->depth + 1,
+        n_particles, node_particles + start, true, node, this->thisIndex);
     /*
     Node<Data>* child = new Node<Data>(child_key, node->depth + 1, node->particles + start,
-        n_particles, child_owner_start, child_owner_end, node);
+        n_particles, node);
     */
     node->exchangeChild(i, child);
 
@@ -357,6 +357,7 @@ void Subtree<Data>::populateTree() {
   }
   CkAssert(!going_up.empty());
 
+  auto branch_factor = paratreet::getConfiguration().branchFactor();
   while (going_up.size()) {
     Node<Data>* node = going_up.front();
     going_up.pop();
@@ -364,7 +365,6 @@ void Subtree<Data>::populateTree() {
     if (node->key == tp_key) {
       // We are at the root of the Subtree, send accumulated data to
       // parent TreeCanopy
-      int branch_factor = node->getBranchFactor();
       Key tc_key = tp_key / branch_factor;
       if (tc_key > 0) tc_proxy[tc_key].recvData(*node, branch_factor);
     } else {

@@ -28,6 +28,19 @@ namespace paratreet {
       eInvalid = 100
     };
 
+    inline int branchFactorFromTreeType(TreeType t) {
+      switch (t) {
+        case TreeType::eOct: return 8;
+        case TreeType::eBinaryOct: return 2;
+        case TreeType::eKd: return 2;
+        case TreeType::eLongest: return 2;
+        default: {
+          CkAbort("Tree type is invalid");
+          return 0;
+        }
+      };
+    };
+
     template <>
     inline void Field<DecompType>::accept(const Value& value) {
       auto s = (std::string)value;
@@ -72,9 +85,11 @@ namespace paratreet {
         int max_particles_per_leaf; // For local tree build
         DecompType decomp_type;
         TreeType tree_type;
+        int branchFactor() const {return branchFactorFromTreeType(tree_type);}
         int num_iterations;
         int num_share_nodes;
         int cache_share_depth;
+        int pool_elem_size;
         int flush_period;
         int flush_max_avg_ratio;
         int lb_period;
@@ -114,6 +129,7 @@ namespace paratreet {
             p | num_iterations;
             p | num_share_nodes;
             p | cache_share_depth;
+            p | pool_elem_size;
             p | flush_period;
             p | flush_max_avg_ratio;
             p | lb_period;

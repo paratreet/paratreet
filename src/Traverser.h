@@ -111,7 +111,7 @@ public:
     for (; idx < paused_curr_nodes.size(); idx++) {
       if (wantsPause()) break;
       auto& paused = paused_curr_nodes[idx];
-      for (size_t childIdx = 0; childIdx < paused.first->getBranchFactor(); childIdx++) {
+      for (size_t childIdx = 0; childIdx < paused.first->n_children; childIdx++) {
         recurse(paused.first->getChild(childIdx), paused.second);
       }
     }
@@ -136,7 +136,6 @@ public:
               else doLeaf(v, node, leaves[bucket], stats);
             }
           }
-          //if (!delay_leaf) node->finish(active_buckets.size());
           break;
         }
       case Node<Data>::Type::Internal:
@@ -154,7 +153,6 @@ public:
               doNode(v, node, leaves[bucket], stats);
             }
           }
-          //node->finish(active_buckets.size() - new_active_buckets.size());
           break;
         }
       case Node<Data>::Type::Boundary:
@@ -296,7 +294,6 @@ public:
               if (delay_leaf) interactions[bucket].push_back(node);
               else doLeaf(v, node, leaves[bucket], stats);
             }
-            //if (!delay_leaf) node->finish(1);
             break;
           }
         case Node<Data>::Type::Internal:
@@ -314,7 +311,6 @@ public:
               // maybe delay as an interaction
               doNode(v, node, leaves[bucket], stats);
             }
-            //node->finish(1);
             break;
           }
         case Node<Data>::Type::Boundary:
