@@ -44,14 +44,12 @@ public:
   }
 private:
   char* getBuf() {
-    lock.lock();
     if (curr->idx == pool_elem_size) {
       if (std::next(curr) == std::end(list)) append();
       curr = std::next(curr);
     }
     auto buf = (FullNode<Data, BranchFactor>*)(curr->ptr) + curr->idx;
     curr->idx++;
-    lock.unlock();
     return (char*) buf;
   }
   virtual void cleanup() override {
@@ -69,11 +67,8 @@ private:
   };
   const size_t pool_elem_size;
   std::list<PoolElem> list;
-  std::mutex lock;
   typename std::list<PoolElem>::iterator curr;
 };
-
-
 
 template <typename Data>
 class CacheManager : public CBase_CacheManager<Data> {
@@ -88,25 +83,23 @@ public:
   std::map<int, Partition<Data>*> partition_lookup; // managed by Partition
   std::set<Key> prefetch_set;
   std::vector<std::vector<Node<Data>*>> cached_leaves; // cached leaves left over
-  std::unique_ptr<NodePool<Data>> pool;
+  std::vector<std::unique_ptr<NodePool<Data>>> pools;
   CProxy_Resumer<Data> r_proxy;
   Data nodewide_data;
 
   CacheManager() { }
 
   void initialize(const CkCallback& cb) {
-    this->initialize();
+    cached_leaves.resize(CkNumPes());
     auto& config = paratreet::getConfiguration();
     branch_factor = config.branchFactor();
     auto pool_elem_size = std::max(config.pool_elem_size, 128);
-    if (branch_factor == 2) pool.reset(new FullNodePool<Data, 2>(pool_elem_size));
-    else if (branch_factor == 8) pool.reset(new FullNodePool<Data, 8>(pool_elem_size));
-    else CkAbort("Config branch factor is not 2 or 8. Update list in CacheMananger::initialize to handle this.");
+    for (size_t i = 0; i < CkNumPes(); i++) {
+      if (branch_factor == 2) pools.emplace_back(new FullNodePool<Data, 2>(pool_elem_size));
+      else if (branch_factor == 8) pools.emplace_back(new FullNodePool<Data, 8>(pool_elem_size));
+      else CkAbort("Config branch factor is not 2 or 8. Update list in CacheMananger::initialize to handle this.");
+    }
     this->contribute(cb);
-  }
-
-  void initialize() {
-    cached_leaves.resize(CkNumPes());
   }
 
   void lockMaps() {
@@ -127,9 +120,9 @@ public:
         Data empty_data;
         SpatialNode<Data> empty_sn (empty_data, 0, false, nullptr, 0);
         auto parent = cl->parent;
-        auto new_leaf = treespec.ckLocalBranch()->makeCachedNode(cl->key, Node<Data>::Type::Remote, empty_sn, parent, nullptr); // placeholder
+        auto new_leaf = makeCachedNode(cl->key, Node<Data>::Type::Remote, empty_sn, parent, nullptr); // placeholder
         new_leaf->cm_index = cl->cm_index;
-        auto which_child = cl->key % cl->getBranchFactor();
+        auto which_child = cl->key % branch_factor;
         cl->parent->exchangeChild(which_child, new_leaf);
         cl->freeParticles();
       }
@@ -138,22 +131,19 @@ public:
     this->contribute(cb);
   }
   void destroy(bool restore) {
-    pool->cleanup();
+    for (auto& pool : pools) pool->cleanup();
     local_tps.clear();
     leaf_lookup.clear();
     subtree_copy_started.clear();
     prefetch_set.clear();
-    cached_leaves.clear();
 
     cleanupPlaceholders();
 
     root = nullptr;
-
-    if (restore) initialize();
   }
 
   Node<Data>* makeNode(Key key, int depth, int n_particles, Particle* particles, bool is_leaf, Node<Data>* parent, int tp_index) {
-    return pool->alloc(key, depth, n_particles, particles, is_leaf, parent, tp_index);
+    return pools[CkMyRank()]->alloc(key, depth, n_particles, particles, is_leaf, parent, tp_index);
   }
 
   Node<Data>* makeCachedNode(Key key, typename Node<Data>::Type type, SpatialNode<Data> spatial_node, Node<Data>* parent, const Particle* particlesToCopy) {
@@ -162,7 +152,7 @@ public:
       particles = new Particle [spatial_node.n_particles];
       std::copy(particlesToCopy, particlesToCopy + spatial_node.n_particles, particles);
     }
-    return pool->alloc(key, type, spatial_node, parent, particles);
+    return pools[CkMyRank()]->alloc(key, type, spatial_node, parent, particles);
   }
 
   template <typename Visitor>
@@ -441,7 +431,7 @@ void CacheManager<Data>::process(Key key) {
 
 template <typename Data>
 void CacheManager<Data>::cleanupPlaceholders() {
-  for (auto clv : cached_leaves) {
+  for (auto& clv : cached_leaves) {
     for (auto l : clv) l->freeParticles();
     clv.clear();
   }
