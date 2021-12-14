@@ -33,8 +33,9 @@ public:
     particles_[index].potential += pot;
   }
   void freeParticles() {
-    if (n_particles > 0) {
+    if (n_particles > 0 && particles_) {
       delete[] particles_;
+      particles_ = nullptr;
     }
   }
   void kick(Real timestep) {
@@ -78,7 +79,7 @@ class Node : public SpatialNode<Data>
 public:
   virtual Node* getChild(int child_idx) const = 0;
   virtual Node* exchangeChild(int child_idx, Node* child) = 0;
-  virtual size_t getBranchFactor() const = 0;
+  virtual Node<Data>* getDescendant(Key to_find) = 0;
 
   enum class Type {
     Invalid = 0,
@@ -97,14 +98,12 @@ public:
 
   Node(const Data& data, int _n_particles, Particle* _particles, int _depth,
         int _n_children, Node* _parent, Type _type, Key _key,
-        int _owner_tp_start, int _owner_tp_end, int _tp_index, int _cm_index)
+        int _tp_index, int _cm_index)
     : SpatialNode<Data>(data, _n_particles, _n_children == 0, _particles, _depth),
       n_children(_n_children),
       parent(_parent),
       type(_type),
       key(_key),
-      owner_tp_start(_owner_tp_start),
-      owner_tp_end(_owner_tp_end),
       wait_count(_n_children),
       tp_index(_tp_index),
       cm_index(_cm_index)
@@ -133,35 +132,12 @@ public:
   const Key key;
 
   // this stuff gets edited:
-  int owner_tp_start = -1;
-  int owner_tp_end   = -1;
   int wait_count     = -1;
   int tp_index       = -1;
   int cm_index       = -1;
   std::atomic<bool> requested = ATOMIC_VAR_INIT(false);
-  std::atomic<size_t> num_buckets_finished = ATOMIC_VAR_INIT(0);
 
 public:
-  Node<Data>* getDescendant(Key to_find) {
-    std::vector<int> remainders;
-    Key temp = to_find;
-    auto branch_factor = getBranchFactor();
-    while (temp >= branch_factor * this->key) {
-      remainders.push_back(temp % branch_factor);
-      temp /= branch_factor;
-    }
-    Node<Data>* node = this;
-    for (int i = remainders.size()-1; i >= 0; i--) {
-      if (node && remainders[i] < node->n_children) node = node->getChild(remainders[i]);
-      else return nullptr;
-    }
-    return node;
-  }
- 
-  void finish(size_t num_buckets) {
-    num_buckets_finished += num_buckets;
-  }
-
   bool isCached() const {
     return type == Type::CachedRemote
         || type == Type::CachedBoundary
@@ -177,7 +153,7 @@ public:
         if (child == nullptr) continue;
         child->triggerFree();
         delete child;
-	    exchangeChild(i, nullptr);
+        exchangeChild(i, nullptr);
       }
     }
   }
@@ -202,7 +178,6 @@ public:
     out << "label=\"";
     out << key << ", ";
     out << this->n_particles << ", ";
-    out << "[" << owner_tp_start << ", " << owner_tp_end << "]";
     //out << "\\n" << payload_;
     //out << "\\n" << tp_;
     out << "\",";
@@ -236,8 +211,8 @@ public:
     initChildren();
   }
 
-  FullNode(Key _key, int _depth, int _n_particles, Particle* _particles, int _owner_tp_start, int _owner_tp_end, bool _is_leaf, Node<Data>* _parent, int _tp_index)
-    : Node<Data>(Data(), _n_particles, _particles, _depth, _is_leaf ? 0 : BRANCH_FACTOR, _parent, Node<Data>::Type::Invalid, _key, _owner_tp_start, _owner_tp_end, _tp_index, -1)
+  FullNode(Key _key, int _depth, int _n_particles, Particle* _particles, bool _is_leaf, Node<Data>* _parent, int _tp_index)
+    : Node<Data>(Data(), _n_particles, _particles, _depth, _is_leaf ? 0 : BRANCH_FACTOR, _parent, Node<Data>::Type::Invalid, _key, _tp_index, -1)
   {
     initChildren();
   }
@@ -254,9 +229,21 @@ public:
     CkAssert(child_idx < this->n_children);
     return children[child_idx].exchange(child, std::memory_order_relaxed);
   }
-  virtual size_t getBranchFactor() const override {
-    return BRANCH_FACTOR;
+  virtual Node<Data>* getDescendant(Key to_find) override {
+    std::vector<int> remainders;
+    Key temp = to_find;
+    while (temp >= BRANCH_FACTOR * this->key) {
+      remainders.push_back(temp % BRANCH_FACTOR);
+      temp /= BRANCH_FACTOR;
+    }
+    Node<Data>* node = this;
+    for (int i = remainders.size()-1; i >= 0; i--) {
+      if (node && remainders[i] < node->n_children) node = node->getChild(remainders[i]);
+      else return nullptr;
+    }
+    return node;
   }
+
 
 private:
   std::array<std::atomic<Node<Data>*>, BRANCH_FACTOR> children; 

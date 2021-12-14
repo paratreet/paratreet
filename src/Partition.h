@@ -197,10 +197,8 @@ void Partition<Data>::addLeaves(const std::vector<Node<Data>*>& leaf_ptrs, int s
       else {
         auto particles = new Particle [leaf_particles.size()];
         std::copy(leaf_particles.begin(), leaf_particles.end(), particles);
-        auto node = treespec.ckLocalBranch()->template makeNode<Data>(
-          leaf->key, leaf->depth, leaf_particles.size(), particles,
-          subtree_idx, subtree_idx, true, nullptr, subtree_idx
-          );
+        auto node = cm_local->makeNode(leaf->key, leaf->depth,
+          leaf_particles.size(), particles, true, nullptr, subtree_idx);
         node->type = Node<Data>::Type::Leaf;
         node->home_pe = leaf->home_pe;
         node->data = Data(node->particles(), node->n_particles, node->depth);
@@ -215,7 +213,6 @@ void Partition<Data>::addLeaves(const std::vector<Node<Data>*>& leaf_ptrs, int s
   }
   else leaves.insert(leaves.end(), new_leaves.begin(), new_leaves.end());
   receive_lock.unlock();
-  cm_local->num_buckets += leaf_ptrs.size();
 }
 
 template <typename Data>
@@ -274,7 +271,6 @@ void Partition<Data>::reset()
   for (int i = 0; i < leaves.size(); i++) {
     if (leaves[i] != tree_leaves[i]) {
       leaves[i]->freeParticles();
-      delete leaves[i];
     }
   }
   lookup_leaf_keys.clear();
