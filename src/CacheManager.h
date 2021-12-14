@@ -131,7 +131,7 @@ public:
         new_leaf->cm_index = cl->cm_index;
         auto which_child = cl->key % cl->getBranchFactor();
         cl->parent->exchangeChild(which_child, new_leaf);
-        cl->triggerFree();
+        cl->freeParticles();
       }
       clv.clear();
     }
