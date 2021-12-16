@@ -54,19 +54,8 @@ public:
   virtual void interact() = 0;
   virtual void start() = 0;
   virtual bool isFinished() = 0;
-
   virtual bool wantsPause() const {return false;}
   virtual void resumeAfterPause() {}
-
-  template <typename Visitor>
-  void interactBase(Visitor& v, Partition<Data>& part)
-  {
-    for (int i = 0; i < part.interactions.size(); i++) {
-      for (Node<Data>* source : part.interactions[i]) {
-        doLeaf(v, source, part.leaves[i], part.r_local);
-      }
-    }
-  }
 };
 
 template <typename Data, typename Visitor>
@@ -76,10 +65,12 @@ protected:
   size_t trav_idx = 0;
   std::vector<Node<Data>*> leaves;
   Partition<Data>& part;
+  ThreadStateHolder* stats = nullptr;
   std::unordered_map<Key, std::vector<int>> curr_nodes;
   std::vector<std::pair<Node<Data>*, std::vector<int>>> paused_curr_nodes;
   int num_requested = 0;
   int request_pause_interval = 0;
+  std::vector<std::vector<Node<Data>*>> interactions;
   const bool delay_leaf;
 
 protected:
@@ -97,6 +88,8 @@ public:
     : v(vi), trav_idx(ti), leaves(leavesi), part(parti), delay_leaf(delay_leafi)
   {
     request_pause_interval = paratreet::getConfiguration().request_pause_interval;
+    stats = thread_state_holder.ckLocalBranch();
+    if (delay_leaf) interactions.resize(leaves.size());
   }
   virtual ~TransposedDownTraverser() = default;
   virtual bool isFinished() override {return curr_nodes.empty();}
@@ -104,7 +97,13 @@ public:
     // Initialize with global root key and leaves
     startTrav(part.cm_local->root);
   }
-  virtual void interact() override {this->template interactBase<Visitor> (v, part);}
+  virtual void interact() override {
+    for (int i = 0; i < interactions.size(); i++) {
+      for (Node<Data>* source : interactions[i]) {
+        doLeaf(v, source, part.leaves[i], stats);
+      }
+    }
+  }
   virtual bool wantsPause() const override {return num_requested > request_pause_interval;}
   virtual void resumeAfterPause() override{
     num_requested = 0;
@@ -112,7 +111,7 @@ public:
     for (; idx < paused_curr_nodes.size(); idx++) {
       if (wantsPause()) break;
       auto& paused = paused_curr_nodes[idx];
-      for (size_t childIdx = 0; childIdx < paused.first->getBranchFactor(); childIdx++) {
+      for (size_t childIdx = 0; childIdx < paused.first->n_children; childIdx++) {
         recurse(paused.first->getChild(childIdx), paused.second);
       }
     }
@@ -133,11 +132,10 @@ public:
           // Store local and remote cached leaves for interactions
           for (auto bucket : active_buckets) {
             if (Visitor::CallSelfLeaf || leaves[bucket]->key != node->key) {
-              if (delay_leaf) part.interactions[bucket].push_back(node);
-              else doLeaf(v, node, leaves[bucket], part.r_local);
+              if (delay_leaf) interactions[bucket].push_back(node);
+              else doLeaf(v, node, leaves[bucket], stats);
             }
           }
-          //if (!delay_leaf) node->finish(active_buckets.size());
           break;
         }
       case Node<Data>::Type::Internal:
@@ -147,15 +145,14 @@ public:
           // Check if the opening condition is fulfilled
           // If so, need to go down deeper
           for (auto bucket : active_buckets) {
-            const bool should_open = doOpen(v, node, leaves[bucket], part.r_local);
+            const bool should_open = doOpen(v, node, leaves[bucket], stats);
             if (should_open) {
               new_active_buckets.push_back(bucket);
             } else {
               // maybe delay as an interaction
-              doNode(v, node, leaves[bucket], part.r_local);
+              doNode(v, node, leaves[bucket], stats);
             }
           }
-          //node->finish(active_buckets.size() - new_active_buckets.size());
           break;
         }
       case Node<Data>::Type::Boundary:
@@ -227,11 +224,13 @@ protected:
   size_t trav_idx;
   std::vector<Node<Data>*> leaves;
   Partition<Data>& part;
+  ThreadStateHolder* stats = nullptr;
   std::unordered_map<Key, std::vector<int>> curr_nodes;
   int num_requested = 0;
   int saved_start_idx = 0;
   int request_pause_interval = 0;
   int next_stop_index = 0;
+  std::vector<std::vector<Node<Data>*>> interactions;
   const bool delay_leaf;
 
 protected:
@@ -250,6 +249,8 @@ public:
     request_pause_interval = paratreet::getConfiguration().request_pause_interval;
     auto iter_pause_interval = paratreet::getConfiguration().iter_pause_interval;
     next_stop_index += iter_pause_interval > 0 ? iter_pause_interval : leaves.size();
+    if (delay_leaf) interactions.resize(leaves.size());
+    stats = thread_state_holder.ckLocalBranch();
   }
   virtual ~BasicDownTraverser() = default;
   virtual bool isFinished() override {return curr_nodes.empty();}
@@ -260,7 +261,13 @@ public:
     // Initialize with global root key and leaves
     startTrav();
   }
-  virtual void interact() override {this->template interactBase<Visitor> (v, part);}
+  virtual void interact() override {
+    for (int i = 0; i < interactions.size(); i++) {
+      for (Node<Data>* source : interactions[i]) {
+        doLeaf(v, source, part.leaves[i], stats);
+      }
+    }
+  }
   virtual bool wantsPause() const override {return saved_start_idx > next_stop_index || num_requested > request_pause_interval;}
   virtual void resumeAfterPause() override {
     num_requested = 0;
@@ -284,10 +291,9 @@ public:
           {
             // Store local and remote cached leaves for interactions
             if (Visitor::CallSelfLeaf || leaves[bucket]->key != node->key) {
-              if (delay_leaf) part.interactions[bucket].push_back(node);
-              else doLeaf(v, node, leaves[bucket], part.r_local);
+              if (delay_leaf) interactions[bucket].push_back(node);
+              else doLeaf(v, node, leaves[bucket], stats);
             }
-            //if (!delay_leaf) node->finish(1);
             break;
           }
         case Node<Data>::Type::Internal:
@@ -296,16 +302,15 @@ public:
           {
             // Check if the opening condition is fulfilled
             // If so, need to go down deeper
-            const bool should_open = doOpen(v, node, leaves[bucket], part.r_local);
+            const bool should_open = doOpen(v, node, leaves[bucket], stats);
             if (should_open) {
               for (int idx = 0; idx < node->n_children; idx++) {
                 nodes.push_front(node->getChild(idx));
               }
             } else {
               // maybe delay as an interaction
-              doNode(v, node, leaves[bucket], part.r_local);
+              doNode(v, node, leaves[bucket], stats);
             }
-            //node->finish(1);
             break;
           }
         case Node<Data>::Type::Boundary:
@@ -369,6 +374,7 @@ private:
   Visitor v;
   size_t trav_idx;
   Partition<Data>& part;
+  ThreadStateHolder* stats = nullptr;
   std::unordered_map<Key, std::vector<int>> curr_nodes;
   std::vector<int> num_waiting;
   std::vector<Node<Data>*> trav_tops;
@@ -382,6 +388,7 @@ public:
       part.leaves[i]->data.widen();
     }
     num_waiting = std::vector<int> (part.leaves.size(), 1);
+    stats = thread_state_holder.ckLocalBranch();
   }
   virtual void interact() override {}
   virtual bool isFinished() override {return curr_nodes.empty();}
@@ -425,19 +432,19 @@ private:
           case Node<Data>::Type::Leaf:
           case Node<Data>::Type::CachedRemoteLeaf:
             {
-              doLeaf(v, node, part.leaves[bucket], part.r_local);
+              doLeaf(v, node, part.leaves[bucket], stats);
               break;
             }
           case Node<Data>::Type::Internal:
           case Node<Data>::Type::CachedBoundary:
           case Node<Data>::Type::CachedRemote:
             {
-              if (doOpen(v, node, part.leaves[bucket], part.r_local)) {
+              if (doOpen(v, node, part.leaves[bucket], stats)) {
                 for (int i = 0; i < node->n_children; i++) {
                   nodes.push(node->getChild(i));
                 }
               } else {
-                doNode(v, node, part.leaves[bucket], part.r_local);
+                doNode(v, node, part.leaves[bucket], stats);
               }
               break;
             }
@@ -500,10 +507,13 @@ private:
   Visitor v;
   size_t trav_idx;
   Subtree<Data>& tp;
+  ThreadStateHolder* stats = nullptr;
   std::unordered_map<Key, std::vector<Node<Data>*>> curr_nodes; // source nodes to target nodes
 public:
   DualTraverser(Visitor& vi, size_t ti, Subtree<Data>& tpi) : v(vi), trav_idx(ti), tp(tpi)
-  {}
+  {
+    stats = thread_state_holder.ckLocalBranch();
+  }
   void start() override {
     curr_nodes[1].push_back(tp.local_root);
     doTrav(tp.cm_local->root);
@@ -520,14 +530,14 @@ public:
       Node<Data>* node = nodes.top();
       nodes.pop();
       if (node->type == Node<Data>::Type::Leaf || node->type == Node<Data>::Type::CachedRemoteLeaf) {
-        doLeaf(v, source_leaf, node, tp.r_local);
+        doLeaf(v, source_leaf, node, stats);
       } else {
-        if (doOpen(v, source_leaf, node, tp.r_local)) {
+        if (doOpen(v, source_leaf, node, stats)) {
           for (int j = 0; j < node->n_children; j++) {
             nodes.push(node->getChild(j));
           }
         } else {
-          doNode(v, source_leaf, node, tp.r_local);
+          doNode(v, source_leaf, node, stats);
         }
       }
     }
@@ -561,7 +571,7 @@ public:
         case Node<Data>::Type::Leaf:
         case Node<Data>::Type::CachedRemoteLeaf:
           {
-            doLeaf(v, node, curr_payload, tp.r_local); // n2 calc
+            doLeaf(v, node, curr_payload, stats); // n2 calc
             break;
           }
         case Node<Data>::Type::Internal:
@@ -570,13 +580,13 @@ public:
           {
             if (curr_payload->type == Node<Data>::Type::Leaf
                // cell means should we open target
-             || !doCell(v, node, curr_payload, tp.r_local)) {
-              if (doOpen(v, node, curr_payload, tp.r_local)) {
+             || !doCell(v, node, curr_payload, stats)) {
+              if (doOpen(v, node, curr_payload, stats)) {
 	        for (int i = 0; i < node->n_children; i++) {
 	          nodes.emplace(node->getChild(i), curr_payload);
                 }
               } else {
-                doNode(v, node, curr_payload, tp.r_local);
+                doNode(v, node, curr_payload, stats);
               }
             }
             else {

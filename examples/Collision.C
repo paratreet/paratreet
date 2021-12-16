@@ -7,6 +7,7 @@
 extern bool verify;
 extern int iter_start_collision;
 extern Real theta;
+extern Real max_timestep;
 
 PARATREET_REGISTER_PER_LEAF_FN(CropFn, CentroidData, (
   [](SpatialNode<CentroidData>& leaf, Partition<CentroidData>* partition) {
@@ -83,5 +84,5 @@ PARATREET_REGISTER_PER_LEAF_FN(CollisionResolveFn, CentroidData, (
   }
 
   Real ExMain::getTimestep(BoundingBox& universe, Real max_velocity) {
-    return 0.01570796326;
+    return max_timestep;
   }

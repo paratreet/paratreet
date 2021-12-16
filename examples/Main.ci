@@ -7,6 +7,7 @@ mainmodule Main {
     readonly Real theta;
     readonly int peanoKey;
     readonly int iter_start_collision;
+    readonly Real max_timestep;
     readonly CProxy_CountManager count_manager;
     readonly CProxy_NeighborListCollector neighbor_list_collector;
     readonly CProxy_CollisionTracker collision_tracker;
