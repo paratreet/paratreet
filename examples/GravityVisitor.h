@@ -155,7 +155,7 @@ public:
     if (source.n_particles <= nMinParticleNode) return true;
     Real dataRsq = source.data.rsq * gravity_factor;
 #ifdef HEXADECAPOLE
-    if(Space::intersect(target.data.box, source.data.centroid + offset, dataRsq)){
+    if(!Space::intersect(target.data.box, source.data.centroid + offset, dataRsq)){
         // test for softening overlap
         if(!openSoftening(target.data, source.data)) {
             return false;       /* Passes both tests */
@@ -168,6 +168,7 @@ public:
             return Space::intersect(target.data.box, sM);
         }
     }
+    return true;
 #else
     return Space::intersect(target.data.box, source.data.centroid + offset, dataRsq);
 #endif
