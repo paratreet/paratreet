@@ -47,7 +47,7 @@ public:
 
     // Check if any of the target balls intersect the source volume
     for (int i = 0; i < target.n_particles; i++) {
-      Real ballSq = target.particles()[i].ball*target.particles()[i].ball;
+      Real ballSq = target.data.pps[i].ball * target.data.pps[i].ball;
       if(Space::intersect(source.data.box, target.particles()[i].position, ballSq))
         return true;
     }
@@ -62,11 +62,11 @@ public:
         auto& sp = source.particles()[j];
         auto& tp = target.particles()[i];
         Real dsq = (tp.position - sp.position).lengthSquared();
-        Real rsq = tp.ball * tp.ball;
+        Real rsq = target.data.pps[i].ball * target.data.pps[i].ball;
         if (dsq < rsq && sp.order != tp.order) {
           Real dt = getCollideTime(tp, sp);
-          if (dt < target.data.pps.best_dt[i].first) {
-            target.data.pps.best_dt[i] = std::make_pair(dt, sp);
+          if (dt < target.data.pps[i].best_dt.first) {
+            target.data.pps[i].best_dt = std::make_pair(dt, &sp);
           }
         }
       }

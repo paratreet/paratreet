@@ -22,9 +22,7 @@ mainmodule Main {
 
     group NeighborListCollector {
         entry NeighborListCollector();
-        entry void addRequest(int, Key);
-        entry [inline] void forwardRequest(int, Particle);
-        entry [inline] void fillRequest(int, Particle);
+        entry void savePartitionHome(int, Key);
         entry void shareAccelerations();
         entry void addAccelerations(const std::vector<Particle>&);
         entry void forwardAccelerations(const std::vector<Particle>&);
@@ -50,7 +48,7 @@ mainmodule Main {
     extern entry void Partition<CentroidData> startDown<VisitAllVisitor> (VisitAllVisitor v);
     extern entry void Partition<CentroidData> startBasicDown<VisitAllVisitor> (VisitAllVisitor v);
     extern entry void Partition<CentroidData> startUpAndDown<DensityVisitor> (DensityVisitor v);
-    //extern entry void Partition<CentroidData> startDown<PressureVisitor> (PressureVisitor v);
+    extern entry void Partition<CentroidData> startDown<PressureVisitor> (PressureVisitor v);
     extern entry void CacheManager<CentroidData> startPrefetch<GravityVisitor>(DPHolder<CentroidData>, CkCallback);
     extern entry void Driver<CentroidData> prefetch<GravityVisitor> (CentroidData, int, CkCallback);
 }

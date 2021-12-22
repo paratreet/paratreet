@@ -2,7 +2,7 @@
 
 #include "GravityVisitor.h"
 #include "DensityVisitor.h"
-//#include "PressureVisitor.h"
+#include "PressureVisitor.h"
 #include "CountVisitor.h"
 #include "VisitAllVisitor.h"
 #include "CollisionVisitor.h"

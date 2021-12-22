@@ -5,9 +5,21 @@
 #include <vector>
 #include <queue>
 #include "Particle.h"
-#include "ParticleComp.h"
 #include "OrientedBox.h"
 #include "MultipoleMoments.h"
+
+struct pqSmoothNode {
+  Real fKey = 0.;// distance^2 -> place in priority queue
+  const Particle* pPtr = nullptr;
+
+  inline bool operator<(const pqSmoothNode& n) const {
+    return fKey < n.fKey;
+  }
+
+  void pup(PUP::er& p) {
+    p|fKey;
+  }
+};
 
 struct CentroidData {
   Vector3D<Real> moment;
@@ -20,10 +32,12 @@ struct CentroidData {
     PerParticleStruct() {}
     PerParticleStruct& operator=(const PerParticleStruct&) {return *this;}
     PerParticleStruct(const PerParticleStruct&) {}
-    std::vector< CkVec<pqSmoothNode> > neighbors; // Neighbor list for knn search
-    std::vector<std::pair<Real, Particle>> best_dt;
+    CkVec<pqSmoothNode> neighbors; // Neighbor list for knn search
+    Real ball = 0;
+    Real sphBallSq = 0ull;
+    std::pair<Real, const Particle*> best_dt;
   };
-  PerParticleStruct pps;
+  std::vector<PerParticleStruct> pps;
   OrientedBox<Real> box;
   int count;
   Real rsq;                     ///< Opening radius
@@ -45,8 +59,13 @@ struct CentroidData {
     // After we have a radius and centroid, we can calculate the high
     // order (scaled by radius) multipole moments.
     calculateRadiusBox(multipoles, tmp_box);
-    for (int i = 0; i < n_particles; i++)
+    Real deltaT = 0.01570796326; // Is there some way to make config.timestep_size accessible here?
+    pps.resize(count);
+    for (int i = 0; i < n_particles; i++) {
+      pps[i].best_dt = std::make_pair(std::numeric_limits<Real>::max(), nullptr);
+      pps[i].ball    = 2.0*particles[i].velocity.length()*deltaT + (4*particles[i].soft);
       multipoles += particles[i];
+    }
   }
 
     /// The size of a node needs to be non-zero before calculating
@@ -64,9 +83,7 @@ struct CentroidData {
         }
         return tmp_box;
     }
-    
-    
-  
+
 /// Calculate gravity opening radius and linear size based on box size.
   void getRadius() {
     Vector3D<Real> delta1 = centroid - box.lesser_corner;
@@ -93,11 +110,6 @@ struct CentroidData {
 
   CentroidData& operator=(const CentroidData&) = default;
 
-  void widen() {
-    pps.neighbors.resize(count);
-    pps.best_dt.resize(count, std::make_pair(std::numeric_limits<Real>::max(), Particle{}));
-  }
-
   void pup(PUP::er& p) {
     p | moment;
     p | multipoles;
@@ -108,6 +120,13 @@ struct CentroidData {
     p | rsq;
     p | max_rad;
     p | size_sm;
+    int num_leaves = pps.size();
+    p | num_leaves;
+    if (p.isUnpacking()) pps.resize(num_leaves);
+    for (int i = 0; i < num_leaves; i++) {
+      if (p.isUnpacking()) pps[i].best_dt = std::make_pair(std::numeric_limits<Real>::max(), nullptr);
+      p | pps[i].ball;
+    }
   }
 
 };

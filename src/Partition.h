@@ -61,6 +61,7 @@ struct Partition : public CBase_Partition<Data> {
   void output(CProxy_TipsyWriter w, int n_total_particles, CkCallback cb);
   void callPerLeafFn(paratreet::PerLeafAble<Data>&, const CkCallback&);
   void deleteParticleOfOrder(int order) {particle_delete_order.insert(order);}
+  void requestParticleUpdates(int cm_index, std::vector<Key> pKeys);
   void pup(PUP::er& p);
   void makeLeaves(int);
   void pauseForLB(){
@@ -177,6 +178,21 @@ void Partition<Data>::interact(const CkCallback& cb)
 }
 
 template <typename Data>
+void Partition<Data>::requestParticleUpdates(int cm_index, std::vector<Key> pKeys) {
+  std::set<Key> keySet (pKeys.begin(), pKeys.end());
+  std::vector<Particle> particles_sending;
+  for (int i = 0; i < leaves.size(); i++) {
+    //if (leaves[i] != tree_leaves[i]) {
+    for (int pi = 0; pi < leaves[i]->n_particles; pi++) {
+      if (keySet.count(leaves[i]->particles()[pi].key)) {
+        particles_sending.push_back(leaves[i]->particles()[pi]);
+      }
+    }
+  }
+  cm_proxy[cm_index].receiveParticleUpdates(particles_sending);
+}
+
+template <typename Data>
 void Partition<Data>::addLeaves(const std::vector<Node<Data>*>& leaf_ptrs, int subtree_idx) {
   decltype(leaves) new_leaves;
   if (!matching_decomps) {
@@ -198,7 +214,8 @@ void Partition<Data>::addLeaves(const std::vector<Node<Data>*>& leaf_ptrs, int s
         auto particles = new Particle [leaf_particles.size()];
         std::copy(leaf_particles.begin(), leaf_particles.end(), particles);
         auto node = cm_local->makeNode(leaf->key, leaf->depth,
-          leaf_particles.size(), particles, true, nullptr, subtree_idx);
+          leaf_particles.size(), particles, true, nullptr, subtree_idx, cm_local->thisIndex);
+        // note here: cm_index is of the old home, not the new home. not sure about this
         node->type = Node<Data>::Type::Leaf;
         node->home_pe = leaf->home_pe;
         node->data = Data(node->particles(), node->n_particles, node->depth);

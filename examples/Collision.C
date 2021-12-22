@@ -24,10 +24,10 @@ PARATREET_REGISTER_PER_LEAF_FN(CollisionResolveFn, CentroidData, (
   [](SpatialNode<CentroidData>& leaf, Partition<CentroidData>* partition) {
     for (int pi = 0; pi < leaf.n_particles; pi++) {
       auto& part = leaf.particles()[pi];
-      auto best_dt = leaf.data.pps.best_dt[pi].first;
+      auto best_dt = leaf.data.pps[pi].best_dt.first;
 
       if (best_dt < 0.01570796326) {
-        auto& partB = leaf.data.pps.best_dt[pi].second;
+        auto& partB = *(leaf.data.pps[pi].best_dt.second);
         auto& posA = part.position;
         auto& posB = partB.position;
         auto& velA = part.velocity;
@@ -65,7 +65,7 @@ PARATREET_REGISTER_PER_LEAF_FN(CollisionResolveFn, CentroidData, (
     );
     if (iter % 10000 == 0) paratreet::outputTipsy(universe, proxy_pack.partition);
     if (iter >= iter_start_collision) {
-      proxy_pack.cache.resetCachedParticles(CkCallbackResumeThread());
+      proxy_pack.cache.resetCachedParticles(proxy_pack.partition);
       double start_time = CkWallTimer();
       proxy_pack.partition.template startDown<CollisionVisitor>(CollisionVisitor());
       CkWaitQD();
