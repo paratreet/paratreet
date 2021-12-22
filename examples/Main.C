@@ -17,7 +17,6 @@ PARATREET_REGISTER_MAIN(ExMain);
 /* readonly */ int iter_start_collision;
 /* readonly */ Real max_timestep;
 /* readonly */ CProxy_CountManager count_manager;
-/* readonly */ CProxy_NeighborListCollector neighbor_list_collector;
 /* readonly */ CProxy_CollisionTracker collision_tracker;
 /* readonly */ CProxy_VisitAllTracker visit_all_tracker;
 
@@ -187,7 +186,6 @@ PARATREET_REGISTER_MAIN(ExMain);
     CkPrintf("Max timestep: %lf\n\n", max_timestep);
 
     count_manager = CProxy_CountManager::ckNew(0.00001, 10000, 5);
-    neighbor_list_collector = CProxy_NeighborListCollector::ckNew();
     collision_tracker = CProxy_CollisionTracker::ckNew();
     visit_all_tracker = CProxy_VisitAllTracker::ckNew();
 

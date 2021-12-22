@@ -7,7 +7,7 @@
 struct Particle {
   Key key;
   int order;
-  int partition_idx = 0; // Only used when Subtree and Patition have different decomp types
+  int partition_idx = 0; // Only used when Subtree and Partition have different decomp types
 
   Real mass;
   Real density;
@@ -19,6 +19,7 @@ struct Particle {
   Vector3D<Real> velocity;
   Vector3D<Real> velocity_predicted;
   Real pressure_dVolume = 0.;
+  using Effect = std::pair<Vector3D<Real>, Real>; // accel, pressure
   Real u_predicted;
 
   enum class Type : char {

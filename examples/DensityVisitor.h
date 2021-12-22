@@ -4,12 +4,9 @@
 #include "paratreet.decl.h"
 #include "common.h"
 #include "Space.h"
-#include "NeighborListCollector.h"
 #include <cmath>
 #include <vector>
 #include <queue>
-
-extern CProxy_NeighborListCollector neighbor_list_collector;
 
 struct DensityVisitor {
 public:
@@ -35,7 +32,6 @@ public:
   static void node(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {}
 
   static void leaf(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
-    auto nlc = neighbor_list_collector.ckLocalBranch();
     for (int i = 0; i < target.n_particles; i++) {
       auto& Q = target.data.pps[i].neighbors;
       for (int j = 0; j < source.n_particles; j++) {
@@ -51,7 +47,6 @@ public:
         }
         // Add the particle to the neighbor list if it isnt filled up
         if (Q.size() < k) {
-          nlc->saveSubtreeHome(source.home_pe, sp);
           pqSmoothNode pqNew;
           pqNew.pPtr = &sp;
           pqNew.fKey = dsq;

@@ -62,6 +62,7 @@ struct Partition : public CBase_Partition<Data> {
   void callPerLeafFn(paratreet::PerLeafAble<Data>&, const CkCallback&);
   void deleteParticleOfOrder(int order) {particle_delete_order.insert(order);}
   void requestParticleUpdates(int cm_index, std::vector<Key> pKeys);
+  void applyOpposingEffects(std::vector<std::pair<Key, Particle::Effect>> effects);
   void pup(PUP::er& p);
   void makeLeaves(int);
   void pauseForLB(){
@@ -181,15 +182,28 @@ template <typename Data>
 void Partition<Data>::requestParticleUpdates(int cm_index, std::vector<Key> pKeys) {
   std::set<Key> keySet (pKeys.begin(), pKeys.end());
   std::vector<Particle> particles_sending;
-  for (int i = 0; i < leaves.size(); i++) {
-    //if (leaves[i] != tree_leaves[i]) {
-    for (int pi = 0; pi < leaves[i]->n_particles; pi++) {
-      if (keySet.count(leaves[i]->particles()[pi].key)) {
-        particles_sending.push_back(leaves[i]->particles()[pi]);
+  for (auto& leaf : leaves) {
+    for (int pi = 0; pi < leaf->n_particles; pi++) {
+      if (keySet.count(leaf->particles()[pi].key)) {
+        particles_sending.push_back(leaf->particles()[pi]);
       }
     }
   }
   cm_proxy[cm_index].receiveParticleUpdates(particles_sending);
+}
+
+template <typename Data>
+void Partition<Data>::applyOpposingEffects(std::vector<std::pair<Key, Particle::Effect>> effects) {
+  std::map<Key, Particle::Effect> effects_map (effects.begin(), effects.end());
+  for (auto& leaf : leaves) {
+    for (int pi = 0; pi < leaf->n_particles; pi++) {
+      auto it = effects_map.find(leaf->particles()[pi].key);
+      if (it != effects_map.end()) {
+        leaf->applyAcceleration(pi, it->second.first);
+        leaf->applyGasWork(pi, it->second.second);
+      }
+    }
+  }
 }
 
 template <typename Data>

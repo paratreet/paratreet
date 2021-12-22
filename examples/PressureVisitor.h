@@ -3,10 +3,7 @@
 #include "paratreet.decl.h"
 #include "common.h"
 #include "Space.h"
-#include "NeighborListCollector.h"
 #include <cmath>
-
-extern CProxy_NeighborListCollector neighbor_list_collector;
 
 struct PressureVisitor {
 public:

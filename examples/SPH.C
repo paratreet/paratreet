@@ -10,7 +10,6 @@ using namespace paratreet;
 
 PARATREET_REGISTER_PER_LEAF_FN(DensityFn, CentroidData, (
   [](SpatialNode<CentroidData>& leaf, Partition<CentroidData>* partition) {
-    auto nlc = neighbor_list_collector.ckLocalBranch();
     leaf.data.max_rad = 0;
     for (int pi = 0; pi < leaf.n_particles; pi++) {
       auto& part = leaf.particles()[pi];
@@ -38,7 +37,7 @@ PARATREET_REGISTER_PER_LEAF_FN(DensityFn, CentroidData, (
 
 PARATREET_REGISTER_PER_LEAF_FN(ForceFn, CentroidData, (
   [](SpatialNode<CentroidData>& leaf, Partition<CentroidData>* partition) {
-    auto nlc = neighbor_list_collector.ckLocalBranch();
+    auto tls = thread_state_holder.ckLocalBranch();
 
     for (int pi = 0; pi < leaf.n_particles; pi++) {
       auto& part = leaf.particles()[pi];
@@ -61,28 +60,8 @@ PARATREET_REGISTER_PER_LEAF_FN(ForceFn, CentroidData, (
       auto fDivv_Corrector = (divvj != 0.0 ? divvi/divvj : 1.0);
 
       for (int i = 0; i < Q.size(); i++) {
-        auto nbrIt = nlc->remote_particles.find(Q[i].pPtr->key);
-        CkAssert(nbrIt != nlc->remote_particles.end());
-        if (nbrIt == nlc->remote_particles.end()) CkAbort("cry");
-        nbrIt->second.second = *(Q[i].pPtr);
-        doSPHCalc(leaf, pi, fBall, nbrIt->second.second, fDivv_Corrector);
+        doSPHCalc(leaf, pi, fBall, tls, *Q[i].pPtr, fDivv_Corrector);
       }
-    }
-  }));
-
-PARATREET_REGISTER_PER_LEAF_FN(SymmetricForceFn, CentroidData, (
-  [](SpatialNode<CentroidData>& leaf, Partition<CentroidData>* partition) {
-    auto nlc = neighbor_list_collector.ckLocalBranch();
-    for (int pi = 0; pi < leaf.n_particles; pi++) {
-      auto& part = leaf.particles()[pi];
-      auto it = nlc->remote_particles.find(part.key);
-      CkAssert(it != nlc->remote_particles.end());
-      auto copy_part = part;
-      auto&& otherAcc = it->second.second.acceleration;
-      copy_part.acceleration = (otherAcc + part.acceleration);
-      auto otherWork = it->second.second.pressure_dVolume;
-      copy_part.pressure_dVolume = (otherWork + part.pressure_dVolume);
-      leaf.changeParticle(pi, copy_part);
     }
   }));
 
@@ -93,7 +72,6 @@ PARATREET_REGISTER_PER_LEAF_FN(SymmetricForceFn, CentroidData, (
   }
 
   void ExMain::traversalFn(BoundingBox& universe, ProxyPack<CentroidData>& proxy_pack, int iter) {
-    neighbor_list_collector.reset(CkCallbackResumeThread());
     double start_time = CkWallTimer();
     proxy_pack.partition.template startUpAndDown<DensityVisitor>(DensityVisitor());
     CkWaitQD();
@@ -117,12 +95,8 @@ PARATREET_REGISTER_PER_LEAF_FN(SymmetricForceFn, CentroidData, (
     );
     CkPrintf("Pressure calculations: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
     start_time = CkWallTimer();
-    neighbor_list_collector.shareAccelerations();
+    thread_state_holder.applyAccumulatedOpposingEffects<CentroidData>(proxy_pack.partition);
     CkWaitQD();
-    proxy_pack.partition.callPerLeafFn(
-      PARATREET_PER_LEAF_FN(SymmetricForceFn, CentroidData),  // averages pressure
-      CkCallbackResumeThread()
-    );
     CkPrintf("Averaging pressures: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
   }
 
