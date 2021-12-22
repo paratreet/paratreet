@@ -24,10 +24,8 @@ PARATREET_REGISTER_PER_LEAF_FN(CollisionResolveFn, CentroidData, (
   [](SpatialNode<CentroidData>& leaf, Partition<CentroidData>* partition) {
     for (int pi = 0; pi < leaf.n_particles; pi++) {
       auto& part = leaf.particles()[pi];
-      auto best_dt = leaf.data.pps[pi].best_dt.first;
-
-      if (best_dt < 0.01570796326) {
-        auto& partB = *(leaf.data.pps[pi].best_dt.second);
+      if (leaf.data.pps[pi].best_dt < max_timestep) {
+        auto& partB = *(leaf.data.pps[pi].best_dt_partPtr);
         auto& posA = part.position;
         auto& posB = partB.position;
         auto& velA = part.velocity;
@@ -36,8 +34,8 @@ PARATREET_REGISTER_PER_LEAF_FN(CollisionResolveFn, CentroidData, (
             "deleting particles of order %d and %d that collide at dt %lf. "
             "First has position (%lf, %lf, %lf) velocity (%lf, %lf, %lf). "
             "Second has position (%lf, %lf, %lf) velocity (%lf, %lf, %lf)\n",
-            part.order, partB.order, partition->time_advanced + best_dt, posA.x,
-            posA.y, posA.z, velA.x, velA.y, velA.z, posB.x, posB.y, posB.z,
+            part.order, partB.order, partition->time_advanced + leaf.data.pps[pi].best_dt,
+            posA.x, posA.y, posA.z, velA.x, velA.y, velA.z, posB.x, posB.y, posB.z,
             velB.x, velB.y, velB.z);
         partition->deleteParticleOfOrder(part.order);
         partition->thisProxy[partB.partition_idx].deleteParticleOfOrder(
@@ -66,6 +64,7 @@ PARATREET_REGISTER_PER_LEAF_FN(CollisionResolveFn, CentroidData, (
     if (iter % 10000 == 0) paratreet::outputTipsy(universe, proxy_pack.partition);
     if (iter >= iter_start_collision) {
       proxy_pack.cache.resetCachedParticles(proxy_pack.partition);
+      CkWaitQD();
       double start_time = CkWallTimer();
       proxy_pack.partition.template startDown<CollisionVisitor>(CollisionVisitor());
       CkWaitQD();

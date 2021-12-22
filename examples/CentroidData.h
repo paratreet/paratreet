@@ -29,13 +29,11 @@ struct CentroidData {
   Real max_rad = 0.0;
   Real size_sm;
   struct PerParticleStruct {
-    PerParticleStruct() {}
-    PerParticleStruct& operator=(const PerParticleStruct&) {return *this;}
-    PerParticleStruct(const PerParticleStruct&) {}
     CkVec<pqSmoothNode> neighbors; // Neighbor list for knn search
     Real ball = 0;
     Real sphBallSq = 0ull;
-    std::pair<Real, const Particle*> best_dt;
+    Real best_dt = std::numeric_limits<Real>::max();
+    const Particle* best_dt_partPtr = nullptr;
   };
   std::vector<PerParticleStruct> pps;
   OrientedBox<Real> box;
@@ -60,29 +58,28 @@ struct CentroidData {
     // order (scaled by radius) multipole moments.
     calculateRadiusBox(multipoles, tmp_box);
     Real deltaT = 0.01570796326; // Is there some way to make config.timestep_size accessible here?
-    pps.resize(count);
+    pps.resize(n_particles);
     for (int i = 0; i < n_particles; i++) {
-      pps[i].best_dt = std::make_pair(std::numeric_limits<Real>::max(), nullptr);
-      pps[i].ball    = 2.0*particles[i].velocity.length()*deltaT + (4*particles[i].soft);
+      pps[i].ball = 2.0*particles[i].velocity.length()*deltaT + (4*particles[i].soft);
       multipoles += particles[i];
     }
   }
 
-    /// The size of a node needs to be non-zero before calculating
-    /// multipole moments.  Use a heuristic based on the size of the
-    /// simulation to guess a non-zero size.
-    OrientedBox<Real> fixSize(int depth) {
-        auto tmp_box = box;
-        if(size_sm == 0.0) { // Box has to have finite size for scaled multipole
-            // calculations.
-            auto size_universe = (thread_state_holder.ckLocalBranch()->universe.box.size()).length();
-            // Approximate size by assuming a binary represented Oct tree.
-            size_sm = size_universe/pow(2.0, depth/3);
-            // size_sm = 1.0;  // Stopgap for now.
-            tmp_box.grow(box.center() + size_sm);
-        }
-        return tmp_box;
+  /// The size of a node needs to be non-zero before calculating
+  /// multipole moments.  Use a heuristic based on the size of the
+  /// simulation to guess a non-zero size.
+  OrientedBox<Real> fixSize(int depth) {
+    auto tmp_box = box;
+    if(size_sm == 0.0) { // Box has to have finite size for scaled multipole
+      // calculations.
+      auto size_universe = (thread_state_holder.ckLocalBranch()->universe.box.size()).length();
+      // Approximate size by assuming a binary represented Oct tree.
+      size_sm = size_universe/pow(2.0, depth/3);
+      // size_sm = 1.0;  // Stopgap for now.
+      tmp_box.grow(box.center() + size_sm);
     }
+    return tmp_box;
+  }
 
 /// Calculate gravity opening radius and linear size based on box size.
   void getRadius() {
@@ -124,7 +121,6 @@ struct CentroidData {
     p | num_leaves;
     if (p.isUnpacking()) pps.resize(num_leaves);
     for (int i = 0; i < num_leaves; i++) {
-      if (p.isUnpacking()) pps[i].best_dt = std::make_pair(std::numeric_limits<Real>::max(), nullptr);
       p | pps[i].ball;
     }
   }
