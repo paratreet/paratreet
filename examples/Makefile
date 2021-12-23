@@ -7,7 +7,7 @@ CHARMC = $(CHARM_HOME)/bin/charmc $(OPTS)
 
 all: Gravity SPH Collision VisitAll
 DATA = CentroidData.h MultipoleMoments.h
-VISITORS = DensityVisitor.h PressureVisitor.h GravityVisitor.h CollisionVisitor.h NeighborListCollector.h VisitAllVisitor.h
+VISITORS = DensityVisitor.h PressureVisitor.h GravityVisitor.h CollisionVisitor.h VisitAllVisitor.h
 OTHERS = CountManager.h
 
 debug:

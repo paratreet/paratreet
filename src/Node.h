@@ -110,12 +110,16 @@ public:
   {
   }
 
-  Node(Key _key, typename Node<Data>::Type _type, int _n_children, const SpatialNode<Data>& _spatial_node, Particle* _particles, Node<Data>* _parent)
+  Node(Key _key, typename Node<Data>::Type _type, int _n_children,
+        const SpatialNode<Data>& _spatial_node, Particle* _particles,
+        Node<Data>* _parent, int _tp_index, int _cm_index)
     : SpatialNode<Data>(_spatial_node, _particles),
       n_children(_n_children),
       parent(_parent),
       type(_type),
-      key(_key)
+      key(_key),
+      tp_index(_tp_index),
+      cm_index(_cm_index)
   {
   }
 
@@ -133,8 +137,8 @@ public:
 
   // this stuff gets edited:
   int wait_count     = -1;
-  int tp_index       = -1;
-  int cm_index       = -1;
+  const int tp_index;
+  const int cm_index;
   std::atomic<bool> requested = ATOMIC_VAR_INIT(false);
 
 public:
@@ -205,14 +209,14 @@ public:
   FullNode() = default;
   virtual ~FullNode() = default;
 
-  FullNode(Key _key, typename Node<Data>::Type _type, bool _is_leaf, const SpatialNode<Data>& _spatial_node, Particle* _particles, Node<Data>* _parent) // for cached non boundary nodes
-  : Node<Data>(_key, _type, _is_leaf ? 0 : BRANCH_FACTOR, _spatial_node, _particles, _parent)
+  FullNode(Key _key, typename Node<Data>::Type _type, bool _is_leaf, const SpatialNode<Data>& _spatial_node, Particle* _particles, Node<Data>* _parent, int _tp_index, int _cm_index) // for cached non boundary nodes
+  : Node<Data>(_key, _type, _is_leaf ? 0 : BRANCH_FACTOR, _spatial_node, _particles, _parent, _tp_index, _cm_index)
   {
     initChildren();
   }
 
-  FullNode(Key _key, int _depth, int _n_particles, Particle* _particles, bool _is_leaf, Node<Data>* _parent, int _tp_index)
-    : Node<Data>(Data(), _n_particles, _particles, _depth, _is_leaf ? 0 : BRANCH_FACTOR, _parent, Node<Data>::Type::Invalid, _key, _tp_index, -1)
+  FullNode(Key _key, int _depth, int _n_particles, Particle* _particles, bool _is_leaf, Node<Data>* _parent, int _tp_index, int _cm_index)
+    : Node<Data>(Data(), _n_particles, _particles, _depth, _is_leaf ? 0 : BRANCH_FACTOR, _parent, Node<Data>::Type::Invalid, _key, _tp_index, _cm_index)
   {
     initChildren();
   }
