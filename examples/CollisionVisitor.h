@@ -7,9 +7,7 @@
 #include <cmath>
 #include <vector>
 #include <queue>
-#include "CollisionTracker.h"
 
-extern CProxy_CollisionTracker collision_tracker;
 extern Real max_timestep;
 
 struct CollisionVisitor {
