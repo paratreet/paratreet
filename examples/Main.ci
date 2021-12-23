@@ -9,7 +9,6 @@ mainmodule Main {
     readonly int iter_start_collision;
     readonly Real max_timestep;
     readonly CProxy_CountManager count_manager;
-    readonly CProxy_CollisionTracker collision_tracker;
     readonly CProxy_VisitAllTracker visit_all_tracker;
 
     initnode void initialize(void);
@@ -21,12 +20,6 @@ mainmodule Main {
 
     group VisitAllTracker {
         entry VisitAllTracker();
-        entry void reset(const CkCallback&);
-    }
-
-    nodegroup CollisionTracker {
-        entry CollisionTracker();
-        entry [exclusive] void setShouldDelete(Key key);
         entry void reset(const CkCallback&);
     }
 
