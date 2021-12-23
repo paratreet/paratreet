@@ -1,0 +1,22 @@
+mainmodule Main {
+    extern module paratreet;
+
+    readonly int peanoKey;
+    readonly CProxy_CountManager count_manager;
+    readonly CProxy_VisitAllTracker visit_all_tracker;
+
+    initnode void initialize(void);
+
+    group CountManager {
+        entry CountManager(double min, double max, int nbins);
+        entry void sum(const CkCallback&);
+    }
+
+    group VisitAllTracker {
+        entry VisitAllTracker();
+        entry void reset(const CkCallback&);
+    }
+
+    extern entry void Partition<SearchData> startDown<VisitAllVisitor> (VisitAllVisitor v);
+    extern entry void Partition<SearchData> startBasicDown<VisitAllVisitor> (VisitAllVisitor v);
+}

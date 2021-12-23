@@ -8,27 +8,13 @@ mainmodule Main {
     readonly int peanoKey;
     readonly int iter_start_collision;
     readonly Real max_timestep;
-    readonly CProxy_CountManager count_manager;
-    readonly CProxy_VisitAllTracker visit_all_tracker;
 
     initnode void initialize(void);
-
-    group CountManager {
-        entry CountManager(double min, double max, int nbins);
-        entry void sum(const CkCallback&);
-    }
-
-    group VisitAllTracker {
-        entry VisitAllTracker();
-        entry void reset(const CkCallback&);
-    }
 
     extern entry void Partition<CentroidData> startDown<GravityVisitor> (GravityVisitor v);
     extern entry void Subtree<CentroidData> startDual<GravityVisitor> (GravityVisitor v);
     extern entry void Partition<CentroidData> startBasicDown<GravityVisitor> (GravityVisitor v);
     extern entry void Partition<CentroidData> startDown<CollisionVisitor> (CollisionVisitor v);
-    extern entry void Partition<CentroidData> startDown<VisitAllVisitor> (VisitAllVisitor v);
-    extern entry void Partition<CentroidData> startBasicDown<VisitAllVisitor> (VisitAllVisitor v);
     extern entry void Partition<CentroidData> startUpAndDown<DensityVisitor> (DensityVisitor v);
     extern entry void Partition<CentroidData> startDown<PressureVisitor> (PressureVisitor v);
     extern entry void CacheManager<CentroidData> startPrefetch<GravityVisitor>(DPHolder<CentroidData>, CkCallback);
