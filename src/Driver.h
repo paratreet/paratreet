@@ -227,7 +227,8 @@ public:
       float ratio = (float) maxPESize / avgPESize;
       bool complete_rebuild = (config.flush_period == 0) ?
           (ratio > config.flush_max_avg_ratio) :
-          (iter % config.flush_period == config.flush_period - 1) ;
+          (iter % config.flush_period == config.flush_period - 1);
+      if (iter + 1 == config.num_iterations) complete_rebuild = false;
       CkPrintf("[Meta] n_subtree = %d; timestep_size = %f; sumPESize = %d; maxPESize = %d, avgPESize = %f; ratio = %f; maxVelocity = %f; rebuild = %s\n", n_subtrees, timestep_size, sumPESize, maxPESize, avgPESize, ratio, max_velocity, (complete_rebuild? "yes" : "no"));
       //End Subtree reduction message parsing
 
@@ -241,7 +242,7 @@ public:
       partitions.rebuild(universe, subtrees, complete_rebuild); // 0.1s for example
       CkWaitQD();
       CkPrintf("Perturbations: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
-      if (!complete_rebuild && iter % config.lb_period == config.lb_period - 1){
+      if (!complete_rebuild && config.lb_period > 0 && iter % config.lb_period == config.lb_period - 1){
         start_time = CkWallTimer();
         //subtrees.pauseForLB(); // move them later
         partitions.pauseForLB();

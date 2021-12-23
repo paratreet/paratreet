@@ -4,17 +4,17 @@
 
   using namespace paratreet;
 
-  void ExMain::preTraversalFn(ProxyPack<CentroidData>& proxy_pack) {
+  void ExMain::preTraversalFn(ProxyPack<SearchData>& proxy_pack) {
     //proxy_pack.cache.startParentPrefetch(this->thisProxy, CkCallback::ignore); // MUST USE FOR UPND TRAVS
     //proxy_pack.cache.template startPrefetch<GravityVisitor>(this->thisProxy, CkCallback::ignore);
     proxy_pack.driver.loadCache(CkCallbackResumeThread());
   }
 
-  void ExMain::traversalFn(BoundingBox& universe, ProxyPack<CentroidData>& proxy_pack, int iter) {
+  void ExMain::traversalFn(BoundingBox& universe, ProxyPack<SearchData>& proxy_pack, int iter) {
     proxy_pack.partition.template startDown<VisitAllVisitor>(VisitAllVisitor());
   }
 
-  void ExMain::postIterationFn(BoundingBox& universe, ProxyPack<CentroidData>& proxy_pack, int iter) {
+  void ExMain::postIterationFn(BoundingBox& universe, ProxyPack<SearchData>& proxy_pack, int iter) {
     visit_all_tracker.reset(CkCallbackResumeThread());
   }
 

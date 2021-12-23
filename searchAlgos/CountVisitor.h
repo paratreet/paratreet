@@ -20,22 +20,22 @@ private:
     return (p1-p2).length();
   }
 
-  static Vector3D<Real> center(const CentroidData& data) {
+  static Vector3D<Real> center(const SearchData& data) {
     return data.box.center();
   }
 
-  static Real radius(const CentroidData& data) {
+  static Real radius(const SearchData& data) {
     return data.box.size().length()/2;
   }
 
-  static int findBin(const CentroidData& from, const CentroidData& on) {
+  static int findBin(const SearchData& from, const SearchData& on) {
     Real d = dist(center(from), center(on));
     Real r1 = radius(from), r2 = radius(on);
     return count_manager.ckLocalBranch()->findBin(d - r1 - r2, d + r1 + r2);
   }
 
 public:
-  static bool open(const SpatialNode<CentroidData>& from, SpatialNode<CentroidData>& on) {
+  static bool open(const SpatialNode<SearchData>& from, SpatialNode<SearchData>& on) {
     if (from.data.count == 0 || on.data.count == 0) {
       return false;
     }
@@ -49,13 +49,13 @@ public:
     }
   }
 
-  static void node(const SpatialNode<CentroidData>& from, SpatialNode<CentroidData>& on) {}
+  static void node(const SpatialNode<SearchData>& from, SpatialNode<SearchData>& on) {}
 
-  static bool cell(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
+  static bool cell(const SpatialNode<SearchData>& source, SpatialNode<SearchData>& target) {
     return open(source, target);
   }
 
-  static void leaf(const SpatialNode<CentroidData>& from, SpatialNode<CentroidData>& on) {
+  static void leaf(const SpatialNode<SearchData>& from, SpatialNode<SearchData>& on) {
     CountManager* countManager = count_manager.ckLocalBranch();
     int idx = findBin(from.data, on.data);
     if (idx < 0) {
