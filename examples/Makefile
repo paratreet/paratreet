@@ -5,10 +5,9 @@ LB_LIBS = $(foreach m, $(LBS), -module $(m))
 OPTS = -g -O3 $(INCLUDES) -DCOUNT_INTERACTIONS=0 -DDEBUG=0 -DHEXADECAPOLE $(MAKE_OPTS)
 CHARMC = $(CHARM_HOME)/bin/charmc $(OPTS)
 
-all: Gravity SPH Collision VisitAll
+all: Gravity SPH Collision
 DATA = CentroidData.h MultipoleMoments.h
-VISITORS = DensityVisitor.h PressureVisitor.h GravityVisitor.h CollisionVisitor.h VisitAllVisitor.h
-OTHERS = CountManager.h
+VISITORS = DensityVisitor.h PressureVisitor.h GravityVisitor.h CollisionVisitor.h
 
 debug:
 	echo $(LB_LIBS)
@@ -25,9 +24,6 @@ Collision: Main.decl.h Main.o Collision.o moments.o ../src/libparatreet.a
 SPH: Main.decl.h Main.o SPH.o moments.o ../src/libparatreet.a
 	$(CHARMC) -language charm++ $(LB_LIBS) -o SPH SPH.o Main.o moments.o $(LD_LIBS)
 
-VisitAll: Main.decl.h Main.o VisitAll.o moments.o ../src/libparatreet.a
-	$(CHARMC) -language charm++ -module CommonLBs -o VisitAll VisitAll.o Main.o moments.o $(LD_LIBS)
-
 Gravity.o: Gravity.C Main.decl.h
 	$(CHARMC) -c $<
 
@@ -37,10 +33,7 @@ Collision.o: Collision.C Main.decl.h
 SPH.o: SPH.C SPHUtils.h Main.decl.h
 	$(CHARMC) -c $<
 
-VisitAll.o: VisitAll.C Main.decl.h
-	$(CHARMC) -c $<
-
-Main.o: Main.C $(VISITORS) $(OTHERS) Main.decl.h
+Main.o: Main.C $(VISITORS) Main.decl.h
 	$(CHARMC) -c $<
 
 moments.o: moments.C
@@ -50,4 +43,4 @@ test: all
 	./charmrun ./Gravity -f $(BASE_PATH)/inputgen/100k.tipsy -d sfc +p3 ++ppn 3 +pemap 1-3 +commap 0 ++local
 
 clean:
-	rm -f *.decl.h *.def.h conv-host *.o Gravity SPH Collision VisitAll charmrun
+	rm -f *.decl.h *.def.h conv-host *.o Gravity SPH Collision charmrun
