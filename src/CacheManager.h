@@ -17,8 +17,8 @@ extern CProxy_TreeSpec treespec;
 template <typename Data>
 struct NodePool {
   virtual ~NodePool() = default;
-  virtual Node<Data>* alloc(Key key, int depth, int n_particles, Particle* particles, bool is_leaf, Node<Data>* parent, int tp_index) = 0;
-  virtual Node<Data>* alloc(Key key, typename Node<Data>::Type type, SpatialNode<Data> spatial_node, Node<Data>* parent, Particle* particles) = 0;
+  virtual Node<Data>* alloc(Key key, int depth, int n_particles, Particle* particles, bool is_leaf, Node<Data>* parent, int tp_index, int cm_index) = 0;
+  virtual Node<Data>* alloc(Key key, typename Node<Data>::Type type, SpatialNode<Data> spatial_node, Node<Data>* parent, Particle* particles, int tp_index, int cm_index) = 0;
   virtual void cleanup() = 0;
 };
 
@@ -34,13 +34,13 @@ public:
   virtual ~FullNodePool() override {
     for (auto& elem : list) delete[] elem.ptr;
   }
-  virtual Node<Data>* alloc(Key key, int depth, int n_particles, Particle* particles, bool is_leaf, Node<Data>* parent, int tp_index) override {
+  virtual Node<Data>* alloc(Key key, int depth, int n_particles, Particle* particles, bool is_leaf, Node<Data>* parent, int tp_index, int cm_index) override {
     auto buf = getBuf();
-    return new (buf) FullNode<Data, BranchFactor>(key, depth, n_particles, particles, is_leaf, parent, tp_index);
+    return new (buf) FullNode<Data, BranchFactor>(key, depth, n_particles, particles, is_leaf, parent, tp_index, cm_index);
   }
-  virtual Node<Data>* alloc(Key key, typename Node<Data>::Type type, SpatialNode<Data> spatial_node, Node<Data>* parent, Particle* particles) override {
+  virtual Node<Data>* alloc(Key key, typename Node<Data>::Type type, SpatialNode<Data> spatial_node, Node<Data>* parent, Particle* particles, int tp_index, int cm_index) override {
     auto buf = getBuf();
-    return new (buf) FullNode<Data, BranchFactor>(key, type, spatial_node.is_leaf, spatial_node, particles, parent);
+    return new (buf) FullNode<Data, BranchFactor>(key, type, spatial_node.is_leaf, spatial_node, particles, parent, tp_index, cm_index);
   }
 private:
   char* getBuf() {
@@ -83,6 +83,7 @@ public:
   std::map<int, Partition<Data>*> partition_lookup; // managed by Partition
   std::set<Key> prefetch_set;
   std::vector<std::vector<Node<Data>*>> cached_leaves; // cached leaves left over
+  std::vector<std::vector<Node<Data>*>> displaced_leaves; // leaves split between >1 Partitions
   std::vector<std::unique_ptr<NodePool<Data>>> pools;
   CProxy_Resumer<Data> r_proxy;
   Data nodewide_data;
@@ -91,6 +92,7 @@ public:
 
   void initialize(const CkCallback& cb) {
     cached_leaves.resize(CkNumPes());
+    displaced_leaves.resize(CkNumPes());
     auto& config = paratreet::getConfiguration();
     branch_factor = config.branchFactor();
     auto pool_elem_size = std::max(config.pool_elem_size, 128);
@@ -113,46 +115,89 @@ public:
     destroy(false);
   }
 
+  void addDisplacedLeaf(Node<Data>* leaf) {
+    displaced_leaves[CkMyRank()].push_back(leaf);
+  }
+
 public:
-  void resetCachedParticles(CkCallback cb) {
+  void resetCachedParticles(PPHolder<Data> pp_holder) {
     for (auto && clv : cached_leaves) {
       for (auto && cl : clv) {
         Data empty_data;
         SpatialNode<Data> empty_sn (empty_data, 0, false, nullptr, 0);
         auto parent = cl->parent;
-        auto new_leaf = makeCachedNode(cl->key, Node<Data>::Type::Remote, empty_sn, parent, nullptr); // placeholder
-        new_leaf->cm_index = cl->cm_index;
+        auto new_leaf = makeCachedNode(cl->key, Node<Data>::Type::Remote, empty_sn, parent, nullptr, cl->tp_index, cl->cm_index); // placeholder
         auto which_child = cl->key % branch_factor;
         cl->parent->exchangeChild(which_child, new_leaf);
         cl->freeParticles();
       }
       clv.clear();
     }
-    this->contribute(cb);
+    std::map<int, std::vector<Key>> partitions_to_request;
+    auto handleLeaf = [&] (Node<Data>* leaf) {
+      for (int i = 0; i < leaf->n_particles; i++) {
+        //CkPrintf("Requesting particle %" PRIx64 "\n", leaf->particles()[i].key);
+        partitions_to_request[leaf->particles()[i].partition_idx].push_back(leaf->particles()[i].key);
+      }
+    };
+    for (auto && dlv : displaced_leaves) {
+      for (auto && dl : dlv) handleLeaf(dl);
+    }
+    for (auto& l : leaf_lookup) handleLeaf(l.second);
+    for (auto& pair : partitions_to_request) {
+      pp_holder.proxy[pair.first].requestParticleUpdates(this->thisIndex, pair.second);
+    }
+  }
+  void receiveParticleUpdates(const std::vector<Particle>& particles_received) {
+    std::map<Key, const Particle*> key_mappings;
+    for (auto& p : particles_received) key_mappings.emplace(p.key, &p);
+    size_t replaced = 0;
+    auto handleLeaf = [&] (Node<Data>* leaf) {
+      for (int i = 0; i < leaf->n_particles; i++) {
+        auto it = key_mappings.find(leaf->particles()[i].key);
+        if (it != key_mappings.end()) {
+          replaced++;
+          leaf->changeParticle(i, *(it->second));
+          //CkPrintf("Changing particle %" PRIx64 "\n", leaf->particles()[i].key);
+        }
+      }
+    };
+    for (auto && dlv : displaced_leaves) {
+      for (auto && dl : dlv) handleLeaf(dl);
+    }
+    for (auto& l : leaf_lookup) handleLeaf(l.second);
+    if (replaced != particles_received.size()) CkAbort("broken");
   }
   void destroy(bool restore) {
+    for (auto& clv : cached_leaves) {
+      for (auto l : clv) l->freeParticles();
+      clv.clear();
+    }
+    for (auto& l : leaf_lookup) l.second->freeParticles();
+    for (auto& dlv : displaced_leaves) {
+      dlv.clear();
+    }
     for (auto& pool : pools) pool->cleanup();
     local_tps.clear();
     leaf_lookup.clear();
     subtree_copy_started.clear();
     prefetch_set.clear();
 
-    cleanupPlaceholders();
 
     root = nullptr;
   }
 
-  Node<Data>* makeNode(Key key, int depth, int n_particles, Particle* particles, bool is_leaf, Node<Data>* parent, int tp_index) {
-    return pools[CkMyRank()]->alloc(key, depth, n_particles, particles, is_leaf, parent, tp_index);
+  Node<Data>* makeNode(Key key, int depth, int n_particles, Particle* particles, bool is_leaf, Node<Data>* parent, int tp_index, int cm_index) {
+    return pools[CkMyRank()]->alloc(key, depth, n_particles, particles, is_leaf, parent, tp_index, cm_index);
   }
 
-  Node<Data>* makeCachedNode(Key key, typename Node<Data>::Type type, SpatialNode<Data> spatial_node, Node<Data>* parent, const Particle* particlesToCopy) {
+  Node<Data>* makeCachedNode(Key key, typename Node<Data>::Type type, SpatialNode<Data> spatial_node, Node<Data>* parent, const Particle* particlesToCopy, int tp_index, int cm_index) {
     Particle* particles = nullptr;
     if (spatial_node.is_leaf && spatial_node.n_particles > 0) {
       particles = new Particle [spatial_node.n_particles];
       std::copy(particlesToCopy, particlesToCopy + spatial_node.n_particles, particles);
     }
-    return pools[CkMyRank()]->alloc(key, type, spatial_node, parent, particles);
+    return pools[CkMyRank()]->alloc(key, type, spatial_node, parent, particles, tp_index, cm_index);
   }
 
   template <typename Visitor>
@@ -176,7 +221,6 @@ private:
   void process(Key);
   void connect(Node<Data>*, bool);
   void connect(Node<Data>*, const std::vector<Node<Data>*>&);
-  void cleanupPlaceholders();
 };
 
 template <typename Data>
@@ -293,11 +337,9 @@ Node<Data>* CacheManager<Data>::addCacheHelper(Particle* particles, int n_partic
   }
 
   auto top_type = nodes[0].second.is_leaf ? Node<Data>::Type::CachedRemoteLeaf : Node<Data>::Type::CachedRemote;
-  auto first_node = makeCachedNode(nodes[0].first, top_type, nodes[0].second, first_node_placeholder_parent, particles);
+  auto first_node = makeCachedNode(nodes[0].first, top_type, nodes[0].second, first_node_placeholder_parent, particles, tp_index, cm_index);
   std::vector<Node<Data>*> leaves;
   if (nodes[0].second.is_leaf) leaves.push_back(first_node);
-  first_node->cm_index = cm_index;
-  first_node->tp_index = tp_index;
   insertNode(first_node, false, false);
   int p_index = nodes[0].second.is_leaf ? nodes[0].second.n_particles : 0;
   for (int j = 1; j < n_nodes; j++) {
@@ -305,9 +347,7 @@ Node<Data>* CacheManager<Data>::addCacheHelper(Particle* particles, int n_partic
     auto && spatial_node = nodes[j].second;
     auto curr_parent = first_node->getDescendant(new_key / branch_factor);
     auto type = spatial_node.is_leaf ? Node<Data>::Type::CachedRemoteLeaf : Node<Data>::Type::CachedRemote;
-    auto node = makeCachedNode(new_key, type, spatial_node, curr_parent, &particles[p_index]);
-    node->cm_index = cm_index;
-    node->tp_index = tp_index;
+    auto node = makeCachedNode(new_key, type, spatial_node, curr_parent, &particles[p_index], tp_index, cm_index);
     if (node->is_leaf) {
       p_index += spatial_node.n_particles;
       leaves.push_back(node);
@@ -374,7 +414,7 @@ void CacheManager<Data>::restoreDataHelper(std::pair<Key, SpatialNode<Data>>& pa
 #endif
   Key key = param.first;
   Node<Data>* parent = (key == Key(1)) ? nullptr : root->getDescendant(key / branch_factor);
-  auto node = makeCachedNode(key, Node<Data>::Type::CachedBoundary, param.second, parent, nullptr);
+  auto node = makeCachedNode(key, Node<Data>::Type::CachedBoundary, param.second, parent, nullptr, -1, -1);
   insertNode(node, true, false);
   connect(node, should_process);
 }
@@ -413,8 +453,9 @@ void CacheManager<Data>::insertNode(Node<Data>* node, bool above_tp, bool should
       auto type = (above_tp) ? Node<Data>::Type::RemoteAboveTPKey : Node<Data>::Type::Remote;
       Data empty_data;
       SpatialNode<Data> empty_sn (empty_data, 0, false, nullptr, 0);
-      new_child = makeCachedNode(child_key, type, empty_sn, node, nullptr); // placeholder
-      if (!above_tp) new_child->cm_index = node->cm_index;
+      //int new_tp_index = above_tp ? node->tp_index : -1;
+      int new_cm_index = above_tp ? -1 : node->cm_index;
+      new_child = makeCachedNode(child_key, type, empty_sn, node, nullptr, -1, new_cm_index); // placeholder
     }
     node->exchangeChild(i, new_child);
   }
@@ -428,14 +469,5 @@ void CacheManager<Data>::process(Key key) {
     r_proxy[this->thisIndex * CkNodeSize(0) + i].process(key);
   }
 }
-
-template <typename Data>
-void CacheManager<Data>::cleanupPlaceholders() {
-  for (auto& clv : cached_leaves) {
-    for (auto l : clv) l->freeParticles();
-    clv.clear();
-  }
-}
-
 
 #endif //PARATREET_CACHEMANAGER_H_

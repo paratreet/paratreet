@@ -4,12 +4,9 @@
 #include "paratreet.decl.h"
 #include "common.h"
 #include "Space.h"
-#include "NeighborListCollector.h"
 #include <cmath>
 #include <vector>
 #include <queue>
-
-extern CProxy_NeighborListCollector neighbor_list_collector;
 
 struct DensityVisitor {
 public:
@@ -25,8 +22,8 @@ public:
   static bool open(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
     // Check if any of the target balls intersect the source volume
     for (int i = 0; i < target.n_particles; i++) {
-      if (target.data.pps.neighbors[i].size() < k) return true;
-      if(Space::intersect(source.data.box, target.particles()[i].position, target.data.pps.neighbors[i][0].fKey))
+      if (target.data.pps[i].neighbors.size() < k) return true;
+      if(Space::intersect(source.data.box, target.particles()[i].position, target.data.pps[i].neighbors[0].fKey))
         return true;
     }
     return false;
@@ -35,9 +32,8 @@ public:
   static void node(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {}
 
   static void leaf(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
-    auto nlc = neighbor_list_collector.ckLocalBranch();
     for (int i = 0; i < target.n_particles; i++) {
-      auto& Q = target.data.pps.neighbors[i];
+      auto& Q = target.data.pps[i].neighbors;
       for (int j = 0; j < source.n_particles; j++) {
         const auto& sp = source.particles()[j]; //source particle
         Vector3D<Real> dr = target.particles()[i].position - sp.position;
@@ -51,12 +47,9 @@ public:
         }
         // Add the particle to the neighbor list if it isnt filled up
         if (Q.size() < k) {
-          nlc->makeRequest(source.home_pe, sp.key); // on RTFORCE, request his density
-          nlc->saveSubtreeHome(source.home_pe, sp); // else, its good to go
           pqSmoothNode pqNew;
-          pqNew.mass = sp.mass;
+          pqNew.pPtr = &sp;
           pqNew.fKey = dsq;
-          pqNew.pKey = sp.key;
           Q.push_back(pqNew);
           std::push_heap(&(Q)[0] + 0, &(Q)[0] + Q.size());
         }

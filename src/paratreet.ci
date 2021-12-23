@@ -47,7 +47,8 @@ module paratreet {
     entry void startPrefetch(DPHolder<Data>, CkCallback);
     entry void startParentPrefetch(DPHolder<Data>, CkCallback);
     entry void destroy(bool);
-    entry void resetCachedParticles(CkCallback);
+    entry void resetCachedParticles(PPHolder<Data>);
+    entry void receiveParticleUpdates(std::vector<Particle>);
   };
 
   template <typename Data>
@@ -62,6 +63,8 @@ module paratreet {
     entry void setUniverse(BoundingBox b);
     entry void collectAndResetStats(CkCallback cb);
     entry void collectMetaData(const CkCallback & cb);
+    template <typename Data>
+    entry void applyAccumulatedOpposingEffects(PPHolder<Data>);
   };
 
   group Writer {
@@ -97,6 +100,8 @@ module paratreet {
     entry void callPerLeafFn(CkReference<paratreet::PerLeafAble<Data>>, const CkCallback&);
     entry void deleteParticleOfOrder(int order);
     entry void pauseForLB();
+    entry void requestParticleUpdates(int cm_index, std::vector<Key> pKeys);
+    entry void applyOpposingEffects(std::vector<std::pair<Key, std::pair<Vector3D<Real>, Real>>> effects);
   }
 
   template <typename Data>

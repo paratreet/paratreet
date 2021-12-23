@@ -61,7 +61,7 @@ typedef struct PressSmoothParticleStruct {
     double PoverRho2f;
 } PressSmoothParticle;
 
-static void doSPHCalc(SpatialNode<CentroidData>& leaf, int pi, Real fBall, Particle& b, Real fDivv_Corrector) {
+static void doSPHCalc(SpatialNode<CentroidData>& leaf, int pi, Real fBall, ThreadStateHolder* tls, const Particle& b, Real fDivv_Corrector) {
     auto& a = leaf.particles()[pi];
     static constexpr const Real visc = 0.;
     static constexpr const Real aFac = 1.; // both of these are cosmology
@@ -125,8 +125,7 @@ static void doSPHCalc(SpatialNode<CentroidData>& leaf, int pi, Real fBall, Parti
 //    updateParticle(a, b, &params, &qParams, &pParams, -1);
     PdV = aParams.rNorm * 0.5 * params.visc * params.dvdotdr;
     PdV += aParams.rNorm*aParams.PoverRho2*params.dvdotdr;
-    b.pressure_dVolume += PdV;
-    b.acceleration -= acc*aParams.rNorm*params.dx;
+    tls->applyOpposingEffect(b, -acc*aParams.rNorm*params.dx, PdV);
   }
 }
 

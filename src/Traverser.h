@@ -77,7 +77,6 @@ protected:
   void startTrav(Node<Data>* new_payload) {
     std::vector<int> all_leaves;
     for (int i = 0; i < leaves.size(); i++) {
-      leaves[i]->data.widen();
       all_leaves.push_back(i);
     }
     recurse(new_payload, all_leaves);
@@ -255,9 +254,6 @@ public:
   virtual ~BasicDownTraverser() = default;
   virtual bool isFinished() override {return curr_nodes.empty();}
   virtual void start() override {
-    for (int i = 0; i < leaves.size(); i++) {
-      leaves[i]->data.widen();
-    }
     // Initialize with global root key and leaves
     startTrav();
   }
@@ -385,7 +381,6 @@ public:
       auto tree_leaf = part.tree_leaves[i];
       curr_nodes[tree_leaf->key].push_back(i);
       trav_tops[i] = tree_leaf;
-      part.leaves[i]->data.widen();
     }
     num_waiting = std::vector<int> (part.leaves.size(), 1);
     stats = thread_state_holder.ckLocalBranch();
