@@ -12,19 +12,19 @@ class CProxy_Subtree;
 
 namespace paratreet {
     enum class DecompType {
-      eOct = 0,
-      eBinaryOct,
-      eSfc,
-      eKd,
-      eLongest,
+      eOct = 0, // Partitions are leaves in an octree
+      eBinaryOct, // Partitions are leaves in a binary octree
+      eSfc, // Partitions are chunks of a space-filling curve
+      eKd, // Partitions are leaves in a k-d tree
+      eLongest, // Partitions are leaves in a LongestDimension kd-tree
       eInvalid = 100
     };
 
     enum class TreeType {
-      eOct = 0,
-      eBinaryOct,
-      eKd,
-      eLongest,
+      eOct = 0, // 8 children for every node (in 3d)
+      eBinaryOct, // 2 children for every node, alternates dimension
+      eKd, // k-d tree, alternates dimension
+      eLongest, // k-d tree, dimension is always the longest dimension of the box
       eInvalid = 100
     };
 
@@ -80,23 +80,23 @@ namespace paratreet {
     }
 
     struct Configuration : public PUP::able, public Loadable {
-        int min_n_subtrees;
-        int min_n_partitions;
-        int max_particles_per_leaf; // For local tree build
-        DecompType decomp_type;
-        TreeType tree_type;
+        int min_n_subtrees; // how many subtrees do you want, at least
+        int min_n_partitions; // how many partitions do you want, at least
+        int max_particles_per_leaf; // at most how many particles can fit in one leaf
+        DecompType decomp_type; // enum for how to decompose particles to Partitions
+        TreeType tree_type; // enum for how to build the tree
         int branchFactor() const {return branchFactorFromTreeType(tree_type);}
-        int num_iterations;
-        int num_share_nodes;
-        int cache_share_depth;
-        int pool_elem_size;
-        int flush_period;
-        int flush_max_avg_ratio;
-        int lb_period;
-        int request_pause_interval;
-        int iter_pause_interval;
-        std::string input_file;
-        std::string output_file;
+        int num_iterations; // number of iterations to run the simulation for.
+        int num_share_nodes; // how many nodes to share when requesting a node
+        int cache_share_depth; // how many nodes of the global tree should be shared. 0 means all
+        int pool_elem_size; // how many nodes in one pool element. nodes are stored in pools
+        int flush_period; // after how many iterations should we flush (re-do decomposition)
+        int flush_max_avg_ratio; // after what decomposition (max/avg) ratio should we flush
+        int lb_period; // after how many iterations should we re-balance load
+        int request_pause_interval; // after how many requests per Partition should we pause that traversal
+        int iter_pause_interval; // after how many iterations should we pause that traversal
+        std::string input_file; // filename representing initial conditions
+        std::string output_file; // filename representing output conditions
 
         Configuration(void) { this->register_fields(); }
         Configuration(CkMigrateMessage *m): PUP::able(m) {}

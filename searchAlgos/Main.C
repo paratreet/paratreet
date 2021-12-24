@@ -102,9 +102,9 @@ PARATREET_REGISTER_MAIN(ExMain);
         case 's':
           conf.num_share_nodes = atoi(optarg);
           break;
-	case 'm':
-	  peanoKey = 0; // morton
-	  break;
+        case 'm':
+          peanoKey = 0; // morton
+          break;
 
         default:
           CkPrintf("Usage: %s\n", m->argv[0]);

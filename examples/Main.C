@@ -21,7 +21,6 @@ PARATREET_REGISTER_MAIN(ExMain);
 
   void ExMain::main(CkArgMsg* m) {
     // mainProxy = thisProxy;
-    int cur_iteration;
 
     // Initialize readonly variables
     conf.input_file = "";
@@ -47,9 +46,6 @@ PARATREET_REGISTER_MAIN(ExMain);
     theta = 0.7;
     iter_start_collision = 0;
     max_timestep = 1e-5;
-
-    // Initialize member variables
-    cur_iteration = 0;
 
     // Process command line arguments
     int c;
@@ -133,9 +129,9 @@ PARATREET_REGISTER_MAIN(ExMain);
           conf.output_file = optarg;
           if (conf.output_file.empty()) CkAbort("output file unspecified");
           break;
-	case 'm':
-	  peanoKey = 0; // morton
-	  break;
+        case 'm':
+          peanoKey = 0; // morton
+          break;
         case 'e':
           dual_tree = true;
           CkPrintf("You are doing a dual-tree traversal. Make sure you have matching decomps.\n");
