@@ -3,6 +3,8 @@
 ![SMP](https://github.com/paratreet/paratreet/workflows/SMP/badge.svg?branch=master)
 ![Non-SMP](https://github.com/paratreet/paratreet/workflows/Non-SMP/badge.svg?branch=master)
 
+[Wiki Page](https://github.com/paratreet/paratreet/wiki)
+
 ## Installation
 
 ### 1. Build Charm++
