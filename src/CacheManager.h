@@ -91,7 +91,7 @@ public:
   CacheManager() { }
 
   void initialize(const CkCallback& cb) {
-    auto node_size = this->isNodeGroup() ? CmiNodeSize(CkMyNode()) : 0;
+    auto node_size = this->isNodeGroup() ? CmiNodeSize(CkMyNode()) : 1;
     cached_leaves.resize(node_size);
     displaced_leaves.resize(node_size);
     auto& config = paratreet::getConfiguration();
@@ -465,20 +465,19 @@ void CacheManager<Data>::insertNode(Node<Data>* node, bool above_tp, bool should
 
 template <typename Data>
 void CacheManager<Data>::process(Node<Data>* node) {
-  auto key = node->key;
-  if (!this->isNodeGroup()) r_proxy[this->thisIndex].process (key);
+  if (!this->isNodeGroup()) r_proxy[this->thisIndex].process(node->key);
   else {
     auto node_size = CmiNodeSize(CkMyNode());
     auto first_pe = CmiNodeFirst(CkMyNode());
     if (node_size > sizeof(node->requested) * 8) {
       for (int i = 0; i < node_size; i++) {
-        r_proxy[first_pe + i].process(key);
+        r_proxy[first_pe + i].process(node->key);
       }
     }
     else {
       auto requested = node->requested.load();
       for (int i = 0; i < node_size; i++) {
-        if ((1ull << i) | requested) r_proxy[first_pe + i].process(key);
+        if ((1ull << i) | requested) r_proxy[first_pe + i].process(node->key);
       }
     }
   }

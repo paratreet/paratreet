@@ -44,6 +44,35 @@ inline bool doCell(Visitor& v, Node* source, Node* target, StatCollector* stats)
   return should_open;
 }
 
+template <typename Data>
+// returns if_requested
+inline bool handleRemoteNode(Node<Data>* node, size_t trav_idx, size_t part_idx, CProxy_TreeCanopy<Data> tc_proxy, CProxy_CacheManager<Data> cm_proxy, CProxy_Resumer<Data> r_proxy) {
+  auto cm_index = cm_proxy.ckLocalBranch()->thisIndex;
+  auto mask = 1ull << CkMyRank();
+  auto prev = node->requested.fetch_or(mask);
+  bool changed = prev | mask == 0;
+  if (prev == 0) {
+    if (node->type == Node<Data>::Type::Boundary || node->type == Node<Data>::Type::RemoteAboveTPKey) {
+      // Ask TreeCanopy for data
+      // If the canopy is at the same level as a TP, it asks the TP
+      // which eventually calls CacheManager::serviceRequest
+      // If the canopy is above TPs, it directly calls
+      // CacheManager::restoreData which fills in the cache
+      tc_proxy[node->key].requestData(cm_index);
+    }
+    else {
+      // The node is entirely remote, ask CacheManager for data
+      cm_proxy[node->cm_index].requestNodes(std::make_pair(node->key, cm_index));
+    }
+  // it is possible that the node has been substituted already. in this case, check if the placeholder is still the same
+  } else if (changed && node->parent && node->parent->getDescendant(node->key) != node) r_proxy.process(node->key);
+  // Add the Partition that initiated the traversal to the waiting list
+  // maintained in Resumer
+  auto& list = r_proxy.ckLocalBranch()->waiting[node->key];
+  if (list.empty() || list.back().first != trav_idx || list.back().second != part_idx) list.emplace_back(trav_idx, part_idx);
+  return prev == 0;
+}
+
 } // empty namespace
 
 template <typename Data>
@@ -160,28 +189,7 @@ public:
       case Node<Data>::Type::RemoteLeaf:
         {
           curr_nodes[node->key] = active_buckets;
-
-          // Submit a request if the node wasn't requested before
-          bool prev = node->requested.fetch_or(1ull << CkMyRank()) > 0;
-          if (!prev) {
-            //CkPrintf("part idx %d requested node %d\n", part.thisIndex, node->key);
-            num_requested++;
-            if (node->type == Node<Data>::Type::Boundary || node->type == Node<Data>::Type::RemoteAboveTPKey) {
-              // Ask TreeCanopy for data
-              // If the canopy is at the same level as a TP, it asks the TP
-              // which eventually calls CacheManager::serviceRequest
-              // If the canopy is above TPs, it directly calls
-              // CacheManager::restoreData which fills in the cache
-              part.tc_proxy[node->key].requestData(part.cm_local->thisIndex);
-            }
-            else {
-              // The node is entirely remote, ask CacheManager for data
-              part.cm_proxy[node->cm_index].requestNodes(std::make_pair(node->key, part.cm_local->thisIndex));
-            }
-          }
-          // Add the Partition that initiated the traversal to the waiting list
-          // maintained in Resumer
-          part.r_local->waiting[node->key].emplace_back(trav_idx, part.thisIndex);
+          if (handleRemoteNode(node, trav_idx, part.thisIndex, part.tc_proxy, part.cm_proxy, part.r_proxy)) num_requested++;
           break;
         }
       default:
@@ -315,28 +323,7 @@ public:
         case Node<Data>::Type::RemoteLeaf:
           {
             curr_nodes[node->key].push_back(bucket);
-
-            // Submit a request if the node wasn't requested before
-            bool prev = node->requested.fetch_or(1ull << CkMyRank()) > 0;
-            if (!prev) {
-              //CkPrintf("part idx %d requested node %d\n", part.thisIndex, node->key);
-              num_requested++;
-              if (node->type == Node<Data>::Type::Boundary || node->type == Node<Data>::Type::RemoteAboveTPKey) {
-                // Ask TreeCanopy for data
-                // If the canopy is at the same level as a TP, it asks the TP
-                // which eventually calls CacheManager::serviceRequest
-                // If the canopy is above TPs, it directly calls
-                // CacheManager::restoreData which fills in the cache
-                part.tc_proxy[node->key].requestData(part.cm_local->thisIndex);
-              }
-              else {
-                // The node is entirely remote, ask CacheManager for data
-                part.cm_proxy[node->cm_index].requestNodes(std::make_pair(node->key, part.cm_local->thisIndex));
-              }
-            }
-            // Add the Partition that initiated the traversal to the waiting list
-            // maintained in Resumer
-            part.r_local->waiting[node->key].emplace_back(trav_idx, part.thisIndex);
+            if (handleRemoteNode(node, trav_idx, part.thisIndex, part.tc_proxy, part.cm_proxy, part.r_proxy)) num_requested++;
             break;
           }
         default:
@@ -449,15 +436,7 @@ private:
           case Node<Data>::Type::RemoteLeaf:
             {
               curr_nodes_insertions.push_back(std::make_pair(node->key, bucket));
-              num_waiting[bucket]++;
-              bool prev = node->requested.fetch_or(1ull << CkMyRank()) > 0;
-              if (!prev) {
-                if (node->type == Node<Data>::Type::Boundary || node->type == Node<Data>::Type::RemoteAboveTPKey)
-                  part.tc_proxy[node->key].requestData(part.cm_local->thisIndex);
-                else part.cm_proxy[node->cm_index].requestNodes(std::make_pair(node->key, part.cm_local->thisIndex));
-              }
-              auto& list = part.r_local->waiting[node->key];
-              if (list.empty() || list.back().first != trav_idx || list.back().second != part.thisIndex) list.emplace_back(trav_idx, part.thisIndex);
+              handleRemoteNode(node, trav_idx, part.thisIndex, part.tc_proxy, part.cm_proxy, part.r_proxy);
               break;
             }
           default:
@@ -599,14 +578,7 @@ public:
         case Node<Data>::Type::RemoteLeaf:
           {
             curr_nodes_insertions.push_back(std::make_pair(node->key, curr_payload));
-            bool prev = node->requested.fetch_or(1ull << CkMyRank()) > 0;
-            if (!prev) {
-              if (node->type == Node<Data>::Type::Boundary || node->type == Node<Data>::Type::RemoteAboveTPKey)
-                tp.tc_proxy[node->key].requestData(tp.cm_local->thisIndex);
-              else tp.cm_proxy[node->cm_index].requestNodes(std::make_pair(node->key, tp.cm_local->thisIndex));
-            }
-            auto& list = tp.r_local->waiting[node->key];
-            if (list.empty() || list.back().first != trav_idx || list.back().second != tp.thisIndex) list.emplace_back(trav_idx, tp.thisIndex);
+            handleRemoteNode(node, trav_idx, tp.thisIndex, tp.tc_proxy, tp.cm_proxy, tp.r_proxy);
             break;
           }
         default: break;
