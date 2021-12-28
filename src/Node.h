@@ -139,7 +139,9 @@ public:
   int wait_count     = -1;
   const int tp_index;
   const int cm_index;
-  std::atomic<bool> requested = ATOMIC_VAR_INIT(false);
+  std::atomic<unsigned long long> requested = ATOMIC_VAR_INIT(0ull);
+  // functions either as a boolean or as an indicator
+  // as to whether it's requested on that pe
 
 public:
   bool isCached() const {
