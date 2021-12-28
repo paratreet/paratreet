@@ -162,7 +162,7 @@ public:
           curr_nodes[node->key] = active_buckets;
 
           // Submit a request if the node wasn't requested before
-          bool prev = node->requested.exchange(true);
+          bool prev = node->requested.fetch_or(1ull << CkMyRank()) > 0;
           if (!prev) {
             //CkPrintf("part idx %d requested node %d\n", part.thisIndex, node->key);
             num_requested++;
@@ -317,7 +317,7 @@ public:
             curr_nodes[node->key].push_back(bucket);
 
             // Submit a request if the node wasn't requested before
-            bool prev = node->requested.exchange(true);
+            bool prev = node->requested.fetch_or(1ull << CkMyRank()) > 0;
             if (!prev) {
               //CkPrintf("part idx %d requested node %d\n", part.thisIndex, node->key);
               num_requested++;
@@ -450,7 +450,7 @@ private:
             {
               curr_nodes_insertions.push_back(std::make_pair(node->key, bucket));
               num_waiting[bucket]++;
-              bool prev = node->requested.exchange(true);
+              bool prev = node->requested.fetch_or(1ull << CkMyRank()) > 0;
               if (!prev) {
                 if (node->type == Node<Data>::Type::Boundary || node->type == Node<Data>::Type::RemoteAboveTPKey)
                   part.tc_proxy[node->key].requestData(part.cm_local->thisIndex);
@@ -599,7 +599,7 @@ public:
         case Node<Data>::Type::RemoteLeaf:
           {
             curr_nodes_insertions.push_back(std::make_pair(node->key, curr_payload));
-            bool prev = node->requested.exchange(true);
+            bool prev = node->requested.fetch_or(1ull << CkMyRank()) > 0;
             if (!prev) {
               if (node->type == Node<Data>::Type::Boundary || node->type == Node<Data>::Type::RemoteAboveTPKey)
                 tp.tc_proxy[node->key].requestData(tp.cm_local->thisIndex);

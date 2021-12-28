@@ -91,12 +91,13 @@ public:
   CacheManager() { }
 
   void initialize(const CkCallback& cb) {
-    cached_leaves.resize(CkNumPes());
-    displaced_leaves.resize(CkNumPes());
+    auto node_size = this->isNodeGroup() ? CmiNodeSize(CkMyNode()) : 0;
+    cached_leaves.resize(node_size);
+    displaced_leaves.resize(node_size);
     auto& config = paratreet::getConfiguration();
     branch_factor = config.branchFactor();
     auto pool_elem_size = std::max(config.pool_elem_size, 128);
-    for (size_t i = 0; i < CkNumPes(); i++) {
+    for (size_t i = 0; i < node_size; i++) {
       if (branch_factor == 2) pools.emplace_back(new FullNodePool<Data, 2>(pool_elem_size));
       else if (branch_factor == 8) pools.emplace_back(new FullNodePool<Data, 8>(pool_elem_size));
       else CkAbort("Config branch factor is not 2 or 8. Update list in CacheMananger::initialize to handle this.");
@@ -218,7 +219,7 @@ private:
   void restoreDataHelper(std::pair<Key, SpatialNode<Data>>&, bool);
   void insertNode(Node<Data>*, bool, bool);
   void swapIn(Node<Data>*);
-  void process(Key);
+  void process(Node<Data>*);
   void connect(Node<Data>*, bool);
   void connect(Node<Data>*, const std::vector<Node<Data>*>&);
 };
@@ -259,7 +260,7 @@ void CacheManager<Data>::connect(Node<Data>* node, bool should_process) {
   CkAssert(node->type == Node<Data>::Type::CachedBoundary);
   // Invoked internally to update a cached node
   swapIn(node);
-  if (should_process) process(node->key);
+  if (should_process) process(node);
 }
 
 template <typename Data>
@@ -316,7 +317,7 @@ void CacheManager<Data>::receiveSubtree(MultiData<Data> multidata, PPHolder<Data
 template <typename Data>
 void CacheManager<Data>::addCache(MultiData<Data> multidata) {
   Node<Data>* top_node = addCacheHelper(multidata.particles.data(), multidata.particles.size(), multidata.nodes.data(), multidata.nodes.size(), multidata.cm_index, multidata.tp_index, false);
-  process(top_node->key);
+  process(top_node);
 }
 
 template <typename Data>
@@ -463,10 +464,23 @@ void CacheManager<Data>::insertNode(Node<Data>* node, bool above_tp, bool should
 }
 
 template <typename Data>
-void CacheManager<Data>::process(Key key) {
+void CacheManager<Data>::process(Node<Data>* node) {
+  auto key = node->key;
   if (!this->isNodeGroup()) r_proxy[this->thisIndex].process (key);
-  else for (int i = 0; i < CkNodeSize(0); i++) {
-    r_proxy[this->thisIndex * CkNodeSize(0) + i].process(key);
+  else {
+    auto node_size = CmiNodeSize(CkMyNode());
+    auto first_pe = CmiNodeFirst(CkMyNode());
+    if (node_size > sizeof(node->requested) * 8) {
+      for (int i = 0; i < node_size; i++) {
+        r_proxy[first_pe + i].process(key);
+      }
+    }
+    else {
+      auto requested = node->requested.load();
+      for (int i = 0; i < node_size; i++) {
+        if ((1ull << i) | requested) r_proxy[first_pe + i].process(key);
+      }
+    }
   }
 }
 
