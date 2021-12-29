@@ -45,7 +45,7 @@ public:
 
 public:
   Data      data;
-  int       n_particles = -1; // means non-leaf
+  int       n_particles = -1; // non-leaves will have this as -1
   int       depth = -1;
   inline const Particle* particles() const {return particles_;}
 
@@ -143,7 +143,7 @@ public:
 
 public:
   const int n_children;
-  Node* parent;   // CacheManager's insertNode  prevents the constness
+  Node* parent = nullptr; // CacheManager's insertNode  prevents the constness
   const Type type;
   const Key key;
 
@@ -229,7 +229,7 @@ public:
   virtual ~FullNode() = default;
 
   FullNode(Key _key, typename Node<Data>::Type _type, const SpatialNode<Data>& _spatial_node, Particle* _particles, Node<Data>* _parent, int _tp_index, int _cm_index) // for cached non boundary nodes
-  : Node<Data>(_key, _type, (_type == Node<Data>::Type::CachedRemoteLeaf) ? 0 : BRANCH_FACTOR, _spatial_node, _particles, _parent, _tp_index, _cm_index)
+  : Node<Data>(_key, _type, (_spatial_node.n_particles >= 0) ? 0 : BRANCH_FACTOR, _spatial_node, _particles, _parent, _tp_index, _cm_index)
   {
     initChildren();
   }

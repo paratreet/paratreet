@@ -36,7 +36,7 @@ public:
   }
   virtual Node<Data>* alloc(Key key, typename Node<Data>::Type type, int depth, int n_particles, Particle* particles, Node<Data>* parent, int tp_index, int cm_index) override {
     auto buf = getBuf();
-    if (type == Node<Data>::Type::Leaf)  {
+    if (type == Node<Data>::Type::Leaf)  { // use this not (n_particles > 0)
       return new (buf) FullNode<Data, BranchFactor>(key, type, depth, n_particles, particles, parent, tp_index, cm_index);
     } else return new (buf) FullNode<Data, BranchFactor>(key, type, depth, parent, tp_index, cm_index);
   }
