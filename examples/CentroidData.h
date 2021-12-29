@@ -37,7 +37,7 @@ struct CentroidData {
   };
   std::vector<PerParticleStruct> pps;
   OrientedBox<Real> box;
-  int count;
+  int count = 0;
   Real rsq;                     ///< Opening radius
 
   CentroidData() :
