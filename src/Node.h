@@ -10,12 +10,16 @@ class SpatialNode
 {
 public:
   SpatialNode() = default;
-  SpatialNode(const Data& _data, int _n_particles, bool _is_leaf, Particle* _particles, int _depth)
-    : data(_data), n_particles(_n_particles), is_leaf(_is_leaf), particles_(_particles), depth(_depth), home_pe(CkMyPe())
+  SpatialNode(Particle* _particles, int _n_particles, int _depth)
+  : data(_particles, _n_particles, _depth),
+    n_particles(_n_particles), depth(_depth), particles_(_particles)
+  {
+  }
+  SpatialNode(int _depth, int _n_particles) : data(), n_particles(_n_particles), depth(_depth), particles_(nullptr)
   {
   }
   SpatialNode(const SpatialNode<Data>& other, Particle* _particles)
-    : data(other.data), n_particles(other.n_particles), is_leaf(other.is_leaf), particles_(_particles), depth(other.depth), home_pe(other.home_pe)
+    : data(other.data), n_particles(other.n_particles), depth(other.depth), particles_(_particles)
   {
   }
   virtual ~SpatialNode() = default;
@@ -32,6 +36,23 @@ public:
   void applyPotential(int index, Real pot) {
     particles_[index].potential += pot;
   }
+
+  void pup (PUP::er& p) {
+    p | depth;
+    p | data;
+    p | n_particles;
+  }
+
+public:
+  Data      data;
+  int       n_particles = -1; // means non-leaf
+  int       depth = -1;
+  inline const Particle* particles() const {return particles_;}
+
+private:
+  Particle* particles_ = nullptr;
+
+public:
   void freeParticles() {
     if (n_particles > 0 && particles_) {
       delete[] particles_;
@@ -48,29 +69,6 @@ public:
       particles_[i].perturb(timestep);
     }
   }
-
-  void pup (PUP::er& p) {
-    p | depth;
-    p | data;
-    p | n_particles;
-    p | is_leaf;
-    p | home_pe;
-    if (p.isUnpacking()) {
-      particles_ = nullptr;
-    }
-  }
-
-public:
-  Data      data;
-  int       n_particles = 0;
-  bool      is_leaf     = false;
-  int       depth       = 0;
-  int       home_pe     = -1; // SUBTREE HOME
-  inline const Particle* particles() const {return particles_;}
-
-private:
-    Particle* particles_ = nullptr;
-
 };
 
 template <typename Data>
@@ -96,10 +94,8 @@ public:
     CachedBoundary
   };
 
-  Node(const Data& data, int _n_particles, Particle* _particles, int _depth,
-        int _n_children, Node* _parent, Type _type, Key _key,
-        int _tp_index, int _cm_index)
-    : SpatialNode<Data>(data, _n_particles, _n_children == 0, _particles, _depth),
+  Node(int _depth, int _n_children, Node* _parent, Type _type, Key _key, int _tp_index, int _cm_index)
+    : SpatialNode<Data>(_depth, (_n_children > 0) ? -1 : 0),
       n_children(_n_children),
       parent(_parent),
       type(_type),
@@ -110,6 +106,21 @@ public:
   {
   }
 
+  Node(int _n_particles, Particle* _particles, int _depth,
+       Node* _parent, Type _type, Key _key,
+        int _tp_index, int _cm_index)
+    : SpatialNode<Data>(_particles, _n_particles, _depth),
+      n_children(0),
+      parent(_parent),
+      type(_type),
+      key(_key),
+      wait_count(0),
+      tp_index(_tp_index),
+      cm_index(_cm_index)
+  {
+  }
+
+
   Node(Key _key, typename Node<Data>::Type _type, int _n_children,
         const SpatialNode<Data>& _spatial_node, Particle* _particles,
         Node<Data>* _parent, int _tp_index, int _cm_index)
@@ -118,6 +129,7 @@ public:
       parent(_parent),
       type(_type),
       key(_key),
+      wait_count(-1),
       tp_index(_tp_index),
       cm_index(_cm_index)
   {
@@ -130,13 +142,13 @@ public:
   }
 
 public:
-  int n_children; // Subtree's recursiveBuild prevents the constness
+  const int n_children;
   Node* parent;   // CacheManager's insertNode  prevents the constness
-  Type type;      // Subtree's recursiveBuild prevents the constness
+  const Type type;
   const Key key;
 
   // this stuff gets edited:
-  int wait_count     = -1;
+  int wait_count = -1;
   const int tp_index;
   const int cm_index;
   std::atomic<unsigned long long> requested = ATOMIC_VAR_INIT(0ull);
@@ -147,6 +159,11 @@ public:
   bool isCached() const {
     return type == Type::CachedRemote
         || type == Type::CachedBoundary
+        || type == Type::CachedRemoteLeaf;
+  }
+  bool isLeaf() const {
+    return type == Type::Leaf
+        || type == Type::EmptyLeaf
         || type == Type::CachedRemoteLeaf;
   }
 
@@ -211,14 +228,19 @@ public:
   FullNode() = default;
   virtual ~FullNode() = default;
 
-  FullNode(Key _key, typename Node<Data>::Type _type, bool _is_leaf, const SpatialNode<Data>& _spatial_node, Particle* _particles, Node<Data>* _parent, int _tp_index, int _cm_index) // for cached non boundary nodes
-  : Node<Data>(_key, _type, _is_leaf ? 0 : BRANCH_FACTOR, _spatial_node, _particles, _parent, _tp_index, _cm_index)
+  FullNode(Key _key, typename Node<Data>::Type _type, const SpatialNode<Data>& _spatial_node, Particle* _particles, Node<Data>* _parent, int _tp_index, int _cm_index) // for cached non boundary nodes
+  : Node<Data>(_key, _type, (_type == Node<Data>::Type::CachedRemoteLeaf) ? 0 : BRANCH_FACTOR, _spatial_node, _particles, _parent, _tp_index, _cm_index)
   {
     initChildren();
   }
 
-  FullNode(Key _key, int _depth, int _n_particles, Particle* _particles, bool _is_leaf, Node<Data>* _parent, int _tp_index, int _cm_index)
-    : Node<Data>(Data(), _n_particles, _particles, _depth, _is_leaf ? 0 : BRANCH_FACTOR, _parent, Node<Data>::Type::Invalid, _key, _tp_index, _cm_index)
+  FullNode(Key _key, typename Node<Data>::Type _type, int _depth, int _n_particles, Particle* _particles, Node<Data>* _parent, int _tp_index, int _cm_index)
+    : Node<Data>(_n_particles, _particles, _depth, _parent, _type, _key, _tp_index, _cm_index)
+  {
+  }
+
+  FullNode(Key _key, typename Node<Data>::Type _type, int _depth, Node<Data>* _parent, int _tp_index, int _cm_index)
+    : Node<Data>(_depth, (_type == Node<Data>::Type::EmptyLeaf) ? 0 : BRANCH_FACTOR, _parent, _type, _key, _tp_index, _cm_index)
   {
     initChildren();
   }

@@ -454,9 +454,9 @@ private:
               CkPrintf("child of key %lu and parent type %d is nullptr\n", trav_top_parent->key * 8 + j, (int)trav_top_parent->type);
             }
             if (child != trav_tops[bucket]) {
-               if (trav_top_parent->type == Node<Data>::Type::Boundary) {
-                 child->type = Node<Data>::Type::RemoteAboveTPKey;
-               }
+               //if (trav_top_parent->type == Node<Data>::Type::Boundary) {
+               //  child->type = Node<Data>::Type::RemoteAboveTPKey;
+               //}
                curr_nodes_insertions.push_back(std::make_pair(child->key, bucket));
                num_waiting[bucket]++;
                new_nodes.insert(child);

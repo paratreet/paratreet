@@ -17,7 +17,7 @@ extern CProxy_TreeSpec treespec;
 template <typename Data>
 struct NodePool {
   virtual ~NodePool() = default;
-  virtual Node<Data>* alloc(Key key, int depth, int n_particles, Particle* particles, bool is_leaf, Node<Data>* parent, int tp_index, int cm_index) = 0;
+  virtual Node<Data>* alloc(Key key, typename Node<Data>::Type type, int depth, int n_particles, Particle* particles, Node<Data>* parent, int tp_index, int cm_index) = 0;
   virtual Node<Data>* alloc(Key key, typename Node<Data>::Type type, SpatialNode<Data> spatial_node, Node<Data>* parent, Particle* particles, int tp_index, int cm_index) = 0;
   virtual void cleanup() = 0;
 };
@@ -34,13 +34,15 @@ public:
   virtual ~FullNodePool() override {
     for (auto& elem : list) delete[] elem.ptr;
   }
-  virtual Node<Data>* alloc(Key key, int depth, int n_particles, Particle* particles, bool is_leaf, Node<Data>* parent, int tp_index, int cm_index) override {
+  virtual Node<Data>* alloc(Key key, typename Node<Data>::Type type, int depth, int n_particles, Particle* particles, Node<Data>* parent, int tp_index, int cm_index) override {
     auto buf = getBuf();
-    return new (buf) FullNode<Data, BranchFactor>(key, depth, n_particles, particles, is_leaf, parent, tp_index, cm_index);
+    if (type == Node<Data>::Type::Leaf)  {
+      return new (buf) FullNode<Data, BranchFactor>(key, type, depth, n_particles, particles, parent, tp_index, cm_index);
+    } else return new (buf) FullNode<Data, BranchFactor>(key, type, depth, parent, tp_index, cm_index);
   }
   virtual Node<Data>* alloc(Key key, typename Node<Data>::Type type, SpatialNode<Data> spatial_node, Node<Data>* parent, Particle* particles, int tp_index, int cm_index) override {
     auto buf = getBuf();
-    return new (buf) FullNode<Data, BranchFactor>(key, type, spatial_node.is_leaf, spatial_node, particles, parent, tp_index, cm_index);
+    return new (buf) FullNode<Data, BranchFactor>(key, type, spatial_node, particles, parent, tp_index, cm_index);
   }
 private:
   char* getBuf() {
@@ -124,10 +126,8 @@ public:
   void resetCachedParticles(PPHolder<Data> pp_holder) {
     for (auto && clv : cached_leaves) {
       for (auto && cl : clv) {
-        Data empty_data;
-        SpatialNode<Data> empty_sn (empty_data, 0, false, nullptr, 0);
-        auto parent = cl->parent;
-        auto new_leaf = makeCachedNode(cl->key, Node<Data>::Type::Remote, empty_sn, parent, nullptr, cl->tp_index, cl->cm_index); // placeholder
+        SpatialNode<Data> empty_sn (cl->depth, 0);
+        auto new_leaf = makeCachedNode(cl->key, Node<Data>::Type::Remote, empty_sn, cl->parent, nullptr, cl->tp_index, cl->cm_index); // placeholder
         auto which_child = cl->key % branch_factor;
         cl->parent->exchangeChild(which_child, new_leaf);
         cl->freeParticles();
@@ -188,13 +188,13 @@ public:
     root = nullptr;
   }
 
-  Node<Data>* makeNode(Key key, int depth, int n_particles, Particle* particles, bool is_leaf, Node<Data>* parent, int tp_index, int cm_index) {
-    return pools[CkMyRank()]->alloc(key, depth, n_particles, particles, is_leaf, parent, tp_index, cm_index);
+  Node<Data>* makeNode(Key key, typename Node<Data>::Type type, int depth, int n_particles, Particle* particles, Node<Data>* parent, int tp_index, int cm_index) {
+    return pools[CkMyRank()]->alloc(key, type, depth, n_particles, particles, parent, tp_index, cm_index);
   }
 
   Node<Data>* makeCachedNode(Key key, typename Node<Data>::Type type, SpatialNode<Data> spatial_node, Node<Data>* parent, const Particle* particlesToCopy, int tp_index, int cm_index) {
     Particle* particles = nullptr;
-    if (spatial_node.is_leaf && spatial_node.n_particles > 0) {
+    if (spatial_node.n_particles > 0) {
       particles = new Particle [spatial_node.n_particles];
       std::copy(particlesToCopy, particlesToCopy + spatial_node.n_particles, particles);
     }
@@ -337,19 +337,20 @@ Node<Data>* CacheManager<Data>::addCacheHelper(Particle* particles, int n_partic
     first_node_placeholder_parent = first_node_placeholder->parent;
   }
 
-  auto top_type = nodes[0].second.is_leaf ? Node<Data>::Type::CachedRemoteLeaf : Node<Data>::Type::CachedRemote;
+  bool start_is_leaf = nodes[0].second.n_particles > -1;
+  auto top_type = start_is_leaf ? Node<Data>::Type::CachedRemoteLeaf : Node<Data>::Type::CachedRemote;
   auto first_node = makeCachedNode(nodes[0].first, top_type, nodes[0].second, first_node_placeholder_parent, particles, tp_index, cm_index);
   std::vector<Node<Data>*> leaves;
-  if (nodes[0].second.is_leaf) leaves.push_back(first_node);
+  if (start_is_leaf) leaves.push_back(first_node);
   insertNode(first_node, false, false);
-  int p_index = nodes[0].second.is_leaf ? nodes[0].second.n_particles : 0;
+  int p_index = start_is_leaf ? nodes[0].second.n_particles : 0;
   for (int j = 1; j < n_nodes; j++) {
     auto && new_key = nodes[j].first;
     auto && spatial_node = nodes[j].second;
     auto curr_parent = first_node->getDescendant(new_key / branch_factor);
-    auto type = spatial_node.is_leaf ? Node<Data>::Type::CachedRemoteLeaf : Node<Data>::Type::CachedRemote;
+    auto type = spatial_node.n_particles > -1 ? Node<Data>::Type::CachedRemoteLeaf : Node<Data>::Type::CachedRemote;
     auto node = makeCachedNode(new_key, type, spatial_node, curr_parent, &particles[p_index], tp_index, cm_index);
-    if (node->is_leaf) {
+    if (node->isLeaf()) {
       p_index += spatial_node.n_particles;
       leaves.push_back(node);
     }
@@ -452,8 +453,7 @@ void CacheManager<Data>::insertNode(Node<Data>* node, bool above_tp, bool should
     }
     if (!above_tp || add_placeholder) {
       auto type = (above_tp) ? Node<Data>::Type::RemoteAboveTPKey : Node<Data>::Type::Remote;
-      Data empty_data;
-      SpatialNode<Data> empty_sn (empty_data, 0, false, nullptr, 0);
+      SpatialNode<Data> empty_sn (node->depth + 1, -1);
       //int new_tp_index = above_tp ? node->tp_index : -1;
       int new_cm_index = above_tp ? -1 : node->cm_index;
       new_child = makeCachedNode(child_key, type, empty_sn, node, nullptr, -1, new_cm_index); // placeholder
