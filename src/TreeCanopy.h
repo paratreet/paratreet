@@ -35,8 +35,6 @@ public:
 
 template <typename Data>
 void TreeCanopy<Data>::reset() {
-  Data empty_data;
-  my_sn = SpatialNode<Data>(empty_data, 0, false, nullptr, -1);
   recv_count = 0;
 }
 
@@ -53,7 +51,6 @@ template <typename Data>
 void TreeCanopy<Data>::recvData(SpatialNode<Data> child, int branch_factor) {
   // Accumulate data received from Subtree or children TreeCanopies
   my_sn.data += child.data;
-  my_sn.n_particles += child.n_particles;
   my_sn.depth = child.depth - 1;
 
   // If data from all children has been received, send the accumulated data

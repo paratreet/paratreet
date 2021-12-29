@@ -227,12 +227,9 @@ void Partition<Data>::addLeaves(const std::vector<Node<Data>*>& leaf_ptrs, int s
       else {
         auto particles = new Particle [leaf_particles.size()];
         std::copy(leaf_particles.begin(), leaf_particles.end(), particles);
-        auto node = cm_local->makeNode(leaf->key, leaf->depth,
-          leaf_particles.size(), particles, true, nullptr, subtree_idx, cm_local->thisIndex);
+        auto node = cm_local->makeNode(leaf->key, Node<Data>::Type::Leaf, leaf->depth,
+          leaf_particles.size(), particles, nullptr, subtree_idx, cm_local->thisIndex);
         // note here: cm_index is of the old home, not the new home. not sure about this
-        node->type = Node<Data>::Type::Leaf;
-        node->home_pe = leaf->home_pe;
-        node->data = Data(node->particles(), node->n_particles, node->depth);
         new_leaves.push_back(node);
       }
     }
