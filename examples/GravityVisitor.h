@@ -71,6 +71,46 @@ private:
   }
 }
 
+inline const Real COSMO_CONST(const Real C) {return C;}
+/// Calculate softened force and potential terms from cubic spline
+/// density profiles.  Terms are returned in a and b.
+/// 
+inline
+void SPLINE(Real r2, Real twoh, Real &a, Real &b)
+{
+  auto r = sqrt(r2);
+
+  if (r < twoh) {
+    auto dih = COSMO_CONST(2.0)/twoh;
+    auto u = r*dih;
+    if (u < COSMO_CONST(1.0)) {
+      a = dih*(COSMO_CONST(7.0)/COSMO_CONST(5.0) 
+	       - COSMO_CONST(2.0)/COSMO_CONST(3.0)*u*u 
+	       + COSMO_CONST(3.0)/COSMO_CONST(10.0)*u*u*u*u
+	       - COSMO_CONST(1.0)/COSMO_CONST(10.0)*u*u*u*u*u);
+      b = dih*dih*dih*(COSMO_CONST(4.0)/COSMO_CONST(3.0) 
+		       - COSMO_CONST(6.0)/COSMO_CONST(5.0)*u*u 
+		       + COSMO_CONST(1.0)/COSMO_CONST(2.0)*u*u*u);
+    }
+    else {
+      auto dir = COSMO_CONST(1.0)/r;
+      a = COSMO_CONST(-1.0)/COSMO_CONST(15.0)*dir 
+	+ dih*(COSMO_CONST(8.0)/COSMO_CONST(5.0) 
+	       - COSMO_CONST(4.0)/COSMO_CONST(3.0)*u*u + u*u*u
+	       - COSMO_CONST(3.0)/COSMO_CONST(10.0)*u*u*u*u 
+	       + COSMO_CONST(1.0)/COSMO_CONST(30.0)*u*u*u*u*u);
+      b = COSMO_CONST(-1.0)/COSMO_CONST(15.0)*dir*dir*dir 
+	+ dih*dih*dih*(COSMO_CONST(8.0)/COSMO_CONST(3.0) - COSMO_CONST(3.0)*u 
+		       + COSMO_CONST(6.0)/COSMO_CONST(5.0)*u*u 
+		       - COSMO_CONST(1.0)/COSMO_CONST(6.0)*u*u*u);
+    }
+  }
+  else {
+    a = COSMO_CONST(1.0)/r;
+    b = a*a*a;
+  }
+}
+
   inline bool openSoftening(const CentroidData& source, const CentroidData& target)
   {
     Sphere<Real> sourceSphere(source.multipoles.cm + offset, 2.0 * source.multipoles.soft);
@@ -99,8 +139,12 @@ public:
       for (int j = 0; j < source.n_particles; j++) {
           Vector3D<Real> diff = source.particles()[j].position + offset - target.particles()[i].position;
           Real rsq = diff.lengthSquared();
+          Real twoh = source.particles()[j].soft + target.particles()[i].soft;
           if (rsq != 0) {
-              accel += diff * (source.particles()[j].mass / (rsq * sqrt(rsq)));
+              Real a, b;        /* potential and force terms returned
+                                 * from SPLINE */
+              SPLINE(rsq, twoh, a, b);
+              accel += diff * b * source.particles()[j].mass;
           }
       }
       target.applyAcceleration(i, accel);
@@ -110,7 +154,24 @@ public:
   bool open(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
     if (source.data.count <= nMinParticleNode) return true;
     Real dataRsq = source.data.rsq * gravity_factor;
+#ifdef HEXADECAPOLE
+    if(!Space::intersect(target.data.box, source.data.centroid + offset, dataRsq)){
+        // test for softening overlap
+        if(!openSoftening(target.data, source.data)) {
+            return false;       /* Passes both tests */
+        }
+        else {        // Open as monopole?
+            // monopole criteria is much stricter
+            extern Real theta;
+            dataRsq *= pow(theta, -6);
+            Sphere<Real> sM(source.data.centroid + offset, sqrt(dataRsq));
+            return Space::intersect(target.data.box, sM);
+        }
+    }
+    return true;
+#else
     return Space::intersect(target.data.box, source.data.centroid + offset, dataRsq);
+#endif
   }
 
   void node(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
