@@ -91,6 +91,11 @@ int SfcDecomposition::getPartitionHome(int tp_index) {
   return partition_idxs[tp_index];
 }
 
+// called by each reader
+// inputs: splitters and particles
+// assumed state: none
+// state change: none
+// outputs: count array if doing that split. size = states.size()
 void SfcDecomposition::countAssignments(const std::vector<GenericSplitter>& states, const std::vector<Particle>& particles, Reader* reader, const CkCallback& cb, bool weight_by_partition) {
   std::vector<int> counts (states.size(), 0);
   std::function<bool(const Particle&, Key)> compGE = [] (const Particle& a, Key b) {return a.key >= b;};
@@ -99,8 +104,9 @@ void SfcDecomposition::countAssignments(const std::vector<GenericSplitter>& stat
       if (!weight_by_partition && !states[i].pending) continue;
       int begin = Utility::binarySearchComp(states[i].start_key, &particles[0], 0, particles.size(), compGE);
       int found = Utility::binarySearchComp(states[i].midKey(), &particles[0], begin, particles.size(), compGE);
-      counts[i] = found - begin;
-      if (weight_by_partition) counts[i] *= particles[begin].partition_idx;
+      if (weight_by_partition) {
+        for (int j = begin; j < found; j++) counts[i] += particles[j].partition_idx;
+      } else counts[i] = found - begin;
     }
   }
   reader->contribute(sizeof(int) * counts.size(), &counts[0], CkReduction::sum_int, cb);
@@ -182,7 +188,7 @@ int SfcDecomposition::parallelFindSplitters(BoundingBox &universe, CProxy_Reader
   }
   CkAssert(partition_idxs.size() == splitters.size());
   for (int i = 0; i < partition_idxs.size(); i++) {
-    partition_idxs[i] /= counts[i];
+    if (counts[i] > 0) partition_idxs[i] /= counts[i];
   }
   return splitters.size();
 }
@@ -314,6 +320,11 @@ int OctDecomposition::flush(std::vector<Particle> &particles, const SendParticle
   return flush_count;
 }
 
+// called by each reader
+// inputs: splitters and particles
+// assumed state: particles are sorted
+// state change: none
+// outputs: count array if doing that split. size = states.size()
 void OctDecomposition::countAssignments(const std::vector<GenericSplitter>& states, const std::vector<Particle>& particles, Reader* reader, const CkCallback& cb, bool weight_by_partition) {
   std::vector<int> counts (states.size(), 0);
 
@@ -331,9 +342,9 @@ void OctDecomposition::countAssignments(const std::vector<GenericSplitter>& stat
 
       int begin = Utility::binarySearchComp(from, &particles[0], start, finish, compGE);
       int end = Utility::binarySearchComp(to, &particles[0], begin, finish, compGE);
-      counts[i] = end - begin;
-      if (weight_by_partition) counts[i] *= particles[begin].partition_idx;
-
+      if (weight_by_partition) {
+        for (int j = begin; j < end; j++) counts[i] += particles[j].partition_idx;
+      } else counts[i] = end - begin;
       start = end;
     }
   }
@@ -425,9 +436,7 @@ int OctDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &reader
   }
   CkAssert(partition_idxs.size() == splitters.size());
   for (int i = 0; i < partition_idxs.size(); i++) {
-    if (partition_idxs[i] > 0) {
-      partition_idxs[i] /= splitters[i].n_particles;
-    }
+    if (splitters[i].n_particles > 0) partition_idxs[i] /= splitters[i].n_particles;
   }
 
   // Check if decomposition is correct
@@ -479,6 +488,9 @@ int BinaryDecomposition::getPartitionHome(int tp_index) {
   return partition_idxs[tp_index];
 }
 
+// called by each reader
+// inputs: particles from reader. this is how initial data is passed to Decomposition
+// state change: bins becomes a vector-vector of size 1xn_particles
 void BinaryDecomposition::initBinarySplit(const std::vector<Particle>& particles) {
   bins.clear();
   bins.emplace_back();
@@ -489,23 +501,27 @@ int BinaryDecomposition::findSplitters(BoundingBox &universe, CProxy_Reader &rea
   return parallelFindSplitters(universe, readers, min_n_splitters);
 }
 
+// called by each reader
+// inputs: bottom row of splitters, reader for contribute call.
+// assumed state: bins have already been split up until this new row of splitters
+// state change: bins gets doubled in size
+// outputs: two new count arrays after splitting, which each have size (2 * splits.size())
+// first is unweighted, second is weighted
 void BinaryDecomposition::doSplit(const std::vector<GenericSplitter>& splits, Reader* reader, const CkCallback& cb) {
   CkAssert(bins.size() == splits.size());
   decltype(bins) binsCopy (2 * bins.size());
+  std::vector<int> counts (bins.size() * 4, 0); // trust
   for (int i = 0; i < bins.size(); i++) {
     std::vector<Vector3D<Real>> left, right;
     for (auto && pos : bins[i]) {
-      if (pos.second[splits[i].dim] > splits[i].midFloat()) {
-        binsCopy[2 * i + 1].push_back(pos);
-      }
-      else {
-        binsCopy[2 * i].push_back(pos); // left heavy
-      }
+      int new_idx = 2 * i;
+      if (pos.second[splits[i].dim] > splits[i].midFloat()) new_idx++; // left heavy
+      binsCopy[new_idx].push_back(pos);
+      counts[new_idx]++;
+      counts[new_idx + 2 * bins.size()] += pos.first;
     }
   }
   bins = binsCopy;
-  std::vector<int> counts (bins.size(), 0);
-  for (int i = 0; i < counts.size(); i++) counts[i] = bins[i].size();
   reader->contribute(sizeof(int) * counts.size(), &counts[0], CkReduction::sum_int, cb);
 }
 
@@ -518,12 +534,12 @@ int BinaryDecomposition::parallelFindSplitters(BoundingBox &universe, CProxy_Rea
     CkReductionMsg *msg;
     readers.doSplit(level_splitters, isSubtree(), CkCallbackResumeThread((void*&)msg));
     int* counts = (int*)msg->getData();
-    bins_sizes.clear();
-    bins_sizes.resize(2 * level_splitters.size());
-    for (int i = 0; i < bins_sizes.size(); i++) {
-      bins_sizes[i] = counts[i];
-    }
+    bins_sizes = std::vector<int> (counts, counts + (2 * level_splitters.size()));
+    partition_idxs = std::vector<int>(counts + (2 * level_splitters.size()), counts + (4 * level_splitters.size()));
     splitters.insert(splitters.end(), level_splitters.begin(), level_splitters.end());
+  }
+  for (int i = 0; i < partition_idxs.size(); i++) {
+    if (bins_sizes[i] > 0) partition_idxs[i] /= bins_sizes[i];
   }
   return (1 << depth);
 }
@@ -574,12 +590,19 @@ void BinaryDecomposition::pup(PUP::er& p) {
   p | partition_idxs;
 }
 
+// this is not used by parallelFindSplitters
 void KdDecomposition::assign(Bin& parent, Bin& left, Bin& right, BinarySplit split) {
   size_t medianIndex = (parent.size() + 1) / 2;
   left.insert(left.end(), parent.begin(), parent.begin() + medianIndex);
   right.insert(right.end(), parent.begin() + medianIndex, parent.end());
 }
 
+// called by each reader
+// inputs: splitters and particles. do not use particles. not used with weight_by_partition
+// assumed state: bins has size = splits.size(). so we just check if each particle would go left or right
+// state change: none, unless this is the first time we're doing this. then we use initBinarySplit
+// outputs: count array if doing that split. size = states.size().
+// the sum of these counts is not = n_particles, because a particle either goes left or right
 void KdDecomposition::countAssignments(const std::vector<GenericSplitter>& states, const std::vector<Particle>& particles, Reader* reader, const CkCallback& cb, bool weight_by_partition) {
   if (bins.empty()) initBinarySplit(particles);
   std::vector<int> counts (states.size(), 0);
@@ -628,13 +651,14 @@ std::vector<GenericSplitter> KdDecomposition::sortAndGetSplitters(BoundingBox &u
         state.goal_rank -= count;
       }
       else {
-         state.end_float = state.midFloat();
+        state.end_float = state.midFloat();
       }
     }
   }
   return states;
 }
 
+// this is not used by parallelFindSplitters
 std::pair<int, Real> KdDecomposition::sortAndGetSplitter(int depth, Bin& bin) {
   static auto compX = [] (const std::pair<int, Vector3D<Real>>& a, const std::pair<int, Vector3D<Real>>& b) {return a.second.x < b.second.x;};
   static auto compY = [] (const std::pair<int, Vector3D<Real>>& a, const std::pair<int, Vector3D<Real>>& b) {return a.second.y < b.second.y;};
@@ -648,6 +672,7 @@ std::pair<int, Real> KdDecomposition::sortAndGetSplitter(int depth, Bin& bin) {
   return {dim, median};
 }
 
+// this is not used by parallelFindSplitters
 void LongestDimDecomposition::assign(Bin& parent, Bin& left, Bin& right, BinarySplit split) {
   for (auto && pos : parent) {
     if (pos.second[split.first] > split.second) right.push_back(pos);
@@ -655,6 +680,7 @@ void LongestDimDecomposition::assign(Bin& parent, Bin& left, Bin& right, BinaryS
   }
 }
 
+// this is not used by parallelFindSplitters
 std::pair<int, Real> LongestDimDecomposition::sortAndGetSplitter(int depth, Bin& bin) {
   OrientedBox<Real> box;
   Vector3D<Real> unweighted_center;
@@ -708,6 +734,11 @@ std::vector<GenericSplitter> LongestDimDecomposition::sortAndGetSplitters(Boundi
   return level_splitters;
 }
 
+// called by each reader. NOTE: this is a very different function from KdDecomposition's countAssignments
+// it is just trying to get the box dimensions after a binary split
+// assumed state: bins has size = splits.size().
+// state change: none, unless this is the first time we're doing this. then we use initBinarySplit
+// outputs: all the box dimensions. unweighted moment, count, lesser_corner, greater_corner
 void LongestDimDecomposition::countAssignments(const std::vector<GenericSplitter>& states, const std::vector<Particle>& particles, Reader* reader, const CkCallback& cb, bool weight_by_partition) {
   if (bins.empty()) initBinarySplit(particles);
   std::vector<Vector3D<Real>> centers (bins.size(), (0,0,0));
