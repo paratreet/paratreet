@@ -152,7 +152,7 @@ public:
   }
 
   bool open(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
-    if (source.n_particles <= nMinParticleNode) return true;
+    if (source.data.count <= nMinParticleNode) return true;
     Real dataRsq = source.data.rsq * gravity_factor;
 #ifdef HEXADECAPOLE
     if(!Space::intersect(target.data.box, source.data.centroid + offset, dataRsq)){
@@ -175,7 +175,7 @@ public:
   }
 
   void node(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
-    if (source.n_particles == 0) return;
+    if (source.data.count == 0) return;
 #ifdef BARNESHUT
     addGravity(source, target);
 #else
