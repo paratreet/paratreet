@@ -27,13 +27,12 @@ struct Partition : public CBase_Partition<Data> {
   std::vector<Particle> saved_particles;
   bool matching_decomps;
 
-  std::unique_ptr<Traverser<Data>> traverser;
+  std::vector<std::unique_ptr<Traverser<Data>>> traversers;
   int n_partitions;
 
   std::map<int, std::vector<Key>> lookup_leaf_keys;
 
   // filled in during traversal
-  std::vector<std::vector<Node<Data>*>> interactions;
 
   CProxy_TreeCanopy<Data> tc_proxy;
   CProxy_CacheManager<Data> cm_proxy;
@@ -44,10 +43,11 @@ struct Partition : public CBase_Partition<Data> {
   Partition(int, CProxy_CacheManager<Data>, CProxy_Resumer<Data>, TCHolder<Data>, CProxy_Driver<Data> driver, bool);
   Partition(CkMigrateMessage * msg){delete msg;};
 
-  template<typename Visitor> void startDown();
-  template<typename Visitor> void startBasicDown();
-  template<typename Visitor> void startUpAndDown();
-  void goDown();
+  template<typename Visitor> void startDown(Visitor v);
+  template<typename Visitor> void startBasicDown(Visitor v);
+  template<typename Visitor> void startUpAndDown(Visitor v);
+  void goDown(size_t travIdx);
+  void resumeAfterPause(size_t travIdx);
   void interact(const CkCallback& cb);
 
   void addLeaves(const std::vector<Node<Data>*>&, int);
@@ -61,6 +61,8 @@ struct Partition : public CBase_Partition<Data> {
   void output(CProxy_TipsyWriter w, int n_total_particles, CkCallback cb);
   void callPerLeafFn(paratreet::PerLeafAble<Data>&, const CkCallback&);
   void deleteParticleOfOrder(int order) {particle_delete_order.insert(order);}
+  void requestParticleUpdates(int cm_index, std::vector<Key> pKeys);
+  void applyOpposingEffects(std::vector<std::pair<Key, Particle::Effect>> effects);
   void pup(PUP::er& p);
   void makeLeaves(int);
   void pauseForLB(){
@@ -80,6 +82,17 @@ private:
   void initLocalBranches();
   void erasePartition();
   void copyParticles(std::vector<Particle>& particles, bool check_delete);
+  void startNewTraverser() {
+    if (r_local->all_resume_nodes.size() < traversers.size()) {
+      r_local->all_resume_nodes.emplace_back();
+      r_local->all_resume_nodes.back().resize(n_partitions);
+    }
+    traversers.back()->start();
+    if (traversers.back()->wantsPause()) {
+      //CkPrintf("pausing trav %d\n", this->thisIndex);
+      this->thisProxy[this->thisIndex].resumeAfterPause(traversers.size() - 1);
+    }
+  }
   void flush(CProxy_Reader, std::vector<Particle>&);
   void makeLeaves(const std::vector<Key>&, int);
   template <typename WriterProxy> void doOutput(WriterProxy w, int n_total_particles, CkCallback cb);
@@ -107,7 +120,6 @@ template <typename Data>
 void Partition<Data>::initLocalBranches() {
   r_local = r_proxy.ckLocalBranch();
   r_local->part_proxy = this->thisProxy;
-  r_local->resume_nodes_per_part.resize(n_partitions);
   cm_local = cm_proxy.ckLocalBranch();
   cm_local->lockMaps();
   cm_local->partition_lookup.emplace(this->thisIndex, this);
@@ -118,46 +130,80 @@ void Partition<Data>::initLocalBranches() {
 
 template <typename Data>
 template <typename Visitor>
-void Partition<Data>::startDown()
+void Partition<Data>::startDown(Visitor v)
 {
   initLocalBranches();
-  interactions.resize(leaves.size());
-  traverser.reset(new TransposedDownTraverser<Data, Visitor>(leaves, *this));
-  traverser->start();
+  traversers.emplace_back(new TransposedDownTraverser<Data, Visitor>(v, traversers.size(), leaves, *this));
+  startNewTraverser();
+}
+
+template <typename Data>
+void Partition<Data>::resumeAfterPause(size_t travIdx)
+{
+  traversers[travIdx]->resumeAfterPause();
+  if (traversers[travIdx]->wantsPause()) {
+    //CkPrintf("pausing trav %d\n", this->thisIndex);
+    this->thisProxy[this->thisIndex].resumeAfterPause(travIdx);
+  }
 }
 
 template <typename Data>
 template <typename Visitor>
-void Partition<Data>::startBasicDown()
+void Partition<Data>::startBasicDown(Visitor v)
 {
   initLocalBranches();
-  interactions.resize(leaves.size());
-  traverser.reset(new BasicDownTraverser<Data, Visitor>(leaves, *this));
-  traverser->start();
+  traversers.emplace_back(new BasicDownTraverser<Data, Visitor>(v, traversers.size(), leaves, *this));
+  startNewTraverser();
 }
-
 
 template <typename Data>
 template <typename Visitor>
-void Partition<Data>::startUpAndDown()
+void Partition<Data>::startUpAndDown(Visitor v)
 {
   initLocalBranches();
-  interactions.resize(leaves.size());
-  traverser.reset(new UpnDTraverser<Data, Visitor>(*this));
-  traverser->start();
+  traversers.emplace_back(new UpnDTraverser<Data, Visitor>(v, traversers.size(), *this));
+  startNewTraverser();
 }
 
 template <typename Data>
-void Partition<Data>::goDown()
+void Partition<Data>::goDown(size_t travIdx)
 {
-  traverser->resumeTrav();
+  traversers[travIdx]->resumeTrav();
 }
 
 template <typename Data>
 void Partition<Data>::interact(const CkCallback& cb)
 {
-  if (traverser) traverser->interact();
+  for (auto& trav : traversers) trav->interact();
   this->contribute(cb);
+}
+
+template <typename Data>
+void Partition<Data>::requestParticleUpdates(int cm_index, std::vector<Key> pKeys) {
+  std::set<Key> keySet (pKeys.begin(), pKeys.end());
+  std::vector<Particle> particles_sending;
+  for (auto& leaf : leaves) {
+    for (int pi = 0; pi < leaf->n_particles; pi++) {
+      if (keySet.count(leaf->particles()[pi].key)) {
+        particles_sending.push_back(leaf->particles()[pi]);
+      }
+    }
+  }
+  cm_proxy[cm_index].receiveParticleUpdates(particles_sending);
+}
+
+template <typename Data>
+void Partition<Data>::applyOpposingEffects(std::vector<std::pair<Key, Particle::Effect>> effects) {
+  std::map<Key, Particle::Effect> effects_map (effects.begin(), effects.end());
+  for (auto& leaf : leaves) {
+    for (int pi = 0; pi < leaf->n_particles; pi++) {
+      auto it = effects_map.find(leaf->particles()[pi].key);
+      if (it != effects_map.end()) {
+        leaf->applyAcceleration(pi, it->second.first);
+        leaf->applyGasWork(pi, it->second.second);
+      }
+    }
+  }
 }
 
 template <typename Data>
@@ -181,13 +227,9 @@ void Partition<Data>::addLeaves(const std::vector<Node<Data>*>& leaf_ptrs, int s
       else {
         auto particles = new Particle [leaf_particles.size()];
         std::copy(leaf_particles.begin(), leaf_particles.end(), particles);
-        auto node = treespec.ckLocalBranch()->template makeNode<Data>(
-          leaf->key, leaf->depth, leaf_particles.size(), particles,
-          subtree_idx, subtree_idx, true, nullptr, subtree_idx
-          );
-        node->type = Node<Data>::Type::Leaf;
-        node->home_pe = leaf->home_pe;
-        node->data = Data(node->particles(), node->n_particles, node->depth);
+        auto node = cm_local->makeNode(leaf->key, Node<Data>::Type::Leaf, leaf->depth,
+          leaf_particles.size(), particles, nullptr, subtree_idx, cm_local->thisIndex);
+        // note here: cm_index is of the old home, not the new home. not sure about this
         new_leaves.push_back(node);
       }
     }
@@ -199,7 +241,6 @@ void Partition<Data>::addLeaves(const std::vector<Node<Data>*>& leaf_ptrs, int s
   }
   else leaves.insert(leaves.end(), new_leaves.begin(), new_leaves.end());
   receive_lock.unlock();
-  cm_local->num_buckets += leaf_ptrs.size();
 }
 
 template <typename Data>
@@ -254,17 +295,15 @@ void Partition<Data>::destroy()
 template <typename Data>
 void Partition<Data>::reset()
 {
-  traverser.reset();
+  traversers.clear();
   for (int i = 0; i < leaves.size(); i++) {
     if (leaves[i] != tree_leaves[i]) {
       leaves[i]->freeParticles();
-      delete leaves[i];
     }
   }
   lookup_leaf_keys.clear();
   leaves.clear();
   tree_leaves.clear();
-  interactions.clear();
 }
 
 template <typename Data>

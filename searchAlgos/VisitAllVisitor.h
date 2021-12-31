@@ -22,16 +22,17 @@ struct VisitAllVisitor {
 public:
   static constexpr const bool CallSelfLeaf = true;
 
+  void pup(PUP::er& p) {}
 public:
-  static bool open(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
+  static bool open(const SpatialNode<SearchData>& source, SpatialNode<SearchData>& target) {
     auto vat = visit_all_tracker.ckLocalBranch();
     vat->sum_counts += source.n_particles;
     return true;
   }
 
-  static void node(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {}
+  static void node(const SpatialNode<SearchData>& source, SpatialNode<SearchData>& target) {}
 
-  static void leaf(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
+  static void leaf(const SpatialNode<SearchData>& source, SpatialNode<SearchData>& target) {
     auto vat = visit_all_tracker.ckLocalBranch();
     vat->sum_counts += source.n_particles;
   }

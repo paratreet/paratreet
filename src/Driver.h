@@ -48,10 +48,13 @@ public:
     cache_manager(cache_manager_), resumer(resumer_), calculator(calculator_), storage_sorted(false) {}
 
   // Performs initial decomposition
-  void init(CkCallback cb) {
+  void init(const CkCallback& cb, const paratreet::Configuration& cfg) {
     // Ensure all treespecs have been created
     CkPrintf("* Validating tree specifications.\n");
-    treespec.check(CkCallbackResumeThread());
+    treespec.receiveConfiguration(
+      CkCallbackResumeThread(),
+      const_cast<paratreet::Configuration*>(&cfg)
+    );
     // Then, initialize the cache managers
     CkPrintf("* Initializing cache managers.\n");
     cache_manager.initialize(CkCallbackResumeThread());
@@ -84,7 +87,7 @@ public:
   // by either loading particle information from input file or re-computing
   // the universal bounding box
   void decompose(int iter) {
-    auto config = treespec.ckLocalBranch()->getConfiguration();
+    auto& config = paratreet::getConfiguration();
     double decomp_time = CkWallTimer();
     if (iter == 0) {
       // Build universe
@@ -172,7 +175,7 @@ public:
 
   // Core iterative loop of the simulation
   void run(CkCallback cb) {
-    auto config = treespec.ckLocalBranch()->getConfiguration();
+    auto& config = paratreet::getConfiguration();
     double total_time = 0;
     for (int iter = 0; iter < config.num_iterations; iter++) {
       CkPrintf("\n* Iteration %d\n", iter);
@@ -224,7 +227,8 @@ public:
       float ratio = (float) maxPESize / avgPESize;
       bool complete_rebuild = (config.flush_period == 0) ?
           (ratio > config.flush_max_avg_ratio) :
-          (iter % config.flush_period == config.flush_period - 1) ;
+          (iter % config.flush_period == config.flush_period - 1);
+      if (iter + 1 == config.num_iterations) complete_rebuild = false;
       CkPrintf("[Meta] n_subtree = %d; timestep_size = %f; sumPESize = %d; maxPESize = %d, avgPESize = %f; ratio = %f; maxVelocity = %f; rebuild = %s\n", n_subtrees, timestep_size, sumPESize, maxPESize, avgPESize, ratio, max_velocity, (complete_rebuild? "yes" : "no"));
       //End Subtree reduction message parsing
 
@@ -238,7 +242,7 @@ public:
       partitions.rebuild(universe, subtrees, complete_rebuild); // 0.1s for example
       CkWaitQD();
       CkPrintf("Perturbations: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
-      if (!complete_rebuild && iter % config.lb_period == config.lb_period - 1){
+      if (!complete_rebuild && config.lb_period > 0 && iter % config.lb_period == config.lb_period - 1){
         start_time = CkWallTimer();
         //subtrees.pauseForLB(); // move them later
         partitions.pauseForLB();
@@ -246,6 +250,7 @@ public:
         CkPrintf("Load balancing: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
       }
       // Destroy subtrees and perform decomposition from scratch
+      resumer.reset();
       if (complete_rebuild) {
         treespec.reset();
         subtrees.destroy();
@@ -290,7 +295,7 @@ public:
   }
 
   void loadCache(CkCallback cb) {
-    auto config = treespec.ckLocalBranch()->getConfiguration();
+    auto& config = paratreet::getConfiguration();
     CkPrintf("Received data from %d TreeCanopies\n", (int) storage.size());
     // Sort data received from TreeCanopies (by their indices)
     if (!storage_sorted) sortStorage();

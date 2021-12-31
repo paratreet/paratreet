@@ -37,10 +37,6 @@ namespace paratreet {
     CsvDeclare(registration_list_type_, registration_list_);
     CsvDeclare(main_type_, main_);
 
-    void updateConfiguration(const Configuration& cfg, CkCallback cb) {
-        treespec.receiveConfiguration(cfg, cb);
-    }
-
     std::intptr_t __addRegistrationFn(const registration_fn_& fn, const char* name) {
         auto& list = *(&CsvAccess(registration_list_));
         list = new registration_node_(list, fn, name);

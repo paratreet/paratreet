@@ -47,7 +47,8 @@ module paratreet {
     entry void startPrefetch(DPHolder<Data>, CkCallback);
     entry void startParentPrefetch(DPHolder<Data>, CkCallback);
     entry void destroy(bool);
-    entry void resetCachedParticles(CkCallback);
+    entry void resetCachedParticles(PPHolder<Data>);
+    entry void receiveParticleUpdates(std::vector<Particle>);
   };
 
   template <typename Data>
@@ -62,6 +63,8 @@ module paratreet {
     entry void setUniverse(BoundingBox b);
     entry void collectAndResetStats(CkCallback cb);
     entry void collectMetaData(const CkCallback & cb);
+    template <typename Data>
+    entry void applyAccumulatedOpposingEffects(PPHolder<Data>);
   };
 
   group Writer {
@@ -79,11 +82,12 @@ module paratreet {
   template <typename Data>
   array [1d] Partition {
     entry Partition(int, CProxy_CacheManager<Data>, CProxy_Resumer<Data>, TCHolder<Data>, CProxy_Driver<Data>, bool);
-    template <typename Visitor> entry void startDown();
-    template <typename Visitor> entry void startBasicDown();
-    template <typename Visitor> entry void startUpAndDown();
+    template <typename Visitor> entry void startDown(Visitor v);
+    template <typename Visitor> entry void startBasicDown(Visitor v);
+    template <typename Visitor> entry void startUpAndDown(Visitor v);
     entry void interact(const CkCallback&);
-    entry void goDown();
+    entry void goDown(size_t travIdx);
+    entry void resumeAfterPause(size_t travIdx);
     entry void receiveLeaves(std::vector<Key>, Key, int, TPHolder<Data>);
     entry void makeLeaves(int);
     entry void destroy();
@@ -96,6 +100,8 @@ module paratreet {
     entry void callPerLeafFn(CkReference<paratreet::PerLeafAble<Data>>, const CkCallback&);
     entry void deleteParticleOfOrder(int order);
     entry void pauseForLB();
+    entry void requestParticleUpdates(int cm_index, std::vector<Key> pKeys);
+    entry void applyOpposingEffects(std::vector<std::pair<Key, std::pair<Vector3D<Real>, Real>>> effects);
   }
 
   template <typename Data>
@@ -108,8 +114,8 @@ module paratreet {
     entry void destroy();
     entry void reset();
     entry void sendLeaves(CProxy_Partition<Data>);
-    template <typename Visitor> entry void startDual();
-    entry void goDown();
+    template <typename Visitor> entry void startDual(Visitor v);
+    entry void goDown(size_t travIdx);
     entry void checkParticlesChanged(const CkCallback&);
     entry void collectMetaData(const CkCallback & cb);
     entry void pauseForLB();
@@ -127,7 +133,7 @@ module paratreet {
   template <typename Data>
   chare Driver {
     entry Driver(CProxy_CacheManager<Data>, CProxy_Resumer<Data>, CProxy_TreeCanopy<Data>);
-    entry [threaded] void init(CkCallback cb);
+    entry [threaded] void init(CkCallback cb, CkReference<paratreet::Configuration>);
     entry [threaded] void run(CkCallback cb);
     entry [reductiontarget] void countInts(unsigned long long intrn_counts [4]);
     entry [reductiontarget] void reportTime();
@@ -163,15 +169,12 @@ module paratreet {
   };
 
   group TreeSpec {
-    entry TreeSpec(const paratreet::Configuration&);
-    entry void check(const CkCallback&);
+    entry TreeSpec(void);
     entry void reset();
+    entry void receiveConfiguration(const CkCallback&, CkPointer<paratreet::Configuration>);
     entry void receiveDecomposition(const CkCallback&, CkPointer<Decomposition>, bool);
     entry [local] Decomposition* getSubtreeDecomposition();
     entry [local] Decomposition* getPartitionDecomposition();
-    entry void receiveConfiguration(const paratreet::Configuration&,CkCallback);
-    entry [local] paratreet::Configuration& getConfiguration();
-    entry [local] void setConfiguration(const paratreet::Configuration&);
   }
 
   group DecompArrayMap : CkArrayMap {

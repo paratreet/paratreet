@@ -56,12 +56,14 @@ public:
   };
   void receive(ParticleMsg*);
   void buildTree(CProxy_Partition<Data>, CkCallback);
-  void recursiveBuild(Node<Data>*, Particle* node_particles, size_t);
+  void recursiveBuild(Node<Data>*, Particle*, size_t, size_t);
   void populateTree();
   inline void initCache();
+  typename Node<Data>::Type getType(size_t num_particles, size_t max_particles_per_leaf) const;
+  void handlePossibleLeaf(Node<Data>* node);
   void sendLeaves(CProxy_Partition<Data>);
-  template <typename Visitor> void startDual();
-  void goDown();
+  template <typename Visitor> void startDual(Visitor v);
+  void goDown(size_t travIdx);
   void requestNodes(Key, int);
   void requestCopy(int, PPHolder<Data>);
   void print(Node<Data>*);
@@ -111,6 +113,7 @@ Subtree<Data>::Subtree(const CkCallback& cb, int n_total_particles_,
 
   tc_proxy = tc_holder.proxy;
   cm_proxy = cm_proxy_;
+  cm_local = cm_proxy.ckLocalBranch();
   r_proxy  = r_proxy_;
 
   matching_decomps = matching_decomps_;
@@ -188,15 +191,18 @@ void Subtree<Data>::sendLeaves(CProxy_Partition<Data> part)
     return;
   }
 
-  // When Subtree and Parition has different decomp types
+  // When Subtree and Partition has different decomp types
   std::map<int, std::set<Node<Data>*>> part_idx_to_leaf;
+  std::set<Node<Data>*> displaced_leaves;
   for (auto && leaf : leaves) {
+    int prev_partition_idx = -1;
     for (int pi = 0; pi < leaf->n_particles; pi++) {
       auto partition_idx = leaf->particles()[pi].partition_idx;
+      if (pi > 0 && partition_idx != prev_partition_idx) displaced_leaves.insert(leaf);
+      prev_partition_idx = partition_idx;
       part_idx_to_leaf[partition_idx].insert(leaf);
     }
   }
-
 
   for (auto && part_receiver : part_idx_to_leaf) {
     auto it = cm_proxy.ckLocalBranch()->partition_lookup.find(part_receiver.first);
@@ -207,27 +213,32 @@ void Subtree<Data>::sendLeaves(CProxy_Partition<Data> part)
     else {
       std::vector<Key> lookup_leaf_keys;
       for (auto && leaf : part_receiver.second) {
-	lookup_leaf_keys.push_back(leaf->key);
+        lookup_leaf_keys.push_back(leaf->key);
+        displaced_leaves.insert(leaf);
       }
       part[part_receiver.first].receiveLeaves(lookup_leaf_keys, tp_key, this->thisIndex, this->thisProxy);
     }
   }
+  for (auto leaf : displaced_leaves) cm_local->addDisplacedLeaf(leaf);
 }
 
 template <typename Data>
 template <typename Visitor>
-void Subtree<Data>::startDual() {
+void Subtree<Data>::startDual(Visitor v) {
   r_local = r_proxy.ckLocalBranch();
-  r_local->resume_nodes_per_part.resize(n_subtrees);
+  if (r_local->all_resume_nodes.empty()) {
+    r_local->all_resume_nodes.emplace_back();
+    r_local->all_resume_nodes.back().resize(n_subtrees);
+  }
   r_local->subtree_proxy = this->thisProxy;
   r_local->use_subtree = true;
-  cm_local = cm_proxy.ckLocalBranch();
-  traverser.reset(new DualTraverser<Data, Visitor>(*this));
+  traverser.reset(new DualTraverser<Data, Visitor>(v, 0, *this));
   traverser->start();
 }
 
 template <typename Data>
-void Subtree<Data>::goDown() {
+void Subtree<Data>::goDown(size_t travIdx) {
+  CkAssert(travIdx == 0); // cannot handle multiple dual tree traversals yet
   traverser->resumeTrav();
 }
 
@@ -247,6 +258,19 @@ void Subtree<Data>::requestCopy(int cm_index, PPHolder<Data> pp_holder) {
 }
 
 template <typename Data>
+typename Node<Data>::Type Subtree<Data>::getType(size_t num_particles, size_t max_particles_per_leaf) const {
+  if (num_particles == 0) return Node<Data>::Type::EmptyLeaf;
+  else if (num_particles <= max_particles_per_leaf) return Node<Data>::Type::Leaf;
+  return Node<Data>::Type::Internal;
+}
+
+template <typename Data>
+void Subtree<Data>::handlePossibleLeaf(Node<Data>* node) {
+  if (node->type == Node<Data>::Type::EmptyLeaf) empty_leaves.push_back(node);
+  else if (node->type == Node<Data>::Type::Leaf) leaves.push_back(node);
+}
+
+template <typename Data>
 void Subtree<Data>::buildTree(CProxy_Partition<Data> part, CkCallback cb) {
   // Copy over received particles
   std::swap(particles, incoming_particles);
@@ -262,11 +286,14 @@ void Subtree<Data>::buildTree(CProxy_Partition<Data> part, CkCallback cb) {
 #if DEBUG
   CkPrintf("[TP %d] key: 0x%" PRIx64 " particles: %d\n", this->thisIndex, tp_key, particles.size());
 #endif
-  local_root = treespec.ckLocalBranch()->template makeNode<Data>(tp_key, 0,
-        particles.size(), particles.data(), 0, n_subtrees - 1, true, nullptr, this->thisIndex);
-  Key lbf = log2(local_root->getBranchFactor()); // have to use treespec to get BF
-  local_root->depth = Utility::getDepthFromKey(tp_key, lbf);
-  recursiveBuild(local_root, &particles[0], lbf);
+  auto& config = paratreet::getConfiguration();
+  Key lbf = log2(config.branchFactor());
+  auto local_root_type = getType(particles.size(), config.max_particles_per_leaf);
+  local_root = cm_local->makeNode(tp_key, local_root_type,
+         Utility::getDepthFromKey(tp_key, lbf), particles.size(),
+         particles.data(), nullptr, this->thisIndex, cm_local->thisIndex);
+  if (local_root->isLeaf()) handlePossibleLeaf(local_root);
+  else recursiveBuild(local_root, &particles[0], particles.size(), lbf);
 
   flat_subtree.tp_index  = this->thisIndex;
   flat_subtree.cm_index  = cm_proxy.ckLocalBranch()->thisIndex;
@@ -282,39 +309,22 @@ void Subtree<Data>::buildTree(CProxy_Partition<Data> part, CkCallback cb) {
 }
 
 template <typename Data>
-void Subtree<Data>::recursiveBuild(Node<Data>* node, Particle* node_particles, size_t log_branch_factor) {
+void Subtree<Data>::recursiveBuild(Node<Data>* node, Particle* node_particles, size_t node_n_particles, size_t log_branch_factor) {
 #if DEBUG
   CkPrintf("[Level %d] created node 0x%" PRIx64 " with %d particles\n",
-      node->depth, node->key, node->n_particles);
+      node->depth, node->key, node_n_particles);
 #endif
   // store reference to splitters
   //static std::vector<Splitter>& splitters = readers.ckLocalBranch()->splitters;
-  auto config = treespec.ckLocalBranch()->getConfiguration();
+  auto& config = paratreet::getConfiguration();
   auto tree   = treespec.ckLocalBranch()->getTree();
-  bool is_light = (node->n_particles <= config.max_particles_per_leaf);
-
-  // we can stop going deeper if node is light
-  if (is_light) {
-    if (node->n_particles == 0) {
-      node->type = Node<Data>::Type::EmptyLeaf;
-      empty_leaves.push_back(node);
-    }
-    else {
-      node->type = Node<Data>::Type::Leaf;
-      leaves.push_back(node);
-    }
-    return;
-  }
 
   // Create children
-  node->type = Node<Data>::Type::Internal;
-  node->n_children = node->wait_count = (1 << log_branch_factor);
-  node->is_leaf = false;
   Key child_key = (node->key << log_branch_factor);
   int start = 0;
-  int finish = start + node->n_particles;
+  int finish = start + node_n_particles;
 
-  tree->prepParticles(node_particles, node->n_particles, node->key, log_branch_factor);
+  tree->prepParticles(node_particles, node_n_particles, node->key, log_branch_factor);
   for (int i = 0; i < node->n_children; i++) {
     int first_ge_idx = finish;
     if (i < node->n_children - 1) {
@@ -323,16 +333,13 @@ void Subtree<Data>::recursiveBuild(Node<Data>* node, Particle* node_particles, s
     int n_particles = first_ge_idx - start;
 
     // Create child and store in vector
-    Node<Data>* child = treespec.ckLocalBranch()->template makeNode<Data>(child_key, node->depth + 1,
-        n_particles, node_particles + start, 0, n_subtrees - 1, true, node, this->thisIndex);
-    /*
-    Node<Data>* child = new Node<Data>(child_key, node->depth + 1, node->particles + start,
-        n_particles, child_owner_start, child_owner_end, node);
-    */
+    Node<Data>* child = cm_local->makeNode(child_key, getType(n_particles, config.max_particles_per_leaf),
+        node->depth + 1, n_particles, node_particles + start, node, this->thisIndex, cm_local->thisIndex);
     node->exchangeChild(i, child);
 
     // Recursive tree build
-    recursiveBuild(child, node_particles + start, log_branch_factor);
+    if (child->isLeaf()) handlePossibleLeaf(child);
+    else recursiveBuild(child, node_particles + start, n_particles, log_branch_factor);
 
     start = first_ge_idx;
     child_key++;
@@ -345,7 +352,6 @@ void Subtree<Data>::populateTree() {
   std::queue<Node<Data>*> going_up;
 
   for (auto leaf : leaves) {
-      leaf->data = Data(leaf->particles(), leaf->n_particles, leaf->depth);
     going_up.push(leaf);
   }
   for (auto empty_leaf : empty_leaves) {
@@ -353,6 +359,7 @@ void Subtree<Data>::populateTree() {
   }
   CkAssert(!going_up.empty());
 
+  auto branch_factor = paratreet::getConfiguration().branchFactor();
   while (going_up.size()) {
     Node<Data>* node = going_up.front();
     going_up.pop();
@@ -360,7 +367,6 @@ void Subtree<Data>::populateTree() {
     if (node->key == tp_key) {
       // We are at the root of the Subtree, send accumulated data to
       // parent TreeCanopy
-      int branch_factor = node->getBranchFactor();
       Key tc_key = tp_key / branch_factor;
       if (tc_key > 0) tc_proxy[tc_key].recvData(*node, branch_factor);
     } else {

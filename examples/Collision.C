@@ -6,6 +6,8 @@
 
 extern bool verify;
 extern int iter_start_collision;
+extern Real theta;
+extern Real max_timestep;
 
 PARATREET_REGISTER_PER_LEAF_FN(CropFn, CentroidData, (
   [](SpatialNode<CentroidData>& leaf, Partition<CentroidData>* partition) {
@@ -22,10 +24,8 @@ PARATREET_REGISTER_PER_LEAF_FN(CollisionResolveFn, CentroidData, (
   [](SpatialNode<CentroidData>& leaf, Partition<CentroidData>* partition) {
     for (int pi = 0; pi < leaf.n_particles; pi++) {
       auto& part = leaf.particles()[pi];
-      auto best_dt = leaf.data.pps.best_dt[pi].first;
-
-      if (best_dt < 0.01570796326) {
-        auto& partB = leaf.data.pps.best_dt[pi].second;
+      if (leaf.data.pps[pi].best_dt < max_timestep) {
+        auto& partB = *(leaf.data.pps[pi].best_dt_partPtr);
         auto& posA = part.position;
         auto& posB = partB.position;
         auto& velA = part.velocity;
@@ -34,8 +34,8 @@ PARATREET_REGISTER_PER_LEAF_FN(CollisionResolveFn, CentroidData, (
             "deleting particles of order %d and %d that collide at dt %lf. "
             "First has position (%lf, %lf, %lf) velocity (%lf, %lf, %lf). "
             "Second has position (%lf, %lf, %lf) velocity (%lf, %lf, %lf)\n",
-            part.order, partB.order, partition->time_advanced + best_dt, posA.x,
-            posA.y, posA.z, velA.x, velA.y, velA.z, posB.x, posB.y, posB.z,
+            part.order, partB.order, partition->time_advanced + leaf.data.pps[pi].best_dt,
+            posA.x, posA.y, posA.z, velA.x, velA.y, velA.z, posB.x, posB.y, posB.z,
             velB.x, velB.y, velB.z);
         partition->deleteParticleOfOrder(part.order);
         partition->thisProxy[partB.partition_idx].deleteParticleOfOrder(
@@ -53,7 +53,7 @@ PARATREET_REGISTER_PER_LEAF_FN(CollisionResolveFn, CentroidData, (
   }
 
   void ExMain::traversalFn(BoundingBox& universe, ProxyPack<CentroidData>& proxy_pack, int iter) {
-    proxy_pack.partition.template startDown<GravityVisitor<0,0,0>>();
+    proxy_pack.partition.template startDown<GravityVisitor>(GravityVisitor(Vector3D<Real>(0, 0, 0), theta));
   }
 
   void ExMain::postIterationFn(BoundingBox& universe, ProxyPack<CentroidData>& proxy_pack, int iter) {
@@ -63,9 +63,10 @@ PARATREET_REGISTER_PER_LEAF_FN(CollisionResolveFn, CentroidData, (
     );
     if (iter % 10000 == 0) paratreet::outputTipsy(universe, proxy_pack.partition);
     if (iter >= iter_start_collision) {
-      proxy_pack.cache.resetCachedParticles(CkCallbackResumeThread());
+      proxy_pack.cache.resetCachedParticles(proxy_pack.partition);
+      CkWaitQD();
       double start_time = CkWallTimer();
-      proxy_pack.partition.template startDown<CollisionVisitor>();
+      proxy_pack.partition.template startDown<CollisionVisitor>(CollisionVisitor());
       CkWaitQD();
       CkPrintf("Collision traversal: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
       // Collision is a little funky because were going to edit the mass and position of particles after a collision
@@ -82,5 +83,5 @@ PARATREET_REGISTER_PER_LEAF_FN(CollisionResolveFn, CentroidData, (
   }
 
   Real ExMain::getTimestep(BoundingBox& universe, Real max_velocity) {
-    return 0.01570796326;
+    return max_timestep;
   }

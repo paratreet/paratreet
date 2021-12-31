@@ -6,18 +6,27 @@
 #include "Space.h"
 #include <cmath>
 
-template <int repX = 0, int repY = 0, int repZ = 0>
 class GravityVisitor {
 public:
   static constexpr const bool CallSelfLeaf = true;
-  static constexpr Vector3D<Real> offset() {return {repX, repY, repZ};}
+  static constexpr const Real opening_geometry_factor_squared = 4.0 / 3.0;
+  GravityVisitor() : offset(0, 0, 0) {}
+  GravityVisitor(Vector3D<Real> offseti, Real theta) : offset(offseti), gravity_factor(opening_geometry_factor_squared / (theta * theta)) {}
+
+  void pup(PUP::er& p) {
+    p | offset;
+    p | gravity_factor;
+  }
+
+private:
+  Vector3D<Real> offset;
+  Real gravity_factor;
 
 private:
   // note gconst = 1
-  // note: theta defined elsewhere
   static constexpr int  nMinParticleNode = 6;
 
-  static inline void SPLINEQ(Real invr, Real r2, Real twoh, Real& a, Real& b, Real& c, Real& d)
+  inline void SPLINEQ(Real invr, Real r2, Real twoh, Real& a, Real& b, Real& c, Real& d)
 {
   Real u,dih,dir=(invr);
   if ((r2) < (twoh)*(twoh)) {
@@ -62,17 +71,57 @@ private:
   }
 }
 
-  static inline bool openSoftening(const CentroidData& source, const CentroidData& target)
+inline const Real COSMO_CONST(const Real C) {return C;}
+/// Calculate softened force and potential terms from cubic spline
+/// density profiles.  Terms are returned in a and b.
+/// 
+inline
+void SPLINE(Real r2, Real twoh, Real &a, Real &b)
+{
+  auto r = sqrt(r2);
+
+  if (r < twoh) {
+    auto dih = COSMO_CONST(2.0)/twoh;
+    auto u = r*dih;
+    if (u < COSMO_CONST(1.0)) {
+      a = dih*(COSMO_CONST(7.0)/COSMO_CONST(5.0) 
+	       - COSMO_CONST(2.0)/COSMO_CONST(3.0)*u*u 
+	       + COSMO_CONST(3.0)/COSMO_CONST(10.0)*u*u*u*u
+	       - COSMO_CONST(1.0)/COSMO_CONST(10.0)*u*u*u*u*u);
+      b = dih*dih*dih*(COSMO_CONST(4.0)/COSMO_CONST(3.0) 
+		       - COSMO_CONST(6.0)/COSMO_CONST(5.0)*u*u 
+		       + COSMO_CONST(1.0)/COSMO_CONST(2.0)*u*u*u);
+    }
+    else {
+      auto dir = COSMO_CONST(1.0)/r;
+      a = COSMO_CONST(-1.0)/COSMO_CONST(15.0)*dir 
+	+ dih*(COSMO_CONST(8.0)/COSMO_CONST(5.0) 
+	       - COSMO_CONST(4.0)/COSMO_CONST(3.0)*u*u + u*u*u
+	       - COSMO_CONST(3.0)/COSMO_CONST(10.0)*u*u*u*u 
+	       + COSMO_CONST(1.0)/COSMO_CONST(30.0)*u*u*u*u*u);
+      b = COSMO_CONST(-1.0)/COSMO_CONST(15.0)*dir*dir*dir 
+	+ dih*dih*dih*(COSMO_CONST(8.0)/COSMO_CONST(3.0) - COSMO_CONST(3.0)*u 
+		       + COSMO_CONST(6.0)/COSMO_CONST(5.0)*u*u 
+		       - COSMO_CONST(1.0)/COSMO_CONST(6.0)*u*u*u);
+    }
+  }
+  else {
+    a = COSMO_CONST(1.0)/r;
+    b = a*a*a;
+  }
+}
+
+  inline bool openSoftening(const CentroidData& source, const CentroidData& target)
   {
-    Sphere<Real> sourceSphere(source.multipoles.cm + offset(), 2.0 * source.multipoles.soft);
+    Sphere<Real> sourceSphere(source.multipoles.cm + offset, 2.0 * source.multipoles.soft);
     Sphere<Real> targetSphere(target.multipoles.cm, 2.0 * target.multipoles.soft);
     if (Space::intersect(sourceSphere, targetSphere)) return true;
     return Space::intersect(target.box, sourceSphere);
   }
 
-  static void addGravity(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
+  void addGravity(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
     for (int i = 0; i < target.n_particles; i++) {
-      Vector3D<Real> diff = source.data.centroid + offset() - target.particles()[i].position;
+      Vector3D<Real> diff = source.data.centroid + offset - target.particles()[i].position;
       Real rsq = diff.lengthSquared();
       if (rsq != 0) {
         Vector3D<Real> accel = diff * (source.data.sum_mass / (rsq * sqrt(rsq)));
@@ -84,27 +133,49 @@ private:
 public:
   /// @brief We've hit a leaf: N^2 interactions between all particles
   /// in the target and node.
-  static void leaf(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
+  void leaf(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
     for (int i = 0; i < target.n_particles; i++) {
       Vector3D<Real> accel(0.0);
       for (int j = 0; j < source.n_particles; j++) {
-          Vector3D<Real> diff = source.particles()[j].position + offset() - target.particles()[i].position;
+          Vector3D<Real> diff = source.particles()[j].position + offset - target.particles()[i].position;
           Real rsq = diff.lengthSquared();
+          Real twoh = source.particles()[j].soft + target.particles()[i].soft;
           if (rsq != 0) {
-              accel += diff * (source.particles()[j].mass / (rsq * sqrt(rsq)));
+              Real a, b;        /* potential and force terms returned
+                                 * from SPLINE */
+              SPLINE(rsq, twoh, a, b);
+              accel += diff * b * source.particles()[j].mass;
           }
       }
       target.applyAcceleration(i, accel);
     }
   }
 
-  static bool open(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
-    if (source.n_particles <= nMinParticleNode) return true;
-    return Space::intersect(target.data.box, source.data.centroid + offset(), source.data.rsq);
+  bool open(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
+    if (source.data.count <= nMinParticleNode) return true;
+    Real dataRsq = source.data.rsq * gravity_factor;
+#ifdef HEXADECAPOLE
+    if(!Space::intersect(target.data.box, source.data.centroid + offset, dataRsq)){
+        // test for softening overlap
+        if(!openSoftening(target.data, source.data)) {
+            return false;       /* Passes both tests */
+        }
+        else {        // Open as monopole?
+            // monopole criteria is much stricter
+            extern Real theta;
+            dataRsq *= pow(theta, -6);
+            Sphere<Real> sM(source.data.centroid + offset, sqrt(dataRsq));
+            return Space::intersect(target.data.box, sM);
+        }
+    }
+    return true;
+#else
+    return Space::intersect(target.data.box, source.data.centroid + offset, dataRsq);
+#endif
   }
 
-  static void node(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
-    if (source.n_particles == 0) return;
+  void node(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
+    if (source.data.count == 0) return;
 #ifdef BARNESHUT
     addGravity(source, target);
 #else
@@ -115,7 +186,7 @@ public:
     auto& m = source.data.multipoles;
     for (int i = 0; i < target.n_particles; i++) {
       auto& part = target.particles()[i];
-      auto r = part.position - m.cm - offset();
+      auto r = part.position - m.cm - offset;
       auto rsq = r.lengthSquared();
       Real dir = 1.0 / sqrt(rsq);
 #ifdef HEXADECAPOLE
@@ -145,7 +216,7 @@ public:
 #endif
   }
 
-  static bool cell(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
+  bool cell(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
     // cell means: do we want to open up target
     // for example, if source is root, we dont want to open up target
     return !Space::enclose(source.data.box, target.data.box);

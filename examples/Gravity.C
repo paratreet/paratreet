@@ -4,6 +4,8 @@
 extern bool verify;
 extern bool dual_tree;
 extern bool periodic;
+extern Real theta;
+extern Real max_timestep;
 
   using namespace paratreet;
 
@@ -14,37 +16,24 @@ extern bool periodic;
   }
 
   void ExMain::traversalFn(BoundingBox& universe, ProxyPack<CentroidData>& proxy_pack, int iter) {
-    if (dual_tree) proxy_pack.subtree.startDual<GravityVisitor<0,0,0>>();
     if (dual_tree && periodic) CkAbort("Not sure about this -- dual_tree and periodic both set");
-    proxy_pack.partition.template startDown<GravityVisitor<0,0,0>>();
-    if (periodic) {
-      CkWaitQD();
-      proxy_pack.partition.template startDown<GravityVisitor<-1,-1,-1>>(); CkWaitQD();
-      proxy_pack.partition.template startDown<GravityVisitor<-1,-1,0>>(); CkWaitQD();
-      proxy_pack.partition.template startDown<GravityVisitor<-1,-1,1>>(); CkWaitQD();
-      proxy_pack.partition.template startDown<GravityVisitor<-1,0,-1>>(); CkWaitQD();
-      proxy_pack.partition.template startDown<GravityVisitor<-1,0,0>>(); CkWaitQD();
-      proxy_pack.partition.template startDown<GravityVisitor<-1,0,1>>(); CkWaitQD();
-      proxy_pack.partition.template startDown<GravityVisitor<-1,1,-1>>(); CkWaitQD();
-      proxy_pack.partition.template startDown<GravityVisitor<-1,1,0>>(); CkWaitQD();
-      proxy_pack.partition.template startDown<GravityVisitor<-1,1,1>>(); CkWaitQD();
-      proxy_pack.partition.template startDown<GravityVisitor<0,-1,-1>>(); CkWaitQD();
-      proxy_pack.partition.template startDown<GravityVisitor<0,-1,0>>(); CkWaitQD();
-      proxy_pack.partition.template startDown<GravityVisitor<0,-1,1>>(); CkWaitQD();
-      proxy_pack.partition.template startDown<GravityVisitor<0,0,-1>>(); CkWaitQD();
-      proxy_pack.partition.template startDown<GravityVisitor<0,0,1>>(); CkWaitQD();
-      proxy_pack.partition.template startDown<GravityVisitor<0,1,-1>>(); CkWaitQD();
-      proxy_pack.partition.template startDown<GravityVisitor<0,1,0>>(); CkWaitQD();
-      proxy_pack.partition.template startDown<GravityVisitor<0,1,1>>(); CkWaitQD();
-      proxy_pack.partition.template startDown<GravityVisitor<1,-1,-1>>(); CkWaitQD();
-      proxy_pack.partition.template startDown<GravityVisitor<1,-1,0>>(); CkWaitQD();
-      proxy_pack.partition.template startDown<GravityVisitor<1,-1,1>>(); CkWaitQD();
-      proxy_pack.partition.template startDown<GravityVisitor<1,0,-1>>(); CkWaitQD();
-      proxy_pack.partition.template startDown<GravityVisitor<1,0,0>>(); CkWaitQD();
-      proxy_pack.partition.template startDown<GravityVisitor<1,0,1>>(); CkWaitQD();
-      proxy_pack.partition.template startDown<GravityVisitor<1,1,-1>>(); CkWaitQD();
-      proxy_pack.partition.template startDown<GravityVisitor<1,1,0>>(); CkWaitQD();
-      proxy_pack.partition.template startDown<GravityVisitor<1,1,1>>(); CkWaitQD();
+    if (dual_tree) proxy_pack.subtree.startDual<GravityVisitor>(GravityVisitor(Vector3D<Real>(0, 0, 0), theta));
+    if (!periodic) {
+      proxy_pack.partition.template startDown<GravityVisitor>(GravityVisitor(Vector3D<Real>(0, 0, 0), theta));
+    } else {
+      auto replicas = [&] (int N) {
+        auto univ = thread_state_holder.ckLocalBranch()->universe.box.size();
+        for (int X = -N; X <= N; X++) {
+          for (int Y = -N; Y <= N; Y++) {
+            for (int Z = -N; Z <= N; Z++) {
+              Vector3D<Real> offset (X * univ.x, Y * univ.y, Z * univ.z);
+              proxy_pack.partition.template startDown<GravityVisitor>(GravityVisitor(offset, theta));
+            }
+          }
+        }
+      };
+
+      replicas(1); // one box around the box
     }
   }
 
@@ -59,5 +48,6 @@ extern bool periodic;
 
   Real ExMain::getTimestep(BoundingBox& universe, Real max_velocity) {
     Real universe_box_len = universe.box.greater_corner.x - universe.box.lesser_corner.x;
-    return universe_box_len / max_velocity / std::cbrt(universe.n_particles);
+    Real temp = universe_box_len / max_velocity / std::cbrt(universe.n_particles);
+    return std::min(temp, max_timestep);
   }

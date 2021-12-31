@@ -2,17 +2,17 @@ include ../src/Makefile.common
 
 LBS = CommonLBs PrefixLB OrbLB #AverageSmoothLB DiffusionLB DistributedPrefixLB DistributedOrbLB
 LB_LIBS = $(foreach m, $(LBS), -module $(m))
-OPTS = -g -Ofast $(INCLUDES) -DCOUNT_INTERACTIONS=0 -DDEBUG=0 -DHEXADECAPOLE $(MAKE_OPTS)
+OPTS = -g -O3 $(INCLUDES) -DCOUNT_INTERACTIONS=0 -DDEBUG=0 -DHEXADECAPOLE $(MAKE_OPTS)
 CHARMC = $(CHARM_HOME)/bin/charmc $(OPTS)
 
-all: Gravity SPH Collision VisitAll
-VISITORS = DensityVisitor.h PressureVisitor.h GravityVisitor.h CollisionVisitor.h NeighborListCollector.h VisitAllVisitor.h
-OTHERS = CountManager.h
+all: Gravity SPH Collision
+DATA = CentroidData.h MultipoleMoments.h
+VISITORS = DensityVisitor.h PressureVisitor.h GravityVisitor.h CollisionVisitor.h
 
 debug:
 	echo $(LB_LIBS)
 
-Main.decl.h: Main.ci
+Main.decl.h: Main.ci $(DATA)
 	$(CHARMC) $<
 
 Gravity: Main.decl.h Main.o Gravity.o moments.o ../src/libparatreet.a
@@ -24,9 +24,6 @@ Collision: Main.decl.h Main.o Collision.o moments.o ../src/libparatreet.a
 SPH: Main.decl.h Main.o SPH.o moments.o ../src/libparatreet.a
 	$(CHARMC) -language charm++ $(LB_LIBS) -o SPH SPH.o Main.o moments.o $(LD_LIBS)
 
-VisitAll: Main.decl.h Main.o VisitAll.o moments.o ../src/libparatreet.a
-	$(CHARMC) -language charm++ -module CommonLBs -o VisitAll VisitAll.o Main.o moments.o $(LD_LIBS)
-
 Gravity.o: Gravity.C Main.decl.h
 	$(CHARMC) -c $<
 
@@ -36,10 +33,7 @@ Collision.o: Collision.C Main.decl.h
 SPH.o: SPH.C SPHUtils.h Main.decl.h
 	$(CHARMC) -c $<
 
-VisitAll.o: VisitAll.C Main.decl.h
-	$(CHARMC) -c $<
-
-Main.o: Main.C CentroidData.h moments.h MultipoleMoments.h $(VISITORS) $(OTHERS) Main.decl.h
+Main.o: Main.C $(VISITORS) Main.decl.h
 	$(CHARMC) -c $<
 
 moments.o: moments.C
