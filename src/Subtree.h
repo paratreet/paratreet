@@ -204,6 +204,7 @@ void Subtree<Data>::sendLeaves(CProxy_Partition<Data> part)
     }
   }
 
+  size_t num_mismatches = 0u;
   for (auto && part_receiver : part_idx_to_leaf) {
     auto it = cm_proxy.ckLocalBranch()->partition_lookup.find(part_receiver.first);
     if (it != cm_proxy.ckLocalBranch()->partition_lookup.end()) {
@@ -215,11 +216,13 @@ void Subtree<Data>::sendLeaves(CProxy_Partition<Data> part)
       for (auto && leaf : part_receiver.second) {
         lookup_leaf_keys.push_back(leaf->key);
         displaced_leaves.insert(leaf);
+        num_mismatches += leaf->n_particles;
       }
       part[part_receiver.first].receiveLeaves(lookup_leaf_keys, tp_key, this->thisIndex, this->thisProxy);
     }
   }
   for (auto leaf : displaced_leaves) cm_local->addDisplacedLeaf(leaf);
+  thread_state_holder.ckLocalBranch()->countMismatches(num_mismatches);
 }
 
 template <typename Data>

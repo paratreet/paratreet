@@ -71,7 +71,7 @@ private:
   }
 }
 
-inline const Real COSMO_CONST(const Real C) {return C;}
+inline Real COSMO_CONST(const Real C) {return C;}
 /// Calculate softened force and potential terms from cubic spline
 /// density profiles.  Terms are returned in a and b.
 /// 
