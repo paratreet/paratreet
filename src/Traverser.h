@@ -149,7 +149,7 @@ public:
   void recurse(Node<Data>* node, std::vector<int>& active_buckets) {
     CkAssert(node);
     std::vector<int> new_active_buckets;
-    new_active_buckets.reserve(leaves.size());
+    new_active_buckets.reserve(active_buckets.size());
 #if DEBUG
     CkPrintf("tp %d, key = 0x%" PRIx64 ", type = %d, pe %d\n", part.thisIndex, node->key, (int)node->type, CkMyPe());
 #endif

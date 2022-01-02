@@ -80,7 +80,7 @@ void SPLINE(Real r2, Real twoh, Real &a, Real &b)
 {
   auto r = sqrt(r2);
 
-  if (r < twoh) {
+  if (false) {//r < twoh) {
     auto dih = COSMO_CONST(2.0)/twoh;
     auto u = r*dih;
     if (u < COSMO_CONST(1.0)) {
@@ -144,7 +144,7 @@ public:
               Real a, b;        /* potential and force terms returned
                                  * from SPLINE */
               SPLINE(rsq, twoh, a, b);
-              accel += diff * b * source.particles()[j].mass;
+              accel += diff * (b * source.particles()[j].mass);
           }
       }
       target.applyAcceleration(i, accel);

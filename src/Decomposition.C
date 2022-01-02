@@ -485,7 +485,7 @@ int BinaryDecomposition::getNumParticles(int tp_index) {
 }
 
 int BinaryDecomposition::getPartitionHome(int tp_index) {
-  return partition_idxs[tp_index];
+  return partition_idxs.empty() ? 0 : partition_idxs[tp_index];
 }
 
 // called by each reader
