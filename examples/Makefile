@@ -43,4 +43,4 @@ test: all
 	./charmrun ./Gravity -f $(BASE_PATH)/inputgen/100k.tipsy -d sfc +p3 ++ppn 3 +pemap 1-3 +commap 0 ++local
 
 clean:
-	rm -f *.decl.h *.def.h conv-host *.o Gravity SPH Collision charmrun
+	rm -f *.decl.h *.def.h conv-host *.o Gravity SPH Collision charmrun moduleinit*
