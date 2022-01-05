@@ -3,33 +3,33 @@ extern module DistBaseLB;
 initnode void lbinit(void);
 
 include "common.h";
+include "LBCommon.h";
 
-group [migratable] DistributedOrbLB : DistBaseLB {
-  entry void DistributedOrbLB(const CkLBOptions &);
-  initnode void initnodeFn();
-  entry [reductiontarget] void perLBStates(CkReductionMsg * msg);
-  entry [reductiontarget] void getUniverseDimensions(CkReductionMsg * msg);
-  entry void binaryLoadPartitionWithOctalBins(int dim, float load, int left, int right, float low, float high, Vector3D<Real> lower_coords, Vector3D<Real> upper_coords, const CkCallback &);
-  entry [threaded] void createPartitions(int, float,int, int, Vector3D<Real>, Vector3D<Real>);
-  entry [reductiontarget] void getSumOctalLoads(CkReductionMsg * msg);
-  entry void finishedPartitionOneDim(const CkCallback & curr_cb);
-  entry void migrateObjects(std::vector<std::vector<Vector3D<Real>>> pe_splits);
-  entry void acknowledgeIncomingMigrations(int count);
-  entry void sendFinalMigrations(int count);
-  entry void summary(int nmove, int total);
+  group [migratable] DistributedOrbLB : DistBaseLB {
+    entry void DistributedOrbLB(const CkLBOptions &);
+    initnode void initnodeFn();
+    entry [reductiontarget] void perLBStates(CkReductionMsg * msg);
+    entry [reductiontarget] void postLBStates(CkReductionMsg * msg);
+    entry void endLB();
+    entry void reportUniverseDimensions();
+    entry [reductiontarget] void getUniverseDimensions(CkReductionMsg * msg);
+    entry void bCastSectionLoadBinning(LBCommon::DorbPartitionRec rec);
+    entry void loadBinning(LBCommon::DorbPartitionRec rec);
+    entry void createPartitions(LBCommon::DorbPartitionRec rec);
+    entry void finalPartitionStep(LBCommon::DorbPartitionRec, int);
+    entry [expedited] void mergeFinalStepData(LBCommon::DorbPartitionRec, std::vector<LBCommon::LBShortCmp>);
+    entry [expedited] void mergeBinLoads(LBCommon::DorbPartitionRec, std::vector<float>, std::vector<int>);
+    entry void finishedPartitionOneDim(LBCommon::DorbPartitionRec, float, float, int);
+    entry void migrateObjects(std::vector<std::vector<Vector3D<Real>>> pe_splits);
+    entry void acknowledgeIncomingMigrations(int count, float in_load);
+    entry void doMigrations();
+    entry void sendBackToken(LBCommon::LBCentroidAndIndexRecord obj);
+    entry void sendFinalMigrations(int count);
+    entry void reportPostLBStates();
+
+    entry void recv_tokens(LBCommon::DorbPartitionRec rec1, LBCommon::DorbPartitionRec rec2, std::vector<LBCommon::LBCentroidAndIndexRecord> objs);
+    entry void moveTokenWithSplitPoint(LBCommon::DorbPartitionRec rec1, LBCommon::DorbPartitionRec rec2);
+    entry void bCastSectionMoveTokenWithSplitPoint(LBCommon::DorbPartitionRec rec1, LBCommon::DorbPartitionRec rec2);
+    entry void bCastSectionFinalPartitionStep(LBCommon::DorbPartitionRec rec, int curr_split_idx);
+  };
 };
-
-};
-
-
-//struct LBCentroidAndIndexRecord{
-//  Vector3D<Real> centroid;/*{{{*/
-//  int idx;
-//  int particle_size;
-//  int from_pe;
-//  float load;
-//  float distance;
-//  int to_pe;
-//  const LDObjData* data_ptr;
-//  inline void pup(PUP::er &p);
-//};/*}}}*/

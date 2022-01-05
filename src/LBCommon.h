@@ -28,6 +28,31 @@ namespace LBCommon{
     };
   };
 
+  struct DorbPartitionRec{
+    int dim;
+    float load;
+    int n_objs;
+    int left; //pe index
+    int right;
+    double low;
+    double high;
+    float granularity;
+    Vector3D<Real> lower_coords;
+    Vector3D<Real> upper_coords;
+    void pup(PUP::er &p){
+      p | dim;
+      p | load;
+      p | n_objs;
+      p | left;
+      p | right;
+      p | low;
+      p | high;
+      p | granularity;
+      p | lower_coords;
+      p | upper_coords;
+    };
+  };
+
   struct LBObjToken{
     Vector3D<Real> centroid;
     int idx;
@@ -87,8 +112,18 @@ namespace LBCommon{
     float load;
     float distance;
     int to_pe;
-    const LDObjData* data_ptr;
-    inline void pup(PUP::er &p);
+    LDObjData obj_data;
+    // inline void pup(PUP::er &p);
+    void pup(PUP::er &p){
+      p | centroid;
+      p | idx;
+      p | particle_size;
+      p | from_pe;
+      p | load;
+      p | distance;
+      p | to_pe;
+      p | obj_data;
+    };
   };
 
   struct LBCentroidCompare{
@@ -96,9 +131,22 @@ namespace LBCommon{
     int from_pe;
     inline void pup(PUP::er &p);
   };
+
+  struct LBShortCmp{
+    float coord;
+    float load;
+    void pup(PUP::er &p){
+      p | coord;
+      p | load;
+    }
+  };
 };
 
 namespace{
+  bool CompareLBShortCmp(const LBCommon::LBShortCmp & a, const LBCommon::LBShortCmp & b){
+    return a.coord < b.coord;
+  }
+
   bool CompareLBStats(const LBCommon::LBCompareStats & a, const LBCommon::LBCompareStats & b)
   {
     // compare chare array index
