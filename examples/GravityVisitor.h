@@ -9,6 +9,8 @@
 class GravityVisitor {
 public:
   static constexpr const bool CallSelfLeaf = true;
+  static constexpr const bool ForceEvenDepth = true;
+  static constexpr const bool TargetMustBeLeaf = true;
   static constexpr const Real opening_geometry_factor_squared = 4.0 / 3.0;
   GravityVisitor() : offset(0, 0, 0) {}
   GravityVisitor(Vector3D<Real> offseti, Real theta) : offset(offseti), gravity_factor(opening_geometry_factor_squared / (theta * theta)) {}
@@ -144,7 +146,7 @@ public:
               Real a, b;        /* potential and force terms returned
                                  * from SPLINE */
               SPLINE(rsq, twoh, a, b);
-              accel += diff * b * source.particles()[j].mass;
+              accel += diff * (b * source.particles()[j].mass);
           }
       }
       target.applyAcceleration(i, accel);
