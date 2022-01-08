@@ -9,6 +9,8 @@
 class GravityVisitor {
 public:
   static constexpr const bool CallSelfLeaf = true;
+  static constexpr const bool ForceEvenDepth = true;
+  static constexpr const bool TargetMustBeLeaf = true;
   static constexpr const Real opening_geometry_factor_squared = 4.0 / 3.0;
   GravityVisitor() : offset(0, 0, 0) {}
   GravityVisitor(Vector3D<Real> offseti, Real theta) : offset(offseti), gravity_factor(opening_geometry_factor_squared / (theta * theta)) {}
@@ -80,7 +82,7 @@ void SPLINE(Real r2, Real twoh, Real &a, Real &b)
 {
   auto r = sqrt(r2);
 
-  if (false) {//r < twoh) {
+  if (r < twoh) {
     auto dih = COSMO_CONST(2.0)/twoh;
     auto u = r*dih;
     if (u < COSMO_CONST(1.0)) {

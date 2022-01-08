@@ -149,7 +149,7 @@ public:
   void recurse(Node<Data>* node, std::vector<int>& active_buckets) {
     CkAssert(node);
     std::vector<int> new_active_buckets;
-    new_active_buckets.reserve(active_buckets.size());
+    new_active_buckets.reserve(leaves.size());
 #if DEBUG
     CkPrintf("tp %d, key = 0x%" PRIx64 ", type = %d, pe %d\n", part.thisIndex, node->key, (int)node->type, CkMyPe());
 #endif
@@ -503,10 +503,11 @@ public:
     while (!nodes.empty()) {
       Node<Data>* node = nodes.top();
       nodes.pop();
-      if (node->type == Node<Data>::Type::Leaf || node->type == Node<Data>::Type::CachedRemoteLeaf) {
+      if (node->isLeaf()) {
         doLeaf(v, source_leaf, node, stats);
       } else {
-        if (doOpen(v, source_leaf, node, stats)) {
+        if (doOpen(v, source_leaf, node, stats)) { // should we even check this?
+          // if so, wouldnt that justify checking open() before leaf() on leaves?
           for (int j = 0; j < node->n_children; j++) {
             nodes.push(node->getChild(j));
           }
@@ -545,29 +546,40 @@ public:
         case Node<Data>::Type::Leaf:
         case Node<Data>::Type::CachedRemoteLeaf:
           {
-            doLeaf(v, node, curr_payload, stats); // n2 calc
+            if (curr_payload->isLeaf() || !Visitor::TargetMustBeLeaf) {
+              doLeaf(v, node, curr_payload, stats); // n2 calc
+            } else runInvertedTraversal(node, curr_payload);
             break;
           }
         case Node<Data>::Type::Internal:
         case Node<Data>::Type::CachedBoundary:
         case Node<Data>::Type::CachedRemote:
           {
-            if (curr_payload->type == Node<Data>::Type::Leaf
-               // cell means should we open target
-             || !doCell(v, node, curr_payload, stats)) {
+            if (curr_payload->isLeaf()) {
               if (doOpen(v, node, curr_payload, stats)) {
-	        for (int i = 0; i < node->n_children; i++) {
-	          nodes.emplace(node->getChild(i), curr_payload);
+                for (int i = 0; i < node->n_children; i++) {
+                  nodes.emplace(node->getChild(i), curr_payload);
                 }
-              } else {
-                doNode(v, node, curr_payload, stats);
               }
+              else doNode(v, node, curr_payload, stats);
+            }
+            else if (!doCell(v, node, curr_payload, stats)) {
+              // cell means should we open target
+              if (Visitor::TargetMustBeLeaf) runInvertedTraversal(node, curr_payload);
+              else if (doOpen(v, node, curr_payload, stats)) {
+                for (int i = 0; i < node->n_children; i++) {
+                  nodes.emplace(node->getChild(i), curr_payload);
+                }
+              }
+              else doNode(v, node, curr_payload, stats);
             }
             else {
               for (int i = 0; i < node->n_children; i++) {
-                for (int j = 0; j < curr_payload->n_children; j++) {
-                  nodes.emplace(node->getChild(i), curr_payload->getChild(j));
-                }
+                if (!Visitor::ForceEvenDepth || curr_payload->depth <= node->depth) {
+                  for (int j = 0; j < curr_payload->n_children; j++) {
+                    nodes.emplace(node->getChild(i), curr_payload->getChild(j));
+                  }
+                } else nodes.emplace(node->getChild(i), curr_payload);
               }
             }
             break;
