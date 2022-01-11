@@ -59,6 +59,7 @@ void DistributedOrbLB::Strategy(const DistBaseLB::LDStats* const stats) {
 
 
 void DistributedOrbLB::initVariables(){
+  waited = false;
   total_load = .0f;
   total_migrates = 0;
   incoming_migrates = 0;
@@ -86,6 +87,7 @@ void DistributedOrbLB::initVariables(){
   total_move = 0;
   total_objs = 0;
   moved_in_pe_count = 0;
+  section_member_count = 0;
   ready_to_recurse = 0;
 
   recv_spliters = 0;
@@ -291,6 +293,153 @@ void DistributedOrbLB::getUniverseDimensions(CkReductionMsg * msg){
   /*}}}*/
 }
 
+void DistributedOrbLB::bCastSectionGatherObjects(DorbPartitionRec rec){
+  if (rec.right - rec.left == CkNumPes()){
+    thisProxy.mergeObjects(rec);
+    return;
+  }
+
+  int my_idx = my_pe - rec.left;
+  int left_child = my_idx * 2 + rec.left;
+  int right_child = left_child + 1;
+  if (left_child == rec.left){
+    thisProxy[left_child].mergeObjects(rec);
+  } else if (left_child < rec.right){
+    thisProxy[left_child].bCastSectionGatherObjects(rec);
+    thisProxy[left_child].mergeObjects(rec);
+  }
+
+  if (right_child < rec.right){
+    thisProxy[right_child].bCastSectionGatherObjects(rec);
+    thisProxy[right_child].mergeObjects(rec);
+  }
+}
+
+
+
+void DistributedOrbLB::bruteForceSolverRecursiveHelper(DorbPartitionRec rec, int start_idx, int end_idx){
+  // bcast group to contribute their objects
+
+  if (rec.right - rec.left <= 1){
+    CkPrintf("rec (%d , %d) bruteForceSolverRecursiveHelper final start %d end %d load %.6f\n", rec.left, rec.right, start_idx, end_idx, rec.load);
+
+    for (int i = start_idx; i < end_idx; i++){
+      section_obj_collection[i].to_pe = rec.right;
+      section_updated_objects[section_obj_collection[i].from_pe].push_back(section_obj_collection[i]);
+    }
+
+    section_updated_load[rec.left - my_pe] = rec.load;
+    return;
+  }
+
+  CkPrintf("rec (%d , %d) bruteForceSolverRecursiveHelper start %d end %d \n", rec.left, rec.right, start_idx, end_idx);
+
+  std::sort(section_obj_collection.begin()+start_idx, section_obj_collection.begin()+end_idx, NdComparator(rec.dim));
+  int mid_pe = (rec.left + rec.right) / 2;
+  float acc_load  = .0f;
+  float target_left_load = mid_pe - rec.left;
+  target_left_load /= (rec.right - rec.left);
+  target_left_load *= rec.load;
+
+  int left_size = 0;
+  for (; (start_idx + left_size) < end_idx; left_size++){
+    if (acc_load + section_obj_collection[start_idx + left_size].load > target_left_load){
+      break;
+    }
+    acc_load += section_obj_collection[start_idx + left_size].load;
+  }
+
+  if (target_left_load - acc_load > (acc_load + section_obj_collection[start_idx + left_size].load - target_left_load)){
+    acc_load += section_obj_collection[start_idx + left_size].load;
+    left_size ++;
+  }
+
+  float split_point = section_obj_collection[start_idx + left_size + 1].centroid[rec.dim];
+
+  Vector3D<Real> left_lower_coord = rec.lower_coords;
+  Vector3D<Real> left_upper_coord = rec.upper_coords;
+  left_upper_coord[rec.dim] = split_point;
+  Vector3D<Real> right_lower_coord = rec.lower_coords;
+  right_lower_coord[rec.dim] = split_point;
+  Vector3D<Real> right_upper_coord = rec.upper_coords;
+  float curr_right_load = rec.load - acc_load;
+
+  int left_dim = getDim(rec.dim, left_lower_coord, left_upper_coord);
+  DorbPartitionRec left_rec{
+    left_dim, acc_load, left_size,
+    rec.left, mid_pe,
+    left_lower_coord[left_dim], left_upper_coord[left_dim],
+    rec.granularity,
+    left_lower_coord, left_upper_coord};
+
+  int right_dim = getDim(rec.dim, right_lower_coord, right_upper_coord);
+  DorbPartitionRec right_rec{
+    right_dim, rec.load - acc_load, rec.n_objs - left_size,
+    mid_pe, rec.right,
+    right_lower_coord[right_dim], right_upper_coord[right_dim],
+    rec.granularity,
+    right_lower_coord, right_upper_coord};
+
+  bruteForceSolverRecursiveHelper(left_rec, start_idx, start_idx + left_size + 1);
+  bruteForceSolverRecursiveHelper(right_rec, start_idx + left_size + 1, end_idx);
+}
+
+void DistributedOrbLB::bruteForceSolver(DorbPartitionRec rec){
+  // bcast group to contribute their objects
+  section_updated_objects.resize(CkNumPes());
+  section_updated_load.resize(rec.right - rec.left);
+  bruteForceSolverRecursiveHelper(rec, 0, section_obj_collection.size());
+  for (int i = rec.left; i < rec.right; i++){
+    CkPrintf("Send final loads:: %d -> %d\n", my_pe, i);
+    thisProxy[i].sendUpdatedLoad(section_updated_load[i - my_pe]);
+  }
+  for (int i = 0; i < CkNumPes(); i++){
+    CkPrintf("Send final tokens:: %d -> %d\n", my_pe, i);
+    thisProxy[i].sendUpdatedTokens( section_updated_objects[i]);
+  }
+}
+
+void DistributedOrbLB::sendUpdatedTokens(vector<LBCentroidAndIndexRecord> tokens){
+  // new_load = load;
+  moved_partitions = n_partitions;
+  for (auto & obj : tokens){
+    if (obj.to_pe != my_pe){
+      total_migrates ++;
+      // lbmgr->Migrate(obj.obj_data.handle,obj.to_pe);
+      // send_nobjs_to_pes[obj.to_pe] += 1;
+      // send_nload_to_pes[obj.to_pe] += obj.load;
+      // post_lb_load  -= obj.load;
+    }
+  }
+
+  if (!waited){
+    thisProxy[my_pe].waitForMigrations();
+    waited = true;
+  }
+}
+
+void DistributedOrbLB::waitForMigrations(){
+  CkWaitQD();
+  reportPostLBStates();
+}
+
+void DistributedOrbLB::sendUpdatedLoad(float load){
+  new_load = load;
+}
+
+void DistributedOrbLB::mergeObjects(DorbPartitionRec rec){
+  thisProxy[rec.left].addObjects(rec, obj_collection);
+}
+
+void DistributedOrbLB::addObjects(DorbPartitionRec rec, vector<LBCentroidAndIndexRecord> objs){
+  section_obj_collection.insert(section_obj_collection.end(), objs.begin(), objs.end());
+  section_member_count += 1;
+
+  if (section_member_count == (rec.right - rec.left)){
+    bruteForceSolver(rec);
+  }
+}
+
 void DistributedOrbLB::findPeSplitPoints(){
   curr_lower_coords = Vector3D<Real>(universe_coords[0], universe_coords[2], universe_coords[4]);
   curr_upper_coords = Vector3D<Real>(universe_coords[1], universe_coords[3], universe_coords[5]);
@@ -317,6 +466,8 @@ void DistributedOrbLB::createPartitions(DorbPartitionRec rec){
     // CkPrintf("\n**** Done partition dim %d load %.4f left %d right %d size %d  ****\n", rec.dim, rec.load, rec.left, rec.right, rec.n_objs);
     new_load = rec.load;
     thisProxy[rec.left].doMigrations();
+  } else if (rec.n_objs <= brute_force_size){
+    thisProxy[rec.left].bCastSectionGatherObjects(rec);
   }
   else // Recursive case
   {
@@ -934,6 +1085,8 @@ void DistributedOrbLB::reset(){
   bin_loads_collection.clear();
   bin_sizes_collection.clear();
   fdata_collections.clear();
+  section_updated_load.clear();
+  section_updated_objects.clear();
 
   if (CkMyPe() == 0) {
     CkPrintf("DistributedOrbLB>> DistributedOrbLB strategy end at %lf\n", CmiWallTimer()-start_time);
