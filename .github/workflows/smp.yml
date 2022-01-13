@@ -49,11 +49,11 @@ jobs:
         make
         ./charmrun +p1 ./Gravity -f ../inputgen/1k.tipsy ++ppn 1 +setcpuaffinity ++local -u 2
         ./charmrun +p1 ./Gravity -f ../inputgen/1k.tipsy ++ppn 1 +setcpuaffinity ++local -u 2 -n 1 -p 1 -d sfc -t kd
-        ./charmrun +p4 ./Gravity -f ../inputgen/1k.tipsy ++ppn 4 +setcpuaffinity ++local -u 2 -t bin
+        ./charmrun +p4 ./Gravity -f ../inputgen/1k.tipsy ++ppn 4 +setcpuaffinity ++local -u 2 -t binoct
         ./charmrun +p4 ./Gravity -f ../inputgen/1k.tipsy ++ppn 2 +setcpuaffinity ++local -u 2 -d sfc
         ./charmrun +p4 ./Gravity -f ../inputgen/1k.tipsy ++ppn 2 +setcpuaffinity ++local -e -u 2
         ./charmrun +p4 ./Gravity -f ../inputgen/1k.tipsy ++ppn 2 +setcpuaffinity ++local -e -u 2 -v test
         ./charmrun +p1 ./SPH     -f ../inputgen/1k.tipsy ++ppn 1 +setcpuaffinity ++local -u 2
-        ./charmrun +p4 ./SPH     -f ../inputgen/1k.tipsy ++ppn 4 +setcpuaffinity ++local -u 2 -t bin
+        ./charmrun +p4 ./SPH     -f ../inputgen/1k.tipsy ++ppn 4 +setcpuaffinity ++local -u 2 -t binoct
         ./charmrun +p4 ./SPH     -f ../inputgen/1k.tipsy ++ppn 2 +setcpuaffinity ++local -u 2 -d sfc
         ./charmrun +p4 ./Collision -f ../inputgen/1k.tipsy ++ppn 2 +setcpuaffinity ++local -u 2 -d sfc -c 0
