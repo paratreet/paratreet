@@ -1,8 +1,8 @@
 #ifndef PARATREET_CONFIGURATION_H_
 #define PARATREET_CONFIGURATION_H_
 
+#include <charm++.h>
 #include <functional>
-#include <string>
 
 #include "Loadable.h"
 #include "BoundingBox.h"
@@ -42,83 +42,103 @@ namespace paratreet {
     };
 
     template <>
-    inline void Field<DecompType>::accept(const Value& value) {
-      auto s = (std::string)value;
-      using T = DecompType;
-      if (s == "oct") {
-        this->storage_ = T::eOct;
-      } else if (s == "binoct") {
-        this->storage_ = T::eBinaryOct;
-      } else if (s == "sfc") {
-        this->storage_ = T::eSfc;
-      } else if (s == "kd") {
-        this->storage_ = T::eKd;
-      } else if (s == "longest") {
-        this->storage_ = T::eLongest;
-      } else {
-        CmiPrintf("Invalid value %s for %s!", s.c_str(), this->name().c_str());
-        CmiAbort("Invalid value -- see above");
+    struct FieldConverter<DecompType> {
+      DecompType operator()(const char* val) {
+        std::string s(val);
+        using T = DecompType;
+        if (s == "oct") {
+          return T::eOct;
+        } else if (s == "binoct") {
+          return T::eBinaryOct;
+        } else if (s == "sfc") {
+          return T::eSfc;
+        } else if (s == "kd") {
+          return T::eKd;
+        } else if (s == "longest") {
+          return T::eLongest;
+        } else {
+          CmiAbort("-- invalid decomp type value, %s --", val);
+        }
       }
-    }
+    };
 
     template <>
-    inline void Field<TreeType>::accept(const Value& value) {
-      auto s = (std::string)value;
-      using T = TreeType;
-      if (s == "oct") {
-        this->storage_ = T::eOct;
-      } else if (s == "binoct") {
-        this->storage_ = T::eBinaryOct;
-      } else if (s == "kd") {
-        this->storage_ = T::eKd;
-      } else if (s == "longest") {
-        this->storage_ = T::eLongest;
-      } else {
-        CmiPrintf("Invalid value %s for %s!", s.c_str(), this->name().c_str());
-        CmiAbort("Invalid value -- see above");
+    struct FieldConverter<TreeType> {
+      TreeType operator()(const char* val) {
+        std::string s(val);
+        using T = TreeType;
+        if (s == "oct") {
+          return T::eOct;
+        } else if (s == "binoct") {
+          return T::eBinaryOct;
+        } else if (s == "kd") {
+          return T::eKd;
+        } else if (s == "longest") {
+          return T::eLongest;
+        } else {
+          CmiAbort("-- invalid tree type value, %s --", val);
+        }
       }
-    }
+    };
 
     struct Configuration : public PUP::able, public Loadable {
-        int min_n_subtrees; // how many subtrees do you want, at least
-        int min_n_partitions; // how many partitions do you want, at least
-        int max_particles_per_leaf; // at most how many particles can fit in one leaf
-        DecompType decomp_type; // enum for how to decompose particles to Partitions
-        TreeType tree_type; // enum for how to build the tree
-        int branchFactor() const {return branchFactorFromTreeType(tree_type);}
-        int num_iterations; // number of iterations to run the simulation for.
-        int num_share_nodes; // how many nodes to share when requesting a node
-        int cache_share_depth; // how many nodes of the global tree should be shared. 0 means all
-        int pool_elem_size; // how many nodes in one pool element. nodes are stored in pools
-        int flush_period; // after how many iterations should we flush (re-do decomposition)
-        int flush_max_avg_ratio; // after what decomposition (max/avg) ratio should we flush
-        int lb_period; // after how many iterations should we re-balance load
-        int request_pause_interval; // after how many requests per Partition should we pause that traversal
-        int iter_pause_interval; // after how many iterations should we pause that traversal
-        std::string input_file; // filename representing initial conditions
-        std::string output_file; // filename representing output conditions
+        // how many subtrees do you want, at least
+        int min_n_subtrees;
+        // how many partitions do you want, at least
+        int min_n_partitions;
+        // at most how many particles can fit in one leaf
+        int max_particles_per_leaf;
+        // enum for how to decompose particles to Partitions
+        DecompType decomp_type;
+        // enum for how to build the tree
+        TreeType tree_type;
+        // number of iterations to run the simulation for.
+        int num_iterations;
+        // how many nodes to share when requesting a node
+        int num_share_nodes;
+        // how many nodes of the global tree should be shared. 0 means all
+        int cache_share_depth;
+        // how many nodes in one pool element. nodes are stored in pools
+        int pool_elem_size; 
+        // after how many iterations should we flush (re-do decomposition)
+        int flush_period;
+        // after what decomposition (max/avg) ratio should we flush
+        int flush_max_avg_ratio;
+        // after how many iterations should we re-balance load
+        int lb_period;
+        // after how many requests per Partition should we pause that traversal
+        int request_pause_interval;
+        // after how many iterations should we pause that traversal
+        int iter_pause_interval;
+        // filename representing initial conditions
+        std::string input_file;
+        // filename representing output conditions
+        std::string output_file;
 
-        Configuration(void) { this->register_fields(); }
+        // we support loading config files with "-x"
+        Configuration(const char* config_arg = "-x")
+        : Loadable(config_arg) { register_fields(); }
+
         Configuration(CkMigrateMessage *m): PUP::able(m) {}
 
         void register_fields(void) {
-          this->register_field("nSubtreesMin", false, min_n_subtrees);
-          this->register_field("nPartitionsMin", false, min_n_partitions);
-          this->register_field("nParticlesPerLeafMax", false, max_particles_per_leaf);
-          this->register_field("achDecompType", false, decomp_type);
-          this->register_field("achTreeType", false, tree_type);
-          this->register_field("nIterations", false, num_iterations);
-          this->register_field("nShareNodes", false, num_share_nodes);
-          this->register_field("iCacheShareDepth", false, cache_share_depth);
-          this->register_field("iFlushPeriod", false, flush_period);
-          this->register_field("iFlushPeriodMaxAvgRatio", false, flush_max_avg_ratio);
-          this->register_field("iLbPeriod", false, lb_period);
-          this->register_field("achInputFile", false, input_file);
-          this->register_field("achOutputFile", false, output_file);
+          this->register_field("nSubtreesMin", "n", min_n_subtrees);
+          this->register_field("nPartitionsMin", "p", min_n_partitions);
+          this->register_field("nParticlesPerLeafMax", "l", max_particles_per_leaf);
+          this->register_field("achDecompType", "d", decomp_type);
+          this->register_field("achTreeType", "t", tree_type);
+          this->register_field("nIterations", "i", num_iterations);
+          this->register_field("nShareNodes", "s", num_share_nodes);
+          this->register_field("iCacheShareDepth", nullptr, cache_share_depth);
+          this->register_field("iFlushPeriod", "u", flush_period);
+          this->register_field("iFlushPeriodMaxAvgRatio", "r", flush_max_avg_ratio);
+          this->register_field("iLbPeriod", "b", lb_period);
+          this->register_field("achInputFile", "f", input_file);
+          this->register_field("achOutputFile", "v", output_file);
         }
 
-#ifdef __CHARMC__
-#include "pup.h"
+        int branchFactor() const {return branchFactorFromTreeType(tree_type);}
+
         virtual void pup(PUP::er &p) override {
             PUP::able::pup(p);
             p | min_n_subtrees;
@@ -138,7 +158,6 @@ namespace paratreet {
             p | input_file;
             p | output_file;
         }
-#endif //__CHARMC__
     };
 
     // workaround to enable custom configuration types

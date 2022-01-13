@@ -22,6 +22,8 @@ using namespace paratreet;
 MainChare::MainChare(CkArgMsg* m) {
     auto& main = CsvAccess(main_);
 
+    main->setDefaults();
+    (main->configuration()).parse(m->argc, m->argv);
     main->main(m);
 
     CkCallback runCB(CkIndex_MainChare::run(), thisProxy);

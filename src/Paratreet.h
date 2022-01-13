@@ -90,6 +90,8 @@ namespace paratreet {
 
         virtual Real getTimestep(BoundingBox&, Real) = 0;
         virtual void initializeDriver(const CkCallback&) = 0;
+
+        virtual void setDefaults(void) {}
     };
 
     // NOTE because this is called Main, the user's instantiation cannot be
