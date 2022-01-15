@@ -33,6 +33,8 @@ class Loadable {
     this->fields_.emplace_back(new Field<T>(name, arg, storage));
   }
 
+  FieldOrigin origin_of(const std::string& name) const;
+
   void load(const char* file);
 
   void parse(int&, char**);

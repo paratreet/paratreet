@@ -5,13 +5,19 @@
 #include <cstring>
 
 namespace paratreet {
+
+enum class FieldOrigin {
+  CommandLine, File, Unknown
+};
+
 class GenericField {
   std::string name_;
   const char* arg_;
+  FieldOrigin origin_;
 
  public:
   GenericField(const std::string& name, const char* arg)
-      : name_(name), arg_(arg) {}
+      : name_(name), arg_(arg), origin_(FieldOrigin::Unknown) {}
 
   const char* arg(void) const { return this->arg_; }
   const std::string& name(void) const { return this->name_; }
@@ -20,6 +26,14 @@ class GenericField {
   virtual bool takes_value(void) const = 0;
 
   virtual bool required(void) const { return false; }
+
+  FieldOrigin& origin(void) {
+    return this->origin_;
+  }
+
+  FieldOrigin origin(void) const {
+    return this->origin_;
+  }
 };
 
 template<typename T>

@@ -1,5 +1,6 @@
 #include "Loadable.h"
 
+#include <algorithm>
 #include <fstream>
 #include <ctype.h>
 #include <charm++.h>
@@ -75,6 +76,20 @@ static void compress_arguments_(int& argc, char** argv) {
 #endif
 }
 
+FieldOrigin Loadable::origin_of(const std::string& name) const {
+  auto search = std::find_if(
+    std::begin(this->fields_), std::end(this->fields_),
+    [&](const field_type& field) {
+      return name == field->name();
+    }
+  );
+  if (search == std::end(this->fields_)) {
+    return FieldOrigin::Unknown;
+  } else {
+    return (*search)->origin();
+  }
+}
+
 void Loadable::parse(int& argc, char** argv) {
   std::map<std::string, field_type&> args;
   using iterator = typename decltype(args)::iterator;
@@ -112,6 +127,8 @@ void Loadable::parse(int& argc, char** argv) {
       } else {
         field->accept(argv[i]);
       }
+      field->origin() =
+        FieldOrigin::CommandLine;
     }
   }
 
@@ -155,6 +172,7 @@ void Loadable::load(const char* file) {
     auto search = params.find(name);
     if (search != std::end(params)) {
       field->accept((search->second).c_str());
+      field->origin() = FieldOrigin::File;
 
       params.erase(search);
     }
