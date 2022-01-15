@@ -104,12 +104,14 @@ void Loadable::parse(int& argc, char** argv) {
       ((search = args.find(argv[i])) == std::end(args))) {
       continue;
     } else {
-      // TODO ( currently assumes all flags have a value  )
-      //      ( but boolean flags may be store true/false )
       auto& field = search->second;
       argv[i] = nullptr;
-      field->accept(argv[++i]);
-      argv[i] = nullptr;
+      if (field->takes_value()) {
+        field->accept(argv[++i]);
+        argv[i] = nullptr;
+      } else {
+        field->accept(argv[i]);
+      }
     }
   }
 

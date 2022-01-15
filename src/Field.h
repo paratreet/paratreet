@@ -16,7 +16,9 @@ class GenericField {
   const char* arg(void) const { return this->arg_; }
   const std::string& name(void) const { return this->name_; }
 
-  virtual void accept(const char* val) = 0;
+  virtual void accept(const char*) = 0;
+  virtual bool takes_value(void) const = 0;
+
   virtual bool required(void) const { return false; }
 };
 
@@ -30,6 +32,10 @@ class Field : public GenericField {
  public:
   Field(const std::string& name, const char* arg, T& storage)
       : GenericField(name, arg), storage_(storage) {}
+
+  virtual bool takes_value(void) const override {
+    return true;
+  }
 
   virtual void accept(const char* val) override {
     FieldConverter<T> op;
@@ -62,6 +68,28 @@ template<>
 struct FieldConverter<std::string> {
   std::string operator()(const char* val) {
     return std::string(val);
+  }
+};
+
+template <>
+class Field<bool> : public GenericField {
+  bool& storage_;
+  bool value_;
+
+ public:
+  Field(const std::string& name, const char* arg, bool& storage, bool value)
+      : GenericField(name, arg), storage_(storage), value_(value) {}
+
+  virtual bool takes_value(void) const override {
+    return false;
+  }
+
+  virtual void accept(const char* val) override {
+    if (val) {
+      this->storage_ = FieldConverter<bool>()(val);
+    } else {
+      this->storage_ = this->value_;
+    }
   }
 };
 }  // namespace paratreet

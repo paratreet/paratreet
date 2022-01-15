@@ -22,6 +22,12 @@ class Loadable {
 
   Loadable(const Loadable&) {}
 
+  inline void register_field(const std::string& name, const char* arg, bool& storage, bool value = true) {
+    storage = !value; // reset default value
+
+    this->fields_.emplace_back(new Field<bool>(name, arg, storage, value));
+  }
+
   template <typename T>
   inline void register_field(const std::string& name, const char* arg, T& storage) {
     this->fields_.emplace_back(new Field<T>(name, arg, storage));
