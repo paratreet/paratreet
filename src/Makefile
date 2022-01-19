@@ -1,6 +1,6 @@
 include Makefile.common
 
-OPTS = -g -Ofast $(INCLUDES) -DDEBUG=0 $(MAKE_OPTS)
+OPTS = -g -Ofast $(INCLUDES) -DDEBUG=0 -DCMK_LB_USER_DATA $(MAKE_OPTS)
 CHARMC = $(CHARM_HOME)/bin/charmc $(OPTS)
 
 OBJS = Paratreet.o Loadable.o Reader.o Writer.o Particle.o BoundingBox.o Decomposition.o Modularization.o TreeSpec.o ThreadStateHolder.o
@@ -10,7 +10,7 @@ UTILITY_HEADERS = common.h Utility.h $(STRUCTURE_PATH)/Vector3D.h $(STRUCTURE_PA
 CORE_HEADERS = BoundingBox.h BufferedVec.h MultiData.h Node.h NodeWrapper.h ParticleComp.h ParticleMsg.h Splitter.h
 IMPL_HEADERS = CacheManager.h Configuration.h Driver.h Partition.h Reader.h Resumer.h Splitter.h Subtree.h Traverser.h TreeCanopy.h
 
-LBS = PrefixLB OrbLB #AverageSmoothLB DiffusionLB DistributedPrefixLB DistributedOrbLB
+LBS = DistributedOrbLB OrbLB  #PrefixLB #AverageSmoothLB DiffusionLB DistributedPrefixLB DistributedOrbLB
 LB_LIBS = $(foreach m, $(LBS), libmodule$(m).a)
 
 all: lib

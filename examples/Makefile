@@ -1,6 +1,6 @@
 include ../src/Makefile.common
 
-LBS = CommonLBs PrefixLB OrbLB #AverageSmoothLB DiffusionLB DistributedPrefixLB DistributedOrbLB
+LBS = CommonLBs DistributedOrbLB OrbLB # PrefixLB OrbLB DistributedOrbLB #AverageSmoothLB DiffusionLB DistributedPrefixLB DistributedOrbLB
 LB_LIBS = $(foreach m, $(LBS), -module $(m))
 OPTS = -g -O3 $(INCLUDES) -DCOUNT_INTERACTIONS=0 -DDEBUG=0 -DHEXADECAPOLE $(MAKE_OPTS)
 CHARMC = $(CHARM_HOME)/bin/charmc $(OPTS)
@@ -18,6 +18,7 @@ Main.decl.h: Main.ci $(DATA)
 
 Gravity: Main.decl.h Main.o Gravity.o moments.o ../src/libparatreet.a
 	$(CHARMC) -language charm++ $(LB_LIBS) -o Gravity Gravity.o moments.o Main.o $(LD_LIBS)
+	$(CHARMC) -language charm++ $(LB_LIBS) -tracemode projections -o Gravity_proj Gravity.o moments.o Main.o $(LD_LIBS)
 
 Collision: Main.decl.h Main.o Collision.o moments.o ../src/libparatreet.a
 	$(CHARMC) -language charm++ $(LB_LIBS) -o Collision Collision.o Main.o moments.o $(LD_LIBS)

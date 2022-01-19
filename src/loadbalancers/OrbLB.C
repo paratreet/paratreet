@@ -23,6 +23,7 @@ void OrbLB::work(LDStats* stats)
   start_time = CmiWallTimer();
   int obj;
   n_pes = stats->nprocs();
+  CkPrintf("*** LB strategy start at %.3lf ms\n", CmiWallTimer() * 1000);
   //CkPrintf("n_pes = %d\n", n_pes);
   my_stats = stats;
 
@@ -297,7 +298,7 @@ void OrbLB::summary(){
   migrate_ratio = migration_ct;
   migrate_ratio /= (float) centroids.size();
   double end_time = CmiWallTimer();
-
+  CkPrintf("*** LB strategy end at %.3lf ms\n", CmiWallTimer() * 1000);
   if(_lb_args.debug()) CkPrintf("OrbLB >> Post LB load:: range (%.4f, %.4f); average = %.4f; max_avg_ratio = %.4f, max_min_ratio = %.4f\nOrbLB >> Post LB particle size:: range(%d, %d); max_avg_ratio = %.4f\nOrbLB >>> Summary:: moved %d/%d objs, ratio = %.2f (strategy time = %.2f ms)\n", post_lb_min_load, post_lb_max_load, post_lb_average_load, post_lb_max_avg_ratio, post_lb_max_min_ratio, post_lb_min_size, post_lb_max_size, post_lb_size_max_avg_ratio, migration_ct, centroids.size(), migrate_ratio, (end_time - start_time)*1000 );
 }
 

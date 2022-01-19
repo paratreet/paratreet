@@ -12,6 +12,7 @@
 #include "LBCommon.h"
 
 #include <vector>
+#include <chrono>
 using std::vector;
 using LBCommon::LBUserData;
 using LBCommon::LBCentroidAndIndexRecord;
@@ -58,8 +59,9 @@ public:
   void mergeObjects(DorbPartitionRec rec);
   void addObjects(DorbPartitionRec rec, vector<LBCentroidAndIndexRecord> objs);
   void sendUpdatedTokens(vector<LBCentroidAndIndexRecord> tokens);
-  void sendUpdatedLoad(float load);
+  void ackBruteForceResults(float load, int n_migrates);
   void waitForMigrations();
+  void ackTokenReceived();
 
 private:
   void InitLB(const CkLBOptions &);
@@ -82,16 +84,17 @@ private:
 
   void bruteForceSolverRecursiveHelper(DorbPartitionRec rec, int start_idx, int end_idx);
   void bruteForceSolver(DorbPartitionRec rec);
+  void updateLocalObjCollection();
 
-
-
+  vector<int> brute_force_sizes;
+  vector<long long> brute_force_times;
 
   int debug_l0 = 1;
   int debug_l1 = 2;
   int debug_l2 = 3;
   int lb_iter = 0;
   int bin_size = 16;
-  int brute_force_size = 128;
+  int brute_force_size = 256;
   bool waited = false;
   double bin_size_double = 16.0;
   int my_pe, total_migrates, incoming_migrates, recv_ack;
@@ -125,6 +128,9 @@ private:
   // Parition related data
   vector <bool> partition_flags;
   vector <float> split_coords;
+  DorbPartitionRec left_half_rec;
+  DorbPartitionRec right_half_rec;
+  int updated_local_half_obj_collection = -1;
   int curr_depth;
   float curr_half_load, curr_left_load, curr_split_pt;
   int curr_left_nobjs, curr_right_nobjs;
@@ -135,7 +141,8 @@ private:
   vector<LBCentroidAndIndexRecord> section_obj_collection;
   vector<vector<LBCentroidAndIndexRecord>> section_updated_objects;
   vector<float> section_updated_load;
-  int ready_to_recurse;
+  vector<int> section_updated_migrates;
+  // int ready_to_recurse;
   bool went_right = true;
   bool use_longest_dim;
   Vector3D<Real> curr_lower_coords;
