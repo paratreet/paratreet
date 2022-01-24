@@ -98,6 +98,10 @@ namespace paratreet {
         std::string input_file; // filename representing initial conditions
         std::string output_file; // filename representing output conditions
 
+        int periodic;
+        Vector3D<double> fPeriod;
+        int nReplicas;
+        
         Configuration(void) { this->register_fields(); }
         Configuration(CkMigrateMessage *m): PUP::able(m) {}
 
@@ -113,8 +117,14 @@ namespace paratreet {
           this->register_field("iFlushPeriod", false, flush_period);
           this->register_field("iFlushPeriodMaxAvgRatio", false, flush_max_avg_ratio);
           this->register_field("iLbPeriod", false, lb_period);
-          this->register_field("achInputFile", false, input_file);
-          this->register_field("achOutputFile", false, output_file);
+          this->register_field("achInFile", false, input_file);
+          this->register_field("achOutName", false, output_file);
+
+          this->register_field("bPeriodic", false, periodic);
+          this->register_field("dxPeriod", false, fPeriod.x);
+          this->register_field("dyPeriod", false, fPeriod.y);
+          this->register_field("dzPeriod", false, fPeriod.z);
+          this->register_field("nReplicas", false, nReplicas);
         }
 
 #ifdef __CHARMC__
@@ -137,6 +147,8 @@ namespace paratreet {
             p | iter_pause_interval;
             p | input_file;
             p | output_file;
+            p | periodic;
+            p | fPeriod;
         }
 #endif //__CHARMC__
     };
