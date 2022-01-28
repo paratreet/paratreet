@@ -104,6 +104,14 @@ namespace LBCommon{
     inline void pup(PUP::er &p);
   };
 
+  struct LBDorbShortToken{
+    Vector3D<Real> centroid;
+    int from_pe;
+    int to_pe;
+    int original_idx;
+    float load;
+  };
+
   struct LBCentroidAndIndexRecord{
     Vector3D<Real> centroid;
     int idx;
@@ -113,7 +121,6 @@ namespace LBCommon{
     float distance;
     int to_pe;
     LDObjData obj_data;
-    // inline void pup(PUP::er &p);
     void pup(PUP::er &p){
       p | centroid;
       p | idx;
@@ -199,6 +206,10 @@ namespace{
     int dim = -1;
     NdComparator(int dim_){
       dim = dim_;
+    };
+
+    bool operator() (LBCommon::LBDorbShortToken a, LBCommon::LBDorbShortToken b){
+      return a.centroid[dim] < b.centroid[dim];
     };
 
     bool operator() (LBCommon::LBCentroidAndIndexRecord a, LBCommon::LBCentroidAndIndexRecord b){

@@ -36,7 +36,6 @@ include "LBCommon.h";
     entry void addObjects(LBCommon::DorbPartitionRec rec, std::vector<LBCommon::LBCentroidAndIndexRecord> objs);
     entry void sendUpdatedTokens(std::vector<LBCommon::LBCentroidAndIndexRecord> tokens);
     entry void ackBruteForceResults(float load, int n_migrates);
-    entry void waitForMigrations();
     entry void ackTokenReceived();
   };
 };

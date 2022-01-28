@@ -18,6 +18,7 @@ using LBCommon::LBUserData;
 using LBCommon::LBCentroidAndIndexRecord;
 using LBCommon::DorbPartitionRec;
 using LBCommon::LBShortCmp;
+using LBCommon::LBDorbShortToken;
 
 
 void CreateDistributedOrbLB();
@@ -60,7 +61,6 @@ public:
   void addObjects(DorbPartitionRec rec, vector<LBCentroidAndIndexRecord> objs);
   void sendUpdatedTokens(vector<LBCentroidAndIndexRecord> tokens);
   void ackBruteForceResults(float load, int n_migrates);
-  void waitForMigrations();
   void ackTokenReceived();
 
 private:
@@ -139,6 +139,7 @@ private:
   int moved_in_pe_count;
   int section_member_count;
   vector<LBCentroidAndIndexRecord> section_obj_collection;
+  vector<LBDorbShortToken> section_dorb_collection;
   vector<vector<LBCentroidAndIndexRecord>> section_updated_objects;
   vector<float> section_updated_load;
   vector<int> section_updated_migrates;
