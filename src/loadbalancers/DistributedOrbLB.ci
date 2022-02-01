@@ -20,7 +20,6 @@ include "LBCommon.h";
     entry [expedited] void mergeFinalStepData(LBCommon::DorbPartitionRec, std::vector<LBCommon::LBShortCmp>);
     entry [expedited] void mergeBinLoads(LBCommon::DorbPartitionRec, std::vector<float>, std::vector<int>);
     entry void finishedPartitionOneDim(LBCommon::DorbPartitionRec, float, float, int);
-    entry void migrateObjects(std::vector<std::vector<Vector3D<Real>>> pe_splits);
     entry void acknowledgeIncomingMigrations(int count, float in_load);
     entry void doMigrations();
     entry void sendBackToken(LBCommon::LBCentroidAndIndexRecord obj);

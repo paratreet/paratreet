@@ -245,7 +245,7 @@ public:
         start_time = CkWallTimer();
         //subtrees.pauseForLB(); // move them later
         partitions.pauseForLB();
-        CkWaitQD();
+        // CkWaitQD();
         CkPrintf("Load balancing: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
       }
       // Destroy subtrees and perform decomposition from scratch

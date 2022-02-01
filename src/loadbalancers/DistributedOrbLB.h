@@ -48,7 +48,7 @@ public:
   void finalPartitionStep(DorbPartitionRec, int);
   void mergeFinalStepData(DorbPartitionRec, vector<LBShortCmp>);
   void mergeBinLoads(DorbPartitionRec rec, vector<float> bin_loads, vector<int> bin_sizes);
-  void migrateObjects(std::vector<std::vector<Vector3D<Real>>> pe_splits);
+  // void migrateObjects(std::vector<std::vector<Vector3D<Real>>> pe_splits);
   void acknowledgeIncomingMigrations(int count, float in_load);
   void sendFinalMigrations(int count);
   void finishedPartitionOneDim(DorbPartitionRec, float, float, int);
