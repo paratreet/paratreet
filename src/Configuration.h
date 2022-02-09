@@ -141,6 +141,14 @@ namespace paratreet {
 
         virtual void pup(PUP::er &p) override {
             PUP::able::pup(p);
+            Loadable::pup(p);
+#if DEBUG
+            if (p.isUnpacking()) {
+              for (auto& field : this->fields_) {
+                CmiPrintf("%d> deserialized field %s\n", CmiMyPe(), ((std::string)*field).c_str());
+              }
+            }
+#endif
             p | min_n_subtrees;
             p | min_n_partitions;
             p | max_particles_per_leaf;

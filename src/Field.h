@@ -1,12 +1,13 @@
 #ifndef __PARATREET_FIELD_H__
 #define __PARATREET_FIELD_H__
 
-#include <string>
+#include <sstream>
 #include <cstring>
+#include <pup_stl.h>
 
 namespace paratreet {
 
-enum class FieldOrigin {
+enum class FieldOrigin : std::uint8_t {
   CommandLine, File, Unknown
 };
 
@@ -19,11 +20,22 @@ class GenericField {
   GenericField(const std::string& name, const char* arg)
       : name_(name), arg_(arg), origin_(FieldOrigin::Unknown) {}
 
+  GenericField(void)
+      : arg_(nullptr), origin_(FieldOrigin::Unknown) {}
+
   const char* arg(void) const { return this->arg_; }
   const std::string& name(void) const { return this->name_; }
 
-  virtual void accept(const char*) = 0;
-  virtual bool takes_value(void) const = 0;
+  virtual void accept(const char*) {
+    CmiAbort(
+      "errant attempt to set value of generic field %s",
+      this->name_.c_str()
+    );
+  }
+
+  virtual bool takes_value(void) const {
+    return false;
+  }
 
   virtual bool required(void) const { return false; }
 
@@ -34,6 +46,29 @@ class GenericField {
   FieldOrigin origin(void) const {
     return this->origin_;
   }
+
+  virtual void pup(PUP::er& p) {
+    p | this->name_;
+    // p | this->arg_;
+    p | reinterpret_cast<std::uint8_t&>(this->origin_);
+  }
+
+  virtual operator std::string(void) const {
+    std::stringstream ss;
+    ss << "GenericField(name=\"" << this->name_ << "\"";
+    switch (this->origin_) {
+      case FieldOrigin::CommandLine:
+        ss << ",origin=CLI";
+        break;
+      case FieldOrigin::File:
+        ss << ",origin=FILE";
+        break;
+      case FieldOrigin::Unknown:
+        break;
+    }
+    ss << ")";
+    return ss.str();
+  }
 };
 
 template<typename T>
@@ -41,11 +76,13 @@ struct FieldConverter;
 
 template <typename T>
 class Field : public GenericField {
-  T& storage_;
+  T* storage_;
 
  public:
   Field(const std::string& name, const char* arg, T& storage)
-      : GenericField(name, arg), storage_(storage) {}
+      : GenericField(name, arg), storage_(&storage) {}
+
+  Field(void) : GenericField(), storage_(nullptr) {}
 
   virtual bool takes_value(void) const override {
     return true;
@@ -53,7 +90,7 @@ class Field : public GenericField {
 
   virtual void accept(const char* val) override {
     FieldConverter<T> op;
-    new (&this->storage_) T(op(val));
+    new (this->storage_) T(op(val));
   }
 };
 
@@ -87,22 +124,20 @@ struct FieldConverter<std::string> {
 
 template <>
 class Field<bool> : public GenericField {
-  bool& storage_;
+  bool* storage_;
   bool value_;
 
  public:
   Field(const std::string& name, const char* arg, bool& storage, bool value)
-      : GenericField(name, arg), storage_(storage), value_(value) {}
+      : GenericField(name, arg), storage_(&storage), value_(value) {}
 
-  virtual bool takes_value(void) const override {
-    return false;
-  }
+  Field(void) : GenericField() {}
 
   virtual void accept(const char* val) override {
     if (val) {
-      this->storage_ = FieldConverter<bool>()(val);
+      *(this->storage_) = FieldConverter<bool>()(val);
     } else {
-      this->storage_ = this->value_;
+      *(this->storage_) = this->value_;
     }
   }
 };

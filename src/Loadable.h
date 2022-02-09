@@ -8,6 +8,7 @@
 
 namespace paratreet {
 class Loadable {
+ protected:
   using field_type = std::unique_ptr<GenericField>;
   std::vector<field_type> fields_;
   const char* config_arg_; 
@@ -38,6 +39,11 @@ class Loadable {
   void load(const char* file);
 
   void parse(int&, char**);
+
+  void pup(PUP::er& p) {
+    // p | this->config_arg_;
+    p | this->fields_;
+  }
 };
 }  // namespace paratreet
 
