@@ -38,23 +38,24 @@ PARATREET_REGISTER_MAIN(ExMain);
     conf.lb_period = 5;
     conf.request_pause_interval = 20;
     conf.iter_pause_interval = 1000;
+
+    periodic = false;
+    fPeriod = std::numeric_limits<float>::max();
+    nReplicas = 0;
+    conf.periodic = periodic;
+    conf.fPeriod = fPeriod;
+    conf.nReplicas = nReplicas;
   }
 
   void ExMain::main(CkArgMsg* m) {
     // Initialize readonly variables
     verify = !conf.output_file.empty();
     dual_tree = false;
-    periodic = false;
-    fPeriod = std::numeric_limits<float>::max();
-    nReplicas = 0;
     peanoKey = 3;
     theta = 0.7;
     iter_start_collision = 0;
     max_timestep = 1e-5;
 
-    conf.periodic = periodic;
-    conf.fPeriod = fPeriod;
-    conf.nReplicas = nReplicas;
     
     // Process command line arguments
     int c;
@@ -111,7 +112,7 @@ PARATREET_REGISTER_MAIN(ExMain);
     fPeriod = conf.fPeriod;
     nReplicas = conf.nReplicas;
 
-    CProxy_EwaldData ewaldProxy = CProxy_EwaldData::ckNew();
+    ewaldProxy = CProxy_EwaldData::ckNew();
 
     // Delegate to Driver
     // CkCallback runCB(CkIndex_Main::run(), thisProxy);
