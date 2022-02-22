@@ -120,6 +120,8 @@ namespace paratreet {
         Vector3D<double> fPeriod;
         // Number of replicas for Ewald summation
         int nReplicas;
+        // Set a gravitational softening for all the particles
+        double dSoft;
 
         // we support loading config files with "-x"
         Configuration(const char* config_arg = "-x")
@@ -147,6 +149,7 @@ namespace paratreet {
           this->register_field("dyPeriod", nullptr, fPeriod.y);
           this->register_field("dzPeriod", nullptr, fPeriod.z);
           this->register_field("nReplicas", nullptr, nReplicas);
+          this->register_field("dSoft", "e", dSoft);
         }
 
         int branchFactor() const {return branchFactorFromTreeType(tree_type);}
@@ -179,6 +182,7 @@ namespace paratreet {
             p | output_file;
             p | periodic;
             p | fPeriod;
+            p | dSoft;
         }
     };
 

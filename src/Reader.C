@@ -107,6 +107,14 @@ void Reader::load(std::string input_file, const CkCallback& cb) {
 }
 
 
+void Reader::setSoft(const double dSoft, const CkCallback& cb) {
+    for (std::vector<Particle>::iterator it = particles.begin();
+         it != particles.end(); ++it) {
+        it->soft = dSoft;
+    }
+    contribute(cb);
+}
+
 void Reader::computeUniverseBoundingBox(const CkCallback& cb) {
   BoundingBox box;
   for (std::vector<Particle>::const_iterator it = particles.begin();
