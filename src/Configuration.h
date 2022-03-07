@@ -141,8 +141,6 @@ namespace paratreet {
           this->register_field("iFlushPeriod", "u", flush_period);
           this->register_field("iFlushPeriodMaxAvgRatio", "r", flush_max_avg_ratio);
           this->register_field("iLbPeriod", "b", lb_period);
-          this->register_field("achInFile", "f", input_file);
-          this->register_field("achOutName", "v", output_file);
 
           this->register_field("bPeriodic", nullptr, periodic);
           this->register_field("dxPeriod", nullptr, fPeriod.x);
@@ -150,6 +148,8 @@ namespace paratreet {
           this->register_field("dzPeriod", nullptr, fPeriod.z);
           this->register_field("nReplicas", nullptr, nReplicas);
           this->register_field("dSoft", "e", dSoft);
+          this->register_field("achInputFile", "f", input_file);
+          this->register_field("achOutputFile", "v", output_file);
         }
 
         int branchFactor() const {return branchFactorFromTreeType(tree_type);}
