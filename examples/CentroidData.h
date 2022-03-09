@@ -53,10 +53,14 @@ struct CentroidData {
     getRadius();
     centroid = moment / sum_mass;
     count = n_particles;
-    auto tmp_box = fixSize(depth);
-    // After we have a radius and centroid, we can calculate the high
-    // order (scaled by radius) multipole moments.
-    calculateRadiusBox(multipoles, tmp_box);
+    if(count > 1) {
+        auto tmp_box = fixSize(depth);
+        // After we have a radius and centroid, we can calculate the high
+        // order (scaled by radius) multipole moments.
+        calculateRadiusBox(multipoles, tmp_box);
+    }
+    else
+        multipoles.radius = 1.0; // single particle boxes don't need scaling.
     Real deltaT = 0.01570796326; // Is there some way to make config.timestep_size accessible here?
     pps.resize(n_particles);
     for (int i = 0; i < n_particles; i++) {
@@ -72,10 +76,7 @@ struct CentroidData {
     auto tmp_box = box;
     if(size_sm == 0.0) { // Box has to have finite size for scaled multipole
       // calculations.
-      auto size_universe = (thread_state_holder.ckLocalBranch()->universe.box.size()).length();
-      // Approximate size by assuming a binary represented Oct tree.
-      size_sm = size_universe/pow(2.0, depth/3);
-      // size_sm = 1.0;  // Stopgap for now.
+        assert(0);
       tmp_box.grow(box.center() + size_sm);
     }
     return tmp_box;
@@ -98,9 +99,13 @@ struct CentroidData {
     centroid = moment / sum_mass;
     box.grow(cd.box);
     getRadius();
-    auto tmp_box = fixSize(0); // XXX needs fixing
     multipoles += cd.multipoles;
-    calculateRadiusFarthestCorner(multipoles, tmp_box);
+    if(count + cd.count > 1) {
+        auto tmp_box = fixSize(0); // XXX needs fixing
+        calculateRadiusFarthestCorner(multipoles, tmp_box);
+    }
+    else
+        multipoles.radius = 1.0; // Single particle boxes don't need scaling
     count += cd.count;
     return *this;
   }

@@ -4,16 +4,20 @@
 #include "DensityVisitor.h"
 #include "PressureVisitor.h"
 #include "CollisionVisitor.h"
+#include "EwaldData.h"
 
 PARATREET_REGISTER_MAIN(ExMain);
 
 /* readonly */ bool verify;
 /* readonly */ bool dual_tree;
-/* readonly */ bool periodic;
+/* readonly */ int periodic;
 /* readonly */ int peanoKey;
+/* readonly */ Vector3D<Real> fPeriod;
+/* readonly */ int nReplicas;
 /* readonly */ Real theta;
 /* readonly */ int iter_start_collision;
 /* readonly */ Real max_timestep;
+/* readonly */ CProxy_EwaldData ewaldProxy;
 
   static void initialize() {
     BoundingBox::registerReducer();
@@ -41,11 +45,18 @@ PARATREET_REGISTER_MAIN(ExMain);
     verify = !conf.output_file.empty();
     dual_tree = false;
     periodic = false;
+    fPeriod = std::numeric_limits<float>::max();
+    nReplicas = 0;
+    conf.periodic = periodic;
+    conf.fPeriod = fPeriod;
+    conf.nReplicas = nReplicas;
+
     peanoKey = 3;
     theta = 0.7;
     iter_start_collision = 0;
     max_timestep = 1e-5;
 
+    
     // Process command line arguments
     int c;
     std::string input_str;
@@ -96,6 +107,12 @@ PARATREET_REGISTER_MAIN(ExMain);
     CkPrintf("Minimum number of partitions: %d\n", conf.min_n_partitions);
     CkPrintf("Maximum number of particles per leaf: %d\n", conf.max_particles_per_leaf);
     CkPrintf("Max timestep: %lf\n\n", max_timestep);
+
+    periodic = conf.periodic;
+    fPeriod = conf.fPeriod;
+    nReplicas = conf.nReplicas;
+
+    ewaldProxy = CProxy_EwaldData::ckNew();
 
     // Delegate to Driver
     // CkCallback runCB(CkIndex_Main::run(), thisProxy);

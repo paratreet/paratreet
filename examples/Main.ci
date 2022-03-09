@@ -3,11 +3,14 @@ mainmodule Main {
 
     readonly bool verify;
     readonly bool dual_tree;
-    readonly bool periodic;
+    readonly int periodic;
     readonly Real theta;
     readonly int peanoKey;
+    readonly Vector3D<Real> fPeriod;
+    readonly int nReplicas;
     readonly int iter_start_collision;
     readonly Real max_timestep;
+    readonly CProxy_EwaldData ewaldProxy;
 
     initnode void initialize(void);
 
@@ -20,4 +23,9 @@ mainmodule Main {
     extern entry void CacheManager<CentroidData> startPrefetch<GravityVisitor>(DPHolder<CentroidData>, CkCallback);
     extern entry void Driver<CentroidData> prefetch<GravityVisitor> (CentroidData, int, CkCallback);
     extern entry void ThreadStateHolder applyAccumulatedOpposingEffects(PPHolder<CentroidData>);
+
+  nodegroup EwaldData {
+    entry EwaldData();
+    entry void EwaldInit(CentroidData, CkCallback);
+  };
 }

@@ -1,11 +1,19 @@
 #include "Main.h"
 #include "GravityVisitor.h"
 
+// readonly variables
 extern bool verify;
 extern bool dual_tree;
-extern bool periodic;
+extern int periodic;
+extern Vector3D<Real> fPeriod;
+extern int nReplicas;
 extern Real theta;
 extern Real max_timestep;
+extern int nReplicas;
+extern CProxy_EwaldData ewaldProxy;
+
+#include "EwaldData.h"
+#include "Ewald.h"
 
   using namespace paratreet;
 
@@ -13,6 +21,9 @@ extern Real max_timestep;
     //proxy_pack.cache.startParentPrefetch(this->thisProxy, CkCallback::ignore); // MUST USE FOR UPND TRAVS
     //proxy_pack.cache.template startPrefetch<GravityVisitor>(this->thisProxy, CkCallback::ignore);
     proxy_pack.driver.loadCache(CkCallbackResumeThread());
+    if(periodic) {
+        ewaldProxy.EwaldInit(proxy_pack.cache.ckLocalBranch()->root->data, CkCallbackResumeThread());
+    }
   }
 
   void ExMain::traversalFn(BoundingBox& universe, ProxyPack<CentroidData>& proxy_pack, int iter) {
@@ -22,18 +33,21 @@ extern Real max_timestep;
       proxy_pack.partition.template startDown<GravityVisitor>(GravityVisitor(Vector3D<Real>(0, 0, 0), theta));
     } else {
       auto replicas = [&] (int N) {
-        auto univ = thread_state_holder.ckLocalBranch()->universe.box.size();
         for (int X = -N; X <= N; X++) {
           for (int Y = -N; Y <= N; Y++) {
             for (int Z = -N; Z <= N; Z++) {
-              Vector3D<Real> offset (X * univ.x, Y * univ.y, Z * univ.z);
+              Vector3D<Real> offset (X * fPeriod.x, Y * fPeriod.y, Z * fPeriod.z);
               proxy_pack.partition.template startDown<GravityVisitor>(GravityVisitor(offset, theta));
             }
           }
         }
       };
 
-      replicas(1); // one box around the box
+      replicas(nReplicas); // (2*nReplicas + 1)^3 boxes
+      proxy_pack.partition.callPerLeafFn(
+          PARATREET_PER_LEAF_FN(LeafEwaldFn, CentroidData),
+          CkCallbackResumeThread()
+          );
     }
   }
 

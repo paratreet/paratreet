@@ -96,6 +96,12 @@ public:
       readers.load(config.input_file, CkCallbackResumeThread((void*&)result));
       CkPrintf("Loading Tipsy data and building universe: %.3lf ms\n",
           (CkWallTimer() - start_time) * 1000);
+      
+      if(config.origin_of("dSoft") != paratreet::FieldOrigin::Unknown) {
+      	  CkPrintf("Setting softening to %f \n", config.dSoft);
+          // Softening is specified: set it for all particles.
+          readers.setSoft(config.dSoft, CkCallbackResumeThread());
+      }
       universe = *((BoundingBox*)result->getData());
       delete result;
       remakeUniverse();
