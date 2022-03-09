@@ -193,7 +193,7 @@ void Subtree<Data>::sendLeaves(CProxy_Partition<Data> part)
 
   // When Subtree and Partition has different decomp types
   std::map<int, std::set<Node<Data>*>> part_idx_to_leaf;
-  std::set<Node<Data>*> displaced_leaves;
+  std::set<Node<Data>*> displaced_leaves, shared_leaves;
   for (auto && leaf : leaves) {
     int prev_partition_idx = -1;
     for (int pi = 0; pi < leaf->n_particles; pi++) {
@@ -204,6 +204,7 @@ void Subtree<Data>::sendLeaves(CProxy_Partition<Data> part)
     }
   }
 
+  size_t num_shares = 0u, num_copies = 0;
   for (auto && part_receiver : part_idx_to_leaf) {
     auto it = cm_proxy.ckLocalBranch()->partition_lookup.find(part_receiver.first);
     if (it != cm_proxy.ckLocalBranch()->partition_lookup.end()) {
@@ -215,11 +216,16 @@ void Subtree<Data>::sendLeaves(CProxy_Partition<Data> part)
       for (auto && leaf : part_receiver.second) {
         lookup_leaf_keys.push_back(leaf->key);
         displaced_leaves.insert(leaf);
+        if (shared_leaves.insert(leaf).second) num_shares += leaf->n_particles;
       }
       part[part_receiver.first].receiveLeaves(lookup_leaf_keys, tp_key, this->thisIndex, this->thisProxy);
     }
   }
-  for (auto leaf : displaced_leaves) cm_local->addDisplacedLeaf(leaf);
+  for (auto leaf : displaced_leaves) {
+    cm_local->addDisplacedLeaf(leaf);
+    num_copies += leaf->n_particles;
+  }
+  thread_state_holder.ckLocalBranch()->countCopiesAndShares(num_copies, num_shares);
 }
 
 template <typename Data>
@@ -324,7 +330,7 @@ void Subtree<Data>::recursiveBuild(Node<Data>* node, Particle* node_particles, s
   int start = 0;
   int finish = start + node_n_particles;
 
-  tree->prepParticles(node_particles, node_n_particles, node->key, log_branch_factor);
+  tree->prepParticles(node_particles, node_n_particles, node->depth);
   for (int i = 0; i < node->n_children; i++) {
     int first_ge_idx = finish;
     if (i < node->n_children - 1) {

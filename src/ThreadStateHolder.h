@@ -13,6 +13,8 @@ public: // these need to be seen by other local chares
   unsigned long long n_closes    = 0ull;
   unsigned n_partition_particles = 0u;
   unsigned n_subtree_particles   = 0u;
+  unsigned n_ps_copies           = 0u;
+  unsigned n_ps_shares           = 0u;
 
   BoundingBox universe;
 
@@ -30,6 +32,7 @@ public:
   void reset() {
     n_part_ints = n_node_ints = n_opens = n_closes = 0ull;
     n_partition_particles = n_subtree_particles = 0u;
+    n_ps_copies = n_ps_shares = 0;
     if (!opposing_effects.empty()) CkAbort("user added opposing effects but did not flush them");
   }
 
@@ -66,6 +69,11 @@ public:
 
   void countSubtreeParticles(int n_parts) {
     n_subtree_particles += n_parts;
+  }
+
+  void countCopiesAndShares(int n_c, int n_s) {
+    n_ps_copies += n_c;
+    n_ps_shares += n_s;
   }
 };
 

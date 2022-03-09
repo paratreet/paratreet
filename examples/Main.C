@@ -4,27 +4,26 @@
 #include "DensityVisitor.h"
 #include "PressureVisitor.h"
 #include "CollisionVisitor.h"
+#include "EwaldData.h"
 
 PARATREET_REGISTER_MAIN(ExMain);
 
 /* readonly */ bool verify;
 /* readonly */ bool dual_tree;
-/* readonly */ bool periodic;
+/* readonly */ int periodic;
 /* readonly */ int peanoKey;
+/* readonly */ Vector3D<Real> fPeriod;
+/* readonly */ int nReplicas;
 /* readonly */ Real theta;
 /* readonly */ int iter_start_collision;
 /* readonly */ Real max_timestep;
+/* readonly */ CProxy_EwaldData ewaldProxy;
 
   static void initialize() {
     BoundingBox::registerReducer();
   }
 
-  void ExMain::main(CkArgMsg* m) {
-    // mainProxy = thisProxy;
-
-    // Initialize readonly variables
-    conf.input_file = "";
-    conf.output_file = "";
+  void ExMain::setDefaults(void) {
     conf.min_n_subtrees = CkNumPes() * 8; // default from ChaNGa
     conf.min_n_partitions = CkNumPes() * 8;
     conf.max_particles_per_leaf = 12; // default from ChaNGa
@@ -32,103 +31,38 @@ PARATREET_REGISTER_MAIN(ExMain);
     conf.tree_type = paratreet::TreeType::eBinaryOct;
     conf.num_iterations = 3;
     conf.num_share_nodes = 0; // 3;
-    conf.cache_share_depth= 3;
+    conf.cache_share_depth = 3;
+    conf.pool_elem_size; 
     conf.flush_period = 0;
     conf.flush_max_avg_ratio = 10.;
     conf.lb_period = 5;
     conf.request_pause_interval = 20;
     conf.iter_pause_interval = 1000;
+  }
 
-    verify = false;
+  void ExMain::main(CkArgMsg* m) {
+    // Initialize readonly variables
+    verify = !conf.output_file.empty();
     dual_tree = false;
     periodic = false;
+    fPeriod = std::numeric_limits<float>::max();
+    nReplicas = 0;
+    conf.periodic = periodic;
+    conf.fPeriod = fPeriod;
+    conf.nReplicas = nReplicas;
+
     peanoKey = 3;
     theta = 0.7;
     iter_start_collision = 0;
     max_timestep = 1e-5;
 
+    
     // Process command line arguments
     int c;
     std::string input_str;
 
-    // Seek configuration files ahead of the rest of the arguments
-    // (to ensure they are overriden by command-line arguments!)
-    auto& n_args = m->argc;
-    for (auto i = 0; i < n_args; i += 1) {
-      if ((strcmp(m->argv[i], "-x") == 0) && ((i + 1) < n_args)) {
-        conf.load(m->argv[i + 1]);
-      }
-    }
-
-    while ((c = getopt(n_args, m->argv, "x:f:n:p:l:d:t:i:s:u:r:b:v:amec:j:")) != -1) {
+    while ((c = getopt(m->argc, m->argv, "mec:j:")) != -1) {
       switch (c) {
-        case 'x':
-          break;
-        case 'f':
-          conf.input_file = optarg;
-          break;
-        case 'n':
-          conf.min_n_subtrees = atoi(optarg);
-          break;
-        case 'p':
-          conf.min_n_partitions = atoi(optarg);
-          break;
-        case 'l':
-          conf.max_particles_per_leaf = atoi(optarg);
-          break;
-        case 'd':
-          input_str = optarg;
-          if (input_str.compare("oct") == 0) {
-            conf.decomp_type = paratreet::DecompType::eOct;
-          }
-          else if (input_str.compare("binoct") == 0) {
-            conf.decomp_type = paratreet::DecompType::eBinaryOct;
-          }
-          else if (input_str.compare("sfc") == 0) {
-            conf.decomp_type = paratreet::DecompType::eSfc;
-          }
-          else if (input_str.compare("kd") == 0) {
-            conf.decomp_type = paratreet::DecompType::eKd;
-          }
-          else if (input_str.compare("longest") == 0) {
-            conf.decomp_type = paratreet::DecompType::eLongest;
-          }
-          break;
-        case 't':
-          input_str = optarg;
-          if (input_str.compare("oct") == 0) {
-            conf.tree_type = paratreet::TreeType::eOct;
-          }
-          else if (input_str.compare("binoct") == 0) {
-            conf.tree_type = paratreet::TreeType::eBinaryOct;
-          }
-          else if (input_str.compare("kd") == 0) {
-            conf.tree_type = paratreet::TreeType::eKd;
-          }
-          else if (input_str.compare("longest") == 0) {
-            conf.tree_type = paratreet::TreeType::eLongest;
-          }
-          break;
-        case 'i':
-          conf.num_iterations = atoi(optarg);
-          break;
-        case 's':
-          conf.num_share_nodes = atoi(optarg);
-          break;
-        case 'u':
-          conf.flush_period = atoi(optarg);
-          break;
-        case 'r':
-          conf.flush_max_avg_ratio = atoi(optarg);
-          break;
-        case 'b':
-          conf.lb_period = atoi(optarg);
-          break;
-        case 'v':
-          verify = true;
-          conf.output_file = optarg;
-          if (conf.output_file.empty()) CkAbort("output file unspecified");
-          break;
         case 'm':
           peanoKey = 0; // morton
           break;
@@ -173,6 +107,12 @@ PARATREET_REGISTER_MAIN(ExMain);
     CkPrintf("Minimum number of partitions: %d\n", conf.min_n_partitions);
     CkPrintf("Maximum number of particles per leaf: %d\n", conf.max_particles_per_leaf);
     CkPrintf("Max timestep: %lf\n\n", max_timestep);
+
+    periodic = conf.periodic;
+    fPeriod = conf.fPeriod;
+    nReplicas = conf.nReplicas;
+
+    ewaldProxy = CProxy_EwaldData::ckNew();
 
     // Delegate to Driver
     // CkCallback runCB(CkIndex_Main::run(), thisProxy);

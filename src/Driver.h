@@ -96,6 +96,12 @@ public:
       readers.load(config.input_file, CkCallbackResumeThread((void*&)result));
       CkPrintf("Loading Tipsy data and building universe: %.3lf ms\n",
           (CkWallTimer() - start_time) * 1000);
+      
+      if(config.origin_of("dSoft") != paratreet::FieldOrigin::Unknown) {
+      	  CkPrintf("Setting softening to %f \n", config.dSoft);
+          // Softening is specified: set it for all particles.
+          readers.setSoft(config.dSoft, CkCallbackResumeThread());
+      }
       universe = *((BoundingBox*)result->getData());
       delete result;
       remakeUniverse();
@@ -221,15 +227,17 @@ public:
       // Now track PE imbalance for memory reasons
       thread_state_holder.collectMetaData(CkCallbackResumeThread((void *&) msg2));
       msg2->toTuple(&res2, &numRedn2);
+      int numParticleCopies = *(int*)(res2[2].data);
+      int numParticleShares = *(int*)(res2[3].data);
       int maxPESize = *(int*)(res2[0].data);
       int sumPESize = *(int*)(res2[1].data);
       float avgPESize = (float) universe.n_particles / (float) CkNumPes();
       float ratio = (float) maxPESize / avgPESize;
       bool complete_rebuild = (config.flush_period == 0) ?
-          (ratio > config.flush_max_avg_ratio) :
+          (ratio > config.flush_max_avg_ratio || numParticleShares * 10 > universe.n_particles) :
           (iter % config.flush_period == config.flush_period - 1);
       if (iter + 1 == config.num_iterations) complete_rebuild = false;
-      CkPrintf("[Meta] n_subtree = %d; timestep_size = %f; sumPESize = %d; maxPESize = %d, avgPESize = %f; ratio = %f; maxVelocity = %f; rebuild = %s\n", n_subtrees, timestep_size, sumPESize, maxPESize, avgPESize, ratio, max_velocity, (complete_rebuild? "yes" : "no"));
+      CkPrintf("[Meta] n_subtree = %d; timestep_size = %f; numPSParticleCopies = %d; numPSParticleShares = %d; sumPESize = %d; maxPESize = %d, avgPESize = %f; ratio = %f; maxVelocity = %f; rebuild = %s\n", n_subtrees, timestep_size, numParticleCopies, numParticleShares, sumPESize, maxPESize, avgPESize, ratio, max_velocity, (complete_rebuild? "yes" : "no"));
       //End Subtree reduction message parsing
 
       paratreet::postIterationFn(universe, proxy_pack, iter);

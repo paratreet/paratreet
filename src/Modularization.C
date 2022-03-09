@@ -31,7 +31,7 @@ void Tree::buildCanopy(int tp_index, const SendProxyFn &fn) {
     }
 }
 
-void LongestDimTree::prepParticles(Particle* particles, size_t n_particles, Key parent_key, size_t log_branch_factor) {
+void LongestDimTree::prepParticles(Particle* particles, size_t n_particles, int depth) {
   OrientedBox<Real> box;
   Vector3D<Real> unweighted_center;
   for (int i = 0; i < n_particles; i++) {
@@ -51,9 +51,8 @@ void LongestDimTree::prepParticles(Particle* particles, size_t n_particles, Key 
   partialSort(particles, n_particles, best_dim);
 }
 
-void KdTree::prepParticles(Particle* particles, size_t n_particles, Key parent_key, size_t log_branch_factor) {
+void KdTree::prepParticles(Particle* particles, size_t n_particles, int depth) {
   // sort by key
-  int depth = Utility::getDepthFromKey(parent_key, log_branch_factor);
   int dim = depth % NDIM;
   partialSort(particles, n_particles, dim);
 }

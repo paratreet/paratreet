@@ -148,6 +148,7 @@ module paratreet {
   group Reader {
     entry Reader();
     entry void load(std::string, const CkCallback&);
+    entry void setSoft(const double dSoft, const CkCallback&);
     entry void computeUniverseBoundingBox(const CkCallback&);
     entry void assignKeys(BoundingBox, const CkCallback&);
     template <typename Data>
