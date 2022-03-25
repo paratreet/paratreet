@@ -304,6 +304,7 @@ void DistributedPrefixLB::sendSummary(int num_moves, int base_ct){
   recv_prefix_summary_ct += 1;
 
   if (recv_prefix_summary_ct == CkNumPes()){
+    CkPrintf("*** Distributed_PrefixLB strategy end at %.3lf ms\n", CmiWallTimer() * 1000);
     CkPrintf("DistributedPrefixLB>> Summary:: moved %d/%d objects\n", total_prefix_moves, total_prefix_objects);
   }
 }

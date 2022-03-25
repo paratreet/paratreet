@@ -1,6 +1,6 @@
 include ../src/Makefile.common
 
-LBS = CommonLBs DistributedOrbLB OrbLB # PrefixLB OrbLB DistributedOrbLB #AverageSmoothLB DiffusionLB DistributedPrefixLB DistributedOrbLB
+LBS = CommonLBs DistributedOrbLB OrbLB PrefixLB DistributedPrefixLB #OrbLB DistributedOrbLB #AverageSmoothLB DiffusionLB DistributedPrefixLB DistributedOrbLB
 LB_LIBS = $(foreach m, $(LBS), -module $(m))
 OPTS = -g -O3 $(INCLUDES) -DCOUNT_INTERACTIONS=0 -DDEBUG=0 -DHEXADECAPOLE $(MAKE_OPTS)
 CHARMC = $(CHARM_HOME)/bin/charmc $(OPTS)

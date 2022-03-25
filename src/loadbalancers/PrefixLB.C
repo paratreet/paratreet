@@ -80,6 +80,7 @@ void PrefixLB::work(LDStats* stats)
   }
 
   double end_time = CmiWallTimer();
+  CkPrintf("*** Centralized_PrefixLB strategy end at %.3lf ms\n", end_time * 1000);
   //CkPrintf("[%d] PrefixLB strategy moved %d objs\n n_pes = %d; n_objs = %d; n_migrateobjs = %d\n total migratable ct= %d load =  %f; total nonmig ct = %d load = %f\n",CkMyPe(),  migrate_ct, n_pes, stats->objData.size(), stats->n_migrateobjs, migratable_obj_ct, total_load, nonmig_obj_ct, total_nonmig_load);
   CkPrintf("CharmLB> PrefixLB: PE [%d] moved %d objects. Elapse time = %.4f ms\n", CkMyPe(), migrate_ct, (end_time - start_time)*1000);
   //CkPrintf("Partition load =  %f, else = %f\n", total_partition_load, total_load - total_partition_load);

@@ -245,6 +245,7 @@ public:
         start_time = CkWallTimer();
         //subtrees.pauseForLB(); // move them later
         partitions.pauseForLB();
+        CkPrintf("*** LB strategy start at %.3lf ms\n", CmiWallTimer() * 1000);
         // CkWaitQD();
         CkPrintf("Load balancing: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
       }

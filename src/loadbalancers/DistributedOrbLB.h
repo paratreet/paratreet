@@ -31,12 +31,9 @@ public:
   void perLBStates(CkReductionMsg * msg);
   void postLBStates(CkReductionMsg * msg);
   void endLB();
-  void reportUniverseDimensions();
-  void getUniverseDimensions(CkReductionMsg * msg);
   void recursiveLoadPartition();
   void loadBinning(DorbPartitionRec rec);
   void createPartitions(DorbPartitionRec rec);
-  // void setPeSpliters(DorbPartitionRec rec);
 
   void moveTokenWithSplitPoint(DorbPartitionRec rec1, DorbPartitionRec rec2);
   void bCastSectionMoveTokenWithSplitPoint(DorbPartitionRec rec1, DorbPartitionRec rec2);
@@ -48,13 +45,10 @@ public:
   void finalPartitionStep(DorbPartitionRec, int);
   void mergeFinalStepData(DorbPartitionRec, vector<LBShortCmp>);
   void mergeBinLoads(DorbPartitionRec rec, vector<float> bin_loads, vector<int> bin_sizes);
-  // void migrateObjects(std::vector<std::vector<Vector3D<Real>>> pe_splits);
-  void acknowledgeIncomingMigrations(int count, float in_load);
-  void sendFinalMigrations(int count);
   void finishedPartitionOneDim(DorbPartitionRec, float, float, int);
   void recv_tokens(DorbPartitionRec rec1, DorbPartitionRec rec2, vector<LBCentroidAndIndexRecord> objs);
-  void doMigrations();
-  void sendBackToken(LBCentroidAndIndexRecord obj);
+  // void doMigrations();
+  // void sendBackToken(LBCentroidAndIndexRecord obj);
 
   void bCastSectionGatherObjects(DorbPartitionRec rec);
   void mergeObjects(DorbPartitionRec rec);
@@ -62,6 +56,7 @@ public:
   void sendUpdatedTokens(vector<LBCentroidAndIndexRecord> tokens);
   void ackBruteForceResults(float load, int n_migrates);
   void ackTokenReceived();
+  void bruteForceSolver(DorbPartitionRec rec);
 
 private:
   void InitLB(const CkLBOptions &);
@@ -74,7 +69,6 @@ private:
   bool inCurrentBox(Vector3D<Real> & centroid, Vector3D<Real> & lower_coords, Vector3D<Real> & upper_coords);
   int calNChildren(int pe, DorbPartitionRec & rec);
   int calSpinningTreeIdx(int root);
-  // void bruteForceSolver(DorbPartitionRec rec);
   void processBinLoads(DorbPartitionRec rec, vector<float> bin_loads, vector<int> bin_sizes);
   void processFinalStepData(DorbPartitionRec rec);
   void findPeSplitPoints();
@@ -83,7 +77,6 @@ private:
 
 
   void bruteForceSolverRecursiveHelper(DorbPartitionRec rec, int start_idx, int end_idx);
-  void bruteForceSolver(DorbPartitionRec rec);
   void updateLocalObjCollection();
 
   vector<int> brute_force_sizes;
@@ -95,7 +88,6 @@ private:
   int lb_iter = 0;
   int bin_size = 16;
   int brute_force_size = 256;
-  bool waited = false;
   double bin_size_double = 16.0;
   int my_pe, total_migrates, incoming_migrates, recv_ack;
   int recv_final, incoming_final;
@@ -107,10 +99,10 @@ private:
   LBMigrateMsg * final_migration_msg;
 
   // Collect myPE load data
-  float background_load, obj_load, bgload_per_obj, total_load, max_obj_load, min_obj_load, new_load;
+  float background_load, bgload_per_obj, total_load, max_obj_load, min_obj_load, new_load;
   float post_lb_load;
 
-  int n_partitions, n_particles, moved_partitions;
+  int n_partitions, moved_partitions;
   vector<vector<float>> obj_coords; // corrodination limits at all directions
   vector<float> universe_coords; // size 6, min, max coord of 3 dimensions
 
@@ -126,8 +118,8 @@ private:
   int recv_summary, total_move, total_objs;
 
   // Parition related data
+  int send_back_recv;
   vector <bool> partition_flags;
-  vector <float> split_coords;
   DorbPartitionRec left_half_rec;
   DorbPartitionRec right_half_rec;
   int updated_local_half_obj_collection = -1;
@@ -151,8 +143,6 @@ private:
 
   // Partition results
   int recv_spliters = 0;
-  vector<vector<Vector3D<Real>>> pe_split_coords;
-  vector<float> pe_split_loads;
   vector<vector<float>> bin_loads_collection;
   vector<vector<int>> bin_sizes_collection;
   vector<vector<LBShortCmp>> fdata_collections;
