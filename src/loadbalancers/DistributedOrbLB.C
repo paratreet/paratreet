@@ -57,7 +57,7 @@ void DistributedOrbLB::Strategy(const DistBaseLB::LDStats* const stats) {
 
   initVariables();
   parseLBData();
-  // reportPerLBStates();/*}}}*/
+  reportPerLBStates();/*}}}*/
 }
 
 
