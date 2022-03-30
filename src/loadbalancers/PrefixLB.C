@@ -23,6 +23,7 @@ PrefixLB::PrefixLB(const CkLBOptions &opt): CBase_PrefixLB(opt)
 
 void PrefixLB::work(LDStats* stats)
 {
+  CkPrintf("*** Centralized_PrefixLB strategy init at %.3lf ms\n", end_time * 1000);
   start_time = CmiWallTimer();
   int obj;
   int n_pes = stats->nprocs();

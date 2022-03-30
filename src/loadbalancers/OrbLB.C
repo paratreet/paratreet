@@ -23,7 +23,7 @@ void OrbLB::work(LDStats* stats)
   start_time = CmiWallTimer();
   int obj;
   n_pes = stats->nprocs();
-  // CkPrintf("*** LB strategy start at %.3lf ms\n", CmiWallTimer() * 1000);
+  CkPrintf("*** LB strategy init at %.3lf ms\n", CmiWallTimer() * 1000);
   //CkPrintf("n_pes = %d\n", n_pes);
   my_stats = stats;
 

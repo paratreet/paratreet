@@ -5,6 +5,8 @@
 
 #include "DistributedOrbLB.h"
 #include "elements.h"
+#include <fstream>
+#include <string>
 
 extern int quietModeRequested;
 CkpvExtern(int, _lb_obj_index);
@@ -42,7 +44,7 @@ void DistributedOrbLB::InitLB(const CkLBOptions &opt) {
 void DistributedOrbLB::Strategy(const DistBaseLB::LDStats* const stats) {
   start_time = CmiWallTimer();/*{{{*/
   if (CkMyPe() == 0) {
-    // CkPrintf("*** LB strategy start at %.3lf ms\n", CmiWallTimer() * 1000);
+    CkPrintf("*** LB strategy init at %.3lf ms\n", CmiWallTimer() * 1000);
     CkPrintf("*** CkNumPes = %d\n", CkNumPes());
     CkPrintf("DistributedOrbLB>> Seq %d In DistributedOrbLB strategy at %lf; bin_size = %d;\n",lb_iter, start_time, bin_size);
   }
@@ -55,7 +57,7 @@ void DistributedOrbLB::Strategy(const DistBaseLB::LDStats* const stats) {
 
   initVariables();
   parseLBData();
-  reportPerLBStates();/*}}}*/
+  // reportPerLBStates();/*}}}*/
 }
 
 
@@ -104,6 +106,9 @@ void DistributedOrbLB::initVariables(){
 }
 
 void DistributedOrbLB::parseLBData(){
+  std::ofstream myfile;
+  myfile.open ("input/"+std::to_string(my_pe)+".txt");
+
   for (int i = 0; i < my_stats->objData.size(); i++) {/*{{{*/
     LDObjData oData = my_stats->objData[i];
     #if CMK_LB_USER_DATA
@@ -114,6 +119,9 @@ void DistributedOrbLB::parseLBData(){
     // Collect Partition chare element data
     if (usr_data.lb_type == LBCommon::pt){
       n_partitions ++;
+
+      myfile << my_pe << " " << usr_data.centroid[0] << " "<< usr_data.centroid[1] << " "<< usr_data.centroid[2] << " "<< o_load << "\n";
+      // myfile.close();
       // CkPrintf("LBDATA %d %.8f %.8f %.8f %.8f\n", my_pe, 
       //   usr_data.centroid[0],usr_data.centroid[1],usr_data.centroid[2], o_load);
       obj_collection.push_back(
@@ -136,6 +144,8 @@ void DistributedOrbLB::parseLBData(){
     }
     #endif
   }
+  
+  myfile.close();
   if(_lb_args.debug() == 3) CkPrintf("PE[%d] partition size = %d \n", my_pe, n_partitions);
 
   if (lb_iter == 1) background_load = .0f;
@@ -355,7 +365,7 @@ void DistributedOrbLB::bruteForceSolverRecursiveHelper(DorbPartitionRec rec, int
   if (start_idx + left_size + 1 >= section_dorb_collection.size()){
     CkPrintf("rec (%d , %d) my_pe = %d, section_dorb_collection size = %d, split_point idx = %d left_size %d start_idx %d end_idx %d\n",rec.left, rec.right, my_pe, section_dorb_collection.size(), start_idx + left_size + 1, left_size, start_idx, end_idx);
     CkPrintf("acc_load %.8f, acc_load_more %.8f, target_left_load %.8f, rec.load %.8f\n", acc_load, acc_load_more, target_left_load, rec.load);
- 
+    left_size --;
     // CkPrintf("rec (%d , %d) my_pe = %d, section_obj_collection size = %d, split_point idx = %d left_size %d start_idx %d end_idx %d\n",rec.left, rec.right, my_pe, section_obj_collection.size(), left_size, start_idx + left_size + 1, start_idx, end_idx);
   }
 

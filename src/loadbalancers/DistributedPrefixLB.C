@@ -47,6 +47,7 @@ void DistributedPrefixLB::InitLB(const CkLBOptions &opt) {
 void DistributedPrefixLB::Strategy(const DistBaseLB::LDStats* const stats) {
   if (CkMyPe() == 0) {
     start_time = CmiWallTimer();
+    CkPrintf("*** Distributed_PrefixLB strategy init at %.3lf ms\n", CmiWallTimer() * 1000);
     CkPrintf("DistributedPrefixLB>>> In DistributedPrefixLB strategy at %lf, term to balance %s, nearestK = %d\n", start_time, (lb_partition_term? "partitions" : "subtrees"), nearestK);
   }
 
