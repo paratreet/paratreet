@@ -95,8 +95,8 @@ protected:
   std::vector<Node<Data>*> leaves;
   Partition<Data>& part;
   ThreadStateHolder* stats = nullptr;
-  std::unordered_map<Key, std::vector<int>> curr_nodes;
-  std::vector<std::pair<Node<Data>*, std::vector<int>>> paused_curr_nodes;
+  std::unordered_map<Key, std::vector<bool>> curr_nodes;
+  std::vector<std::pair<Node<Data>*, std::vector<bool>>> paused_curr_nodes;
   int num_requested = 0;
   int request_pause_interval = 0;
   std::vector<std::vector<Node<Data>*>> interactions;
@@ -104,10 +104,7 @@ protected:
 
 protected:
   void startTrav(Node<Data>* new_payload) {
-    std::vector<int> all_leaves;
-    for (int i = 0; i < leaves.size(); i++) {
-      all_leaves.push_back(i);
-    }
+    std::vector<bool> all_leaves (leaves.size(), true);
     recurse(new_payload, all_leaves);
   }
 
@@ -132,7 +129,7 @@ public:
       }
     }
   }
-  virtual bool wantsPause() const override {return num_requested > request_pause_interval;}
+  virtual bool wantsPause() const override {return false;}//num_requested > request_pause_interval;}
   virtual void resumeAfterPause() override{
     num_requested = 0;
     size_t idx = 0u;
@@ -146,10 +143,10 @@ public:
     paused_curr_nodes.erase(paused_curr_nodes.begin(), paused_curr_nodes.begin() + idx); // erase all up until idx
   }
 
-  void recurse(Node<Data>* node, std::vector<int>& active_buckets) {
+  void recurse(Node<Data>* node, const std::vector<bool>& active_buckets) {
     CkAssert(node);
-    std::vector<int> new_active_buckets;
-    new_active_buckets.reserve(leaves.size());
+    std::vector<bool> new_active_buckets (leaves.size(), false);
+    bool continue_trav = false;
 #if DEBUG
     CkPrintf("tp %d, key = 0x%" PRIx64 ", type = %d, pe %d\n", part.thisIndex, node->key, (int)node->type, CkMyPe());
 #endif
@@ -158,8 +155,8 @@ public:
       case Node<Data>::Type::CachedRemoteLeaf:
         {
           // Store local and remote cached leaves for interactions
-          for (auto bucket : active_buckets) {
-            if (Visitor::CallSelfLeaf || leaves[bucket]->key != node->key) {
+          for (int bucket = 0; bucket < leaves.size(); bucket++) {
+            if (active_buckets[bucket] && (Visitor::CallSelfLeaf || leaves[bucket]->key != node->key)) {
               if (delay_leaf) interactions[bucket].push_back(node);
               else doLeaf(v, node, leaves[bucket], stats);
             }
@@ -172,10 +169,12 @@ public:
         {
           // Check if the opening condition is fulfilled
           // If so, need to go down deeper
-          for (auto bucket : active_buckets) {
+          for (int bucket = 0; bucket < leaves.size(); bucket++) {
+            if (!active_buckets[bucket]) continue;
             const bool should_open = doOpen(v, node, leaves[bucket], stats);
+            new_active_buckets[bucket] = should_open;
             if (should_open) {
-              new_active_buckets.push_back(bucket);
+              continue_trav = true;
             } else {
               // maybe delay as an interaction
               doNode(v, node, leaves[bucket], stats);
@@ -197,7 +196,7 @@ public:
           break;
         }
     }
-    if (!new_active_buckets.empty()) {
+    if (continue_trav) {
       if (node->type == Node<Data>::Type::Internal && wantsPause()) {
         paused_curr_nodes.emplace_back(node, new_active_buckets);
       } else {

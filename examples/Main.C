@@ -92,7 +92,6 @@ PARATREET_REGISTER_MAIN(ExMain);
           CkPrintf("\t-b [load balancing period]\n");
           CkPrintf("\t-v [filename prefix]\n");
           CkPrintf("\t-j [max timestep]\n");
-          CkExit();
       }
     }
     delete m;
