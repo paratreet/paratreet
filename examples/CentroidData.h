@@ -22,12 +22,10 @@ struct pqSmoothNode {
 };
 
 struct CentroidData {
-  Vector3D<Real> moment;
   MultipoleMoments multipoles;
-  Real sum_mass;
-  Vector3D<Real> centroid; // too slow to compute this on the fly
-  Real max_rad = 0.0;
-  Real size_sm;
+  OrientedBox<Real> box;
+  int count = 0;
+  Real size_sm = 0;
   struct PerParticleStruct {
     CkVec<pqSmoothNode> neighbors; // Neighbor list for knn search
     Real ball = 0;
@@ -35,23 +33,22 @@ struct CentroidData {
     Real best_dt = std::numeric_limits<Real>::max();
     const Particle* best_dt_partPtr = nullptr;
   };
+  Real max_rad = 0.0;
   std::vector<PerParticleStruct> pps;
-  OrientedBox<Real> box;
-  int count = 0;
-  Real rsq;                     ///< Opening radius
 
-  CentroidData() :
-  moment(Vector3D<Real> (0,0,0)), sum_mass(0), count(0), rsq(0.) {}
-
+  CentroidData() = default;
   /// Construct centroid from particles.
   CentroidData(const Particle* particles, int n_particles, int depth) : CentroidData() {
+    // pps is used for SPH + Collision
+    Real deltaT = 0.01570796326; // Is there some way to make config.timestep_size accessible here?
+    pps.resize(n_particles);
+
     for (int i = 0; i < n_particles; i++) {
-      moment += particles[i].mass * particles[i].position;
-      sum_mass += particles[i].mass;
+      multipoles += particles[i];
       box.grow(particles[i].position);
+      pps[i].ball = 2.0*particles[i].velocity.length()*deltaT + (4*particles[i].soft);
     }
-    getRadius();
-    centroid = moment / sum_mass;
+    size_sm = 0.5*(box.size()).length();
     count = n_particles;
     if(count > 1) {
         auto tmp_box = fixSize(depth);
@@ -61,12 +58,6 @@ struct CentroidData {
     }
     else
         multipoles.radius = 1.0; // single particle boxes don't need scaling.
-    Real deltaT = 0.01570796326; // Is there some way to make config.timestep_size accessible here?
-    pps.resize(n_particles);
-    for (int i = 0; i < n_particles; i++) {
-      pps[i].ball = 2.0*particles[i].velocity.length()*deltaT + (4*particles[i].soft);
-      multipoles += particles[i];
-    }
   }
 
   /// The size of a node needs to be non-zero before calculating
@@ -76,52 +67,34 @@ struct CentroidData {
     auto tmp_box = box;
     if(size_sm == 0.0) { // Box has to have finite size for scaled multipole
       // calculations.
-        assert(0);
       tmp_box.grow(box.center() + size_sm);
     }
     return tmp_box;
   }
 
-/// Calculate gravity opening radius and linear size based on box size.
-  void getRadius() {
-    Vector3D<Real> delta1 = centroid - box.lesser_corner;
-    Vector3D<Real> delta2 = box.greater_corner - centroid;
-    delta1.x = (delta1.x > delta2.x ? delta1.x : delta2.x);
-    delta1.y = (delta1.y > delta2.y ? delta1.y : delta2.y);
-    delta1.z = (delta1.z > delta2.z ? delta1.z : delta2.z);
-    rsq = delta1.lengthSquared();
-    size_sm = 0.5*(box.size()).length();
-  }
-
   const CentroidData& operator+=(const CentroidData& cd) { // needed for upward traversal
-    moment += cd.moment;
-    sum_mass += cd.sum_mass;
-    centroid = moment / sum_mass;
     box.grow(cd.box);
-    getRadius();
     multipoles += cd.multipoles;
+    count += cd.count;
+    size_sm = 0.5*(box.size()).length();
     if(count + cd.count > 1) {
         auto tmp_box = fixSize(0); // XXX needs fixing
         calculateRadiusFarthestCorner(multipoles, tmp_box);
     }
-    else
+    else {
         multipoles.radius = 1.0; // Single particle boxes don't need scaling
-    count += cd.count;
+    }
     return *this;
   }
 
   CentroidData& operator=(const CentroidData&) = default;
 
   void pup(PUP::er& p) {
-    p | moment;
     p | multipoles;
-    p | sum_mass;
-    p | centroid;
     p | box;
     p | count;
-    p | rsq;
-    p | max_rad;
     p | size_sm;
+    p | max_rad;
     int num_leaves = pps.size();
     p | num_leaves;
     if (p.isUnpacking()) pps.resize(num_leaves);

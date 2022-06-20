@@ -123,10 +123,10 @@ void SPLINE(Real r2, Real twoh, Real &a, Real &b)
 
   void addGravity(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
     for (int i = 0; i < target.n_particles; i++) {
-      Vector3D<Real> diff = source.data.centroid + offset - target.particles()[i].position;
+      Vector3D<Real> diff = source.data.multipoles.cm + offset - target.particles()[i].position;
       Real rsq = diff.lengthSquared();
       if (rsq != 0) {
-        Vector3D<Real> accel = diff * (source.data.sum_mass / (rsq * sqrt(rsq)));
+        Vector3D<Real> accel = diff * (source.data.multipoles.totalMass / (rsq * sqrt(rsq)));
         target.applyAcceleration(i, accel);
       }
     }
@@ -155,9 +155,9 @@ public:
 
   bool open(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
     if (source.data.count <= nMinParticleNode) return true;
-    Real dataRsq = source.data.rsq * gravity_factor;
+    Real dataRsq = source.data.multipoles.radius * source.data.multipoles.radius * gravity_factor;
 #ifdef HEXADECAPOLE
-    if(!Space::intersect(target.data.box, source.data.centroid + offset, dataRsq)){
+    if(!Space::intersect(target.data.box, source.data.multipoles.cm + offset, dataRsq)){
         // test for softening overlap
         if(!openSoftening(target.data, source.data)) {
             return false;       /* Passes both tests */
@@ -166,13 +166,13 @@ public:
             // monopole criteria is much stricter
             extern Real theta;
             dataRsq *= pow(theta, -6);
-            Sphere<Real> sM(source.data.centroid + offset, sqrt(dataRsq));
+            Sphere<Real> sM(source.data.multipoles.cm + offset, sqrt(dataRsq));
             return Space::intersect(target.data.box, sM);
         }
     }
     return true;
 #else
-    return Space::intersect(target.data.box, source.data.centroid + offset, dataRsq);
+    return Space::intersect(target.data.box, source.data.multipoles.cm + offset, dataRsq);
 #endif
   }
 

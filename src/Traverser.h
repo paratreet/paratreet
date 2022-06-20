@@ -7,6 +7,7 @@
 #include <deque>
 #include <unordered_map>
 #include <vector>
+#include <bitset>
 
 namespace {
 
@@ -89,22 +90,27 @@ public:
 
 template <typename Data, typename Visitor>
 class TransposedDownTraverser : public Traverser<Data> {
+public:
+  using ABType = std::vector<bool>;
+
 protected:
   Visitor v;
   size_t trav_idx = 0;
   std::vector<Node<Data>*> leaves;
   Partition<Data>& part;
   ThreadStateHolder* stats = nullptr;
-  std::unordered_map<Key, std::vector<bool>> curr_nodes;
-  std::vector<std::pair<Node<Data>*, std::vector<bool>>> paused_curr_nodes;
+  std::unordered_map<Key, ABType> curr_nodes;
+  std::vector<std::pair<Node<Data>*, ABType>> paused_curr_nodes;
   int num_requested = 0;
+  int handle_count = 0;
   int request_pause_interval = 0;
+  int iter_pause_interval = 0;
   std::vector<std::vector<Node<Data>*>> interactions;
   const bool delay_leaf;
 
 protected:
   void startTrav(Node<Data>* new_payload) {
-    std::vector<bool> all_leaves (leaves.size(), true);
+    ABType all_leaves (leaves.size(), true);
     recurse(new_payload, all_leaves);
   }
 
@@ -113,6 +119,7 @@ public:
     : v(vi), trav_idx(ti), leaves(leavesi), part(parti), delay_leaf(delay_leafi)
   {
     request_pause_interval = paratreet::getConfiguration().request_pause_interval;
+    iter_pause_interval = paratreet::getConfiguration().iter_pause_interval;
     stats = thread_state_holder.ckLocalBranch();
     if (delay_leaf) interactions.resize(leaves.size());
   }
@@ -129,13 +136,14 @@ public:
       }
     }
   }
-  virtual bool wantsPause() const override {return false;}//num_requested > request_pause_interval;}
+  virtual bool wantsPause() const override {return handle_count > iter_pause_interval || num_requested > request_pause_interval;}
   virtual void resumeAfterPause() override{
     num_requested = 0;
+    handle_count = 0;
     size_t idx = 0u;
     for (; idx < paused_curr_nodes.size(); idx++) {
       if (wantsPause()) break;
-      auto& paused = paused_curr_nodes[idx];
+      auto paused = paused_curr_nodes[idx];
       for (size_t childIdx = 0; childIdx < paused.first->n_children; childIdx++) {
         recurse(paused.first->getChild(childIdx), paused.second);
       }
@@ -143,9 +151,9 @@ public:
     paused_curr_nodes.erase(paused_curr_nodes.begin(), paused_curr_nodes.begin() + idx); // erase all up until idx
   }
 
-  void recurse(Node<Data>* node, const std::vector<bool>& active_buckets) {
+  void recurse(Node<Data>* node, const ABType& active_buckets) {
     CkAssert(node);
-    std::vector<bool> new_active_buckets (leaves.size(), false);
+    ABType new_active_buckets (leaves.size(), false);
     bool continue_trav = false;
 #if DEBUG
     CkPrintf("tp %d, key = 0x%" PRIx64 ", type = %d, pe %d\n", part.thisIndex, node->key, (int)node->type, CkMyPe());
@@ -197,6 +205,7 @@ public:
         }
     }
     if (continue_trav) {
+      handle_count++;
       if (node->type == Node<Data>::Type::Internal && wantsPause()) {
         paused_curr_nodes.emplace_back(node, new_active_buckets);
       } else {
@@ -207,7 +216,7 @@ public:
     }
   }
   virtual void resumeTrav() override {
-    auto && resume_nodes = part.r_local->all_resume_nodes[trav_idx][part.thisIndex];
+    auto && resume_nodes = part.r_local->all_resume_nodes[std::make_pair(trav_idx, part.thisIndex)];
     CkAssert(!resume_nodes.empty()); // nothing to resume on?
     while (!resume_nodes.empty()) {
       auto start_node = resume_nodes.front();
@@ -216,7 +225,7 @@ public:
 #if DEBUG
       CkPrintf("going down on key %d while its type is %d\n", key, (int)start_node->type);
 #endif
-      auto& now_ready = curr_nodes[key];
+      auto now_ready = curr_nodes[key];
       recurse(start_node, now_ready);
       curr_nodes.erase(key);
     }
@@ -333,7 +342,7 @@ public:
     }
   }
   virtual void resumeTrav() override {
-    auto && resume_nodes = part.r_local->all_resume_nodes[trav_idx][part.thisIndex];
+    auto && resume_nodes = part.r_local->all_resume_nodes[std::make_pair(trav_idx, part.thisIndex)];
     CkAssert(!resume_nodes.empty()); // nothing to resume on?
     while (!resume_nodes.empty()) {
       auto start_node = resume_nodes.front();
@@ -381,7 +390,7 @@ public:
   }
 
   virtual void resumeTrav() {
-    auto && resume_nodes = part.r_local->all_resume_nodes[trav_idx][part.thisIndex];
+    auto && resume_nodes = part.r_local->all_resume_nodes[std::make_pair(trav_idx, part.thisIndex)];
     while (!resume_nodes.empty()) {
       auto start_node = resume_nodes.front();
       resume_nodes.pop();
@@ -467,7 +476,7 @@ private:
     }
     curr_nodes.erase(key);
     for (auto cn : curr_nodes_insertions) curr_nodes[cn.first].push_back(cn.second);
-    auto && resume_nodes = part.r_local->all_resume_nodes[trav_idx][part.thisIndex];
+    auto && resume_nodes = part.r_local->all_resume_nodes[std::make_pair(trav_idx, part.thisIndex)];
     for (auto && new_node : new_nodes) resume_nodes.push(new_node);
   }
 };
@@ -518,7 +527,7 @@ public:
   }
 
   virtual void resumeTrav() override {
-    auto && resume_nodes = tp.r_local->all_resume_nodes[trav_idx][tp.thisIndex];
+    auto && resume_nodes = tp.r_local->all_resume_nodes[std::make_pair(trav_idx, tp.thisIndex)];
     while (!resume_nodes.empty()) {
       doTrav(resume_nodes.front());
       resume_nodes.pop();
