@@ -37,7 +37,7 @@ PARATREET_REGISTER_MAIN(ExMain);
     conf.flush_max_avg_ratio = 10.;
     conf.lb_period = 5;
     conf.request_pause_interval = 20;
-    conf.iter_pause_interval = 1000;
+    conf.iter_pause_interval = 100;
   }
 
   void ExMain::main(CkArgMsg* m) {
@@ -92,7 +92,6 @@ PARATREET_REGISTER_MAIN(ExMain);
           CkPrintf("\t-b [load balancing period]\n");
           CkPrintf("\t-v [filename prefix]\n");
           CkPrintf("\t-j [max timestep]\n");
-          CkExit();
       }
     }
     delete m;

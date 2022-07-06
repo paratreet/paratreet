@@ -15,15 +15,14 @@ public: // these need to be seen by other local chares
   CProxy_Partition<Data> part_proxy;
   CProxy_Subtree<Data> subtree_proxy;
   CacheManager<Data>* cm_local;
-  std::vector<std::vector<std::queue<Node<Data>*>>> all_resume_nodes;
+  std::map<std::pair<int, int>, std::queue<Node<Data>*>> all_resume_nodes;
   std::unordered_map<Key, std::vector<std::pair<int, int>>> waiting;
   bool use_subtree = false;
 
   void reset() {
 #if DEBUG
     for (auto& trav : all_resume_nodes) {
-      for (auto && rnq : trav) {
-        if (!rnq.empty()) CkAbort("did not complete last traversal");
+        if (!trav.second.empty()) CkAbort("did not complete last traversal");
       }
     }
     CkAssert(waiting.empty()); // should have gotten rid of them
@@ -32,12 +31,12 @@ public: // these need to be seen by other local chares
   }
 
   void process(Key key) {
-    auto node = cm_local->root->getDescendant(key);
-    CkAssert(node && node->key == key);
     auto it = waiting.find(key);
     if (it == waiting.end()) return;
+    auto node = cm_local->root->getDescendant(key);
+    CkAssert(node && node->key == key);
     for (auto pair : it->second) { // (trav_idx, part_idx)
-      auto && resume_nodes = all_resume_nodes[pair.first][pair.second];
+      auto && resume_nodes = all_resume_nodes[pair];
       bool should_resume = resume_nodes.empty();
       resume_nodes.push(node);
       if (should_resume) {
