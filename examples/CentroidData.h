@@ -51,25 +51,11 @@ struct CentroidData {
     size_sm = 0.5*(box.size()).length();
     count = n_particles;
     if(count > 1) {
-        auto tmp_box = fixSize(depth);
-        // After we have a radius and centroid, we can calculate the high
-        // order (scaled by radius) multipole moments.
-        calculateRadiusBox(multipoles, tmp_box);
+      calculateRadiusBox(multipoles, box);
     }
-    else
-        multipoles.radius = 1.0; // single particle boxes don't need scaling.
-  }
-
-  /// The size of a node needs to be non-zero before calculating
-  /// multipole moments.  Use a heuristic based on the size of the
-  /// simulation to guess a non-zero size.
-  OrientedBox<Real> fixSize(int depth) {
-    auto tmp_box = box;
-    if(size_sm == 0.0) { // Box has to have finite size for scaled multipole
-      // calculations.
-      tmp_box.grow(box.center() + size_sm);
+    else {
+      multipoles.radius = 1.0; // single particle boxes don't need scaling.
     }
-    return tmp_box;
   }
 
   const CentroidData& operator+=(const CentroidData& cd) { // needed for upward traversal
@@ -77,12 +63,11 @@ struct CentroidData {
     multipoles += cd.multipoles;
     count += cd.count;
     size_sm = 0.5*(box.size()).length();
-    if(count + cd.count > 1) {
-        auto tmp_box = fixSize(0); // XXX needs fixing
-        calculateRadiusFarthestCorner(multipoles, tmp_box);
+    if(count > 1) {
+      calculateRadiusFarthestCorner(multipoles, box);
     }
     else {
-        multipoles.radius = 1.0; // Single particle boxes don't need scaling
+      multipoles.radius = 1.0; // Single particle boxes don't need scaling
     }
     return *this;
   }

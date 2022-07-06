@@ -13,16 +13,22 @@ public:
   static constexpr const bool TargetMustBeLeaf = true;
   static constexpr const Real opening_geometry_factor_squared = 4.0 / 3.0;
   GravityVisitor() : offset(0, 0, 0) {}
-  GravityVisitor(Vector3D<Real> offseti, Real theta) : offset(offseti), gravity_factor(opening_geometry_factor_squared / (theta * theta)) {}
+  GravityVisitor(Vector3D<Real> offseti, Real theta) :
+    offset(offseti),
+    gravity_factor(opening_geometry_factor_squared / (theta * theta)),
+    monopole_gravity_factor(sqrt(opening_geometry_factor_squared) / (theta * theta * theta * theta))
+  {}
 
   void pup(PUP::er& p) {
     p | offset;
     p | gravity_factor;
+    p | monopole_gravity_factor;
   }
 
 private:
   Vector3D<Real> offset;
   Real gravity_factor;
+  Real monopole_gravity_factor;
 
 private:
   // note gconst = 1
@@ -164,9 +170,8 @@ public:
         }
         else {        // Open as monopole?
             // monopole criteria is much stricter
-            extern Real theta;
-            dataRsq *= pow(theta, -6);
-            Sphere<Real> sM(source.data.multipoles.cm + offset, sqrt(dataRsq));
+            Real monoRad = source.data.multipoles.radius * monopole_gravity_factor;
+            Sphere<Real> sM(source.data.multipoles.cm + offset, monoRad);
             return Space::intersect(target.data.box, sM);
         }
     }
