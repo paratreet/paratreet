@@ -12,7 +12,9 @@ typedef struct ewaldTable
 class EwaldData : public CBase_EwaldData {
 public:
     std::vector<EWT> ewt;
+#ifdef HEXADECAPOLE
     MOMC momcRoot;  /* hold complete multipole moments */
+#endif
     MultipoleMoments multipoles; /* multipole of root cell */
     EwaldData() { }
     void EwaldInit(const struct CentroidData, const CkCallback& cb);

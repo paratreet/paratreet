@@ -6,15 +6,15 @@ PARATREET_REGISTER_PER_LEAF_FN(LeafEwaldFn, CentroidData, (
 #ifdef HEXADECAPOLE
         MOMC mom = ewaldProxy.ckLocalBranch()->momcRoot;
 	MultipoleMoments &momQuad = ewaldProxy.ckLocalBranch()->multipoles;
-        auto ewt = ewaldProxy.ckLocalBranch()->ewt;
 	double xx,xxx,xxy,xxz,yy,yyy,yyz,xyy,zz,zzz,xzz,yzz,xy,xyz,xz,yz;
 	double Q4mirx,Q4miry,Q4mirz,Q4mir,Q4x,Q4y,Q4z;
 	double Q4xx,Q4xy,Q4xz,Q4yy,Q4yz,Q4zz,Q4,Q3x,Q3y,Q3z;
 	double Q3mirx,Q3miry,Q3mirz,Q3mir;
 	const double onethird = 1.0/3.0;
 #else
-	MultipoleMoments mom = root->moments;
+	MultipoleMoments mom = ewaldProxy.ckLocalBranch()->multipoles;
 #endif
+        auto ewt = ewaldProxy.ckLocalBranch()->ewt;
 	double Q2;
 	double L,fEwCut2,fInner2,alpha,alpha2,alphan,k1,ka;
 	double fPot,ax,ay,az;
