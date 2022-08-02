@@ -126,7 +126,7 @@ void EwaldData::EwaldInit(const struct CentroidData root, const CkCallback& cb)
 				QEVAL(momcRoot, gam, hx, hy, hz,
 				      ax, ay, az, mfacc);
 #else
-				QEVAL(root.moments, gam, hx, hy, hz,
+				QEVAL(multipoles, gam, hx, hy, hz,
 				      ax, ay, az, mfacc);
 #endif
 				gam[0] = exp(-k4*h2)/(M_PI*h2*L);
@@ -146,7 +146,7 @@ void EwaldData::EwaldInit(const struct CentroidData root, const CkCallback& cb)
 				QEVAL(momcRoot, gam,hx,hy,hz,
 				      ax,ay,az,mfacs);
 #else
-				QEVAL(root.moments, gam,hx,hy,hz,
+				QEVAL(multipoles, gam,hx,hy,hz,
 				      ax,ay,az,mfacs);
 #endif
                                 EWT hentry;
