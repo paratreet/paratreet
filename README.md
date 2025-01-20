@@ -44,7 +44,7 @@ $ make test
 
 ## Examples
 
-Under the `examples/` directory, one can find example ParaTreeT applications, like:
+Under the `astro/` directory, one can find example ParaTreeT applications, like:
 
 - _Gravity_ &mdash; Implements an n-body simulation of gravitational dynamics.
 - _SPH_ &mdash; Simulates hydrodynamics using the Smooth Particle Hydrodynamics (SPH) technique.

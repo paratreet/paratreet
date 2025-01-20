@@ -7,7 +7,7 @@ echo -e "For HEXADECAPOLE, expect RMS errors of .0008 and max errors of .03\n"
 hostname=`hostname`
 testname="lambs.00200_subsamp_30K"
 arr="../array"
-app="../../examples"
+app="../../astro"
 
 echo "Running ParaTreeT..."
 if [[ $hostname == *"lassen"* ]]; then
