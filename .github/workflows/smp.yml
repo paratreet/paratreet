@@ -33,6 +33,7 @@ jobs:
     # Prepare ParaTreeT build
     - name: prep-paratreet
       run: |
+        sudo apt-get install libtirpc-dev
         git submodule init
         git submodule update
         cd utility/structures
