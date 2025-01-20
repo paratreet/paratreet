@@ -21,7 +21,7 @@ inline ParticleMsg<Data>::ParticleMsg(int n) {
 
 template <typename Data>
 inline ParticleMsg<Data>::ParticleMsg(typename Data::Particle* p, int n) {
-  std::copy(particles, p, p + n);
+  std::copy(p, p + n, particles);
   n_particles = n;
 }
 
