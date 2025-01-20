@@ -4,27 +4,25 @@
 #include <vector>
 
 #include "CoreFunctions.h"
-
-#include "Particle.h"
 #include "Traverser.h"
-#include "ParticleMsg.h"
 #include "MultiData.h"
-#include "ThreadStateHolder.h"
 #include "paratreet.decl.h"
 #include "LBCommon.h"
+#include "StatisticsTracker.h"
 
 CkpvExtern(int, _lb_obj_index);
 extern CProxy_TreeSpec treespec;
-extern CProxy_Reader readers;
-extern CProxy_ThreadStateHolder thread_state_holder;
 using namespace LBCommon;
 
 template <typename Data>
-struct Partition : public CBase_Partition<Data> {
+class Partition : public CBase_Partition<Data> {
+private:
   std::mutex receive_lock;
+
+public:
   std::vector<Node<Data>*> leaves;
   std::vector<Node<Data>*> tree_leaves;
-  std::vector<Particle> saved_particles;
+  std::vector<typename Data::Particle> saved_particles;
   bool matching_decomps;
 
   std::vector<std::unique_ptr<Traverser<Data>>> traversers;
@@ -34,13 +32,19 @@ struct Partition : public CBase_Partition<Data> {
 
   // filled in during traversal
 
+  CProxy_Reader<Data> readers;
   CProxy_TreeCanopy<Data> tc_proxy;
   CProxy_CacheManager<Data> cm_proxy;
-  CacheManager<Data> *cm_local;
+  CacheManager<Data> *cm_local = nullptr;
   CProxy_Resumer<Data> r_proxy;
-  Resumer<Data>* r_local;
+  Resumer<Data>* r_local = nullptr;
+  CProxy_StatisticsTracker s_proxy;
+  StatisticsTracker* s_local = nullptr;
 
-  Partition(int, CProxy_CacheManager<Data>, CProxy_Resumer<Data>, TCHolder<Data>, CProxy_Driver<Data> driver, bool);
+public: // acceptable for users to access
+  OppositeEffectsManager<Data>* opposite_effects_manager = nullptr;
+
+  Partition(int, CProxy_Reader<Data>, CProxy_CacheManager<Data>, CProxy_StatisticsTracker, CProxy_OppositeEffectsManager<Data>, CProxy_Resumer<Data>, TCHolder<Data>, CProxy_Driver<Data> driver, bool);
   Partition(CkMigrateMessage * msg){delete msg;};
 
   template<typename Visitor> void startDown(Visitor v);
@@ -56,13 +60,12 @@ struct Partition : public CBase_Partition<Data> {
   void reset();
   void kick(Real, CkCallback);
   void perturb(Real, CkCallback);
-  void rebuild(BoundingBox, TPHolder<Data>, bool);
-  void output(CProxy_Writer w, int n_total_particles, CkCallback cb);
-  void output(CProxy_TipsyWriter w, int n_total_particles, CkCallback cb);
+  void rebuild(typename Data::BoundingBox, TPHolder<Data>, bool);
+  void globalSortToReader(int n_total_particles);
   void callPerLeafFn(paratreet::PerLeafAble<Data>&, const CkCallback&);
   void deleteParticleOfOrder(int order) {particle_delete_order.insert(order);}
   void requestParticleUpdates(int cm_index, std::vector<Key> pKeys);
-  void applyOpposingEffects(std::vector<std::pair<Key, Particle::Effect>> effects);
+  void applyOpposingEffects(std::vector<std::pair<Key, typename Data::Particle::Effect>> effects);
   void pup(PUP::er& p);
   void makeLeaves(int);
   void pauseForLB(){
@@ -72,16 +75,13 @@ struct Partition : public CBase_Partition<Data> {
     return;
   };
 
-  Real time_advanced = 0;
-  int iter = 1;
-
 private:
   std::set<int> particle_delete_order;
 
 private:
   void initLocalBranches();
   void erasePartition();
-  void copyParticles(std::vector<Particle>& particles, bool check_delete);
+  void copyParticlesFromLeaves(std::vector<typename Data::Particle>& particles, bool check_delete);
   void startNewTraverser() {
     traversers.back()->start();
     if (traversers.back()->wantsPause()) {
@@ -89,14 +89,14 @@ private:
       this->thisProxy[this->thisIndex].resumeAfterPause(traversers.size() - 1);
     }
   }
-  void flush(CProxy_Reader, std::vector<Particle>&);
   void makeLeaves(const std::vector<Key>&, int);
-  template <typename WriterProxy> void doOutput(WriterProxy w, int n_total_particles, CkCallback cb);
 };
 
 template <typename Data>
 Partition<Data>::Partition(
-  int np, CProxy_CacheManager<Data> cm,
+  int np, CProxy_Reader<Data> rdp,
+  CProxy_CacheManager<Data> cm, CProxy_StatisticsTracker s,
+  CProxy_OppositeEffectsManager<Data> oem,
   CProxy_Resumer<Data> rp, TCHolder<Data> tc_holder,
   CProxy_Driver<Data> driver, bool matching_decomps_
   )
@@ -104,12 +104,14 @@ Partition<Data>::Partition(
   this->usesAtSync = true;
   n_partitions = np;
   tc_proxy = tc_holder.proxy;
+  readers = rdp;
   r_proxy = rp;
   cm_proxy = cm;
+  s_proxy = s;
   matching_decomps = matching_decomps_;
   initLocalBranches();
-  time_advanced = readers.ckLocalBranch()->start_time;
   driver.partitionLocation(this->thisIndex, CkMyPe());
+  opposite_effects_manager = oem.ckLocalBranch();
 }
 
 template <typename Data>
@@ -122,6 +124,7 @@ void Partition<Data>::initLocalBranches() {
   cm_local->unlockMaps();
   r_local->cm_local = cm_local;
   cm_local->r_proxy = r_proxy;
+  s_local = s_proxy.ckLocalBranch();
 }
 
 template <typename Data>
@@ -129,7 +132,7 @@ template <typename Visitor>
 void Partition<Data>::startDown(Visitor v)
 {
   initLocalBranches();
-  traversers.emplace_back(new TransposedDownTraverser<Data, Visitor>(v, traversers.size(), leaves, *this));
+  traversers.emplace_back(new TransposedDownTraverser<Data, Visitor>(v, traversers.size(), leaves, *this, s_local));
   startNewTraverser();
 }
 
@@ -148,7 +151,7 @@ template <typename Visitor>
 void Partition<Data>::startBasicDown(Visitor v)
 {
   initLocalBranches();
-  traversers.emplace_back(new BasicDownTraverser<Data, Visitor>(v, traversers.size(), leaves, *this));
+  traversers.emplace_back(new BasicDownTraverser<Data, Visitor>(v, traversers.size(), leaves, *this, s_local));
   startNewTraverser();
 }
 
@@ -157,7 +160,7 @@ template <typename Visitor>
 void Partition<Data>::startUpAndDown(Visitor v)
 {
   initLocalBranches();
-  traversers.emplace_back(new UpnDTraverser<Data, Visitor>(v, traversers.size(), *this));
+  traversers.emplace_back(new UpnDTraverser<Data, Visitor>(v, traversers.size(), *this, s_local));
   startNewTraverser();
 }
 
@@ -177,7 +180,7 @@ void Partition<Data>::interact(const CkCallback& cb)
 template <typename Data>
 void Partition<Data>::requestParticleUpdates(int cm_index, std::vector<Key> pKeys) {
   std::set<Key> keySet (pKeys.begin(), pKeys.end());
-  std::vector<Particle> particles_sending;
+  std::vector<typename Data::Particle> particles_sending;
   for (auto& leaf : leaves) {
     for (int pi = 0; pi < leaf->n_particles; pi++) {
       if (keySet.count(leaf->particles()[pi].key)) {
@@ -189,14 +192,13 @@ void Partition<Data>::requestParticleUpdates(int cm_index, std::vector<Key> pKey
 }
 
 template <typename Data>
-void Partition<Data>::applyOpposingEffects(std::vector<std::pair<Key, Particle::Effect>> effects) {
-  std::map<Key, Particle::Effect> effects_map (effects.begin(), effects.end());
+void Partition<Data>::applyOpposingEffects(std::vector<std::pair<Key, typename Data::Particle::Effect>> effects) {
+  std::map<Key, typename Data::Particle::Effect> effects_map (effects.begin(), effects.end());
   for (auto& leaf : leaves) {
     for (int pi = 0; pi < leaf->n_particles; pi++) {
       auto it = effects_map.find(leaf->particles()[pi].key);
       if (it != effects_map.end()) {
-        leaf->applyAcceleration(pi, it->second.first);
-        leaf->applyGasWork(pi, it->second.second);
+        leaf->applyEffect(pi, it->second);
       }
     }
   }
@@ -211,7 +213,7 @@ void Partition<Data>::addLeaves(const std::vector<Node<Data>*>& leaf_ptrs, int s
     // reuse leaf without checks and modifications
     new_leaves.reserve(leaf_ptrs.size());
     for (auto leaf : leaf_ptrs) {
-      std::vector<Particle> leaf_particles;
+      std::vector<typename Data::Particle> leaf_particles;
       for (int pi = 0; pi < leaf->n_particles; pi++) {
         if (leaf->particles()[pi].partition_idx == this->thisIndex) {
           leaf_particles.push_back(leaf->particles()[pi]);
@@ -221,7 +223,7 @@ void Partition<Data>::addLeaves(const std::vector<Node<Data>*>& leaf_ptrs, int s
         new_leaves.push_back(leaf);
       }
       else {
-        auto particles = new Particle [leaf_particles.size()];
+        auto particles = new typename Data::Particle [leaf_particles.size()];
         std::copy(leaf_particles.begin(), leaf_particles.end(), particles);
         auto node = cm_local->makeNode(leaf->key, Node<Data>::Type::Leaf, leaf->depth,
           leaf_particles.size(), particles, nullptr, subtree_idx, cm_local->thisIndex);
@@ -282,7 +284,6 @@ void Partition<Data>::makeLeaves(int subtree_idx) {
 template <typename Data>
 void Partition<Data>::destroy()
 {
-  readers.ckLocalBranch()->start_time = time_advanced;
   reset();
   erasePartition();
   this->thisProxy[this->thisIndex].ckDestroy();
@@ -337,10 +338,7 @@ void Partition<Data>::kick(Real timestep, CkCallback cb)
 template <typename Data>
 void Partition<Data>::perturb(Real timestep, CkCallback cb)
 {
-  time_advanced += timestep;
-  iter += 1;
-  BoundingBox box;
-  copyParticles(saved_particles, true);
+  copyParticlesFromLeaves(saved_particles, true);
 
   #if CMK_LB_USER_DATA
   Real zero = 0.0;
@@ -350,7 +348,7 @@ void Partition<Data>::perturb(Real timestep, CkCallback cb)
   for (auto& p : saved_particles){
     centroid += p.position;
   }
-  if (size > 0){
+  if (size > 0) {
     centroid /= (Real) size;
   }
   if (CkpvAccess(_lb_obj_index) != -1) {
@@ -365,47 +363,29 @@ void Partition<Data>::perturb(Real timestep, CkCallback cb)
   }
   #endif
 
+  typename Data::BoundingBox box;
   for (auto && p : saved_particles) {
     p.perturb(timestep);
-    box.grow(p.position);
-    box.mass += p.mass;
-    box.ke += 0.5 * p.mass * p.velocity.lengthSquared();
-    if (p.isGas()) box.n_sph++;
-    if (p.isDark()) box.n_dark++;
-    if (p.isStar()) box.n_star++;
+    Data::addParticleToBox(p, box);
   }
-  box.n_particles = saved_particles.size();
-  this->contribute(sizeof(BoundingBox), &box, BoundingBox::reducer(), cb);
+  this->contribute(sizeof(typename Data::BoundingBox), &box, Data::BoundingBox::reducer(), cb);
 }
 
 template <typename Data>
-void Partition<Data>::rebuild(BoundingBox universe, TPHolder<Data> tp_holder, bool if_flush)
+void Partition<Data>::rebuild(typename Data::BoundingBox universe, TPHolder<Data> tp_holder, bool flush_to_reader)
 {
-  thread_state_holder.ckLocalBranch()->countPartitionParticles(saved_particles.size());
+  s_local->countPartitionParticles(saved_particles.size());
   for (auto && p : saved_particles) {
-    p.adjustNewUniverse(universe.box);
+    Data::adjustParticleForUniverse(p, universe);
   }
 
-  if (if_flush) {
-    flush(readers, saved_particles);
+  if (flush_to_reader) {
+    readers.ckLocalBranch()->localReceive(saved_particles);
   }
   else {
-    auto sendParticles = [&](int dest, int n_particles, Particle* particles) {
-      ParticleMsg* msg = new (n_particles) ParticleMsg(particles, n_particles);
-      tp_holder.proxy[dest].receive(msg);
-    };
-    treespec.ckLocalBranch()->getSubtreeDecomposition()->flush(saved_particles, sendParticles);
+    readers.ckLocalBranch()->flushToSubtreesHelper(saved_particles, tp_holder.proxy);
   }
   saved_particles.clear();
-}
-
-template <typename Data>
-void Partition<Data>::flush(CProxy_Reader readers, std::vector<Particle>& particles)
-{
-  ParticleMsg *msg = new (particles.size()) ParticleMsg(
-    particles.data(), particles.size()
-    );
-  readers[CkMyPe()].receive(msg);
 }
 
 template <typename Data>
@@ -419,7 +399,7 @@ void Partition<Data>::callPerLeafFn(paratreet::PerLeafAble<Data>& perLeafFn, con
 }
 
 template <typename Data>
-void Partition<Data>::copyParticles(std::vector<Particle>& particles, bool check_delete) {
+void Partition<Data>::copyParticlesFromLeaves(std::vector<typename Data::Particle>& particles, bool check_delete) {
   for (auto && leaf : leaves) {
     for (int i = 0; i < leaf->n_particles; i++) {
       if (!check_delete || particle_delete_order.find(leaf->particles()[i].order) == particle_delete_order.end()) {
@@ -430,49 +410,28 @@ void Partition<Data>::copyParticles(std::vector<Particle>& particles, bool check
 }
 
 template <typename Data>
-void Partition<Data>::output(CProxy_Writer w, int n_total_particles, CkCallback cb)
+void Partition<Data>::globalSortToReader(int n_total_particles)
 {
-  doOutput(w, n_total_particles, cb);
-}
-
-
-template <typename Data>
-void Partition<Data>::output(CProxy_TipsyWriter w, int n_total_particles, CkCallback cb)
-{
-  doOutput(w, n_total_particles, cb);
-}
-
-template <typename Data>
-template <typename WriterProxy>
-void Partition<Data>::doOutput(WriterProxy w, int n_total_particles, CkCallback cb)
-{
-  std::vector<Particle> particles;
-  copyParticles(particles, false);
+  std::vector<typename Data::Particle> particles;
+  copyParticlesFromLeaves(particles, false);
 
   std::sort(particles.begin(), particles.end(),
-            [](const Particle& left, const Particle& right) {
+            [](const typename Data::Particle& left, const typename Data::Particle& right) {
               return left.order < right.order;
             });
-
-  int particles_per_writer = n_total_particles / CkNumPes();
-  if (particles_per_writer * CkNumPes() != n_total_particles)
-    ++particles_per_writer;
-
-  int particle_idx = 0;
-  while (particle_idx < particles.size()) {
-    int writer_idx = particles[particle_idx].order / particles_per_writer;
-    int first_particle = writer_idx * particles_per_writer;
-    std::vector<Particle> writer_particles;
-
-    while (
-      particles[particle_idx].order < first_particle + particles_per_writer
-      && particle_idx < particles.size()
-      ) {
-      writer_particles.push_back(particles[particle_idx]);
-      ++particle_idx;
-    }
-
-    w[writer_idx].receive(writer_particles, time_advanced, iter);
+  auto n_readers = readers.ckLocalBranch()->numReaders();
+  int particles_per_reader = n_total_particles / n_readers;
+  if (particles_per_reader * n_readers != n_total_particles) {
+    ++particles_per_reader;
+  }
+  for (int begin = 0; begin < particles.size();) {
+    int reader_idx = particles[begin].order / particles_per_reader;
+    int cutoff_order = particles_per_reader * (1 + reader_idx);
+    auto num_contiguous = std::find_if(particles.begin() + begin, particles.end(), [cutoff_order] (auto && p) {
+		    return p.order >= cutoff_order;}) - (particles.begin() + begin);
+    auto msg = new (num_contiguous) ParticleMsg<Data>(particles.data() + begin, num_contiguous);
+    readers[reader_idx].receive(msg);
+    begin += num_contiguous;
   }
 }
 

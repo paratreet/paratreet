@@ -1,7 +1,6 @@
 #ifndef PARATREET_NODE_H_
 #define PARATREET_NODE_H_ 
 #include "common.h"
-#include "Particle.h"
 #include <array>
 #include <atomic>
 
@@ -10,7 +9,7 @@ class SpatialNode
 {
 public:
   SpatialNode() = default;
-  SpatialNode(Particle* _particles, int _n_particles, int _depth)
+  SpatialNode(typename Data::Particle* _particles, int _n_particles, int _depth)
   : data(_particles, _n_particles, _depth),
     n_particles(_n_particles), depth(_depth), particles_(_particles)
   {
@@ -18,23 +17,19 @@ public:
   SpatialNode(int _depth, int _n_particles) : data(), n_particles(_n_particles), depth(_depth), particles_(nullptr)
   {
   }
-  SpatialNode(const SpatialNode<Data>& other, Particle* _particles)
+  SpatialNode(const SpatialNode<Data>& other, typename Data::Particle* _particles)
     : data(other.data), n_particles(other.n_particles), depth(other.depth), particles_(_particles)
   {
   }
   virtual ~SpatialNode() = default;
-
-  void changeParticle(int index, const Particle& part) {
-    particles_[index] = part;
+  typename Data::Particle& particle(int index) {
+    return particles_[index];
   }
-  void applyAcceleration(int index, Vector3D<Real> accel) {
-    particles_[index].acceleration += accel;
+  const typename Data::Particle& particle(int index) const {
+    return particles_[index];
   }
-  void applyGasWork(int index, Real work) {
-    particles_[index].pressure_dVolume += work;
-  }
-  void applyPotential(int index, Real pot) {
-    particles_[index].potential += pot;
+  void applyEffect(int index, const typename Data::Particle::Effect& effect) {
+    particles_[index].applyEffect(effect);
   }
 
   void pup (PUP::er& p) {
@@ -47,10 +42,10 @@ public:
   Data      data;
   int       n_particles = -1; // non-leaves will have this as -1
   int       depth = -1;
-  inline const Particle* particles() const {return particles_;}
+  inline const typename Data::Particle* particles() const {return particles_;}
 
 private:
-  Particle* particles_ = nullptr;
+  typename Data::Particle* particles_ = nullptr;
 
 public:
   void freeParticles() {
@@ -106,7 +101,7 @@ public:
   {
   }
 
-  Node(int _n_particles, Particle* _particles, int _depth,
+  Node(int _n_particles, typename Data::Particle* _particles, int _depth,
        Node* _parent, Type _type, Key _key,
         int _tp_index, int _cm_index)
     : SpatialNode<Data>(_particles, _n_particles, _depth),
@@ -122,7 +117,7 @@ public:
 
 
   Node(Key _key, typename Node<Data>::Type _type, int _n_children,
-        const SpatialNode<Data>& _spatial_node, Particle* _particles,
+        const SpatialNode<Data>& _spatial_node, typename Data::Particle* _particles,
         Node<Data>* _parent, int _tp_index, int _cm_index)
     : SpatialNode<Data>(_spatial_node, _particles),
       n_children(_n_children),
@@ -228,13 +223,13 @@ public:
   FullNode() = default;
   virtual ~FullNode() = default;
 
-  FullNode(Key _key, typename Node<Data>::Type _type, const SpatialNode<Data>& _spatial_node, Particle* _particles, Node<Data>* _parent, int _tp_index, int _cm_index) // for cached non boundary nodes
+  FullNode(Key _key, typename Node<Data>::Type _type, const SpatialNode<Data>& _spatial_node, typename Data::Particle* _particles, Node<Data>* _parent, int _tp_index, int _cm_index) // for cached non boundary nodes
   : Node<Data>(_key, _type, (_spatial_node.n_particles >= 0) ? 0 : BRANCH_FACTOR, _spatial_node, _particles, _parent, _tp_index, _cm_index)
   {
     initChildren();
   }
 
-  FullNode(Key _key, typename Node<Data>::Type _type, int _depth, int _n_particles, Particle* _particles, Node<Data>* _parent, int _tp_index, int _cm_index)
+  FullNode(Key _key, typename Node<Data>::Type _type, int _depth, int _n_particles, typename Data::Particle* _particles, Node<Data>* _parent, int _tp_index, int _cm_index)
     : Node<Data>(_n_particles, _particles, _depth, _parent, _type, _key, _tp_index, _cm_index)
   {
   }

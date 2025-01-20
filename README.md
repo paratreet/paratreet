@@ -36,9 +36,9 @@ $ cd src
 $ make -j
 ```
 
-3. Build example applications.
+3. Build astro applications.
 ```
-$ cd ../examples
+$ cd ../astro
 $ make test
 ```
 

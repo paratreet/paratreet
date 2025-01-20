@@ -10,14 +10,14 @@
     proxy_pack.driver.loadCache(CkCallbackResumeThread());
   }
 
-  void ExMain::traversalFn(BoundingBox& universe, ProxyPack<SearchData>& proxy_pack, int iter) {
+  void ExMain::traversalFn(const BoundingBox& universe, ProxyPack<SearchData>& proxy_pack, int iter) {
     proxy_pack.partition.template startDown<VisitAllVisitor>(VisitAllVisitor());
   }
 
-  void ExMain::postIterationFn(BoundingBox& universe, ProxyPack<SearchData>& proxy_pack, int iter) {
+  void ExMain::postIterationFn(const BoundingBox& universe, ProxyPack<SearchData>& proxy_pack, int iter) {
     visit_all_tracker.reset(CkCallbackResumeThread());
   }
 
-  Real ExMain::getTimestep(BoundingBox& universe, Real max_velocity) {
+  Real ExMain::getTimestep(const BoundingBox& universe, Real max_velocity) {
     return 0.01570796326;
   }

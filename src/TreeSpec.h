@@ -30,7 +30,7 @@ protected:
     std::unique_ptr<Decomposition> partition_decomp;
 
 private:
-  void getDecomposition(std::unique_ptr<Decomposition>& decomp, paratreet::DecompType decomp_type, bool is_subtree);
+  void getDecomposition(std::unique_ptr<Decomposition>& decomp, paratreet::DecompType decomp_type);
 };
 
 #endif
