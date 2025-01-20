@@ -29,7 +29,6 @@ PARATREET_REGISTER_PER_LEAF_FN(DensityFn, CentroidData, (
       part.density = density;
       part.sphBallSq = rsq;
       leaf.data.max_rad = std::max(leaf.data.max_rad, fBall);
-      Q.clear();
     }
   }));
 

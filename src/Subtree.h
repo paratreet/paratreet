@@ -45,8 +45,6 @@ public:
 
   std::unique_ptr<Traverser<Data>> traverser;
 
-  std::vector<typename Data::Particle> flushed_particles; // For debugging
-
   Subtree(const CkCallback&, int, int, int, TCHolder<Data>, CProxy_Resumer<Data>,
           CProxy_StatisticsTracker, CProxy_CacheManager<Data>, DPHolder<Data>, bool);
   Subtree(CkMigrateMessage * msg){
@@ -78,23 +76,6 @@ public:
     //CkPrintf("[ST %d]  resume from sync for LB on PE %d\n", this->thisIndex, CkMyPe());
     return;
   };
-
-  // For debugging
-  void checkParticlesChanged(const CkCallback& cb) {
-    bool result = true;
-    if (particles.size() != flushed_particles.size()) {
-      result = false;
-      this->contribute(sizeof(bool), &result, CkReduction::logical_and_bool, cb);
-      return;
-    }
-    for (int i = 0; i < particles.size(); i++) {
-      if (!(particles[i] == flushed_particles[i])) {
-        result = false;
-        break;
-      }
-    }
-    this->contribute(sizeof(bool), &result, CkReduction::logical_and_bool, cb);
-  }
 };
 
 template <typename Data>
@@ -147,12 +128,9 @@ void Subtree<Data>::pup(PUP::er& p) {
 template <typename Data>
 void Subtree<Data>::receive(ParticleMsg<Data>* msg) {
   // Copy particles to local vector
-  // TODO: Remove memcpy by just storing the pointer to msg->particles
+  // TODO: Remove the copy by just storing the pointer to msg->particles
   // and using it in tree build
-  int initial_size = incoming_particles.size();
-  incoming_particles.resize(initial_size + msg->n_particles);
-  std::memcpy(&incoming_particles[initial_size], msg->particles,
-              msg->n_particles * sizeof(typename Data::Particle));
+  incoming_particles.insert(incoming_particles.end(), msg->particles, msg->particles + msg->n_particles);
   delete msg;
 }
 

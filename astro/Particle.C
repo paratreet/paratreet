@@ -4,6 +4,43 @@ Particle::Particle() : key(Key(0)) {
   reset();
 }
 
+Particle::Particle(const Particle& other)
+: key(other.key),
+  order(other.order),
+  partition_idx(other.partition_idx),
+  mass(other.mass),
+  density(other.density),
+  potential(other.potential),
+  u(other.u),
+  soft(other.soft),
+  position(other.position),
+  acceleration(other.acceleration),
+  velocity(other.velocity),
+  velocity_predicted(other.velocity_predicted),
+  pressure_dVolume(other.pressure_dVolume),
+  updated_time(other.updated_time),
+  ball(other.ball)
+{}
+
+Particle& Particle::operator=(const Particle& other) {
+  key = other.key;
+  order = other.order;
+  partition_idx = other.partition_idx;
+  mass = other.mass;
+  density = other.density;
+  potential = other.potential;
+  u = other.u;
+  soft = other.soft;
+  position = other.position;
+  acceleration = other.acceleration;
+  velocity = other.velocity;
+  velocity_predicted = other.velocity_predicted;
+  pressure_dVolume = other.pressure_dVolume;
+  updated_time = other.updated_time;
+  ball = other.ball;
+  return *this;
+}
+
 void Particle::applyEffect(const Particle::Effect& effect) {
   acceleration += effect.acceleration;
   pressure_dVolume += effect.pressure;

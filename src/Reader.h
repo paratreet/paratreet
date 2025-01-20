@@ -235,9 +235,7 @@ void Reader<Data>::doSplit(const std::vector<GenericSplitter>& splits, bool is_s
 template <typename Data>
 void Reader<Data>::receive(ParticleMsg<Data>* msg) {
   // Store particles for global sort
-  size_t particle_index = saved_particles.size();
-  saved_particles.resize(particle_index + msg->n_particles);
-  std::memcpy(&saved_particles[particle_index], msg->particles, msg->n_particles * sizeof(typename Data::Particle));
+  saved_particles.insert(saved_particles.end(), msg->particles, msg->particles + msg->n_particles);
   delete msg;
 }
 

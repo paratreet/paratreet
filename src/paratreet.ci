@@ -102,7 +102,6 @@ module paratreet {
     entry void sendLeaves(CProxy_Partition<Data>);
     template <typename Visitor> entry void startDual(Visitor v);
     entry void goDown(size_t travIdx);
-    entry void checkParticlesChanged(const CkCallback&);
     entry void collectMetaData(const CkCallback &);
     entry void pauseForLB();
   }

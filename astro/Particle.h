@@ -35,7 +35,7 @@ struct Particle {
   Real pressure_dVolume = 0.;
   Real updated_time = 0.;
 
-  CkVec<pqSmoothNode> neighbors; // Neighbor list for knn search
+  std::vector<pqSmoothNode> neighbors; // Neighbor list for knn search
   Real ball = 0;
   Real sphBallSq = 0ull;
   Real best_dt = std::numeric_limits<Real>::max();
@@ -59,6 +59,8 @@ struct Particle {
   Type type = Type::eUnknown;
 
   Particle();
+  Particle(const Particle& other);
+  Particle& operator=(const Particle& other);
 
   bool isStar() const {return type == Type::eStar;}
   bool isGas()  const {return type == Type::eGas;}
