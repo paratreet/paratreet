@@ -111,6 +111,8 @@ namespace paratreet {
         int iter_pause_interval;
         // filename representing initial conditions
         std::string input_file;
+        // peano key referring to which space filling curve to use, 3=hilbert, 0=morton
+        int peanoKey;
 
         // we support loading config files with "-x"
         Configuration(const char* config_arg = "-x")
@@ -131,6 +133,7 @@ namespace paratreet {
           this->register_field("iFlushPeriodMaxAvgRatio", "r", flush_max_avg_ratio);
           this->register_field("iLbPeriod", "b", lb_period);
           this->register_field("achInputFile", "f", input_file);
+          this->register_field("dPeanoKey", "f", peanoKey);
         }
 
         int branchFactor() const {return branchFactorFromTreeType(tree_type);}
@@ -160,6 +163,7 @@ namespace paratreet {
             p | request_pause_interval;
             p | iter_pause_interval;
             p | input_file;
+	    p | peanoKey;
         }
     };
 

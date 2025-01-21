@@ -56,7 +56,9 @@ PARATREET_REGISTER_PER_LEAF_FN(CollisionResolveFn, CentroidData, (
       PARATREET_PER_LEAF_FN(CropFn, CentroidData),
       CkCallbackResumeThread()
     );
-    if (iter % 10000 == 0) paratreet::outputSorted("out", box, proxy_pack, iter, {3});
+    if (iter % 10000 == 0 & !astroConf.output_file.empty()) {
+      paratreet::outputSorted(astroConf.output_file, box, proxy_pack, iter, {3});
+    }
     if (iter >= astroConf.iter_start_collision) {
       proxy_pack.cache.resetCachedParticles(proxy_pack.partition);
       CkWaitQD();

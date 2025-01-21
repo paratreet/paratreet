@@ -12,6 +12,7 @@
 #include "Resumer.h"
 
 /* readonly */ CProxy_TreeSpec treespec;
+/* readonly */ int peanoKey;
 
 using namespace paratreet;
 

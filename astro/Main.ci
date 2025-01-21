@@ -3,7 +3,6 @@ mainmodule Main {
   include "AstroFields.h";
   readonly AstroFields astroConf;
   readonly CProxy_EwaldData ewaldProxy;
-  readonly int peanoKey;
 
   initnode void initialize(void);
 

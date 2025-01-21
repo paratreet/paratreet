@@ -16,6 +16,7 @@
 
 #include "paratreet.decl.h"
 /* readonly */ extern CProxy_TreeSpec treespec;
+/* readonly */ extern int peanoKey;
 
 #define PARATREET_MAIN_VAR(m)   m##_impl_
 
@@ -227,6 +228,7 @@ namespace paratreet {
     CProxy_Driver<Data> driver = CProxy_Driver<Data>::ckNew(readers, statistics, opposite_effects_manager, cache, resumer, canopy, CkMyPe());
     // Call the driver initialization routine (performs decomposition)
     auto& cfg = const_cast<paratreet::Configuration&>(paratreet::getConfiguration());
+    peanoKey = cfg.peanoKey;
     driver.init(cb, CkReference<Configuration>(cfg));
 
     return driver;

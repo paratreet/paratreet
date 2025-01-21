@@ -1,7 +1,6 @@
 mainmodule Main {
     extern module paratreet;
 
-    readonly int peanoKey;
     readonly CProxy_CountManager count_manager;
     readonly CProxy_VisitAllTracker visit_all_tracker;
 

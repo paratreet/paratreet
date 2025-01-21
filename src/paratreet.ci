@@ -16,6 +16,7 @@ module paratreet {
   PUPable LongestDimDecomposition;
 
   readonly CProxy_TreeSpec treespec;
+  readonly int peanoKey;
 
   namespace paratreet {
     initproc void __registerMain(void);

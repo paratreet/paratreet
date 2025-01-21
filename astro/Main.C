@@ -11,7 +11,6 @@ PARATREET_REGISTER_MAIN(ExMain);
 
 /* readonly */ AstroFields astroConf;
 /* readonly */ CProxy_EwaldData ewaldProxy;
-/* readonly */ int peanoKey;
 
 AstroConfiguration::AstroConfiguration(): paratreet::Configuration() {
   this->register_field("achOutputFile", "v", astro.output_file);
@@ -54,40 +53,12 @@ void ExMain::setDefaults(void) {
   conf.lb_period = 5;
   conf.request_pause_interval = 20;
   conf.iter_pause_interval = 100;
+  conf.peanoKey = 3;
 }
 
 void ExMain::main(CkArgMsg* m) {
   // Initialize readonly variables
-  peanoKey = 3;
   
-  // Process command line arguments
-  int c;
-
-  while ((c = getopt(m->argc, m->argv, "m")) != -1) {
-    switch (c) {
-      case 'm':
-        peanoKey = 0; // morton
-        break;
-
-      default:
-        CkPrintf("Usage: %s\n", m->argv[0]);
-        CkPrintf("\t-f [input file]\n");
-        CkPrintf("\t-n [number of treepieces]\n");
-        CkPrintf("\t-p [maximum number of particles per treepiece]\n");
-        CkPrintf("\t-l [maximum number of particles per leaf]\n");
-        CkPrintf("\t-d [decomposition type: oct, sfc, kd]\n");
-        CkPrintf("\t-t [tree type: oct, bin, kd]\n");
-        CkPrintf("\t-i [number of iterations]\n");
-        CkPrintf("\t-s [number of shared tree levels]\n");
-        CkPrintf("\t-u [flush period]\n");
-        CkPrintf("\t-r [flush threshold for Subtree max_average ratio]\n");
-        CkPrintf("\t-b [load balancing period]\n");
-        CkPrintf("\t-v [filename prefix]\n");
-        CkPrintf("\t-j [max timestep]\n");
-    }
-  }
-  delete m;
-
   // Print configuration
   CkPrintf("\n[PARATREET]\n");
   if (conf.input_file.empty()) CkAbort("Input file unspecified");
