@@ -3,7 +3,6 @@
 
 #include "paratreet.decl.h"
 #include "common.h"
-#include "ParticleMsg.h"
 #include "templates.h"
 #include "Splitter.h"
 #include "SortingInterfaces.h"
@@ -113,7 +112,6 @@ void ParticleViewer<Data>::nthElementByKey(size_t n, const KeyComparatorFn& fn) 
 template <typename Data>
 class Reader : public CBase_Reader<Data> {
   std::vector<typename Data::Particle> saved_particles;
-  std::vector<ParticleMsg<Data>*> particle_messages;
 
 public:
   // Loading particles and assigning keys
@@ -124,8 +122,7 @@ public:
   void countAssignments(const std::vector<GenericSplitter>&, bool is_subtree, const CkCallback&, bool weight_by_partition);
   void doSplit(const std::vector<GenericSplitter>&, bool is_subtree, const CkCallback&);
 
-  void receive(ParticleMsg<Data>*);
-  void localReceive(const std::vector<typename Data::Particle>& particles);
+  void receive(const std::vector<typename Data::Particle>& particles);
   void localSortByKey(const CkCallback&);
   void localSortByOrder(const CkCallback&);
   // Sending particles to home Partitions and Subtrees
@@ -182,21 +179,16 @@ void Reader<Data>::flushToSubtreesHelper(std::vector<typename Data::Particle>& p
     if (!inserted) {
       continue;
     }
-    ParticleMsg<Data>* msg = nullptr;
-    if (sorted) {
-      auto num_contiguous = std::find_if(destinations.begin() + di, destinations.end(), [dest] (auto && d) {return d != dest;}) - (destinations.begin() + di);
-      msg = new (num_contiguous) ParticleMsg<Data>(particles.data() + di, num_contiguous);
-    }
-    else {
-      auto num_total = std::count(destinations.begin() + di, destinations.end(), dest);
-      msg = new (num_total) ParticleMsg<Data>(num_total);
-      for (size_t pi = di, count = 0ull; count < num_total; pi++) {
-        if (destinations[pi] == dest) {
-          msg->particles[count++] = particles[pi];
-	}
+    std::vector<typename Data::Particle> particle_msg;
+    for (size_t pi = di; pi < destinations.size(); pi++) {
+      if (destinations[pi] == dest) {
+        particle_msg.push_back(particles[pi]);
+      }
+      else if (sorted) {
+	break;
       }
     }
-    subtrees[dest].receive(msg);
+    subtrees[dest].receive(particle_msg);
   }
 }
 
@@ -233,14 +225,7 @@ void Reader<Data>::doSplit(const std::vector<GenericSplitter>& splits, bool is_s
 }
 
 template <typename Data>
-void Reader<Data>::receive(ParticleMsg<Data>* msg) {
-  // Store particles for global sort
-  saved_particles.insert(saved_particles.end(), msg->particles, msg->particles + msg->n_particles);
-  delete msg;
-}
-
-template <typename Data>
-void Reader<Data>::localReceive(const std::vector<typename Data::Particle>& particles) {
+void Reader<Data>::receive(const std::vector<typename Data::Particle>& particles) {
   // Copy particles to local vector
   saved_particles.insert(saved_particles.end(), particles.begin(), particles.end());
 }

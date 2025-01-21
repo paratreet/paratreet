@@ -380,7 +380,7 @@ void Partition<Data>::rebuild(typename Data::BoundingBox universe, TPHolder<Data
   }
 
   if (flush_to_reader) {
-    readers.ckLocalBranch()->localReceive(saved_particles);
+    readers.ckLocalBranch()->receive(saved_particles);
   }
   else {
     readers.ckLocalBranch()->flushToSubtreesHelper(saved_particles, tp_holder.proxy);
@@ -429,8 +429,7 @@ void Partition<Data>::globalSortToReader(int n_total_particles)
     int cutoff_order = particles_per_reader * (1 + reader_idx);
     auto num_contiguous = std::find_if(particles.begin() + begin, particles.end(), [cutoff_order] (auto && p) {
 		    return p.order >= cutoff_order;}) - (particles.begin() + begin);
-    auto msg = new (num_contiguous) ParticleMsg<Data>(particles.data() + begin, num_contiguous);
-    readers[reader_idx].receive(msg);
+    readers[reader_idx].receive(std::vector<typename Data::Particle>(particles.data() + begin, particles.data() + begin + num_contiguous));
     begin += num_contiguous;
   }
 }

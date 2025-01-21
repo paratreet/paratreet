@@ -50,7 +50,7 @@ public:
   Subtree(CkMigrateMessage * msg){
     delete msg;
   };
-  void receive(ParticleMsg<Data>*);
+  void receive(const std::vector<typename Data::Particle>& particles);
   void buildTree(CProxy_Partition<Data>, CkCallback);
   void recursiveBuild(Node<Data>*, typename Data::Particle*, size_t, size_t);
   void populateTree();
@@ -126,12 +126,8 @@ void Subtree<Data>::pup(PUP::er& p) {
 }
 
 template <typename Data>
-void Subtree<Data>::receive(ParticleMsg<Data>* msg) {
-  // Copy particles to local vector
-  // TODO: Remove the copy by just storing the pointer to msg->particles
-  // and using it in tree build
-  incoming_particles.insert(incoming_particles.end(), msg->particles, msg->particles + msg->n_particles);
-  delete msg;
+void Subtree<Data>::receive(const std::vector<typename Data::Particle>& p) {
+  incoming_particles.insert(incoming_particles.end(), p.begin(), p.end());
 }
 
 template <typename Data>

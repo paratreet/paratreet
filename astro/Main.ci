@@ -7,7 +7,6 @@ mainmodule Main {
 
   initnode void initialize(void);
 
-  message ParticleMsg<CentroidData>;
   extern entry void Partition<CentroidData> startDown<GravityVisitor> (GravityVisitor v);
   extern entry void Subtree<CentroidData> startDual<GravityVisitor> (GravityVisitor v);
   extern entry void Partition<CentroidData> startBasicDown<GravityVisitor> (GravityVisitor v);

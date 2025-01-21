@@ -27,6 +27,7 @@ struct Particle {
   Real density;
   Real potential;
   Real u;
+  Real u_predicted;
   Real soft;
   Vector3D<Real> position;
   Vector3D<Real> acceleration;
@@ -48,7 +49,6 @@ struct Particle {
     void pup(PUP::er&);
     const Effect& operator+=(const Effect& e);
   };
-  Real u_predicted;
 
   enum class Type : char {
     eStar = 1,

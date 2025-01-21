@@ -12,6 +12,7 @@ Particle::Particle(const Particle& other)
   density(other.density),
   potential(other.potential),
   u(other.u),
+  u_predicted(other.u_predicted),
   soft(other.soft),
   position(other.position),
   acceleration(other.acceleration),
@@ -30,6 +31,7 @@ Particle& Particle::operator=(const Particle& other) {
   density = other.density;
   potential = other.potential;
   u = other.u;
+  u_predicted = other.u_predicted;
   soft = other.soft;
   position = other.position;
   acceleration = other.acceleration;
@@ -106,6 +108,7 @@ void Particle::pup(PUP::er &p) {
   p|velocity;
   p|soft;
   p|type;
+  p|updated_time;
   p|ball;
 }
 
