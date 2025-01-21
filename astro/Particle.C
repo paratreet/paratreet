@@ -102,14 +102,15 @@ void Particle::pup(PUP::er &p) {
   p|potential;
   p|u;
   p|u_predicted;
-  p|pressure_dVolume;
+  p|soft;
   p|position;
   p|acceleration;
   p|velocity;
-  p|soft;
-  p|type;
+  p|velocity_predicted;
+  p|pressure_dVolume;
   p|updated_time;
   p|ball;
+  p|type;
 }
 
 void Particle::reset() {
