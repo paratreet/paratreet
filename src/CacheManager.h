@@ -138,7 +138,7 @@ public:
     auto handleLeaf = [&] (Node<Data>* leaf) {
       for (int i = 0; i < leaf->n_particles; i++) {
         //CkPrintf("Requesting particle %" PRIx64 "\n", leaf->particles()[i].key);
-        partitions_to_request[leaf->particles()[i].partition_idx].push_back(leaf->particles()[i].key);
+        partitions_to_request[leaf->particle(i).partition_idx].push_back(leaf->particle(i).key);
       }
     };
     for (auto && dlv : displaced_leaves) {
@@ -155,11 +155,11 @@ public:
     size_t replaced = 0;
     auto handleLeaf = [&] (Node<Data>* leaf) {
       for (int i = 0; i < leaf->n_particles; i++) {
-        auto it = key_mappings.find(leaf->particles()[i].key);
+        auto it = key_mappings.find(leaf->particle(i).key);
         if (it != key_mappings.end()) {
           replaced++;
           leaf->particle(i) = *(it->second);
-          //CkPrintf("Changing particle %" PRIx64 "\n", leaf->particles()[i].key);
+          //CkPrintf("Changing particle %" PRIx64 "\n", leaf->particle(i).key);
         }
       }
     };

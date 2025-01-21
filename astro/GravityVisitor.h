@@ -129,11 +129,12 @@ void SPLINE(Real r2, Real twoh, Real &a, Real &b)
 
   void addGravity(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
     for (int i = 0; i < target.n_particles; i++) {
-      Vector3D<Real> diff = source.data.multipoles.cm + offset - target.particles()[i].position;
+      auto& part = target.particle(i);
+      Vector3D<Real> diff = source.data.multipoles.cm + offset - part.position;
       Real rsq = diff.lengthSquared();
       if (rsq != 0) {
         Vector3D<Real> accel = diff * (source.data.multipoles.totalMass / (rsq * sqrt(rsq)));
-        target.applyEffect(i, {accel, 0., 0.});
+        part.acceleration += accel;
       }
     }
   }
@@ -143,19 +144,18 @@ public:
   /// in the target and node.
   void leaf(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
     for (int i = 0; i < target.n_particles; i++) {
-      Vector3D<Real> accel(0.0);
+      auto& part = target.particle(i);
       for (int j = 0; j < source.n_particles; j++) {
-          Vector3D<Real> diff = source.particles()[j].position + offset - target.particles()[i].position;
+          Vector3D<Real> diff = source.particles()[j].position + offset - part.position;
           Real rsq = diff.lengthSquared();
-          Real twoh = source.particles()[j].soft + target.particles()[i].soft;
+          Real twoh = source.particles()[j].soft + part.soft;
           if (rsq != 0) {
               Real a, b;        /* potential and force terms returned
                                  * from SPLINE */
               SPLINE(rsq, twoh, a, b);
-              accel += diff * (b * source.particles()[j].mass);
+              part.acceleration += diff * (b * source.particles()[j].mass);
           }
       }
-      target.applyEffect(i, {accel, 0., 0.});
     }
   }
 
@@ -192,7 +192,7 @@ public:
     }
     auto& m = source.data.multipoles;
     for (int i = 0; i < target.n_particles; i++) {
-      auto& part = target.particles()[i];
+      auto& part = target.particle(i);
       auto r = part.position - m.cm - offset;
       auto rsq = r.lengthSquared();
       Real dir = 1.0 / sqrt(rsq);
@@ -202,7 +202,8 @@ public:
       Real magai;
       momEvalFmomrcm(&m.mom, m.getRadius(), dir, r.x, r.y, r.z,
 		  &potential, &accel.x, &accel.y, &accel.z, &magai);
-      target.applyEffect(i, {accel, potential, 0.});
+      part.acceleration += accel;
+      part.potential += potential;
 #else
       Real twoh = m.soft + part.soft;
       Real a, b, c, d; 
@@ -214,9 +215,8 @@ public:
       Real qir = 0.5 * dot(qirv, r);
       Real tr = 0.5 * (m.xx + m.yy + m.zz);
       Real qir3 = b*m.totalMass + d*qir - c*tr;
-      auto potential = -m.totalMass * a - c*qir + b*tr;
-      auto accel = (-qir3 * r) + (c * qirv);
-      target.applyEffect(i, {accel, potential, 0.});
+      target.potential += -m.totalMass * a - c*qir + b*tr;
+      target.acceleration += (-qir3 * r) + (c * qirv);
 #endif
     }
 #endif

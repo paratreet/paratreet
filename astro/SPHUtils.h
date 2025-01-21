@@ -61,8 +61,7 @@ typedef struct PressSmoothParticleStruct {
     double PoverRho2f;
 } PressSmoothParticle;
 
-static void doSPHCalc(SpatialNode<CentroidData>& leaf, int pi, Real fBall, OppositeEffectsManager<CentroidData>* oem, const Particle& b, Real fDivv_Corrector) {
-    auto& a = leaf.particles()[pi];
+static void doSPHCalc(Particle& a, Real fBall, OppositeEffectsManager<CentroidData>* oem, const Particle& b, Real fDivv_Corrector) {
     static constexpr const Real visc = 0.;
     static constexpr const Real aFac = 1.; // both of these are cosmology
     static constexpr const Real vFac = 1.;
@@ -73,7 +72,6 @@ static void doSPHCalc(SpatialNode<CentroidData>& leaf, int pi, Real fBall, Oppos
     // poverrho2 is pressure over density^2.
     // poverrho2 = gammam1 * p.uPred() / density;
     // poverrho2f is the geometric mean of the two densities
-
 
     Real ph = 0.5 * fBall; // fBall is the smoothing length and also the search radius
     Real ih2 = 4. / (fBall * fBall); // invH2 in changa
@@ -119,7 +117,8 @@ static void doSPHCalc(SpatialNode<CentroidData>& leaf, int pi, Real fBall, Oppos
     PdV += bParams.rNorm*aParams.PoverRho2*params.dvdotdr;
     auto && acc = (aParams.PoverRho2 + bParams.PoverRho2) + params.visc;
     assert(isfinite(acc));
-    leaf.applyEffect(pi, Particle::Effect{acc*bParams.rNorm*params.dx, 0., PdV});
+    a.acceleration += acc*bParams.rNorm*params.dx;
+    a.pressure_dVolume += PdV;
     
 //    updateParticle(a, b, &params, &qParams, &pParams, -1);
     PdV = aParams.rNorm * 0.5 * params.visc * params.dvdotdr;
@@ -129,5 +128,3 @@ static void doSPHCalc(SpatialNode<CentroidData>& leaf, int pi, Real fBall, Oppos
 }
 
 }
-
-

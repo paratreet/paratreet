@@ -47,7 +47,7 @@ public:
     // Check if any of the target balls intersect the source volume
     for (int i = 0; i < target.n_particles; i++) {
       Real ballSq = target.particle(i).ball * target.particle(i).ball;
-      if(Space::intersect(source.data.box, target.particles()[i].position, ballSq))
+      if(Space::intersect(source.data.box, target.particle(i).position, ballSq))
         return true;
     }
     return false;

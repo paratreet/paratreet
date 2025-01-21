@@ -29,6 +29,7 @@ PARATREET_REGISTER_PER_LEAF_FN(DensityFn, CentroidData, (
       part.density = density;
       part.sphBallSq = rsq;
       leaf.data.max_rad = std::max(leaf.data.max_rad, fBall);
+      Q.clear();
     }
   }));
 
@@ -57,9 +58,8 @@ PARATREET_REGISTER_PER_LEAF_FN(ForceFn, CentroidData, (
       auto fDivv_Corrector = (divvj != 0.0 ? divvi/divvj : 1.0);
 
       for (int i = 0; i < Q.size(); i++) {
-        doSPHCalc(leaf, pi, fBall, oem, *Q[i].pPtr, fDivv_Corrector);
+        doSPHCalc(part, fBall, oem, *Q[i].pPtr, fDivv_Corrector);
       }
-      Q.clear();
     }
   }));
 
