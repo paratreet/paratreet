@@ -4,13 +4,13 @@
 #include "common.h"
 #include <vector>
 #include <queue>
-#include "Particle.h"
-#include "BoundingBox.h"
+#include "BasicParticle.h"
+#include "BasicBoundingBox.h"
 #include "Paratreet.h"
 
 struct SearchData {
-  using Particle = ::Particle;
-  using BoundingBox = ::BoundingBox;
+  using Particle = paratreet::BasicParticle;
+  using BoundingBox = paratreet::BasicBoundingBox;
   static void loadParticlesFromFile(int reader_index, int n_readers, const paratreet::Configuration& config, std::vector<Particle>& particles);
   static void addParticleToBox(const Particle& p, BoundingBox& box);
   static void adjustParticleForUniverse(Particle& p, const BoundingBox& box);

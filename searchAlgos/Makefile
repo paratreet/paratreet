@@ -6,10 +6,10 @@ OPTS = -g -O3 $(INCLUDES) -DCOUNT_INTERACTIONS=0 -DDEBUG=0 $(MAKE_OPTS)
 CHARMC = $(CHARM_HOME)/bin/charmc $(OPTS)
 
 all: VisitAll
-DATA = SearchData.h Particle.h BoundingBox.h
+DATA = SearchData.h
 VISITORS = VisitAllVisitor.h
 OTHERS = CountManager.h
-OBJS = Particle.o BoundingBox.o SearchData.o Main.o
+OBJS = SearchData.o Main.o
 
 debug:
 	echo $(LB_LIBS)
@@ -26,13 +26,7 @@ VisitAll.o: VisitAll.C Main.decl.h
 Main.o: Main.C $(VISITORS) $(OTHERS) Main.decl.h
 	$(CHARMC) -c $<
 
-Particle.o: Particle.C Particle.h
-	$(CHARMC) -c $<
-
-BoundingBox.o: BoundingBox.C Particle.h
-	$(CHARMC) -c $<
-
-SearchData.o: SearchData.C SearchData.h Particle.h BoundingBox.h
+SearchData.o: SearchData.C SearchData.h
 	$(CHARMC) -c $<
 
 test: all

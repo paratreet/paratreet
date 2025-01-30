@@ -3,7 +3,7 @@ include Makefile.common
 OPTS = -g -Ofast $(INCLUDES) -DDEBUG=0 $(MAKE_OPTS)
 CHARMC = $(CHARM_HOME)/bin/charmc $(OPTS)
 
-OBJS = Paratreet.o Loadable.o Decomposition.o Modularization.o TreeSpec.o StatisticsTracker.o
+OBJS = Paratreet.o Loadable.o Decomposition.o Modularization.o TreeSpec.o StatisticsTracker.o BasicParticle.o BasicBoundingBox.o
 
 UTILITY_HEADERS = common.h Utility.h $(STRUCTURE_PATH)/Vector3D.h $(STRUCTURE_PATH)/SFC.h
 CORE_HEADERS = BufferedVec.h MultiData.h Node.h Splitter.h

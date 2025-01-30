@@ -1,29 +1,31 @@
-#include "BoundingBox.h"
+#include "BasicBoundingBox.h"
 #include <iomanip>
 
-CkReduction::reducerType BoundingBox::boxReducer;
+namespace paratreet {
 
-BoundingBox::BoundingBox(){
+CkReduction::reducerType BasicBoundingBox::boxReducer;
+
+BasicBoundingBox::BasicBoundingBox(){
   reset();
 }
 
-void BoundingBox::reset(){
+void BasicBoundingBox::reset(){
   n_particles = 0;
   box.reset();
   mass = 0.0;
 }
 
-void BoundingBox::grow(const Vector3D<Real> &v){
+void BasicBoundingBox::grow(const Vector3D<Real> &v){
   box.grow(v);
 }
 
 /*
  * This method is called when performing a reduction over
- * BoundingBox's. It subsumes the bounding box of the 'other'
+ * BasicBoundingBox's. It subsumes the bounding box of the 'other'
  * and accumulates its energy in its own. If a PE has no
  * particles, its contributions are not counted.
 */
-void BoundingBox::grow(const BoundingBox &other){
+void BasicBoundingBox::grow(const BasicBoundingBox &other){
   if(other.n_particles == 0) return;
   if(n_particles == 0){
     *this = other;
@@ -36,12 +38,12 @@ void BoundingBox::grow(const BoundingBox &other){
   }
 }
 
-void BoundingBox::expand(Real pad){
+void BasicBoundingBox::expand(Real pad){
   box.greater_corner = box.greater_corner*pad+box.greater_corner;
   box.lesser_corner = box.lesser_corner-pad*box.lesser_corner;
 }
 
-void BoundingBox::finalizeUniverse() {
+void BasicBoundingBox::finalizeUniverse() {
   Vector3D<Real> bsize = box.size();
   Real max = (bsize.x > bsize.y) ? bsize.x : bsize.y;
   max = (max > bsize.z) ? max : bsize.z;
@@ -52,14 +54,27 @@ void BoundingBox::finalizeUniverse() {
   box = OrientedBox<Real>(bcenter-bsize, bcenter+bsize);
 }
 
-void BoundingBox::pup(PUP::er &p){
+void BasicBoundingBox::pup(PUP::er &p){
   p | box;
   p | n_particles;
   p | mass;
   p | updated_time;
 }
 
-ostream &operator<<(ostream &os, const BoundingBox &bb){
+CkReductionMsg* BasicBoundingBox::reduceFn(int n_msgs, CkReductionMsg** msgs) {
+  BasicBoundingBox* b = static_cast<BasicBoundingBox*>(msgs[0]->getData());
+  if (n_msgs > 1) {
+    BasicBoundingBox* msgb;
+    for (int i = 1; i < n_msgs; i++) {
+      msgb = static_cast<BasicBoundingBox*>(msgs[i]->getData());
+      *b += *msgb;
+    }
+  }
+
+  return CkReductionMsg::buildNew(sizeof(BasicBoundingBox), b);
+}
+
+std::ostream &operator<<(ostream &os, const paratreet::BasicBoundingBox &bb){
   os << "<"
      << bb.n_particles << ", "
      << std::fixed << std::setprecision(3)
@@ -70,15 +85,5 @@ ostream &operator<<(ostream &os, const BoundingBox &bb){
   return os;
 }
 
-CkReductionMsg* BoundingBox::reduceFn(int n_msgs, CkReductionMsg** msgs) {
-  BoundingBox* b = static_cast<BoundingBox*>(msgs[0]->getData());
-  if (n_msgs > 1) {
-    BoundingBox* msgb;
-    for (int i = 1; i < n_msgs; i++) {
-      msgb = static_cast<BoundingBox*>(msgs[i]->getData());
-      *b += *msgb;
-    }
-  }
+} // end namespace paratreet
 
-  return CkReductionMsg::buildNew(sizeof(BoundingBox), b);
-}

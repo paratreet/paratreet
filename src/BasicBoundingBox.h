@@ -1,17 +1,19 @@
-#ifndef SEARCHALGOS_BOUNDING_BOX_H_
-#define SEARCHALGOS_BOUNDING_BOX_H_
+#ifndef PARATREET_BASICBOUNDINGBOX_H_
+#define PARATREET_BASICBOUNDINGBOX_H_
 
 #include "OrientedBox.h"
 #include "common.h"
 
+namespace paratreet {
+
 /*
- * BoundingBox:
+ * BasicBoundingBox:
  * Used to calculate the bounding box of all particles in the
  * simulation universe. It also keeps track of particle energy,
  * to see whether there is a drift in the total system energy
  * through the simulation.
  */
-struct BoundingBox {
+struct BasicBoundingBox {
   const OrientedBox<Real>& boxCorners() const {return box;}
   int numParticles() const {return n_particles;}
 
@@ -22,15 +24,15 @@ struct BoundingBox {
 
   static CkReduction::reducerType boxReducer;
 
-  BoundingBox();
+  BasicBoundingBox();
   void pup(PUP::er &p);
   void expand(Real pad);
-  void grow(const BoundingBox& other);
+  void grow(const BasicBoundingBox& other);
   void grow(const Vector3D<Real>& v);
   void reset();
   void finalizeUniverse();
 
-  BoundingBox &operator+=(const BoundingBox& other){
+  BasicBoundingBox &operator+=(const BasicBoundingBox& other){
     grow(other);
     return *this;
   }
@@ -46,10 +48,12 @@ struct BoundingBox {
   }
 };
 
-#include <iostream>
-using namespace std;
-ostream &operator<<(ostream &os, const BoundingBox &bb);
-
 CkReductionMsg *reduceBoxes(int n_msg, CkReductionMsg** msgs);
 
-#endif // SEARCHALGOS_BOUNDING_BOX_H_
+#include <iostream>
+using namespace std;
+ostream &operator<<(ostream &os, const paratreet::BasicBoundingBox &bb);
+
+} // end namespace paratreet
+
+#endif // PARATREET_BASICBOUNDINGBOX_H_

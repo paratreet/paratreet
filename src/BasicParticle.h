@@ -1,9 +1,11 @@
-#ifndef ASTRO_PARTICLE_H_
-#define ASTRO_PARTICLE_H_
+#ifndef PARATREET_BASICPARTICLE_H_
+#define PARATREET_BASICPARTICLE_H_
 
 #include "common.h"
 
-struct Particle {
+namespace paratreet {
+
+struct BasicParticle {
   Key key;
   int order;
   int partition_idx = 0; // Only used when Subtree and Partition have different decomp types
@@ -21,7 +23,7 @@ struct Particle {
     const Effect& operator+=(const Effect& e);
   };
 
-  Particle();
+  BasicParticle();
 
   void applyEffect(const Effect& effect);
 
@@ -34,11 +36,13 @@ struct Particle {
   void perturb(Real timestep);
   void adjustForUniverse(OrientedBox<Real> universe);
 
-  bool operator==(const Particle&) const;
-  bool operator<=(const Particle&) const;
-  bool operator>(const Particle&) const;
-  bool operator>=(const Particle&) const;
-  bool operator<(const Particle&) const;
+  bool operator==(const BasicParticle&) const;
+  bool operator<=(const BasicParticle&) const;
+  bool operator>(const BasicParticle&) const;
+  bool operator>=(const BasicParticle&) const;
+  bool operator<(const BasicParticle&) const;
 };
 
-#endif // ASTRO_PARTICLE_H_
+} // end namespace paratreet
+
+#endif // PARATREET_BASICPARTICLE_H_

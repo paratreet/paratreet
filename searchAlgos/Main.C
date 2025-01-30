@@ -8,7 +8,7 @@ PARATREET_REGISTER_MAIN(ExMain);
 /* readonly */ CProxy_VisitAllTracker visit_all_tracker;
 
 static void initialize() {
-  BoundingBox::registerReducer();
+  paratreet::BasicBoundingBox::registerReducer();
 }
 
 void ExMain::setDefaults(void) {
