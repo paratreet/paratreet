@@ -98,7 +98,7 @@ public:
     bool matching_decomps = config.decomp_type == paratreet::subtreeDecompForTree(config.tree_type);
     // Set up splitters for decomposition
     start_time = CkWallTimer();
-    ReaderProxy readerProxy (readers);
+    ReaderProxy<Data> readerProxy (readers);
     n_partitions = treespec.ckLocalBranch()->getPartitionDecomposition()->findSplitters(universe.boxCorners(), universe.numParticles(), &readerProxy, config.min_n_partitions, false);
     partition_locations.resize(n_partitions);
     treespec.receiveDecomposition(CkCallbackResumeThread(),

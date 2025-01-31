@@ -61,7 +61,7 @@ CkReductionMsg* Decomposition::doSplit(const std::vector<GenericSplitter>& split
 bool SfcDecomposition::flush(IParticleViewer* particles, int* destinations) {
   std::function<bool(const IParticleViewer*, int, Key)> compGE = [] (const IParticleViewer* particles, int a, Key b) {return particles->key(a) >= b;};
   std::function<bool(const IParticleViewer*, int, Key)> compG  = [] (const IParticleViewer* particles, int a, Key b) {return particles->key(a) > b;};
-  particles->sortByKey([] (auto && a, auto && b) {return a < b;});
+  particles->sortByKey([] (Key a, Key b) {return a < b;});
   int begin = Utility::binarySearchComp(
     splitters[0].from, particles, 0, particles->size(), compGE
     );
@@ -299,7 +299,7 @@ bool OctDecomposition::flush(IParticleViewer* particles, int* destinations) {
 
   // Find particles that belong to each splitter range and flush them
   std::function<bool(const IParticleViewer*, int, Key)> compGE = [] (const IParticleViewer* particles, int a, Key b) {return particles->key(a) >= b;};
-  particles->sortByKey([] (auto && a, auto && b) {return a < b;});
+  particles->sortByKey([] (Key a, Key b) {return a < b;});
   for (int i = 0; i < splitters.size(); i++) {
     int begin = Utility::binarySearchComp(splitters[i].from, particles, start, finish, compGE);
     int end = Utility::binarySearchComp(splitters[i].to, particles, begin, finish, compGE);
