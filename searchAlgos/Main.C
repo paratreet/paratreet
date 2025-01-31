@@ -43,10 +43,6 @@ void ExMain::main(CkArgMsg* m) {
   CkPrintf("Minimum number of subtrees: %d\n", conf.min_n_subtrees);
   CkPrintf("Minimum number of partitions: %d\n", conf.min_n_partitions);
   CkPrintf("Maximum number of particles per leaf: %d\n", conf.max_particles_per_leaf);
-
-  // Delegate to Driver
-  // CkCallback runCB(CkIndex_Main::run(), thisProxy);
-  // driver = paratreet::initialize<CentroidData>(conf, runCB);
 }
 
 void ExMain::run() {

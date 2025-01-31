@@ -76,10 +76,6 @@ void ExMain::main(CkArgMsg* m) {
 
   astroConf = conf.astro;
   ewaldProxy = CProxy_EwaldData::ckNew();
-
-  // Delegate to Driver
-  // CkCallback runCB(CkIndex_Main::run(), thisProxy);
-  // driver = paratreet::initialize<CentroidData>(conf, runCB);
 }
 
 void ExMain::run() {

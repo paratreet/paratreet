@@ -298,8 +298,8 @@ public:
 };
 
 struct AstroConfiguration : public paratreet::Configuration {
-  Real theta;
-  Real max_timestep;
+  Real theta = 0.7;
+  Real max_timestep = 1e-5;
   std::string test_file;
   AstroConfiguration();
   AstroConfiguration(CkMigrateMessage *m);
@@ -371,10 +371,6 @@ void ExMain::main(CkArgMsg* m) {
   theta = conf.theta;
   max_timestep = conf.max_timestep;
   test_file = conf.test_file;
-
-  // Delegate to Driver
-  // CkCallback runCB(CkIndex_Main::run(), thisProxy);
-  // driver = paratreet::initialize<CentroidData>(conf, runCB);
 }
 
 void ExMain::run() {
