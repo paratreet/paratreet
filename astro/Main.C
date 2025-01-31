@@ -31,7 +31,7 @@ AstroConfiguration::AstroConfiguration(CkMigrateMessage *m): paratreet::Configur
 
 void AstroConfiguration::pup(PUP::er &p) {
   paratreet::Configuration::pup(p);
- p | astro;
+  p | astro;
 }
 
 static void initialize() {
