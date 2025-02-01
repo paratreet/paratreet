@@ -83,28 +83,32 @@ size_t ParticleViewer<Data>::size() const {
 
 template <typename Data>
 void ParticleViewer<Data>::sortByPosition(const PositionComparatorFn& fn) {
-  std::sort(particles, particles + n_particles, [fn] (auto && a, auto && b) {
+  std::sort(particles, particles + n_particles, [fn] (
+    const typename Data::Particle& a, const typename Data::Particle& b) {
     return fn(a.position, b.position);
   });
 }
 
 template <typename Data>
 void ParticleViewer<Data>::sortByKey(const KeyComparatorFn& fn) {
-  std::sort(particles, particles + n_particles, [fn] (auto && a, auto && b) {
+  std::sort(particles, particles + n_particles, [fn] (
+    const typename Data::Particle& a, const typename Data::Particle& b) {
     return fn(a.key, b.key);
   });
 }
 
 template <typename Data>
 void ParticleViewer<Data>::nthElementByPosition(size_t n, const PositionComparatorFn& fn) {
-  std::nth_element(particles, particles + n, particles + n_particles, [fn] (auto && a, auto && b) {
+  std::nth_element(particles, particles + n, particles + n_particles, [fn] (
+    const typename Data::Particle& a, const typename Data::Particle& b) {
     return fn(a.position, b.position);
   });
 }
 
 template <typename Data>
 void ParticleViewer<Data>::nthElementByKey(size_t n, const KeyComparatorFn& fn) {
-  std::nth_element(particles, particles + n, particles + n_particles, [fn] (auto && a, auto && b) {
+  std::nth_element(particles, particles + n, particles + n_particles, [fn] (
+    const typename Data::Particle& a, const typename Data::Particle& b) {
     return fn(a.key, b.key);
   });
 }
