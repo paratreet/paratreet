@@ -255,8 +255,12 @@ void Reader<Data>::write(int prefix_count, std::string output_file, typename Dat
 {
   Data::outputToFile(this->thisIndex, prefix_count, box, iter, output_file, saved_particles, indicator);
   int new_prefix_count = prefix_count + saved_particles.size();
-  if (this->thisIndex != CkNumPes() - 1) this->thisProxy[this->thisIndex + 1].write(new_prefix_count, output_file, box, iter, indicator, cb);
-  else cb.send();
+  if (this->thisIndex != CkNumPes() - 1) {
+    this->thisProxy[this->thisIndex + 1].write(new_prefix_count, output_file, box, iter, indicator, cb);
+  }
+  else {
+    cb.send();
+  }
   saved_particles.clear();
 }
 

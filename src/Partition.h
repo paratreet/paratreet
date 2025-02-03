@@ -63,7 +63,7 @@ public: // acceptable for users to access
   void rebuild(typename Data::BoundingBox, TPHolder<Data>, bool);
   void globalSortToReader(int n_total_particles);
   void callPerLeafFn(paratreet::PerLeafAble<Data>&, const CkCallback&);
-  void deleteParticleOfOrder(int order) {particle_delete_order.insert(order);}
+  void deleteParticleOfOrder(int order);
   void requestParticleUpdates(int cm_index, std::vector<Key> pKeys);
   void applyOpposingEffects(std::vector<std::pair<Key, typename Data::Particle::Effect>> effects);
   void pup(PUP::er& p);
@@ -183,8 +183,8 @@ void Partition<Data>::requestParticleUpdates(int cm_index, std::vector<Key> pKey
   std::vector<typename Data::Particle> particles_sending;
   for (auto& leaf : leaves) {
     for (int pi = 0; pi < leaf->n_particles; pi++) {
-      if (keySet.count(leaf->particles()[pi].key)) {
-        particles_sending.push_back(leaf->particles()[pi]);
+      if (keySet.count(leaf->particle(pi).key)) {
+        particles_sending.push_back(leaf->particle(pi));
       }
     }
   }
@@ -196,7 +196,7 @@ void Partition<Data>::applyOpposingEffects(std::vector<std::pair<Key, typename D
   std::map<Key, typename Data::Particle::Effect> effects_map (effects.begin(), effects.end());
   for (auto& leaf : leaves) {
     for (int pi = 0; pi < leaf->n_particles; pi++) {
-      auto it = effects_map.find(leaf->particles()[pi].key);
+      auto it = effects_map.find(leaf->particle(pi).key);
       if (it != effects_map.end()) {
         leaf->applyEffect(pi, it->second);
       }
@@ -215,8 +215,8 @@ void Partition<Data>::addLeaves(const std::vector<Node<Data>*>& leaf_ptrs, int s
     for (auto leaf : leaf_ptrs) {
       std::vector<typename Data::Particle> leaf_particles;
       for (int pi = 0; pi < leaf->n_particles; pi++) {
-        if (leaf->particles()[pi].partition_idx == this->thisIndex) {
-          leaf_particles.push_back(leaf->particles()[pi]);
+        if (leaf->particle(pi).partition_idx == this->thisIndex) {
+          leaf_particles.push_back(leaf->particle(pi));
         }
       }
       if (leaf_particles.size() == leaf->n_particles) {
@@ -399,11 +399,16 @@ void Partition<Data>::callPerLeafFn(paratreet::PerLeafAble<Data>& perLeafFn, con
 }
 
 template <typename Data>
+void Partition<Data>::deleteParticleOfOrder(int order) {
+  particle_delete_order.insert(order);
+}
+
+template <typename Data>
 void Partition<Data>::copyParticlesFromLeaves(std::vector<typename Data::Particle>& particles, bool check_delete) {
   for (auto && leaf : leaves) {
     for (int i = 0; i < leaf->n_particles; i++) {
-      if (!check_delete || particle_delete_order.find(leaf->particles()[i].order) == particle_delete_order.end()) {
-        particles.emplace_back(leaf->particles()[i]);
+      if (!check_delete || particle_delete_order.find(leaf->particle(i).order) == particle_delete_order.end()) {
+        particles.emplace_back(leaf->particle(i));
       }
     }
   }

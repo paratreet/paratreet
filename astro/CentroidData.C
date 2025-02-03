@@ -165,6 +165,9 @@ void CentroidData::outputToFile(int writer_index, int particle_index, const Boun
           CkAbort("Bad Write");
         }
       }
+      else {
+        CkAbort("Unknown particle type\n");
+      }
     }
   }
   else {

@@ -20,7 +20,8 @@ Particle::Particle(const Particle& other)
   velocity_predicted(other.velocity_predicted),
   pressure_dVolume(other.pressure_dVolume),
   updated_time(other.updated_time),
-  ball(other.ball)
+  ball(other.ball),
+  type(other.type)
 {}
 
 Particle& Particle::operator=(const Particle& other) {
@@ -40,6 +41,7 @@ Particle& Particle::operator=(const Particle& other) {
   pressure_dVolume = other.pressure_dVolume;
   updated_time = other.updated_time;
   ball = other.ball;
+  type = other.type;
   return *this;
 }
 
