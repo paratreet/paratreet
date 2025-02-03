@@ -6,16 +6,13 @@
 #include "Subtree.h"
 #include "Partition.h"
 #include "TreeCanopy.h"
-#include "BoundingBox.h"
 #include "BufferedVec.h"
 #include "Utility.h"
 #include "CacheManager.h"
 #include "Resumer.h"
 
-/* readonly */ CProxy_Reader readers;
 /* readonly */ CProxy_TreeSpec treespec;
-/* readonly */ CProxy_ThreadStateHolder thread_state_holder;
-/* readonly */ int n_readers;
+/* readonly */ int peanoKey;
 
 using namespace paratreet;
 

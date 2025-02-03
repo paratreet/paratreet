@@ -17,8 +17,8 @@ extern CProxy_TreeSpec treespec;
 template <typename Data>
 struct NodePool {
   virtual ~NodePool() = default;
-  virtual Node<Data>* alloc(Key key, typename Node<Data>::Type type, int depth, int n_particles, Particle* particles, Node<Data>* parent, int tp_index, int cm_index) = 0;
-  virtual Node<Data>* alloc(Key key, typename Node<Data>::Type type, SpatialNode<Data> spatial_node, Node<Data>* parent, Particle* particles, int tp_index, int cm_index) = 0;
+  virtual Node<Data>* alloc(Key key, typename Node<Data>::Type type, int depth, int n_particles, typename Data::Particle* particles, Node<Data>* parent, int tp_index, int cm_index) = 0;
+  virtual Node<Data>* alloc(Key key, typename Node<Data>::Type type, SpatialNode<Data> spatial_node, Node<Data>* parent, typename Data::Particle* particles, int tp_index, int cm_index) = 0;
   virtual void cleanup() = 0;
 };
 
@@ -34,13 +34,13 @@ public:
   virtual ~FullNodePool() override {
     for (auto& elem : list) delete[] elem.ptr;
   }
-  virtual Node<Data>* alloc(Key key, typename Node<Data>::Type type, int depth, int n_particles, Particle* particles, Node<Data>* parent, int tp_index, int cm_index) override {
+  virtual Node<Data>* alloc(Key key, typename Node<Data>::Type type, int depth, int n_particles, typename Data::Particle* particles, Node<Data>* parent, int tp_index, int cm_index) override {
     auto buf = getBuf();
     if (type == Node<Data>::Type::Leaf)  { // use this not (n_particles > 0)
       return new (buf) FullNode<Data, BranchFactor>(key, type, depth, n_particles, particles, parent, tp_index, cm_index);
     } else return new (buf) FullNode<Data, BranchFactor>(key, type, depth, parent, tp_index, cm_index);
   }
-  virtual Node<Data>* alloc(Key key, typename Node<Data>::Type type, SpatialNode<Data> spatial_node, Node<Data>* parent, Particle* particles, int tp_index, int cm_index) override {
+  virtual Node<Data>* alloc(Key key, typename Node<Data>::Type type, SpatialNode<Data> spatial_node, Node<Data>* parent, typename Data::Particle* particles, int tp_index, int cm_index) override {
     auto buf = getBuf();
     return new (buf) FullNode<Data, BranchFactor>(key, type, spatial_node, particles, parent, tp_index, cm_index);
   }
@@ -138,7 +138,7 @@ public:
     auto handleLeaf = [&] (Node<Data>* leaf) {
       for (int i = 0; i < leaf->n_particles; i++) {
         //CkPrintf("Requesting particle %" PRIx64 "\n", leaf->particles()[i].key);
-        partitions_to_request[leaf->particles()[i].partition_idx].push_back(leaf->particles()[i].key);
+        partitions_to_request[leaf->particle(i).partition_idx].push_back(leaf->particle(i).key);
       }
     };
     for (auto && dlv : displaced_leaves) {
@@ -149,17 +149,17 @@ public:
       pp_holder.proxy[pair.first].requestParticleUpdates(this->thisIndex, pair.second);
     }
   }
-  void receiveParticleUpdates(const std::vector<Particle>& particles_received) {
-    std::map<Key, const Particle*> key_mappings;
+  void receiveParticleUpdates(const std::vector<typename Data::Particle>& particles_received) {
+    std::map<Key, const typename Data::Particle*> key_mappings;
     for (auto& p : particles_received) key_mappings.emplace(p.key, &p);
     size_t replaced = 0;
     auto handleLeaf = [&] (Node<Data>* leaf) {
       for (int i = 0; i < leaf->n_particles; i++) {
-        auto it = key_mappings.find(leaf->particles()[i].key);
+        auto it = key_mappings.find(leaf->particle(i).key);
         if (it != key_mappings.end()) {
           replaced++;
-          leaf->changeParticle(i, *(it->second));
-          //CkPrintf("Changing particle %" PRIx64 "\n", leaf->particles()[i].key);
+          leaf->particle(i) = *(it->second);
+          //CkPrintf("Changing particle %" PRIx64 "\n", leaf->particle(i).key);
         }
       }
     };
@@ -188,14 +188,14 @@ public:
     root = nullptr;
   }
 
-  Node<Data>* makeNode(Key key, typename Node<Data>::Type type, int depth, int n_particles, Particle* particles, Node<Data>* parent, int tp_index, int cm_index) {
+  Node<Data>* makeNode(Key key, typename Node<Data>::Type type, int depth, int n_particles, typename Data::Particle* particles, Node<Data>* parent, int tp_index, int cm_index) {
     return pools[CkMyRank()]->alloc(key, type, depth, n_particles, particles, parent, tp_index, cm_index);
   }
 
-  Node<Data>* makeCachedNode(Key key, typename Node<Data>::Type type, SpatialNode<Data> spatial_node, Node<Data>* parent, const Particle* particlesToCopy, int tp_index, int cm_index) {
-    Particle* particles = nullptr;
-    if (spatial_node.n_particles > 0) {
-      particles = new Particle [spatial_node.n_particles];
+  Node<Data>* makeCachedNode(Key key, typename Node<Data>::Type type, SpatialNode<Data> spatial_node, Node<Data>* parent, const typename Data::Particle* particlesToCopy, int tp_index, int cm_index) {
+    typename Data::Particle* particles = nullptr;
+    if (spatial_node.n_particles > 0 && particlesToCopy != nullptr) {
+      particles = new typename Data::Particle [spatial_node.n_particles];
       std::copy(particlesToCopy, particlesToCopy + spatial_node.n_particles, particles);
     }
     return pools[CkMyRank()]->alloc(key, type, spatial_node, parent, particles, tp_index, cm_index);
@@ -214,8 +214,8 @@ public:
   void connect(Node<Data>*);
 
 private:
-  void makeMsgPerNode(int, std::vector<Node<Data>*>&, std::vector<Particle>&, Node<Data>*);
-  Node<Data>* addCacheHelper(Particle*, int, std::pair<Key, SpatialNode<Data>>*, int, int, int, bool);
+  void makeMsgPerNode(int, std::vector<Node<Data>*>&, std::vector<typename Data::Particle>&, Node<Data>*);
+  Node<Data>* addCacheHelper(typename Data::Particle*, int, std::pair<Key, SpatialNode<Data>>*, int, int, int, bool);
   void restoreDataHelper(std::pair<Key, SpatialNode<Data>>&, bool);
   void insertNode(Node<Data>*, bool, bool);
   void swapIn(Node<Data>*);
@@ -321,7 +321,7 @@ void CacheManager<Data>::addCache(MultiData<Data> multidata) {
 }
 
 template <typename Data>
-Node<Data>* CacheManager<Data>::addCacheHelper(Particle* particles, int n_particles, std::pair<Key, SpatialNode<Data>>* nodes, int n_nodes, int cm_index, int tp_index, bool add_to_tps) {
+Node<Data>* CacheManager<Data>::addCacheHelper(typename Data::Particle* particles, int n_particles, std::pair<Key, SpatialNode<Data>>* nodes, int n_nodes, int cm_index, int tp_index, bool add_to_tps) {
 #if DEBUG
   CkPrintf("adding cache for top node 0x%" PRIx64 " on cm %d\n", nodes[0].first, this->thisIndex);
 #endif
@@ -379,7 +379,7 @@ void CacheManager<Data>::requestNodes(std::pair<Key, int> param) {
 }
 
 template <typename Data>
-void CacheManager<Data>::makeMsgPerNode(int start_depth, std::vector<Node<Data>*>& sending_nodes, std::vector<Particle>& sending_particles, Node<Data>* to_process)
+void CacheManager<Data>::makeMsgPerNode(int start_depth, std::vector<Node<Data>*>& sending_nodes, std::vector<typename Data::Particle>& sending_particles, Node<Data>* to_process)
 {
   auto& config = paratreet::getConfiguration();
   sending_nodes.push_back(to_process);
@@ -398,7 +398,7 @@ template <typename Data>
 void CacheManager<Data>::serviceRequest(Node<Data>* node, int cm_index) {
   if (cm_index == this->thisIndex) return; // you'll get it later!
   std::vector<Node<Data>*> sending_nodes;
-  std::vector<Particle> sending_particles;
+  std::vector<typename Data::Particle> sending_particles;
   makeMsgPerNode(node->depth, sending_nodes, sending_particles, node);
   MultiData<Data> multidata (sending_particles.data(), sending_particles.size(), sending_nodes.data(), sending_nodes.size(), this->thisIndex, node->tp_index);
   this->thisProxy[cm_index].addCache(multidata);

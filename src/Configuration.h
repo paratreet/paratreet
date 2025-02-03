@@ -5,7 +5,6 @@
 #include <functional>
 
 #include "Loadable.h"
-#include "BoundingBox.h"
 
 template<typename T>
 class CProxy_Subtree;
@@ -112,16 +111,8 @@ namespace paratreet {
         int iter_pause_interval;
         // filename representing initial conditions
         std::string input_file;
-        // filename representing output conditions
-        std::string output_file;
-        // Periodic boundar conditions
-        int periodic;
-        // Period lengths
-        Vector3D<double> fPeriod;
-        // Number of replicas for Ewald summation
-        int nReplicas;
-        // Set a gravitational softening for all the particles
-        double dSoft;
+        // peano key referring to which space filling curve to use, 3=hilbert, 0=morton
+        int peanoKey;
 
         // we support loading config files with "-x"
         Configuration(const char* config_arg = "-x")
@@ -141,15 +132,8 @@ namespace paratreet {
           this->register_field("iFlushPeriod", "u", flush_period);
           this->register_field("iFlushPeriodMaxAvgRatio", "r", flush_max_avg_ratio);
           this->register_field("iLbPeriod", "b", lb_period);
-
-          this->register_field("bPeriodic", nullptr, periodic);
-          this->register_field("dxPeriod", nullptr, fPeriod.x);
-          this->register_field("dyPeriod", nullptr, fPeriod.y);
-          this->register_field("dzPeriod", nullptr, fPeriod.z);
-          this->register_field("nReplicas", nullptr, nReplicas);
-          this->register_field("dSoft", "e", dSoft);
           this->register_field("achInputFile", "f", input_file);
-          this->register_field("achOutputFile", "v", output_file);
+          this->register_field("dPeanoKey", "f", peanoKey);
         }
 
         int branchFactor() const {return branchFactorFromTreeType(tree_type);}
@@ -179,10 +163,7 @@ namespace paratreet {
             p | request_pause_interval;
             p | iter_pause_interval;
             p | input_file;
-            p | output_file;
-            p | periodic;
-            p | fPeriod;
-            p | dSoft;
+	    p | peanoKey;
         }
     };
 

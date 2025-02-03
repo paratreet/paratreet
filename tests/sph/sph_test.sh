@@ -1,6 +1,6 @@
 #!/bin/bash
 # Run density/SPH tests on paratreet
-app=../../examples
+app=../../astro
 arr=../array
 make -C $arr > /dev/null
 $app/SPH -i 1 -f adiabtophat_glass_28721.bin -v test

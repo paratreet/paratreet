@@ -102,6 +102,13 @@ struct FieldConverter<double> {
 };
 
 template<>
+struct FieldConverter<float> {
+  double operator()(const char* val) {
+    return atof(val);
+  }
+};
+
+template<>
 struct FieldConverter<int> {
   int operator()(const char* val) {
     return atoi(val);

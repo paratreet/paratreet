@@ -33,6 +33,7 @@ jobs:
     # Prepare ParaTreeT build
     - name: prep-paratreet
       run: |
+        sudo apt-get install libtirpc-dev
         git submodule init
         git submodule update
         cd utility/structures
@@ -45,7 +46,7 @@ jobs:
         export CHARM_HOME=$GITHUB_WORKSPACE/charm
         cd src
         make -j4 MAKE_OPTS="-DGROUP_CACHE"
-        cd ../examples/
+        cd ../astro/
         make MAKE_OPTS="-DGROUP_CACHE"
         ./charmrun +p1 ./Gravity -f ../inputgen/1k.tipsy ++local -u 2
         ./charmrun +p4 ./Gravity -f ../inputgen/1k.tipsy ++local -u 2

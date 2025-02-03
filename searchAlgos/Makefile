@@ -9,6 +9,7 @@ all: VisitAll
 DATA = SearchData.h
 VISITORS = VisitAllVisitor.h
 OTHERS = CountManager.h
+OBJS = SearchData.o Main.o
 
 debug:
 	echo $(LB_LIBS)
@@ -16,13 +17,16 @@ debug:
 Main.decl.h: Main.ci $(DATA)
 	$(CHARMC) $<
 
-VisitAll: Main.decl.h Main.o VisitAll.o ../src/libparatreet.a
-	$(CHARMC) -language charm++ -module CommonLBs -o VisitAll VisitAll.o Main.o $(LD_LIBS)
+VisitAll: Main.decl.h $(OBJS) VisitAll.o ../src/libparatreet.a
+	$(CHARMC) -language charm++ -module CommonLBs -o VisitAll VisitAll.o $(OBJS) $(LD_LIBS)
 
 VisitAll.o: VisitAll.C Main.decl.h
 	$(CHARMC) -c $<
 
 Main.o: Main.C $(VISITORS) $(OTHERS) Main.decl.h
+	$(CHARMC) -c $<
+
+SearchData.o: SearchData.C SearchData.h
 	$(CHARMC) -c $<
 
 test: all

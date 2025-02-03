@@ -6,6 +6,10 @@
 template <typename Data>
 class CProxy_Subtree;
 
+
+template <typename Data>
+class CProxy_Reader;
+
 template <typename Data>
 struct TPHolder {
   CProxy_Subtree<Data> proxy;
@@ -59,20 +63,27 @@ template <typename Data>
 class CProxy_CacheManager;
 
 template <typename Data>
+class CProxy_OppositeEffectsManager;
+
+template <typename Data>
 struct ProxyPack {
   CProxy_Driver<Data> driver;
   CProxy_Subtree<Data> subtree;
   CProxy_Partition<Data> partition;
   CProxy_CacheManager<Data> cache;
-  
-  ProxyPack(CProxy_Driver<Data> d, CProxy_Subtree<Data> s, CProxy_Partition<Data> p, CProxy_CacheManager<Data> c)
-    : driver(d), subtree(s), partition(p), cache(c) {}
+  CProxy_Reader<Data> reader;
+  CProxy_OppositeEffectsManager<Data> opposite_effects_manager;
+
+  ProxyPack(CProxy_Driver<Data> d, CProxy_Subtree<Data> s, CProxy_Partition<Data> p, CProxy_CacheManager<Data> c, CProxy_Reader<Data> r, CProxy_OppositeEffectsManager<Data> o)
+    : driver(d), subtree(s), partition(p), cache(c), reader(r), opposite_effects_manager(o) {}
   ProxyPack() {}
   void pup(PUP::er& p) {
     p | driver;
     p | subtree;
     p | partition;
     p | cache;
+    p | reader;
+    p | opposite_effects_manager;
   }
 };
 

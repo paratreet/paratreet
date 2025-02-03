@@ -98,7 +98,7 @@ protected:
   size_t trav_idx = 0;
   std::vector<Node<Data>*> leaves;
   Partition<Data>& part;
-  ThreadStateHolder* stats = nullptr;
+  StatisticsTracker* stats = nullptr;
   std::unordered_map<Key, ABType> curr_nodes;
   std::vector<std::pair<Node<Data>*, ABType>> paused_curr_nodes;
   int num_requested = 0;
@@ -115,12 +115,11 @@ protected:
   }
 
 public:
-  TransposedDownTraverser(Visitor& vi, size_t ti, std::vector<Node<Data>*> leavesi, Partition<Data>& parti, bool delay_leafi = false)
-    : v(vi), trav_idx(ti), leaves(leavesi), part(parti), delay_leaf(delay_leafi)
+  TransposedDownTraverser(Visitor& vi, size_t ti, std::vector<Node<Data>*> leavesi, Partition<Data>& parti, StatisticsTracker* s, bool delay_leafi = false)
+    : v(vi), trav_idx(ti), leaves(leavesi), part(parti), stats(s), delay_leaf(delay_leafi)
   {
     request_pause_interval = paratreet::getConfiguration().request_pause_interval;
     iter_pause_interval = paratreet::getConfiguration().iter_pause_interval;
-    stats = thread_state_holder.ckLocalBranch();
     if (delay_leaf) interactions.resize(leaves.size());
   }
   virtual ~TransposedDownTraverser() = default;
@@ -239,7 +238,7 @@ protected:
   size_t trav_idx;
   std::vector<Node<Data>*> leaves;
   Partition<Data>& part;
-  ThreadStateHolder* stats = nullptr;
+  StatisticsTracker* stats = nullptr;
   std::unordered_map<Key, std::vector<int>> curr_nodes;
   int num_requested = 0;
   int saved_start_idx = 0;
@@ -265,7 +264,6 @@ public:
     auto iter_pause_interval = paratreet::getConfiguration().iter_pause_interval;
     next_stop_index += iter_pause_interval > 0 ? iter_pause_interval : leaves.size();
     if (delay_leaf) interactions.resize(leaves.size());
-    stats = thread_state_holder.ckLocalBranch();
   }
   virtual ~BasicDownTraverser() = default;
   virtual bool isFinished() override {return curr_nodes.empty();}
@@ -365,12 +363,12 @@ private:
   Visitor v;
   size_t trav_idx;
   Partition<Data>& part;
-  ThreadStateHolder* stats = nullptr;
+  StatisticsTracker* stats = nullptr;
   std::unordered_map<Key, std::vector<int>> curr_nodes;
   std::vector<int> num_waiting;
   std::vector<Node<Data>*> trav_tops;
 public:
-  UpnDTraverser(Visitor& vi, size_t ti, Partition<Data>& parti) : v(vi), trav_idx(ti), part(parti) {
+  UpnDTraverser(Visitor& vi, size_t ti, Partition<Data>& parti, StatisticsTracker* s) : v(vi), trav_idx(ti), part(parti), stats(s) {
     trav_tops.resize(part.leaves.size());
     for (int i = 0; i < part.leaves.size(); i++) {
       auto tree_leaf = part.tree_leaves[i];
@@ -378,7 +376,6 @@ public:
       trav_tops[i] = tree_leaf;
     }
     num_waiting = std::vector<int> (part.leaves.size(), 1);
-    stats = thread_state_holder.ckLocalBranch();
   }
   virtual void interact() override {}
   virtual bool isFinished() override {return curr_nodes.empty();}
@@ -489,12 +486,11 @@ private:
   Visitor v;
   size_t trav_idx;
   Subtree<Data>& tp;
-  ThreadStateHolder* stats = nullptr;
+  StatisticsTracker* stats = nullptr;
   std::unordered_map<Key, std::vector<Node<Data>*>> curr_nodes; // source nodes to target nodes
 public:
-  DualTraverser(Visitor& vi, size_t ti, Subtree<Data>& tpi) : v(vi), trav_idx(ti), tp(tpi)
+  DualTraverser(Visitor& vi, size_t ti, Subtree<Data>& tpi, StatisticsTracker* s) : v(vi), trav_idx(ti), tp(tpi), stats(s)
   {
-    stats = thread_state_holder.ckLocalBranch();
   }
   void start() override {
     curr_nodes[1].push_back(tp.local_root);

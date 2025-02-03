@@ -5,7 +5,7 @@ STRUCTURE_PATH = $(BASE_PATH)/utility/structures
 INCLUDES:=$(INCLUDES) -I$(STRUCTURE_PATH) -I$(PARATREET_PATH)
 CHARM_HOME ?= $(HOME)/charm-paratreet
 
-LD_LIBS:=$(LD_LIBS) -L$(PARATREET_PATH) -lparatreet
+LD_LIBS:=$(LD_LIBS) -L$(PARATREET_PATH) -lparatreet -L$(STRUCTURE_PATH) -lTipsy
 
 # TIRPC is required on Summit
 TIRPC_PATH?=/usr/include/tirpc

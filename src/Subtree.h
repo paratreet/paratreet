@@ -4,8 +4,6 @@
 #include "paratreet.decl.h"
 #include "common.h"
 #include "templates.h"
-#include "ParticleMsg.h"
-#include "NodeWrapper.h"
 #include "Node.h"
 #include "Utility.h"
 #include "Reader.h"
@@ -20,12 +18,11 @@
 #include <fstream>
 
 extern CProxy_TreeSpec treespec;
-extern CProxy_Reader readers;
 
 template <typename Data>
 class Subtree : public CBase_Subtree<Data> {
 public:
-  std::vector<Particle> particles, incoming_particles;
+  std::vector<typename Data::Particle> particles, incoming_particles;
   std::vector<Node<Data>*> leaves;
   std::vector<Node<Data>*> empty_leaves;
 
@@ -39,6 +36,7 @@ public:
   Node<Data>* local_root; // Root node of this Subtree, TreeCanopies sit above this node
   MultiData<Data> flat_subtree;
 
+  CProxy_StatisticsTracker stats_proxy;
   CProxy_TreeCanopy<Data> tc_proxy;
   CProxy_CacheManager<Data> cm_proxy;
   CProxy_Resumer<Data> r_proxy;
@@ -47,16 +45,14 @@ public:
 
   std::unique_ptr<Traverser<Data>> traverser;
 
-  std::vector<Particle> flushed_particles; // For debugging
-
-  Subtree(const CkCallback&, int, int, int, TCHolder<Data>,
-          CProxy_Resumer<Data>, CProxy_CacheManager<Data>, DPHolder<Data>, bool);
+  Subtree(const CkCallback&, int, int, int, TCHolder<Data>, CProxy_Resumer<Data>,
+          CProxy_StatisticsTracker, CProxy_CacheManager<Data>, DPHolder<Data>, bool);
   Subtree(CkMigrateMessage * msg){
     delete msg;
   };
-  void receive(ParticleMsg*);
+  void receive(const std::vector<typename Data::Particle>& particles);
   void buildTree(CProxy_Partition<Data>, CkCallback);
-  void recursiveBuild(Node<Data>*, Particle*, size_t, size_t);
+  void recursiveBuild(Node<Data>*, typename Data::Particle*, size_t, size_t);
   void populateTree();
   inline void initCache();
   typename Node<Data>::Type getType(size_t num_particles, size_t max_particles_per_leaf) const;
@@ -69,7 +65,6 @@ public:
   void print(Node<Data>*);
   void destroy();
   void reset();
-  void output(CProxy_Writer w, CkCallback cb);
   void pup(PUP::er& p);
   void collectMetaData(const CkCallback & cb);
   void addNodeToFlatSubtree(Node<Data>* node);
@@ -81,29 +76,12 @@ public:
     //CkPrintf("[ST %d]  resume from sync for LB on PE %d\n", this->thisIndex, CkMyPe());
     return;
   };
-
-  // For debugging
-  void checkParticlesChanged(const CkCallback& cb) {
-    bool result = true;
-    if (particles.size() != flushed_particles.size()) {
-      result = false;
-      this->contribute(sizeof(bool), &result, CkReduction::logical_and_bool, cb);
-      return;
-    }
-    for (int i = 0; i < particles.size(); i++) {
-      if (!(particles[i] == flushed_particles[i])) {
-        result = false;
-        break;
-      }
-    }
-    this->contribute(sizeof(bool), &result, CkReduction::logical_and_bool, cb);
-  }
 };
 
 template <typename Data>
 Subtree<Data>::Subtree(const CkCallback& cb, int n_total_particles_,
                        int n_subtrees_, int n_partitions_, TCHolder<Data> tc_holder,
-                       CProxy_Resumer<Data> r_proxy_,
+                       CProxy_Resumer<Data> r_proxy_, CProxy_StatisticsTracker stats_proxy_,
                        CProxy_CacheManager<Data> cm_proxy_, DPHolder<Data> dp_holder,
                        bool matching_decomps_){
   //this->usesAtSync = true;
@@ -114,7 +92,8 @@ Subtree<Data>::Subtree(const CkCallback& cb, int n_total_particles_,
   tc_proxy = tc_holder.proxy;
   cm_proxy = cm_proxy_;
   cm_local = cm_proxy.ckLocalBranch();
-  r_proxy  = r_proxy_;
+  r_proxy = r_proxy_;
+  stats_proxy = stats_proxy_;
 
   matching_decomps = matching_decomps_;
 
@@ -122,14 +101,12 @@ Subtree<Data>::Subtree(const CkCallback& cb, int n_total_particles_,
     getTpKey(this->thisIndex);
 
   // Create TreeCanopies and send proxies
-  auto sendProxy =
-    [&](Key dest, int tp_index) {
-      tc_proxy[dest].recvProxies(TPHolder<Data>(this->thisProxy),
-                                 tp_index, cm_proxy, dp_holder);
-    };
-
-  treespec.ckLocalBranch()->getTree()->buildCanopy(this->thisIndex, sendProxy);
-
+  std::vector<std::pair<Key, int>> destinations;
+  treespec.ckLocalBranch()->getTree()->buildCanopy(tp_key, this->thisIndex, destinations);
+  for (auto && dest : destinations) {
+      tc_proxy[dest.first].recvProxies(TPHolder<Data>(this->thisProxy),
+                                       dest.second, cm_proxy, dp_holder);
+  }
   local_root = nullptr;
 
   this->contribute(cb);
@@ -149,15 +126,8 @@ void Subtree<Data>::pup(PUP::er& p) {
 }
 
 template <typename Data>
-void Subtree<Data>::receive(ParticleMsg* msg) {
-  // Copy particles to local vector
-  // TODO: Remove memcpy by just storing the pointer to msg->particles
-  // and using it in tree build
-  int initial_size = incoming_particles.size();
-  incoming_particles.resize(initial_size + msg->n_particles);
-  std::memcpy(&incoming_particles[initial_size], msg->particles,
-              msg->n_particles * sizeof(Particle));
-  delete msg;
+void Subtree<Data>::receive(const std::vector<typename Data::Particle>& p) {
+  incoming_particles.insert(incoming_particles.end(), p.begin(), p.end());
 }
 
 template <typename Data>
@@ -225,7 +195,7 @@ void Subtree<Data>::sendLeaves(CProxy_Partition<Data> part)
     cm_local->addDisplacedLeaf(leaf);
     num_copies += leaf->n_particles;
   }
-  thread_state_holder.ckLocalBranch()->countCopiesAndShares(num_copies, num_shares);
+  stats_proxy.ckLocalBranch()->countCopiesAndShares(num_copies, num_shares);
 }
 
 template <typename Data>
@@ -234,7 +204,7 @@ void Subtree<Data>::startDual(Visitor v) {
   r_local = r_proxy.ckLocalBranch();
   r_local->subtree_proxy = this->thisProxy;
   r_local->use_subtree = true;
-  traverser.reset(new DualTraverser<Data, Visitor>(v, 0, *this));
+  traverser.reset(new DualTraverser<Data, Visitor>(v, 0, *this, stats_proxy.ckLocalBranch()));
   traverser->start();
 }
 
@@ -303,7 +273,7 @@ void Subtree<Data>::buildTree(CProxy_Partition<Data> part, CkCallback cb) {
 
   // Populate the tree structure (including TreeCanopy)
   populateTree();
-  thread_state_holder.ckLocalBranch()->countSubtreeParticles(particles.size());
+  stats_proxy.ckLocalBranch()->countSubtreeParticles(particles.size());
   initCache();
 
   this->contribute(cb);
@@ -311,13 +281,11 @@ void Subtree<Data>::buildTree(CProxy_Partition<Data> part, CkCallback cb) {
 }
 
 template <typename Data>
-void Subtree<Data>::recursiveBuild(Node<Data>* node, Particle* node_particles, size_t node_n_particles, size_t log_branch_factor) {
+void Subtree<Data>::recursiveBuild(Node<Data>* node, typename Data::Particle* node_particles, size_t node_n_particles, size_t log_branch_factor) {
 #if DEBUG
   CkPrintf("[Level %d] created node 0x%" PRIx64 " with %d particles\n",
       node->depth, node->key, node_n_particles);
 #endif
-  // store reference to splitters
-  //static std::vector<Splitter>& splitters = readers.ckLocalBranch()->splitters;
   auto& config = paratreet::getConfiguration();
   auto tree   = treespec.ckLocalBranch()->getTree();
 
@@ -326,11 +294,12 @@ void Subtree<Data>::recursiveBuild(Node<Data>* node, Particle* node_particles, s
   int start = 0;
   int finish = start + node_n_particles;
 
-  tree->prepParticles(node_particles, node_n_particles, node->depth);
+  ParticleViewer<Data> viewer {node_particles, node_n_particles};
+  tree->prepParticles(&viewer, node->depth);
   for (int i = 0; i < node->n_children; i++) {
     int first_ge_idx = finish;
     if (i < node->n_children - 1) {
-      first_ge_idx = tree->findChildsLastParticle(node_particles, start, finish, child_key, log_branch_factor);
+      first_ge_idx = tree->findChildsLastParticle(&viewer, start, finish, child_key, log_branch_factor);
     }
     int n_particles = first_ge_idx - start;
 
@@ -410,9 +379,9 @@ void Subtree<Data>::destroy() {
 
 template <typename Data>
 void Subtree<Data>::print(Node<Data>* node) {
-  ostringstream oss;
+  std::ostringstream oss;
   oss << "tree." << this->thisIndex << ".dot";
-  ofstream out(oss.str().c_str());
+  std::ofstream out(oss.str().c_str());
   CkAssert(out.is_open());
   out << "digraph tree" << this->thisIndex << "{" << endl;
   node->dot(out);

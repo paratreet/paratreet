@@ -1,0 +1,22 @@
+mainmodule Main {
+  extern module paratreet;
+  include "AstroFields.h";
+  readonly AstroFields astroConf;
+  readonly CProxy_EwaldData ewaldProxy;
+
+  initnode void initialize(void);
+
+  extern entry void Partition<CentroidData> startDown<GravityVisitor> (GravityVisitor v);
+  extern entry void Subtree<CentroidData> startDual<GravityVisitor> (GravityVisitor v);
+  extern entry void Partition<CentroidData> startBasicDown<GravityVisitor> (GravityVisitor v);
+  extern entry void Partition<CentroidData> startDown<CollisionVisitor> (CollisionVisitor v);
+  extern entry void Partition<CentroidData> startUpAndDown<DensityVisitor> (DensityVisitor v);
+  extern entry void Partition<CentroidData> startDown<PressureVisitor> (PressureVisitor v);
+  extern entry void CacheManager<CentroidData> startPrefetch<GravityVisitor>(DPHolder<CentroidData>, CkCallback);
+  extern entry void Driver<CentroidData> prefetch<GravityVisitor> (CentroidData, int, CkCallback);
+
+  nodegroup EwaldData {
+    entry EwaldData();
+    entry void EwaldInit(CentroidData, CkCallback);
+  };
+}

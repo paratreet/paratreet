@@ -4,10 +4,18 @@
 #include "common.h"
 #include <vector>
 #include <queue>
-#include "Particle.h"
-#include "OrientedBox.h"
+#include "BasicParticle.h"
+#include "BasicBoundingBox.h"
+#include "Paratreet.h"
 
 struct SearchData {
+  using Particle = paratreet::BasicParticle;
+  using BoundingBox = paratreet::BasicBoundingBox;
+  static void loadParticlesFromFile(int reader_index, int n_readers, const paratreet::Configuration& config, std::vector<Particle>& particles);
+  static void addParticleToBox(const Particle& p, BoundingBox& box);
+  static void adjustParticleForUniverse(Particle& p, const BoundingBox& box);
+  static void outputToFile(int writer_index, int particle_index, const BoundingBox& box, int iter, const std::string& output_file, const std::vector<Particle>& particles, int indicator);
+
   Vector3D<Real> moment;
   Real sum_mass;
   Vector3D<Real> centroid; // too slow to compute this on the fly

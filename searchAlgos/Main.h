@@ -6,10 +6,11 @@
 #include "SearchData.h"
 
 class ExMain: public paratreet::Main<SearchData> {
-  virtual Real getTimestep(BoundingBox&, Real) override;
+  virtual Real getTimestep(const paratreet::BasicBoundingBox&, Real) override;
   virtual void preTraversalFn(ProxyPack<SearchData>&) override;
-  virtual void traversalFn(BoundingBox&, ProxyPack<SearchData>&, int) override;
-  virtual void postIterationFn(BoundingBox&, ProxyPack<SearchData>&, int) override;
+  virtual void traversalFn(const paratreet::BasicBoundingBox&, ProxyPack<SearchData>&, int) override;
+  virtual void postIterationFn(const paratreet::BasicBoundingBox&, ProxyPack<SearchData>&, int) override;
+  virtual void setDefaults(void) override;
   virtual void main(CkArgMsg*) override;
   virtual void run(void) override;
 };

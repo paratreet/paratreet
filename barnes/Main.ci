@@ -1,0 +1,12 @@
+mainmodule Main {
+  extern module paratreet;
+
+  readonly Real theta;
+  readonly Real max_timestep;
+  readonly std::string test_file;
+
+  initnode void initialize(void);
+
+  extern entry void Partition<CentroidData> startDown<GravityVisitor> (GravityVisitor v);
+  extern entry void Partition<CentroidData> startBasicDown<GravityVisitor> (GravityVisitor v);
+}

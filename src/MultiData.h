@@ -1,7 +1,6 @@
 #ifndef PARATREET_MULTIDATA_H_
 #define PARATREET_MULTIDATA_H_
 
-#include "Particle.h"
 #include "Node.h"
 #include "common.h"
 #include "paratreet.decl.h"
@@ -11,13 +10,13 @@
 
 template <typename Data>
 struct MultiData {
-  std::vector<Particle> particles;
+  std::vector<typename Data::Particle> particles;
   std::vector<std::pair<Key, SpatialNode<Data>>> nodes;
   int cm_index = -1;
   int tp_index = -1;
 
   MultiData();
-  MultiData(Particle*, int, Node<Data>**, int, int, int);
+  MultiData(typename Data::Particle*, int, Node<Data>**, int, int, int);
   void pup(PUP::er& p);
   void clear();
 };
@@ -26,7 +25,7 @@ template <typename Data>
 MultiData<Data>::MultiData() {}
 
 template <typename Data>
-inline MultiData<Data>::MultiData(Particle* particlesi, int n_particles, Node<Data>** nodesi, int n_nodes, int cm_indexi, int tp_indexi) {
+inline MultiData<Data>::MultiData(typename Data::Particle* particlesi, int n_particles, Node<Data>** nodesi, int n_nodes, int cm_indexi, int tp_indexi) {
   cm_index      = cm_indexi;
   tp_index      = tp_indexi;
   std::copy(particlesi, particlesi + n_particles, std::back_inserter(particles));
