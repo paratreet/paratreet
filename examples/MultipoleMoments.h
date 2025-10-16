@@ -475,7 +475,7 @@ inline void calculateRadiusBox(MultipoleMoments& m,
 	Vector3D<Real> delta = box.greater_corner - box.lesser_corner;
 	Real newradius = 0.5*delta.length();
 #ifdef HEXADECAPOLE
-	if(m.totalMass > 0.0)
+	if(newradius > 0.0)
 	    momRescaleFmomr(&m.mom, newradius, m.radius);
 #endif
 	m.radius = newradius;

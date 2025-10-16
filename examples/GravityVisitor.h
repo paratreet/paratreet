@@ -13,16 +13,22 @@ public:
   static constexpr const bool TargetMustBeLeaf = true;
   static constexpr const Real opening_geometry_factor_squared = 4.0 / 3.0;
   GravityVisitor() : offset(0, 0, 0) {}
-  GravityVisitor(Vector3D<Real> offseti, Real theta) : offset(offseti), gravity_factor(opening_geometry_factor_squared / (theta * theta)) {}
+  GravityVisitor(Vector3D<Real> offseti, Real theta) :
+    offset(offseti),
+    gravity_factor(opening_geometry_factor_squared / (theta * theta)),
+    monopole_gravity_factor(sqrt(opening_geometry_factor_squared) / (theta * theta * theta * theta))
+  {}
 
   void pup(PUP::er& p) {
     p | offset;
     p | gravity_factor;
+    p | monopole_gravity_factor;
   }
 
 private:
   Vector3D<Real> offset;
   Real gravity_factor;
+  Real monopole_gravity_factor;
 
 private:
   // note gconst = 1
@@ -123,10 +129,10 @@ void SPLINE(Real r2, Real twoh, Real &a, Real &b)
 
   void addGravity(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
     for (int i = 0; i < target.n_particles; i++) {
-      Vector3D<Real> diff = source.data.centroid + offset - target.particles()[i].position;
+      Vector3D<Real> diff = source.data.multipoles.cm + offset - target.particles()[i].position;
       Real rsq = diff.lengthSquared();
       if (rsq != 0) {
-        Vector3D<Real> accel = diff * (source.data.sum_mass / (rsq * sqrt(rsq)));
+        Vector3D<Real> accel = diff * (source.data.multipoles.totalMass / (rsq * sqrt(rsq)));
         target.applyAcceleration(i, accel);
       }
     }
@@ -155,24 +161,23 @@ public:
 
   bool open(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
     if (source.data.count <= nMinParticleNode) return true;
-    Real dataRsq = source.data.rsq * gravity_factor;
+    Real dataRsq = source.data.multipoles.radius * source.data.multipoles.radius * gravity_factor;
 #ifdef HEXADECAPOLE
-    if(!Space::intersect(target.data.box, source.data.centroid + offset, dataRsq)){
+    if(!Space::intersect(target.data.box, source.data.multipoles.cm + offset, dataRsq)){
         // test for softening overlap
         if(!openSoftening(target.data, source.data)) {
             return false;       /* Passes both tests */
         }
         else {        // Open as monopole?
             // monopole criteria is much stricter
-            extern Real theta;
-            dataRsq *= pow(theta, -6);
-            Sphere<Real> sM(source.data.centroid + offset, sqrt(dataRsq));
+            Real monoRad = source.data.multipoles.radius * monopole_gravity_factor;
+            Sphere<Real> sM(source.data.multipoles.cm + offset, monoRad);
             return Space::intersect(target.data.box, sM);
         }
     }
     return true;
 #else
-    return Space::intersect(target.data.box, source.data.centroid + offset, dataRsq);
+    return Space::intersect(target.data.box, source.data.multipoles.cm + offset, dataRsq);
 #endif
   }
 
