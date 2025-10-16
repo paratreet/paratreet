@@ -6,7 +6,7 @@ LB_LIBS = $(foreach m, $(LBS), -module $(m))
 OPTS = -g -O3 $(INCLUDES) -DCOUNT_INTERACTIONS=0 -DDEBUG=0 -DHEXADECAPOLE $(MAKE_OPTS) -DFOF
 CHARMC = $(CHARM_HOME)/bin/charmc $(OPTS)
 
-all: Gravity SPH Collision
+all: Gravity SPH Collision FoFApp
 DATA = CentroidData.h MultipoleMoments.h
 VISITORS = DensityVisitor.h PressureVisitor.h GravityVisitor.h CollisionVisitor.h
 
