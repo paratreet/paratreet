@@ -11,16 +11,16 @@ struct Particle {
 
   Real mass;
   Real density;
-  //Real potential;
+  Real potential;
   //Real u;
   Real soft;
   Vector3D<Real> position;
-  //Vector3D<Real> acceleration;
+  Vector3D<Real> acceleration;
   Vector3D<Real> velocity;
-  //Vector3D<Real> velocity_predicted;
+  Vector3D<Real> velocity_predicted;
   Real pressure_dVolume = 0.;
   using Effect = std::pair<Vector3D<Real>, Real>; // accel, pressure
-  //Real u_predicted;
+  Real u_predicted;
 
   // FoF: add a field to store component number in UnionFind (groupId)
   // postIterationFn loo

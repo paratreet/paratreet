@@ -41,13 +41,14 @@ void Particle::pup(PUP::er &p) {
   p|partition_idx;
   p|mass;
   p|density;
-  //p|potential;
+  p|potential;
   //p|u;
-  //p|u_predicted;
+  p|u_predicted;
   p|pressure_dVolume;
   p|position;
-  //p|acceleration;
+  p|acceleration;
   p|velocity;
+  p|velocity_predicted;
   p|soft;
   p|type;
   p|group_number;
@@ -57,7 +58,7 @@ void Particle::pup(PUP::er &p) {
 void Particle::reset() {
   pressure_dVolume = 0.0;
   density       = 0.0;
-  //acceleration  = Vector3D<Real> (0.0, 0.0, 0.0);
+  acceleration  = Vector3D<Real> (0.0, 0.0, 0.0);
 }
 
 bool Particle::operator==(const Particle& other) const {

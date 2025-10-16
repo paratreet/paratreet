@@ -27,15 +27,15 @@ public:
   void changeParticle(int index, const Particle& part) {
     particles_[index] = part;
   }
-  /*void applyAcceleration(int index, Vector3D<Real> accel) {
+  void applyAcceleration(int index, Vector3D<Real> accel) {
     particles_[index].acceleration += accel;
-  }*/
+  }
   void applyGasWork(int index, Real work) {
     particles_[index].pressure_dVolume += work;
   }
-  /*void applyPotential(int index, Real pot) {
+  void applyPotential(int index, Real pot) {
     particles_[index].potential += pot;
-  }*/
+  }
 
   void pup (PUP::er& p) {
     p | depth;
