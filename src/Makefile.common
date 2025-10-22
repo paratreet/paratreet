@@ -1,11 +1,11 @@
-BASE_PATH=/Users/ritvik/paratreet
+BASE_PATH=$(HOME)/paratreet
 PARATREET_PATH = $(BASE_PATH)/src
 STRUCTURE_PATH = $(BASE_PATH)/utility/structures
 UNION_FIND_DIR = $(BASE_PATH)/../unionfind
 PREFIX_LIB_DIR = $(UNION_FIND_DIR)/prefixLib
 
 INCLUDES:=$(INCLUDES) -I$(STRUCTURE_PATH) -I$(PARATREET_PATH) -I$(PREFIX_LIB_DIR) -I$(UNION_FIND_DIR) -I.
-CHARM_HOME ?= /Users/ritvik/clean_charm/charm
+CHARM_HOME ?= $(HOME)/charm
 
 LD_LIBS:=$(LD_LIBS) -L$(PARATREET_PATH) -lparatreet -L$(UNION_FIND_DIR) -lunionFind -L${PREFIX_LIB_DIR} -lprefix
 
