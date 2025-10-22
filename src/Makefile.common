@@ -9,6 +9,13 @@ CHARM_HOME ?= /Users/ritvik/clean_charm/charm
 
 LD_LIBS:=$(LD_LIBS) -L$(PARATREET_PATH) -lparatreet -L$(UNION_FIND_DIR) -lunionFind -L${PREFIX_LIB_DIR} -lprefix
 
+# XDR library for Tipsy file I/O
+XDR_PATH=$(BASE_PATH)/utility/xdr
+ifneq (,$(wildcard $(XDR_PATH)/libxdr.a))
+	INCLUDES:=$(INCLUDES) -I$(BASE_PATH)/utility/xdr
+	LD_LIBS:=$(LD_LIBS) -L$(XDR_PATH) -lxdr
+endif
+
 # TIRPC is required on Summit
 TIRPC_PATH?=/usr/include/tirpc
 ifneq (,$(wildcard $(TIRPC_PATH)))
