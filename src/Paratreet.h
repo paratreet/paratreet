@@ -92,6 +92,8 @@ namespace paratreet {
         virtual void initializeDriver(const CkCallback&) = 0;
 
         virtual void setDefaults(void) {}
+
+        virtual ~MainBase() = default;
     };
 
     // NOTE because this is called Main, the user's instantiation cannot be
@@ -110,7 +112,7 @@ namespace paratreet {
 
         // pass the configuration without a deleter by default
         Main(void)
-        : MainBase(std::shared_ptr<Configuration>(&conf, [](void*){})) {}
+        : MainBase(std::shared_ptr<Configuration>(&conf, [](Configuration* ptr){ /* no-op deleter for stack object */ })) {}
 
         virtual void initializeDriver(const CkCallback& cb) override {
             this->driver = initialize<T>(cb);
