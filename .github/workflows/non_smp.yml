@@ -38,6 +38,8 @@ jobs:
         cd utility/structures
         ./configure
         make
+        cd ../xdr
+        make
 
     # Build and test ParaTreeT
     - name: build-paratreet
