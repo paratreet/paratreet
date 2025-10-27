@@ -16,6 +16,29 @@ ifneq (,$(wildcard $(XDR_PATH)/libxdr.a))
 	LD_LIBS:=$(LD_LIBS) -L$(XDR_PATH) -lxdr
 endif
 
+# XDR library for Tipsy file I/O
+# First check for system RPC XDR library, then fall back to utility/xdr
+HAS_SYSTEM_XDR := $(shell echo '\#include <rpc/xdr.h>' | $(CC) -E - >/dev/null 2>&1 && echo yes)
+ifeq ($(HAS_SYSTEM_XDR),yes)
+	# Use system RPC XDR library
+	# Try different library names depending on the system
+	HAS_LIBRPC := $(shell $(CC) -lrpc -xc /dev/null -o /dev/null >/dev/null 2>&1 && echo yes)
+	HAS_LIBTIRPC := $(shell $(CC) -ltirpc -xc /dev/null -o /dev/null >/dev/null 2>&1 && echo yes)
+	ifeq ($(HAS_LIBRPC),yes)
+		LD_LIBS:=$(LD_LIBS) -lrpc
+	else ifeq ($(HAS_LIBTIRPC),yes)
+		LD_LIBS:=$(LD_LIBS) -ltirpc
+	endif
+	# If neither library is needed, XDR functions are in libc (older glibc)
+else
+	# Fall back to utility/xdr library
+	XDR_PATH=$(BASE_PATH)/utility/xdr
+	ifneq (,$(wildcard $(XDR_PATH)/libxdr.a))
+		INCLUDES:=$(INCLUDES) -I$(BASE_PATH)/utility/xdr
+		LD_LIBS:=$(LD_LIBS) -L$(XDR_PATH) -lxdr
+	endif
+endif
+
 # TIRPC is required on Summit
 TIRPC_PATH?=/usr/include/tirpc
 ifneq (,$(wildcard $(TIRPC_PATH)))

@@ -22,6 +22,12 @@ jobs:
     # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
     - uses: actions/checkout@v2
 
+    # Install system dependencies required for XDR (libtirpc)
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libtirpc-dev
+
     # Build Charm++
     - name: build-charm++
       run: |
@@ -37,6 +43,8 @@ jobs:
         git submodule update
         cd utility/structures
         ./configure
+        make
+        cd ../xdr
         make
 
     # Build and test ParaTreeT
