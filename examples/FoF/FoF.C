@@ -13,6 +13,7 @@
 /* readonly */ int minVerticesPerComponent; // minimum is strictly greater than this value
 int periodic;
 Vector3D<Real> fPeriod;
+bool verify;
 
 using namespace paratreet;
 
@@ -75,6 +76,7 @@ class FoF : public paratreet::Main<CentroidData> {
     if (conf.input_file.empty()) CkAbort("Input file unspecified");
     CkPrintf("Input file: %s\n", conf.input_file.c_str());
     CkPrintf("Output file prefix: %s\n", conf.output_file.empty() ? "output file prefix not provided" : conf.output_file.c_str());
+    verify = conf.output_file.empty() ? false : true;
     CkPrintf("Decomposition type: %s\n", paratreet::asString(conf.decomp_type).c_str());
     CkPrintf("Tree type: %s\n", paratreet::asString(conf.tree_type).c_str());
     CkPrintf("Minimum number of subtrees: %d\n", conf.min_n_subtrees);
@@ -159,7 +161,7 @@ class FoF : public paratreet::Main<CentroidData> {
     CkPrintf("[Main] Components pruned and labeled. Outputting results of friends-of-friends\n");
     CkPrintf("[Main] Component labeling time: %f\n", CkWallTimer() - startTime);
     startTime = CkWallTimer();
-    paratreet::outputParticleAccelerations(universe, partitionProxy);
+    if(verify) paratreet::outputParticleAccelerations(universe, partitionProxy);
 
     CkPrintf("[Main] Output complete for friends-of-friends\n");
     CkPrintf("[Main] Writing to output time: %f\n", CkWallTimer() - startTime);
