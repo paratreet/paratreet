@@ -106,6 +106,7 @@ class FoF : public paratreet::Main<CentroidData> {
     conf.request_pause_interval = 20;
     conf.iter_pause_interval = 1000;
     conf.min_vertices_per_component = 8; // default from ChaNGa
+    conf.linking_length = 0.2; // default from ChaNGa
   }
 
   // -------------------

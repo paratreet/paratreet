@@ -57,7 +57,6 @@ public:
         // union two particles if source and target particles linking length spheres intersect
         // avoid union of same pair twice by comapring particle order (the particle ID) with "<" operator
         if (distance < linkingLength && sp.order < tp.order) {
-
           libProxy[tp.partition_idx].ckLocal()->union_request(sp.vertex_id, tp.vertex_id);
         }
       }
