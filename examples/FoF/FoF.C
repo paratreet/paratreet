@@ -120,6 +120,13 @@ class FoF : public paratreet::Main<CentroidData> {
     // Store proxies as global variables for access
     libProxy = proxy_pack.libProxy;
     partitionProxy = proxy_pack.partition;
+
+    //load balancing: use subtree volumes to help with load balancing
+    //Calculate the subtree's volumes from CentroidData->box->volume()
+    //then send these volumes to the charm runtime with setCpuTime
+    //then make the subtree call atSync to migrate based on these volumes
+    proxy_pack.subtree.pauseForLB();
+
   }
 
   void traversalFn(BoundingBox& universe, ProxyPack<CentroidData>& proxy_pack, int iter) override {

@@ -28,6 +28,7 @@ public:
   std::vector<Particle> particles, incoming_particles;
   std::vector<Node<Data>*> leaves;
   std::vector<Node<Data>*> empty_leaves;
+  Real load;
 
   int n_total_particles;
   int n_subtrees;
@@ -81,6 +82,21 @@ public:
     //CkPrintf("[ST %d]  resume from sync for LB on PE %d\n", this->thisIndex, CkMyPe());
     return;
   };
+  void UserSetLBLoad()
+  {
+    //calculate load as inverse of volume of bounding box
+    if (local_root)
+    {
+      OrientedBox<Real> box = local_root->data.box;
+      Real volume = box.volume();
+      if (volume > 0.0)
+        this->load = 1.0 / volume;
+      else
+        this->load = 0.0;
+    }
+    //CkPrintf("[ST %d] LB load set to %f on PE %d\n", this->thisIndex, this->load, CkMyPe());
+    this->setObjTime(this->load);
+  }
 
   // For debugging
   void checkParticlesChanged(const CkCallback& cb) {
@@ -116,6 +132,10 @@ Subtree<Data>::Subtree(const CkCallback& cb, int n_total_particles_,
   cm_local = cm_proxy.ckLocalBranch();
   r_proxy  = r_proxy_;
 
+  this->load = 0.0;
+  this->usesAutoMeasure = false;
+  this->usesAtSync = true;
+
   matching_decomps = matching_decomps_;
 
   tp_key = treespec.ckLocalBranch()->getSubtreeDecomposition()->
@@ -146,6 +166,7 @@ void Subtree<Data>::pup(PUP::er& p) {
   p | r_proxy;
   p | incoming_particles;
   p | matching_decomps;
+  p | load;
 }
 
 template <typename Data>
