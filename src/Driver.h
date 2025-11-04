@@ -237,11 +237,19 @@ public:
       // Perform traversals
       start_time = CkWallTimer();
 
+      #ifdef FOF
+      if(iter!=0)
+      {
+        paratreet::traversalFn(universe, proxy_pack, iter);
+        CkWaitQD();
+        CkPrintf("Tree traversal: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
+      } 
+      else CkPrintf("In FoF, we are skipping traversal in iteration 0\n");
+      #else
       paratreet::traversalFn(universe, proxy_pack, iter);
-
       CkWaitQD();
-
       CkPrintf("Tree traversal: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
+      #endif // FOF
 
 
       start_time = CkWallTimer();
@@ -270,8 +278,15 @@ public:
       CkPrintf("[Meta] n_subtree = %d; timestep_size = %f; numPSParticleCopies = %d; numPSParticleShares = %d; sumPESize = %d; maxPESize = %d, avgPESize = %f; ratio = %f; maxVelocity = %f; rebuild = %s\n", n_subtrees, timestep_size, numParticleCopies, numParticleShares, sumPESize, maxPESize, avgPESize, ratio, max_velocity, (complete_rebuild? "yes" : "no"));
       //End Subtree reduction message parsing
 
-
+      #ifdef FOF
+      if(iter!=0)
+      {
+        paratreet::postIterationFn(universe, proxy_pack, iter);
+      }
+      else CkPrintf("In FoF, we are skipping postIterationFn in iteration 0\n");
+      #else
       paratreet::postIterationFn(universe, proxy_pack, iter);
+      #endif // FOF
 
 
       CkReductionMsg* result;
@@ -287,6 +302,7 @@ public:
       if (!complete_rebuild && config.lb_period > 0 && iter % config.lb_period == config.lb_period - 1){
         start_time = CkWallTimer();
         //subtrees.pauseForLB(); // move them later
+        CkPrintf("Starting load balancing...\n");
         partitions.pauseForLB();
         CkWaitQD();
         CkPrintf("Load balancing: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);

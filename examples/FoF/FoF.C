@@ -96,13 +96,13 @@ class FoF : public paratreet::Main<CentroidData> {
     conf.max_particles_per_leaf = 12; // default from ChaNGa
     conf.decomp_type = paratreet::DecompType::eBinaryOct;
     conf.tree_type = paratreet::TreeType::eBinaryOct;
-    conf.num_iterations = 1;
+    conf.num_iterations = 2; //just load balance in iteration 0
     conf.num_share_nodes = 0; // 3;
     conf.cache_share_depth = 3;
     conf.pool_elem_size;
     conf.flush_period = 0;
     conf.flush_max_avg_ratio = 10.;
-    conf.lb_period = 5;
+    conf.lb_period = 1;
     conf.request_pause_interval = 20;
     conf.iter_pause_interval = 1000;
     conf.min_vertices_per_component = 8; // default from ChaNGa
@@ -125,7 +125,7 @@ class FoF : public paratreet::Main<CentroidData> {
     //Calculate the subtree's volumes from CentroidData->box->volume()
     //then send these volumes to the charm runtime with setCpuTime
     //then make the subtree call atSync to migrate based on these volumes
-    partitionProxy.pauseForLB();
+    //partitionProxy.pauseForLB();
 
   }
 

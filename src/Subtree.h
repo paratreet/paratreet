@@ -166,6 +166,9 @@ void Subtree<Data>::pup(PUP::er& p) {
   p | incoming_particles;
   p | matching_decomps;
   p | load;
+  if(p.isUnpacking()) {
+    cm_local = cm_proxy.ckLocalBranch();
+  }
 }
 
 template <typename Data>
