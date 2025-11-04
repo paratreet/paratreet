@@ -91,8 +91,8 @@ class FoF : public paratreet::Main<CentroidData> {
 
 
   void setDefaults(void) {
-    conf.min_n_subtrees = CkNumPes() * 8; // default from ChaNGa
-    conf.min_n_partitions = CkNumPes() * 8;
+    conf.min_n_subtrees = CkNumPes() * 16; // default from ChaNGa
+    conf.min_n_partitions = CkNumPes() * 16;
     conf.max_particles_per_leaf = 12; // default from ChaNGa
     conf.decomp_type = paratreet::DecompType::eBinaryOct;
     conf.tree_type = paratreet::TreeType::eBinaryOct;
