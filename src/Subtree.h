@@ -122,7 +122,6 @@ Subtree<Data>::Subtree(const CkCallback& cb, int n_total_particles_,
                        CProxy_Resumer<Data> r_proxy_,
                        CProxy_CacheManager<Data> cm_proxy_, DPHolder<Data> dp_holder,
                        bool matching_decomps_){
-  //this->usesAtSync = true;
   n_total_particles = n_total_particles_;
   n_subtrees = n_subtrees_;
   n_partitions = n_partitions_;
@@ -132,9 +131,9 @@ Subtree<Data>::Subtree(const CkCallback& cb, int n_total_particles_,
   cm_local = cm_proxy.ckLocalBranch();
   r_proxy  = r_proxy_;
 
-  this->load = 0.0;
-  this->usesAutoMeasure = false;
-  this->usesAtSync = true;
+  //this->load = 0.0;
+  //this->usesAutoMeasure = false;
+  //this->usesAtSync = true;
 
   matching_decomps = matching_decomps_;
 

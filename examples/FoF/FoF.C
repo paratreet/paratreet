@@ -125,7 +125,7 @@ class FoF : public paratreet::Main<CentroidData> {
     //Calculate the subtree's volumes from CentroidData->box->volume()
     //then send these volumes to the charm runtime with setCpuTime
     //then make the subtree call atSync to migrate based on these volumes
-    proxy_pack.subtree.pauseForLB();
+    partitionProxy.pauseForLB();
 
   }
 

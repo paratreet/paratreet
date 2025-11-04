@@ -29,6 +29,7 @@ struct Partition : public CBase_Partition<Data> {
   std::vector<Node<Data>*> tree_leaves;
   std::vector<Particle> saved_particles;
   bool matching_decomps;
+  Real load;
 
   std::vector<std::unique_ptr<Traverser<Data>>> traversers;
   int n_partitions;
@@ -77,6 +78,23 @@ struct Partition : public CBase_Partition<Data> {
   void ResumeFromSync(){
     return;
   };
+  void UserSetLBLoad()
+  {
+    //add volume for each leaf node
+    Real volume = 0.0;
+    for (auto && leaf : leaves) {
+      volume += leaf->data.box.volume();
+    }
+    if (volume > 0.0) {
+      Real load = 1.0 / volume;
+      this->load = load;
+    }
+    else {
+      this->load = 0.0;
+    }
+    this->setObjTime(this->load);
+
+  }
   void initializeLibVertices(const CkCallback &cb);
   inline uint64_t encodeChareAndArrayIndex(int particles_so_far);
   static std::pair<int, int> getLocationFromID(uint64_t vid);
@@ -112,7 +130,9 @@ Partition<Data>::Partition(
   CProxy_Driver<Data> driver, bool matching_decomps_
   )
 {
-  //this->usesAtSync = true;
+  this->usesAtSync = true;
+  this->load = 0.0;
+  this->usesAutoMeasure = false;
   n_partitions = np;
   tc_proxy = tc_holder.proxy;
   r_proxy = rp;
@@ -327,6 +347,7 @@ void Partition<Data>::pup(PUP::er& p)
   p | cm_proxy;
   p | r_proxy;
   p | matching_decomps;
+  p | load;
   if (p.isUnpacking()) {
     initLocalBranches();
   }
