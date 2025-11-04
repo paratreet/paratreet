@@ -22,8 +22,11 @@ private:
   CProxy_CacheManager<Data> cm_proxy;
   CProxy_Driver<Data> d_proxy;
 public:
-  TreeCanopy() = default;
-  TreeCanopy(CkMigrateMessage * msg){
+  TreeCanopy() {
+    this->setMigratable(false); // Disable migration for TreeCanopy objects
+  }
+  TreeCanopy(CkMigrateMessage * msg) {
+    this->setMigratable(false); // Disable migration for TreeCanopy objects
     delete msg;
   };
   void reset();

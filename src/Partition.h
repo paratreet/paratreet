@@ -112,7 +112,7 @@ Partition<Data>::Partition(
   CProxy_Driver<Data> driver, bool matching_decomps_
   )
 {
-  this->usesAtSync = true;
+  //this->usesAtSync = true;
   n_partitions = np;
   tc_proxy = tc_holder.proxy;
   r_proxy = rp;
