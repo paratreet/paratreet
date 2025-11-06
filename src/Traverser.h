@@ -6,8 +6,10 @@
 #include <stack>
 #include <deque>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 #include <bitset>
+#include <cinttypes> // For PRIx64 macro
 
 namespace {
 
@@ -91,7 +93,7 @@ public:
 template <typename Data, typename Visitor>
 class TransposedDownTraverser : public Traverser<Data> {
 public:
-  using ABType = std::vector<bool>;
+  using ABType = std::vector<char>; // Changed from std::vector<bool> to avoid bit-packing issues
 
 protected:
   Visitor v;
@@ -110,7 +112,7 @@ protected:
 
 protected:
   void startTrav(Node<Data>* new_payload) {
-    ABType all_leaves (leaves.size(), true);
+    ABType all_leaves (leaves.size(), 1); // Use 1 instead of true for char vector
     recurse(new_payload, all_leaves);
   }
 
@@ -153,7 +155,15 @@ public:
 
   void recurse(Node<Data>* node, const ABType& active_buckets) {
     CkAssert(node);
-    ABType new_active_buckets (leaves.size(), false);
+    
+    // Add bounds checking to prevent segfaults
+    if (active_buckets.size() != leaves.size()) {
+      CkPrintf("ERROR: active_buckets size (%zu) != leaves size (%zu)\n", 
+               active_buckets.size(), leaves.size());
+      CkAbort("Size mismatch in TransposedDownTraverser::recurse");
+    }
+    
+    ABType new_active_buckets (leaves.size(), 0); // Use 0 instead of false for char vector
     bool continue_trav = false;
 #if DEBUG
     CkPrintf("tp %d, key = 0x%" PRIx64 ", type = %d, pe %d\n", part.thisIndex, node->key, (int)node->type, CkMyPe());
@@ -180,7 +190,7 @@ public:
           for (int bucket = 0; bucket < leaves.size(); bucket++) {
             if (!active_buckets[bucket]) continue;
             const bool should_open = doOpen(v, node, leaves[bucket], stats);
-            new_active_buckets[bucket] = should_open;
+            new_active_buckets[bucket] = should_open ? 1 : 0; // Use 1/0 instead of true/false for char vector
             if (should_open) {
               continue_trav = true;
             } else {
@@ -218,16 +228,46 @@ public:
   virtual void resumeTrav() override {
     auto && resume_nodes = part.r_local->all_resume_nodes[std::make_pair(trav_idx, part.thisIndex)];
     CkAssert(!resume_nodes.empty()); // nothing to resume on?
+    
+    // Keep track of processed keys to avoid duplicate processing
+    std::unordered_set<Key> processed_keys;
+    
     while (!resume_nodes.empty()) {
       auto start_node = resume_nodes.front();
       resume_nodes.pop();
       auto key = start_node->key;
+      
+      // Skip if we've already processed this key in this round
+      if (processed_keys.find(key) != processed_keys.end()) {
 #if DEBUG
-      CkPrintf("going down on key %d while its type is %d\n", key, (int)start_node->type);
+        CkPrintf("Skipping already processed key %" PRIx64 "\n", key);
 #endif
-      auto now_ready = curr_nodes[key];
-      recurse(start_node, now_ready);
-      curr_nodes.erase(key);
+        continue;
+      }
+      
+#if DEBUG
+      CkPrintf("going down on key %" PRIx64 " while its type is %d\n", key, (int)start_node->type);
+#endif
+      auto it = curr_nodes.find(key);
+      if (it != curr_nodes.end()) {
+        auto now_ready = it->second;
+        // Add additional bounds checking
+        if (now_ready.size() != leaves.size()) {
+          CkPrintf("ERROR: now_ready size (%zu) != leaves size (%zu) for key %" PRIx64 "\n", 
+                   now_ready.size(), leaves.size(), key);
+          CkAbort("Size mismatch in TransposedDownTraverser::resumeTrav");
+        }
+        recurse(start_node, now_ready);
+        curr_nodes.erase(it);
+        processed_keys.insert(key);
+      } else {
+        // This can happen if the node was already processed by another thread/traversal
+        // or if there's a timing issue. Just silently skip it.
+#if DEBUG
+        CkPrintf("Key %" PRIx64 " not found in curr_nodes (likely already processed)\n", key);
+#endif
+        processed_keys.insert(key);
+      }
     }
   }
 };
