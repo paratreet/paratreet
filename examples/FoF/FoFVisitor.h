@@ -30,17 +30,38 @@ public:
     p | offset;
   }
 
+  // Compute minimum squared distance between two axis-aligned boxes (OrientedBox)
+  // after shifting box b by `offset`. Returns 0 if boxes overlap.
+  static inline Real aabb_min_distance_sq(const OrientedBox<Real>& a, const OrientedBox<Real>& b, const Vector3D<Real>& offset)
+  {
+    // shift b by offset (do not modify original)
+    const Vector3D<Real> bl = b.lesser_corner + offset;
+    const Vector3D<Real> bg = b.greater_corner + offset;
+    Real dx = 0.0, dy = 0.0, dz = 0.0;
+    if (bg.x < a.lesser_corner.x) dx = a.lesser_corner.x - bg.x;
+    else if (bl.x > a.greater_corner.x) dx = bl.x - a.greater_corner.x;
+
+    if (bg.y < a.lesser_corner.y) dy = a.lesser_corner.y - bg.y;
+    else if (bl.y > a.greater_corner.y) dy = bl.y - a.greater_corner.y;
+
+    if (bg.z < a.lesser_corner.z) dz = a.lesser_corner.z - bg.z;
+    else if (bl.z > a.greater_corner.z) dz = bl.z - a.greater_corner.z;
+
+    return dx*dx + dy*dy + dz*dz;
+  }
+
 
   bool open(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
-    Real r_bucket = target.data.size_sm + linkingLength;
-    if (!Space::intersect(source.data.box, target.data.box.center()+offset, r_bucket*r_bucket))
-      return false;
+    // Cheap conservative reject using box-vs-box minimum distance.
+    const Real linkSq = linkingLength * linkingLength;
+    Real minDistSq = aabb_min_distance_sq(source.data.box, target.data.box, offset);
+    if (minDistSq > linkSq) return false;
 
-    // Check if any of the target balls intersect the source volume
+    // Fallback: if boxes are close, check individual particles (exact test)
     for (int i = 0; i < target.n_particles; i++) {
-      Real ballSq = linkingLength * linkingLength;
-      //adding offset to target needs to be the same in leaf
-      if(Space::intersect(source.data.box, target.particles()[i].position+offset, ballSq))
+      Real ballSq = linkSq;
+      // adding offset to target needs to be the same in leaf
+      if (Space::intersect(source.data.box, target.particles()[i].position+offset, ballSq))
         return true;
     }
     return false;
@@ -49,14 +70,19 @@ public:
   void node(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {}
 
   void leaf(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
-    for (int i = 0; i < target.n_particles; i++) {
-      for (int j = 0; j < source.n_particles; j++) {
+    //int counter = 0;
+    const Real linkSq = linkingLength * linkingLength;
+    for (int i = 0; i < target.n_particles; ++i) {
+      const Particle& tp = target.particles()[i];
+      for (int j = 0; j < source.n_particles; ++j) {
         const Particle& sp = source.particles()[j];
-        const Particle& tp = target.particles()[i];
-        Real distance = (tp.position - sp.position + offset).length();
-        // union two particles if source and target particles linking length spheres intersect
-        // avoid union of same pair twice by comapring particle order (the particle ID) with "<" operator
-        if (distance < linkingLength && sp.order < tp.order) {
+        // avoid union of same pair twice by comparing particle order first (cheap)
+        if (sp.order >= tp.order) continue;
+        // squared distance (avoid sqrt)
+        const Vector3D<Real> d = tp.position - sp.position + offset;
+        const Real distSq = d.x*d.x + d.y*d.y + d.z*d.z;
+        if (distSq < linkSq) {
+          //counter++;
           libProxy[tp.partition_idx].ckLocal()->union_request(sp.vertex_id, tp.vertex_id);
         }
       }
