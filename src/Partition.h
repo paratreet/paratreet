@@ -80,18 +80,24 @@ struct Partition : public CBase_Partition<Data> {
   };
   void UserSetLBLoad()
   {
-    //add volume for each leaf node
-    Real volume = 0.0;
+    Real total_volume = 0.0;
+    int total_particles = 0;
+    
     for (auto && leaf : leaves) {
-      volume += leaf->data.box.volume();
+      total_volume += leaf->data.box.volume();
+      total_particles += leaf->n_particles;
     }
-    if (volume > 0.0) {
-      Real load = 1.0 / volume;
-      this->load = load;
-    }
-    else {
+    
+    if (total_volume > 0.0 && total_particles > 0) {
+      // Higher density = higher computational load for FoF
+      Real density = (Real)total_particles / total_volume;
+      this->load = density;
+    } else if (total_particles > 0) {
+      this->load = (Real)total_particles;
+    } else {
       this->load = 0.0;
     }
+    
     this->setObjTime(this->load);
 
   }
