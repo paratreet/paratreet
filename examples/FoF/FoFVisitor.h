@@ -57,7 +57,7 @@ public:
     Real minDistSq = aabb_min_distance_sq(source.data.box, target.data.box, offset);
     if (minDistSq > linkSq) return false;
 
-    //old logic fot box box reject
+    //old logic for box box reject
     /*
     Real r_bucket = target.data.size_sm + linkingLength;
     if (!Space::intersect(source.data.box, target.data.box.center()+offset, r_bucket*r_bucket))
