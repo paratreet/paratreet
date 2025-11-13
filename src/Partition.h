@@ -102,6 +102,8 @@ struct Partition : public CBase_Partition<Data> {
 
   }
   void initializeLibVertices(const CkCallback &cb);
+  void propagateVertexIDRanges(const CkCallback &cb);
+  void validateVertexIDRanges(const CkCallback &cb);
   inline uint64_t encodeChareAndArrayIndex(int particles_so_far);
   static std::pair<int, int> getLocationFromID(uint64_t vid);
   void unionRequest(int sp_order, int tp_order);
@@ -561,6 +563,95 @@ void Partition<Data>::initializeLibVertices(const CkCallback& cb) {
 
   libPtr->initialize_vertices(libVertices, n_particles_on_partition);
   libPtr->registerGetLocationFromID(getLocationFromID);
+  this->contribute(cb);
+}
+
+/**
+ * @brief Propagates vertex ID ranges from leaf nodes up through the tree hierarchy.
+ * This should be called after initializeLibVertices and before any traversals.
+ * Each internal node will have its particle_min_index and particle_max_index
+ * set to encompass all vertex IDs in its subtree.
+ * 
+ * @param cb Callback to execute after function finishes executing
+ */
+template <typename Data>
+void Partition<Data>::propagateVertexIDRanges(const CkCallback& cb) {
+  // Propagate vertex ID ranges from leaves up through tree_leaves
+  // tree_leaves contains the original tree structure before filtering for this partition
+  std::set<Node<Data>*> processed_roots;
+  
+  #ifdef DEBUG_VERTEX_IDS
+  CkPrintf("Partition %d: Starting vertex ID range propagation for %lu tree leaves\n", 
+           this->thisIndex, tree_leaves.size());
+  #endif
+  
+  for (auto && tree_leaf : tree_leaves) {
+    // Find the root of this tree by going up through parents
+    Node<Data>* current = tree_leaf;
+    Node<Data>* root = current;
+    
+    // Find root node by traversing up parent pointers
+    while (current && current->parent != nullptr) {
+      root = current->parent;
+      current = current->parent;
+    }
+    
+    // Only propagate from this root once (avoid duplicates)
+    if (processed_roots.find(root) == processed_roots.end()) {
+      #ifdef DEBUG_VERTEX_IDS
+      CkPrintf("Partition %d: Propagating from root node %lu\n", 
+               this->thisIndex, root->key);
+      #endif
+      root->propagateVertexIDRanges();
+      processed_roots.insert(root);
+    }
+  }
+  
+  #ifdef DEBUG_VERTEX_IDS
+  CkPrintf("Partition %d: Completed vertex ID range propagation for %lu roots\n", 
+           this->thisIndex, processed_roots.size());
+  #endif
+  
+  this->contribute(cb);
+}
+
+/**
+ * @brief Validates that vertex ID ranges are correctly propagated through the tree.
+ * Prints information about the ranges for debugging purposes.
+ * 
+ * @param cb Callback to execute after function finishes executing
+ */
+template <typename Data>
+void Partition<Data>::validateVertexIDRanges(const CkCallback& cb) {
+  /* DEBUG: Uncomment to enable range validation output
+  CkPrintf("Partition %d: Vertex ID Range Validation\n", this->thisIndex);
+  CkPrintf("  Tree leaves: %lu, Partition leaves: %lu\n", 
+           tree_leaves.size(), leaves.size());
+  
+  // Check ranges in leaves
+  for (size_t i = 0; i < leaves.size() && i < 5; i++) {  // Limit output to first 5 for brevity
+    auto leaf = leaves[i];
+    CkPrintf("  Leaf %lu: vertex_range [%lu, %lu], order_range [%d, %d], particles: %d\n", 
+             leaf->key, leaf->particle_min_index, leaf->particle_max_index, 
+             leaf->particle_min_order, leaf->particle_max_order, leaf->n_particles);
+  }
+  
+  // Check ranges in some tree nodes by following parents
+  if (!tree_leaves.empty()) {
+    auto sample_leaf = tree_leaves[0];
+    Node<Data>* current = sample_leaf;
+    int level = 0;
+    while (current != nullptr && level < 3) {  // Check up to 3 levels
+      CkPrintf("  Level %d Node %lu: vertex_range [%lu, %lu], order_range [%d, %d], particles: %d, children: %d\n", 
+               level, current->key, current->particle_min_index, 
+               current->particle_max_index, current->particle_min_order,
+               current->particle_max_order, current->n_particles, current->n_children);
+      current = current->parent;
+      level++;
+    }
+  }
+  */
+  
   this->contribute(cb);
 }
 

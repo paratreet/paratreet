@@ -232,6 +232,15 @@ public:
       // Populate UnionFindLib Vertices for FoF
       partitions.initializeLibVertices(CkCallbackResumeThread());
       CkPrintf("Initialized %d vertices in UnionFindLib\n", universe.n_particles);
+      
+      // Propagate vertex ID ranges up the tree hierarchy
+      partitions.propagateVertexIDRanges(CkCallbackResumeThread());
+      CkPrintf("Propagated vertex ID ranges up tree hierarchy\n");
+      
+      // Show some validation output (from first PE only to avoid spam)
+      if (CkMyPe() == 0) {
+        partitions.validateVertexIDRanges(CkCallbackResumeThread());
+      }
       #endif // FOF      
 
       // Perform traversals

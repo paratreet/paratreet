@@ -41,12 +41,21 @@ public:
     p | depth;
     p | data;
     p | n_particles;
+    p | particle_min_index;
+    p | particle_max_index;
   }
 
 public:
   Data      data;
   int       n_particles = -1; // non-leaves will have this as -1
   int       depth = -1;
+  uint64_t  particle_min_index = UINT64_MAX;
+  uint64_t  particle_max_index = 0;
+  bool      vertex_range_initialized = false;
+  // Track particle order ranges for FoF optimization
+  int       particle_min_order = INT_MAX;
+  int       particle_max_order = INT_MIN;
+  bool      order_range_initialized = false;
   inline const Particle* particles() const {return particles_;}
 
 private:
@@ -75,6 +84,75 @@ public:
   }
   void setParticleVertexID(int i, uint64_t vertex_id) {
     particles_[i].vertex_id = vertex_id;
+    
+    // Update vertex ID range
+    if (!vertex_range_initialized) {
+      // First particle - initialize both min and max to this vertex ID
+      particle_min_index = vertex_id;
+      particle_max_index = vertex_id;
+      vertex_range_initialized = true;
+    } else {
+      // Update range based on this vertex ID
+      if (vertex_id < particle_min_index) {
+        particle_min_index = vertex_id;
+      }
+      if (vertex_id > particle_max_index) {
+        particle_max_index = vertex_id;
+      }
+    }
+    
+    // Update order range using existing particle order
+    int particle_order = particles_[i].order;
+    if (!order_range_initialized) {
+      // First particle - initialize both min and max to this order
+      particle_min_order = particle_order;
+      particle_max_order = particle_order;
+      order_range_initialized = true;
+    } else {
+      // Update range based on this particle order
+      if (particle_order < particle_min_order) {
+        particle_min_order = particle_order;
+      }
+      if (particle_order > particle_max_order) {
+        particle_max_order = particle_order;
+      }
+    }
+  }
+  
+  // Update this node's min/max vertex IDs based on a child's range
+  void updateVertexIDRange(uint64_t child_min, uint64_t child_max) {
+    if (!vertex_range_initialized) {
+      // First child - initialize both min and max to child's range
+      particle_min_index = child_min;
+      particle_max_index = child_max;
+      vertex_range_initialized = true;
+    } else {
+      // Update range based on child's range
+      if (child_min < particle_min_index) {
+        particle_min_index = child_min;
+      }
+      if (child_max > particle_max_index) {
+        particle_max_index = child_max;
+      }
+    }
+  }
+  
+  // Update this node's min/max order based on a child's range
+  void updateOrderRange(int child_min_order, int child_max_order) {
+    if (!order_range_initialized) {
+      // First child - initialize both min and max to child's range
+      particle_min_order = child_min_order;
+      particle_max_order = child_max_order;
+      order_range_initialized = true;
+    } else {
+      // Update range based on child's range
+      if (child_min_order < particle_min_order) {
+        particle_min_order = child_min_order;
+      }
+      if (child_max_order > particle_max_order) {
+        particle_max_order = child_max_order;
+      }
+    }
   }
 };
 
@@ -85,6 +163,9 @@ public:
   virtual Node* getChild(int child_idx) const = 0;
   virtual Node* exchangeChild(int child_idx, Node* child) = 0;
   virtual Node<Data>* getDescendant(Key to_find) = 0;
+  
+  // Propagate vertex ID ranges from children up to this node
+  virtual void propagateVertexIDRanges() = 0;
 
   enum class Type {
     Invalid = 0,
@@ -277,6 +358,87 @@ public:
       else return nullptr;
     }
     return node;
+  }
+
+  virtual void propagateVertexIDRanges() override {
+    // For leaf nodes, the range is already set by setParticleVertexID
+    if (this->isLeaf()) {
+      return;
+    }
+    
+    // For internal nodes, first recursively propagate from children
+    // then update this node's ranges based on children's ranges
+    bool has_valid_vertex_child = false;
+    bool has_valid_order_child = false;
+    uint64_t min_vertex_range = UINT64_MAX;
+    uint64_t max_vertex_range = 0;
+    int min_order_range = INT_MAX;
+    int max_order_range = INT_MIN;
+    
+    for (int i = 0; i < this->n_children; i++) {
+      Node<Data>* child = getChild(i);
+      if (child != nullptr) {
+        // Recursively propagate from child first
+        child->propagateVertexIDRanges();
+        
+        // Update vertex ID range based on this child if child has valid range
+        if (child->vertex_range_initialized) {
+          if (!has_valid_vertex_child) {
+            // First valid child - initialize our vertex range
+            min_vertex_range = child->particle_min_index;
+            max_vertex_range = child->particle_max_index;
+            has_valid_vertex_child = true;
+          } else {
+            // Subsequent valid children - update vertex range
+            if (child->particle_min_index < min_vertex_range) {
+              min_vertex_range = child->particle_min_index;
+            }
+            if (child->particle_max_index > max_vertex_range) {
+              max_vertex_range = child->particle_max_index;
+            }
+          }
+        }
+        
+        // Update order range based on this child if child has valid range
+        if (child->order_range_initialized) {
+          if (!has_valid_order_child) {
+            // First valid child - initialize our order range
+            min_order_range = child->particle_min_order;
+            max_order_range = child->particle_max_order;
+            has_valid_order_child = true;
+          } else {
+            // Subsequent valid children - update order range
+            if (child->particle_min_order < min_order_range) {
+              min_order_range = child->particle_min_order;
+            }
+            if (child->particle_max_order > max_order_range) {
+              max_order_range = child->particle_max_order;
+            }
+          }
+        }
+      }
+    }
+    
+    // Update this node's vertex range if we found valid children
+    if (has_valid_vertex_child) {
+      this->particle_min_index = min_vertex_range;
+      this->particle_max_index = max_vertex_range;
+      this->vertex_range_initialized = true;
+    }
+    
+    // Update this node's order range if we found valid children
+    if (has_valid_order_child) {
+      this->particle_min_order = min_order_range;
+      this->particle_max_order = max_order_range;
+      this->order_range_initialized = true;
+    }
+    
+    #ifdef DEBUG_VERTEX_IDS
+    if (has_valid_child) {
+      CkPrintf("Node %lu: Updated vertex ID range [%lu, %lu] from children\n", 
+               this->key, this->particle_min_index, this->particle_max_index);
+    }
+    #endif
   }
 
 

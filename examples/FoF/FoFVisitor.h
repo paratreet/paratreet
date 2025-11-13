@@ -65,13 +65,70 @@ public:
     */
 
     // Fallback: if boxes are close, check individual particles (exact test)
+    bool may_return = false;
     for (int i = 0; i < target.n_particles; i++) {
       Real ballSq = linkSq;
-      // adding offset to target needs to be the same in leaf
+      // adding offset to target needs to be the same in vertex_range_initialized check
       if (Space::intersect(source.data.box, target.particles()[i].position+offset, ballSq))
-        return true;
+      {
+        may_return = true;
+        break;
+      }
     }
-    return false;
+    
+    if (!may_return) return false;
+    
+    // Vertex ID range optimization: we only process pairs where sp.vertex_id < tp.vertex_id
+    // If both nodes have initialized vertex ranges, check for potential early termination
+    if (source.vertex_range_initialized && target.vertex_range_initialized) {
+      bool should_skip = false;
+      
+      // If all source particles have vertex_id >= all target particles, skip this interaction
+      // (no valid sp.vertex_id < tp.vertex_id pairs possible)
+      if (source.particle_min_index >= target.particle_max_index) {
+        should_skip = true;
+      }
+      
+      // If all target particles have vertex_id <= all source particles, skip this interaction  
+      // (no valid sp.vertex_id < tp.vertex_id pairs possible)
+      if (target.particle_max_index <= source.particle_min_index) {
+        should_skip = true;
+      }
+      
+      if (should_skip) {
+        return false;
+      }
+      
+      /* DEBUG: Uncomment to enable optimization statistics
+      // Debug: track optimization attempts
+      static int total_checks = 0;
+      static int skipped_interactions = 0;
+      static int overlapping_ranges = 0;
+      total_checks++;
+      
+      // Count overlapping ranges for statistics
+      if (!(source.particle_min_index >= target.particle_max_index || 
+            target.particle_max_index <= source.particle_min_index)) {
+        overlapping_ranges++;
+      }
+      
+      if (should_skip) {
+        skipped_interactions++;
+      }
+      
+      if (total_checks % 10000 == 0) {
+        CkPrintf("FoF Stats: %d checks, %d skipped (%.2f%%), %d overlapping (%.2f%%)\n", 
+                 total_checks, skipped_interactions, 
+                 100.0 * skipped_interactions / total_checks,
+                 overlapping_ranges, 100.0 * overlapping_ranges / total_checks);
+        CkPrintf("  Example ranges: source[%lu,%lu] target[%lu,%lu]\n",
+                 source.particle_min_index, source.particle_max_index,
+                 target.particle_min_index, target.particle_max_index);
+      }
+      */
+    }
+    
+    return true;
   }
 
   void node(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {}
@@ -83,8 +140,9 @@ public:
       const Particle& tp = target.particles()[i];
       for (int j = 0; j < source.n_particles; ++j) {
         const Particle& sp = source.particles()[j];
-        // avoid union of same pair twice by comparing particle order first (cheap)
-        if (sp.order >= tp.order) continue;
+        // avoid union of same pair twice by comparing vertex_id instead of order
+        // This should be more effective since vertex_id has spatial locality
+        if (sp.vertex_id >= tp.vertex_id) continue;
         // squared distance (avoid sqrt)
         const Vector3D<Real> d = tp.position - sp.position + offset;
         const Real distSq = d.x*d.x + d.y*d.y + d.z*d.z;

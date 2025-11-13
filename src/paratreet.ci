@@ -107,6 +107,8 @@ module paratreet {
     // FoF functions
     #ifdef FOF    
     entry void initializeLibVertices(const CkCallback &cb);
+    entry void propagateVertexIDRanges(const CkCallback &cb);
+    entry void validateVertexIDRanges(const CkCallback &cb);
     entry void getConnectedComponents(const CkCallback& cb);
     #endif
   }
