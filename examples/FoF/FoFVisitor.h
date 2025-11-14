@@ -89,12 +89,6 @@ public:
         should_skip = true;
       }
       
-      // If all target particles have vertex_id <= all source particles, skip this interaction  
-      // (no valid sp.vertex_id < tp.vertex_id pairs possible)
-      if (target.particle_max_index <= source.particle_min_index) {
-        should_skip = true;
-      }
-      
       if (should_skip) {
         return false;
       }
@@ -134,7 +128,7 @@ public:
   void node(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {}
 
   void leaf(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
-    //int counter = 0;
+    int counter = 0;
     const Real linkSq = linkingLength * linkingLength;
     for (int i = 0; i < target.n_particles; ++i) {
       const Particle& tp = target.particles()[i];
@@ -147,8 +141,8 @@ public:
         const Vector3D<Real> d = tp.position - sp.position + offset;
         const Real distSq = d.x*d.x + d.y*d.y + d.z*d.z;
         if (distSq < linkSq) {
-          //counter++;
-          libProxy[tp.partition_idx].ckLocal()->union_request(sp.vertex_id, tp.vertex_id);
+          counter++;
+          //libProxy[tp.partition_idx].ckLocal()->union_request(sp.vertex_id, tp.vertex_id);
         }
       }
     }
