@@ -4,6 +4,7 @@
 #include "Particle.h"
 #include <array>
 #include <atomic>
+#include <climits>
 
 template <typename Data>
 class SpatialNode
