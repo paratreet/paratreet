@@ -142,7 +142,7 @@ public:
         const Real distSq = d.x*d.x + d.y*d.y + d.z*d.z;
         if (distSq < linkSq) {
           //counter++;
-          libProxy[tp.partition_idx].ckLocal()->union_request(sp.vertex_id, tp.vertex_id);
+          libProxy[tp.partition_idx].union_request(sp.vertex_id, tp.vertex_id);
         }
       }
     }
