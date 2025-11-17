@@ -25,7 +25,6 @@ public:
   FoFVisitor() : offset(0, 0, 0) {}
   FoFVisitor(Vector3D<Real> offseti) : offset(offseti) {}
 
-
   void pup(PUP::er& p) {
     p | offset;
   }
