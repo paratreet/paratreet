@@ -1,0 +1,24 @@
+mainmodule Main {
+    extern module paratreet;
+
+    readonly bool verify;
+    readonly bool periodic;
+    readonly int peanoKey;
+    readonly CProxy_NeighborListCollector neighbor_list_collector;
+
+    initnode void initialize(void);
+
+    group NeighborListCollector {
+        entry NeighborListCollector();
+        entry void addRequest(int, Key);
+        entry [inline] void forwardRequest(int, Particle);
+        entry [inline] void fillRequest(int, Particle);
+        entry [inline] void savePartitionHome(int, Particle);
+        entry void shareDensities();
+        entry void addDensity(Particle);
+        entry void forwardDensity(Particle);
+        entry void reset(const CkCallback&);
+    }
+
+    extern entry void Partition<CentroidData> startUpAndDown<DensityVisitor> ();
+}
