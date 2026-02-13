@@ -3,7 +3,7 @@ include ../src/Makefile.common
 # comment out -DFOF if not using FoF to not waste runtime
 LBS = CommonLBs PrefixLB OrbLB #AverageSmoothLB DiffusionLB DistributedPrefixLB DistributedOrbLB
 LB_LIBS = $(foreach m, $(LBS), -module $(m))
-OPTS = -g -O3 $(INCLUDES) -DCOUNT_INTERACTIONS=1 -DDEBUG=0 -DHEXADECAPOLE $(MAKE_OPTS) -DFOF #-DANCHOR_ALGO
+OPTS = -g -O3 $(INCLUDES) -DCOUNT_INTERACTIONS=1 -DDEBUG=0 -DHEXADECAPOLE $(MAKE_OPTS) -DFOF -DUNIONFIND #-DANCHOR_ALGO
 CHARMC = $(CHARM_HOME)/bin/charmc $(OPTS)
 
 all: Gravity SPH Collision FoFApp
