@@ -79,6 +79,7 @@ public:
     
     // Vertex ID range optimization: we only process pairs where sp.vertex_id < tp.vertex_id
     // If both nodes have initialized vertex ranges, check for potential early termination
+    /*
     if (source.vertex_range_initialized && target.vertex_range_initialized) {
       bool should_skip = false;
       
@@ -118,8 +119,8 @@ public:
                  source.particle_min_index, source.particle_max_index,
                  target.particle_min_index, target.particle_max_index);
       }
-      */
     }
+      */
     
     return true;
   }
@@ -144,7 +145,6 @@ public:
           if (sp.partition_idx == tp.partition_idx) {
             libProxy[tp.partition_idx].ckLocal()->union_request(sp.vertex_id, tp.vertex_id);
           } else {
-            /*
             //logic for who to do the union request:
             //if tp.partition_idx is even and tp.partition_idx < sp.partition_idx, or tp.partition_idx is odd and tp.partition_idx > sp.partition_idx, then tp does the union request. This is to avoid both sides doing the union request at the same time and causing deadlock
             if ((tp.partition_idx < sp.partition_idx) ^ (tp.partition_idx & 1)) {
@@ -152,8 +152,7 @@ public:
             } else {
               libProxy[sp.partition_idx].union_request(sp.vertex_id, tp.vertex_id);
             }
-              */
-            libProxy[tp.partition_idx].union_request(sp.vertex_id, tp.vertex_id);
+            //libProxy[tp.partition_idx].union_request(sp.vertex_id, tp.vertex_id);
           }
         }
       }
