@@ -250,7 +250,9 @@ public:
       if(iter!=0)
       {
         paratreet::traversalFn(universe, proxy_pack, iter);
-        CkWaitQD();
+        CkWaitQD(); //for paratreet tree traversals
+        libProxy.flush_buffers();
+        CkWaitQD(); //for union-find lib messages
         CkPrintf("Tree traversal: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
       } 
       else CkPrintf("In FoF, we are skipping traversal in iteration 0\n");
