@@ -110,6 +110,8 @@ module paratreet {
     entry void propagateVertexIDRanges(const CkCallback &cb);
     entry void validateVertexIDRanges(const CkCallback &cb);
     entry void getConnectedComponents(const CkCallback& cb);
+    entry void resetUnionRequestCounter(const CkCallback& cb);
+    entry void reportUnionRequestCount(const CkCallback& cb);
     #endif
   }
 

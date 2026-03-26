@@ -141,16 +141,19 @@ public:
         const Vector3D<Real> d = tp.position - sp.position + offset;
         const Real distSq = d.x*d.x + d.y*d.y + d.z*d.z;
         if (distSq < linkSq) {
-          //counter++;
+          fof_union_request_count++;
           if (sp.partition_idx == tp.partition_idx) {
             libProxy[tp.partition_idx].ckLocal()->union_request(sp.vertex_id, tp.vertex_id);
           } else {
             //logic for who to do the union request:
             //if tp.partition_idx is even and tp.partition_idx < sp.partition_idx, or tp.partition_idx is odd and tp.partition_idx > sp.partition_idx, then tp does the union request. This is to avoid both sides doing the union request at the same time and causing deadlock
-            if ((tp.partition_idx < sp.partition_idx) ^ (tp.partition_idx & 1)) {
-              libProxy[tp.partition_idx].union_request(sp.vertex_id, tp.vertex_id);
+            int target_idx = ((tp.partition_idx < sp.partition_idx) ^ (tp.partition_idx & 1))
+                             ? tp.partition_idx : sp.partition_idx;
+            UnionFindLib* local_lib = libProxy[target_idx].ckLocal();
+            if (local_lib != nullptr) {
+              local_lib->union_request(sp.vertex_id, tp.vertex_id);
             } else {
-              libProxy[sp.partition_idx].union_request(sp.vertex_id, tp.vertex_id);
+              //libProxy[target_idx].union_request(sp.vertex_id, tp.vertex_id);
             }
             //libProxy[tp.partition_idx].union_request(sp.vertex_id, tp.vertex_id);
           }

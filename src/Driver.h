@@ -249,12 +249,20 @@ public:
       #ifdef FOF
       if(iter!=0)
       {
+        proxy_pack.partition.resetUnionRequestCounter(CkCallbackResumeThread());
         paratreet::traversalFn(universe, proxy_pack, iter);
         CkWaitQD(); //for paratreet tree traversals
-        libProxy.flush_buffers();
-        CkWaitQD(); //for union-find lib messages
+        libProxy[0].quiesce(CkCallbackResumeThread()); //flush htram buffers and wait for quiescence
         CkPrintf("Tree traversal: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
-      } 
+        void* count_raw = nullptr;
+        proxy_pack.partition.reportUnionRequestCount(CkCallbackResumeThread(count_raw));
+        if (count_raw) {
+          CkReductionMsg* count_msg = static_cast<CkReductionMsg*>(count_raw);
+          long long global_total = *static_cast<long long*>(count_msg->getData());
+          CkPrintf("[Main] Global total union_request calls: %lld\n", global_total);
+          delete count_msg;
+        }
+      }
       else CkPrintf("In FoF, we are skipping traversal in iteration 0\n");
       #else
       paratreet::traversalFn(universe, proxy_pack, iter);

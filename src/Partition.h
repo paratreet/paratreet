@@ -108,6 +108,8 @@ struct Partition : public CBase_Partition<Data> {
   static std::pair<int, int> getLocationFromID(uint64_t vid);
   void unionRequest(int sp_order, int tp_order);
   void getConnectedComponents(const CkCallback& cb);
+  void resetUnionRequestCounter(const CkCallback& cb);
+  void reportUnionRequestCount(const CkCallback& cb);
 
   Real time_advanced = 0;
   int iter = 1;
@@ -526,6 +528,17 @@ void Partition<Data>::doOutput(WriterProxy w, int n_total_particles, CkCallback 
 // Friends-of-Friends (FoF) functions
 // -------------------
 #ifdef FOF
+
+// Per-PE counters for union_request calls.  thread_local gives one instance
+// per PE (each Charm++ PE owns one OS thread in SMP mode).  static gives
+// internal linkage so the definition is safe in this header.
+static thread_local long long fof_union_request_count = 0;
+static thread_local bool fof_count_reported = false;
+
+inline void fof_reset_union_request_counter() {
+  fof_union_request_count = 0;
+  fof_count_reported = false;
+}
 /**
  * @brief Initializes an instance of unionFindLib by reading in all particles
  * stored on this partition. Must be called after partitions are initialized
@@ -713,6 +726,23 @@ void Partition<Data>::getConnectedComponents(const CkCallback& cb) {
     }
   }
   this->contribute(cb);
+}
+
+template <typename Data>
+void Partition<Data>::resetUnionRequestCounter(const CkCallback& cb) {
+  fof_reset_union_request_counter();
+  this->contribute(cb);
+}
+
+template <typename Data>
+void Partition<Data>::reportUnionRequestCount(const CkCallback& cb) {
+  long long count = 0;
+  if (!fof_count_reported) {
+    fof_count_reported = true;
+    count = fof_union_request_count;
+    CkPrintf("[PE %d] union_request calls: %lld\n", CkMyPe(), count);
+  }
+  this->contribute(sizeof(long long), &count, CkReduction::sum_long, cb);
 }
 #endif // FOF
 
