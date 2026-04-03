@@ -230,9 +230,12 @@ public:
 
       #ifdef FOF
       // Populate UnionFindLib Vertices for FoF
-      partitions.initializeLibVertices(CkCallbackResumeThread());
-      CkPrintf("Initialized %d vertices in UnionFindLib\n", universe.n_particles);
-      
+      //if(iter<2)
+      //{
+        partitions.initializeLibVertices(CkCallbackResumeThread());
+        CkPrintf("Initialized %d vertices in UnionFindLib\n", universe.n_particles);
+      //}
+      /*
       // Propagate vertex ID ranges up the tree hierarchy
       partitions.propagateVertexIDRanges(CkCallbackResumeThread());
       CkPrintf("Propagated vertex ID ranges up tree hierarchy\n");
@@ -241,6 +244,7 @@ public:
       if (CkMyPe() == 0) {
         partitions.validateVertexIDRanges(CkCallbackResumeThread());
       }
+        */
       #endif // FOF      
 
       // Perform traversals
@@ -249,7 +253,7 @@ public:
       #ifdef FOF
       if(iter!=0)
       {
-        proxy_pack.partition.resetUnionRequestCounter(CkCallbackResumeThread());
+        /*if(iter<2)*/ proxy_pack.partition.resetUnionRequestCounter(CkCallbackResumeThread());
         paratreet::traversalFn(universe, proxy_pack, iter);
         CkWaitQD(); //for paratreet tree traversals
         libProxy[0].quiesce(CkCallbackResumeThread()); //flush htram buffers and wait for quiescence
@@ -294,6 +298,11 @@ public:
           (iter % config.flush_period == config.flush_period - 1);
 
       if (iter + 1 == config.num_iterations) complete_rebuild = false;
+      /*#ifdef FOF
+      // Keep the tree intact between iter=1 (intra-partition) and iter=2 (cross-partition)
+      // so iter=2 can reuse the same tree structure without an expensive rebuild.
+      if (iter == 1) complete_rebuild = false;
+      #endif*/
       CkPrintf("[Meta] n_subtree = %d; timestep_size = %f; numPSParticleCopies = %d; numPSParticleShares = %d; sumPESize = %d; maxPESize = %d, avgPESize = %f; ratio = %f; maxVelocity = %f; rebuild = %s\n", n_subtrees, timestep_size, numParticleCopies, numParticleShares, sumPESize, maxPESize, avgPESize, ratio, max_velocity, (complete_rebuild? "yes" : "no"));
       //End Subtree reduction message parsing
 
@@ -308,6 +317,7 @@ public:
       #endif // FOF
 
 
+      #ifndef FOF
       CkReductionMsg* result;
       partitions.perturb(timestep_size, CkCallbackResumeThread((void *&)result));
 
@@ -315,6 +325,7 @@ public:
       delete result;
       remakeUniverse();
       partitions.rebuild(universe, subtrees, complete_rebuild); // 0.1s for example
+      #endif // FOF
 
       CkWaitQD();
       CkPrintf("Perturbations: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);

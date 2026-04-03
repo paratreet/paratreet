@@ -20,13 +20,16 @@ class FoFVisitor {
 
 private:
   Vector3D<Real> offset;
+  int iter; // current paratreet iteration
 public:
   static constexpr const bool CallSelfLeaf = true;
-  FoFVisitor() : offset(0, 0, 0) {}
-  FoFVisitor(Vector3D<Real> offseti) : offset(offseti) {}
+  FoFVisitor() : offset(0, 0, 0), iter(0) {}
+  FoFVisitor(Vector3D<Real> offseti) : offset(offseti), iter(0) {}
+  FoFVisitor(Vector3D<Real> offseti, int _iter) : offset(offseti), iter(_iter) {}
 
   void pup(PUP::er& p) {
     p | offset;
+    p | iter;
   }
 
   // Compute minimum squared distance between two axis-aligned boxes (OrientedBox)
@@ -143,19 +146,22 @@ public:
         if (distSq < linkSq) {
           fof_union_request_count++;
           if (sp.partition_idx == tp.partition_idx) {
-            libProxy[tp.partition_idx].ckLocal()->union_request(sp.vertex_id, tp.vertex_id);
+            // intra-partition pair: only process in iter=1
+            //if (iter == 1) {
+              libProxy[tp.partition_idx].ckLocal()->union_request(sp.vertex_id, tp.vertex_id);
+            //}
           } else {
-            //logic for who to do the union request:
-            //if tp.partition_idx is even and tp.partition_idx < sp.partition_idx, or tp.partition_idx is odd and tp.partition_idx > sp.partition_idx, then tp does the union request. This is to avoid both sides doing the union request at the same time and causing deadlock
-            int target_idx = ((tp.partition_idx < sp.partition_idx) ^ (tp.partition_idx & 1))
-                             ? tp.partition_idx : sp.partition_idx;
-            UnionFindLib* local_lib = libProxy[target_idx].ckLocal();
-            if (local_lib != nullptr) {
-              local_lib->union_request(sp.vertex_id, tp.vertex_id);
-            } else {
-              //libProxy[target_idx].union_request(sp.vertex_id, tp.vertex_id);
-            }
-            //libProxy[tp.partition_idx].union_request(sp.vertex_id, tp.vertex_id);
+            // cross-partition pair: only process in iter=2
+            //if (iter == 2) {
+              int target_idx = ((tp.partition_idx < sp.partition_idx) ^ (tp.partition_idx & 1))
+                               ? tp.partition_idx : sp.partition_idx;
+              UnionFindLib* local_lib = libProxy[target_idx].ckLocal();
+              if (local_lib != nullptr) {
+                local_lib->union_request(sp.vertex_id, tp.vertex_id);
+              } else {
+                //libProxy[target_idx].union_request(sp.vertex_id, tp.vertex_id);
+              }
+            //}
           }
         }
       }
