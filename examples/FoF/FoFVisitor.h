@@ -32,6 +32,20 @@ public:
     p | iter;
   }
 
+  // Compute maximum squared distance between any two points in boxes a and b,
+  // after shifting box b by `offset`.
+  static inline Real aabb_max_distance_sq(const OrientedBox<Real>& a, const OrientedBox<Real>& b, const Vector3D<Real>& offset)
+  {
+    const Vector3D<Real> bl = b.lesser_corner + offset;
+    const Vector3D<Real> bg = b.greater_corner + offset;
+
+    Real dx = std::max(std::abs(a.lesser_corner.x - bg.x), std::abs(a.greater_corner.x - bl.x));
+    Real dy = std::max(std::abs(a.lesser_corner.y - bg.y), std::abs(a.greater_corner.y - bl.y));
+    Real dz = std::max(std::abs(a.lesser_corner.z - bg.z), std::abs(a.greater_corner.z - bl.z));
+
+    return dx*dx + dy*dy + dz*dz;
+  }
+
   // Compute minimum squared distance between two axis-aligned boxes (OrientedBox)
   // after shifting box b by `offset`. Returns 0 if boxes overlap.
   static inline Real aabb_min_distance_sq(const OrientedBox<Real>& a, const OrientedBox<Real>& b, const Vector3D<Real>& offset)
@@ -130,9 +144,56 @@ public:
 
   void node(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {}
 
+  void do_union(const Particle& sp, const Particle& tp) {
+    fof_union_request_count++;
+    if (sp.partition_idx == tp.partition_idx) {
+      // intra-partition pair: only process in iter=1
+      //if (iter == 1) {
+        UnionFindLib* local_lib = libProxy[tp.partition_idx].ckLocal();
+        if (local_lib != nullptr) local_lib->union_request(sp.vertex_id, tp.vertex_id);
+      //}
+    } else {
+      // cross-partition pair: only process in iter=2
+      //if (iter == 2) {
+        int target_idx = ((tp.partition_idx < sp.partition_idx) ^ (tp.partition_idx & 1))
+                         ? tp.partition_idx : sp.partition_idx;
+        UnionFindLib* local_lib = libProxy[target_idx].ckLocal();
+        if (local_lib != nullptr) {
+          local_lib->union_request(sp.vertex_id, tp.vertex_id);
+        } else {
+          //libProxy[target_idx].union_request(sp.vertex_id, tp.vertex_id);
+        }
+      //}
+    }
+  }
+
   void leaf(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
-    //int counter = 0;
     const Real linkSq = linkingLength * linkingLength;
+    const bool all_within = (aabb_max_distance_sq(source.data.box, target.data.box, offset) < linkSq);
+
+    if (all_within && source.n_particles > 0 && target.n_particles > 0) {
+      // Every particle pair is within linking length. Instead of O(N*M) unions,
+      // build a star: find the particle with minimum vertex_id across both buckets
+      // and union all others to it. This gives O(N+M) unions (a spanning tree).
+      const Particle* root = &source.particles()[0];
+      for (int j = 1; j < source.n_particles; ++j)
+        if (source.particles()[j].vertex_id < root->vertex_id) root = &source.particles()[j];
+      for (int i = 0; i < target.n_particles; ++i)
+        if (target.particles()[i].vertex_id < root->vertex_id) root = &target.particles()[i];
+
+      for (int j = 0; j < source.n_particles; ++j) {
+        const Particle& sp = source.particles()[j];
+        if (sp.vertex_id == root->vertex_id) continue;
+        do_union(*root, sp);
+      }
+      for (int i = 0; i < target.n_particles; ++i) {
+        const Particle& tp = target.particles()[i];
+        if (tp.vertex_id == root->vertex_id) continue;
+        do_union(*root, tp);
+      }
+      return;
+    }
+
     for (int i = 0; i < target.n_particles; ++i) {
       const Particle& tp = target.particles()[i];
       for (int j = 0; j < source.n_particles; ++j) {
@@ -144,25 +205,7 @@ public:
         const Vector3D<Real> d = tp.position - sp.position + offset;
         const Real distSq = d.x*d.x + d.y*d.y + d.z*d.z;
         if (distSq < linkSq) {
-          fof_union_request_count++;
-          if (sp.partition_idx == tp.partition_idx) {
-            // intra-partition pair: only process in iter=1
-            //if (iter == 1) {
-              libProxy[tp.partition_idx].ckLocal()->union_request(sp.vertex_id, tp.vertex_id);
-            //}
-          } else {
-            // cross-partition pair: only process in iter=2
-            //if (iter == 2) {
-              int target_idx = ((tp.partition_idx < sp.partition_idx) ^ (tp.partition_idx & 1))
-                               ? tp.partition_idx : sp.partition_idx;
-              UnionFindLib* local_lib = libProxy[target_idx].ckLocal();
-              if (local_lib != nullptr) {
-                local_lib->union_request(sp.vertex_id, tp.vertex_id);
-              } else {
-                //libProxy[target_idx].union_request(sp.vertex_id, tp.vertex_id);
-              }
-            //}
-          }
+          do_union(sp, tp);
         }
       }
     }
