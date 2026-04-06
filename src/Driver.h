@@ -317,7 +317,6 @@ public:
       #endif // FOF
 
 
-      #ifndef FOF
       CkReductionMsg* result;
       partitions.perturb(timestep_size, CkCallbackResumeThread((void *&)result));
 
@@ -325,7 +324,6 @@ public:
       delete result;
       remakeUniverse();
       partitions.rebuild(universe, subtrees, complete_rebuild); // 0.1s for example
-      #endif // FOF
 
       CkWaitQD();
       CkPrintf("Perturbations: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
