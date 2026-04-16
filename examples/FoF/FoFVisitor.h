@@ -172,9 +172,22 @@ public:
     const bool all_within = (aabb_max_distance_sq(source.data.box, target.data.box, offset) < linkSq);
 
     if (all_within && source.n_particles > 0 && target.n_particles > 0) {
-      // Every particle pair is within linking length. Instead of O(N*M) unions,
-      // build a star: find the particle with minimum vertex_id across both buckets
-      // and union all others to it. This gives O(N+M) unions (a spanning tree).
+      // Every particle pair is within linking length. Build a star from the particle
+      // with minimum vertex_id to all others: O(N+M-1) unions (a spanning tree).
+      //
+      // The traversal calls leaf(A,B) AND leaf(B,A) for each distinct node pair, so
+      // without a dedup gate the star would be built twice. We process only when
+      // source.particle_min_index <= target.particle_min_index. Since each particle
+      // belongs to exactly one leaf, particle_min_index uniquely identifies a leaf, so
+      // exactly one direction satisfies the condition for any non-equal pair.
+      // For self-leaf calls (CallSelfLeaf=true, source == target same particles), both
+      // sides are equal and we proceed — but skip the target loop to avoid doubling
+      // intra-bucket unions.
+      if (source.vertex_range_initialized && target.vertex_range_initialized
+          && source.particle_min_index > target.particle_min_index) {
+        return; // the symmetric leaf(target, source) call handles this pair
+      }
+
       const Particle* root = &source.particles()[0];
       for (int j = 1; j < source.n_particles; ++j)
         if (source.particles()[j].vertex_id < root->vertex_id) root = &source.particles()[j];
@@ -186,10 +199,17 @@ public:
         if (sp.vertex_id == root->vertex_id) continue;
         do_union(*root, sp);
       }
-      for (int i = 0; i < target.n_particles; ++i) {
-        const Particle& tp = target.particles()[i];
-        if (tp.vertex_id == root->vertex_id) continue;
-        do_union(*root, tp);
+      // Self-leaf: source and target represent the same bucket (same vertex_id range
+      // and particle count). Skip the target loop to avoid unions being sent twice.
+      const bool is_self_leaf = source.vertex_range_initialized && target.vertex_range_initialized
+          && source.particle_min_index == target.particle_min_index
+          && source.n_particles == target.n_particles;
+      if (!is_self_leaf) {
+        for (int i = 0; i < target.n_particles; ++i) {
+          const Particle& tp = target.particles()[i];
+          if (tp.vertex_id == root->vertex_id) continue;
+          do_union(*root, tp);
+        }
       }
       return;
     }
