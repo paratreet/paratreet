@@ -24,6 +24,9 @@
 #include "Writer.h"
 #include "Subtree.h"
 #include "unionFindLib.h"
+#ifdef FOF
+#include "LocalCalcs.h"
+#endif
 
 extern CProxy_Reader readers;
 extern CProxy_TreeSpec treespec;
@@ -45,6 +48,9 @@ public:
   double start_time;
   std::vector<int> partition_locations;
   CProxy_UnionFindLib libProxy;
+#ifdef FOF
+  CProxy_LocalCalcs<Data> localCalcs;
+#endif
 
   Driver(CProxy_CacheManager<Data> cache_manager_, CProxy_Resumer<Data> resumer_, CProxy_TreeCanopy<Data> calculator_) :
     cache_manager(cache_manager_), resumer(resumer_), calculator(calculator_), storage_sorted(false) {}
@@ -62,6 +68,10 @@ public:
     cache_manager.initialize(CkCallbackResumeThread());
     // Useful particle keys
     CkPrintf("* Initialization\n");
+#ifdef FOF
+    localCalcs = CProxy_LocalCalcs<Data>::ckNew();
+    CkPrintf("* Created LocalCalcs group.\n");
+#endif
     decompose(0);
     cb.send();
   }
@@ -216,6 +226,7 @@ public:
 
       #ifdef FOF
       ProxyPack<Data> proxy_pack (this->thisProxy, subtrees, partitions, cache_manager, libProxy);
+      proxy_pack.localCalcs = localCalcs;
       #else
       ProxyPack<Data> proxy_pack (this->thisProxy, subtrees, partitions, cache_manager, NULL);
       #endif // FOF
@@ -245,7 +256,9 @@ public:
         partitions.validateVertexIDRanges(CkCallbackResumeThread());
       }
         */
-      #endif // FOF      
+      // Deposit leaf bucket pointers and vertex arrays into LocalCalcs on each PE.
+      partitions.depositBucketPointers(localCalcs, CkCallbackResumeThread());
+      #endif // FOF
 
       // Perform traversals
       start_time = CkWallTimer();

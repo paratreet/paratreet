@@ -59,6 +59,11 @@ struct DPHolder {
 template <typename Data>
 class CProxy_CacheManager;
 
+#ifdef FOF
+template <typename Data>
+class CProxy_LocalCalcs;
+#endif
+
 template <typename Data>
 struct ProxyPack {
   CProxy_Driver<Data> driver;
@@ -66,7 +71,10 @@ struct ProxyPack {
   CProxy_Partition<Data> partition;
   CProxy_CacheManager<Data> cache;
   CProxy_UnionFindLib libProxy;
-  
+#ifdef FOF
+  CProxy_LocalCalcs<Data> localCalcs;
+#endif
+
   ProxyPack(CProxy_Driver<Data> d, CProxy_Subtree<Data> s, CProxy_Partition<Data> p, CProxy_CacheManager<Data> c, CProxy_UnionFindLib u)
     : driver(d), subtree(s), partition(p), cache(c), libProxy(u) {}
   ProxyPack() {}
@@ -76,6 +84,9 @@ struct ProxyPack {
     p | partition;
     p | cache;
     p | libProxy;
+#ifdef FOF
+    p | localCalcs;
+#endif
   }
 };
 

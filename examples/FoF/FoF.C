@@ -134,16 +134,15 @@ class FoF : public paratreet::Main<CentroidData> {
     //only need to look at cubes that are almost touching (N=1)
     if(!periodic)
     {
-      proxy_pack.partition.template startDown<FoFVisitor>(FoFVisitor(Vector3D<Real> (0,0,0), iter));
+      proxy_pack.partition.template startDown<FoFVisitor>(FoFVisitor(Vector3D<Real>(0,0,0), iter, proxy_pack.localCalcs));
     }
     else
     {
-    for (int X = -1; X <= 1; ++X) {
+      for (int X = -1; X <= 1; ++X) {
         for (int Y = -1; Y <= 1; ++Y) {
           for (int Z = -1; Z <= 1; ++Z) {
-            Vector3D<Real> offset (X * fPeriod.x, Y * fPeriod.y, Z * fPeriod.z);
-            //Vector3D<Real> offset (X, Y, Z);
-            proxy_pack.partition.template startDown<FoFVisitor>(FoFVisitor(offset, iter));
+            Vector3D<Real> offset(X * fPeriod.x, Y * fPeriod.y, Z * fPeriod.z);
+            proxy_pack.partition.template startDown<FoFVisitor>(FoFVisitor(offset, iter, proxy_pack.localCalcs));
           }
         }
       }

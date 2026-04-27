@@ -79,6 +79,14 @@ module paratreet {
     entry void write(int prefix_count, CkCallback cb);
   }
 
+  #ifdef FOF
+  template <typename Data>
+  group LocalCalcs {
+    entry LocalCalcs();
+    entry void doPhase0(const CkCallback& cb);
+  };
+  #endif
+
   template <typename Data>
   array [1d] Partition {
     entry Partition(int, CProxy_CacheManager<Data>, CProxy_Resumer<Data>, TCHolder<Data>, CProxy_Driver<Data>, bool);
@@ -105,7 +113,8 @@ module paratreet {
     entry void applyOpposingEffects(std::vector<std::pair<Key, std::pair<Vector3D<Real>, Real>>> effects);
     
     // FoF functions
-    #ifdef FOF    
+    #ifdef FOF
+    entry void depositBucketPointers(CProxy_LocalCalcs<Data> lc_proxy, const CkCallback& cb);
     entry void initializeLibVertices(const CkCallback &cb);
     entry void propagateVertexIDRanges(const CkCallback &cb);
     entry void validateVertexIDRanges(const CkCallback &cb);

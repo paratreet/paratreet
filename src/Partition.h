@@ -13,6 +13,9 @@
 #include "paratreet.decl.h"
 #include "LBCommon.h"
 #include "unionFindLib.h"
+#ifdef FOF
+#include "LocalCalcs.h"
+#endif
 
 CkpvExtern(int, _lb_obj_index);
 extern CProxy_TreeSpec treespec;
@@ -110,6 +113,9 @@ struct Partition : public CBase_Partition<Data> {
   void getConnectedComponents(const CkCallback& cb);
   void resetUnionRequestCounter(const CkCallback& cb);
   void reportUnionRequestCount(const CkCallback& cb);
+#ifdef FOF
+  void depositBucketPointers(CProxy_LocalCalcs<Data> lc_proxy, const CkCallback& cb);
+#endif
 
   Real time_advanced = 0;
   int iter = 1;
@@ -528,6 +534,21 @@ void Partition<Data>::doOutput(WriterProxy w, int n_total_particles, CkCallback 
 // Friends-of-Friends (FoF) functions
 // -------------------
 #ifdef FOF
+
+template <typename Data>
+void Partition<Data>::depositBucketPointers(CProxy_LocalCalcs<Data> lc_proxy, const CkCallback& cb) {
+  LocalCalcs<Data>* lc_local = lc_proxy.ckLocalBranch();
+  lc_local->cross_partition_union_count = 0;
+  lc_local->compress_count = 0;
+  int nParticles = 0;
+  for (auto leaf : leaves) {
+    lc_local->depositBucket(leaf);
+    nParticles += leaf->n_particles;
+  }
+  UnionFindLib* lib = libProxy[this->thisIndex].ckLocal();
+  if (lib) lc_local->depositVertexArray(this->thisIndex, lib->return_vertices(), nParticles);
+  this->contribute(cb);
+}
 
 // Per-PE counters for union_request calls.  thread_local gives one instance
 // per PE (each Charm++ PE owns one OS thread in SMP mode).  static gives

@@ -8,28 +8,44 @@
 #include <cmath>
 #include <vector>
 #include <queue>
+#include <unordered_set>
 #include "unionFindLib.h"
 #include "Partition.h"
+#include "LocalCalcs.h"
 
 extern CProxy_UnionFindLib libProxy;
 extern CProxy_Partition<CentroidData> partitionProxy;
 extern Real linkingLength;
 extern Vector3D<Real> fPeriod;
 
+struct PairHash {
+  std::size_t operator()(const std::pair<uint64_t, uint64_t>& p) const {
+    std::size_t h1 = std::hash<uint64_t>{}(p.first);
+    std::size_t h2 = std::hash<uint64_t>{}(p.second);
+    return h1 ^ (h2 * 0x9e3779b97f4a7c15ULL + (h1 << 6) + (h1 >> 2));
+  }
+};
+
 class FoFVisitor {
 
 private:
   Vector3D<Real> offset;
-  int iter; // current paratreet iteration
+  int iter;
+  CProxy_LocalCalcs<CentroidData> lc_proxy;
+  static constexpr int COMPRESS_THRESHOLD = 50000;
+  std::unordered_set<std::pair<uint64_t,uint64_t>, PairHash> dedup_set;
+
 public:
   static constexpr const bool CallSelfLeaf = true;
   FoFVisitor() : offset(0, 0, 0), iter(0) {}
-  FoFVisitor(Vector3D<Real> offseti) : offset(offseti), iter(0) {}
-  FoFVisitor(Vector3D<Real> offseti, int _iter) : offset(offseti), iter(_iter) {}
+  FoFVisitor(Vector3D<Real> offseti, int _iter, CProxy_LocalCalcs<CentroidData> lc)
+    : offset(offseti), iter(_iter), lc_proxy(lc) {}
 
   void pup(PUP::er& p) {
     p | offset;
     p | iter;
+    p | lc_proxy;
+    // dedup_set intentionally not PUP'd (local traversal state, starts empty on each PE)
   }
 
   // Compute maximum squared distance between any two points in boxes a and b,
@@ -73,13 +89,6 @@ public:
     Real minDistSq = aabb_min_distance_sq(source.data.box, target.data.box, offset);
     if (minDistSq > linkSq) return false;
 
-    //old logic for box box reject
-    /*
-    Real r_bucket = target.data.size_sm + linkingLength;
-    if (!Space::intersect(source.data.box, target.data.box.center()+offset, r_bucket*r_bucket))
-      return false;
-    */
-
     // Fallback: if boxes are close, check individual particles (exact test)
     bool may_return = false;
     for (int i = 0; i < target.n_particles; i++) {
@@ -91,54 +100,9 @@ public:
         break;
       }
     }
-    
+
     if (!may_return) return false;
-    
-    // Vertex ID range optimization: we only process pairs where sp.vertex_id < tp.vertex_id
-    // If both nodes have initialized vertex ranges, check for potential early termination
-    /*
-    if (source.vertex_range_initialized && target.vertex_range_initialized) {
-      bool should_skip = false;
-      
-      // If all source particles have vertex_id >= all target particles, skip this interaction
-      // (no valid sp.vertex_id < tp.vertex_id pairs possible)
-      if (source.particle_min_index >= target.particle_max_index) {
-        should_skip = true;
-      }
-      
-      if (should_skip) {
-        return false;
-      }
-      
-      /* DEBUG: Uncomment to enable optimization statistics
-      // Debug: track optimization attempts
-      static int total_checks = 0;
-      static int skipped_interactions = 0;
-      static int overlapping_ranges = 0;
-      total_checks++;
-      
-      // Count overlapping ranges for statistics
-      if (!(source.particle_min_index >= target.particle_max_index || 
-            target.particle_max_index <= source.particle_min_index)) {
-        overlapping_ranges++;
-      }
-      
-      if (should_skip) {
-        skipped_interactions++;
-      }
-      
-      if (total_checks % 10000 == 0) {
-        CkPrintf("FoF Stats: %d checks, %d skipped (%.2f%%), %d overlapping (%.2f%%)\n", 
-                 total_checks, skipped_interactions, 
-                 100.0 * skipped_interactions / total_checks,
-                 overlapping_ranges, 100.0 * overlapping_ranges / total_checks);
-        CkPrintf("  Example ranges: source[%lu,%lu] target[%lu,%lu]\n",
-                 source.particle_min_index, source.particle_max_index,
-                 target.particle_min_index, target.particle_max_index);
-      }
-    }
-      */
-    
+
     return true;
   }
 
@@ -147,69 +111,73 @@ public:
   void do_union(const Particle& sp, const Particle& tp) {
     fof_union_request_count++;
     if (sp.partition_idx == tp.partition_idx) {
-      // intra-partition pair: only process in iter=1
-      //if (iter == 1) {
-        UnionFindLib* local_lib = libProxy[tp.partition_idx].ckLocal();
-        if (local_lib != nullptr) local_lib->union_request(sp.vertex_id, tp.vertex_id);
-      //}
+      UnionFindLib* local_lib = libProxy[tp.partition_idx].ckLocal();
+      if (local_lib != nullptr) local_lib->union_request(sp.vertex_id, tp.vertex_id);
     } else {
-      // cross-partition pair: only process in iter=2
-      //if (iter == 2) {
-        int target_idx = ((tp.partition_idx < sp.partition_idx) ^ (tp.partition_idx & 1))
-                         ? tp.partition_idx : sp.partition_idx;
-        UnionFindLib* local_lib = libProxy[target_idx].ckLocal();
-        if (local_lib != nullptr) {
-          local_lib->union_request(sp.vertex_id, tp.vertex_id);
-        } else {
-          //libProxy[target_idx].union_request(sp.vertex_id, tp.vertex_id);
-        }
-      //}
+      lc_proxy.ckLocalBranch()->cross_partition_union_count++;
+      int target_idx = ((tp.partition_idx < sp.partition_idx) ^ (tp.partition_idx & 1))
+                       ? tp.partition_idx : sp.partition_idx;
+      UnionFindLib* local_lib = libProxy[target_idx].ckLocal();
+      if (local_lib != nullptr) {
+        local_lib->union_request(sp.vertex_id, tp.vertex_id);
+      }
+    }
+  }
+
+  void do_union_tips(uint64_t vid1, uint64_t vid2) {
+    fof_union_request_count++;
+    int pid1 = (int)(vid1 >> 32);
+    int pid2 = (int)(vid2 >> 32);
+    if (pid1 == pid2) {
+      UnionFindLib* local_lib = libProxy[pid1].ckLocal();
+      if (local_lib != nullptr) local_lib->union_request(vid1, vid2);
+    } else {
+      lc_proxy.ckLocalBranch()->cross_partition_union_count++;
+      int target_idx = ((pid2 < pid1) ^ (pid2 & 1)) ? pid2 : pid1;
+      UnionFindLib* local_lib = libProxy[target_idx].ckLocal();
+      if (local_lib != nullptr) local_lib->union_request(vid1, vid2);
     }
   }
 
   void leaf(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
+    LocalCalcs<CentroidData>* lc = lc_proxy.ckLocalBranch();
+    if (lc->compress_count < LocalCalcs<CentroidData>::MAX_COMPRESSIONS) {
+      bool trigger = (lc->compress_count == 0 && lc->cross_partition_union_count > 0)
+                     || (lc->cross_partition_union_count >= COMPRESS_THRESHOLD);
+      if (trigger) lc->compressLocal();
+    }
     const Real linkSq = linkingLength * linkingLength;
     const bool all_within = (aabb_max_distance_sq(source.data.box, target.data.box, offset) < linkSq);
 
     if (all_within && source.n_particles > 0 && target.n_particles > 0) {
-      // Every particle pair is within linking length. Build a star from the particle
-      // with minimum vertex_id to all others: O(N+M-1) unions (a spanning tree).
-      //
-      // The traversal calls leaf(A,B) AND leaf(B,A) for each distinct node pair, so
-      // without a dedup gate the star would be built twice. We process only when
-      // source.particle_min_index <= target.particle_min_index. Since each particle
-      // belongs to exactly one leaf, particle_min_index uniquely identifies a leaf, so
-      // exactly one direction satisfies the condition for any non-equal pair.
-      // For self-leaf calls (CallSelfLeaf=true, source == target same particles), both
-      // sides are equal and we proceed — but skip the target loop to avoid doubling
-      // intra-bucket unions.
-      if (source.vertex_range_initialized && target.vertex_range_initialized
-          && source.particle_min_index > target.particle_min_index) {
-        return; // the symmetric leaf(target, source) call handles this pair
-      }
-
+      // Every particle pair is within linking length. Build a star around the min vertex_id
+      // particle, using local tips to skip redundant union requests.
       const Particle* root = &source.particles()[0];
       for (int j = 1; j < source.n_particles; ++j)
         if (source.particles()[j].vertex_id < root->vertex_id) root = &source.particles()[j];
       for (int i = 0; i < target.n_particles; ++i)
         if (target.particles()[i].vertex_id < root->vertex_id) root = &target.particles()[i];
 
+      bool dummy;
+      uint64_t root_tip = lc->localFind(root->vertex_id, dummy);
+
       for (int j = 0; j < source.n_particles; ++j) {
         const Particle& sp = source.particles()[j];
         if (sp.vertex_id == root->vertex_id) continue;
-        do_union(*root, sp);
+        uint64_t sp_tip = lc->localFind(sp.vertex_id, dummy);
+        if (sp_tip == root_tip) continue;
+        auto key = std::make_pair(std::min(root_tip, sp_tip), std::max(root_tip, sp_tip));
+        if (!dedup_set.insert(key).second) continue;
+        do_union_tips(root_tip, sp_tip);
       }
-      // Self-leaf: source and target represent the same bucket (same vertex_id range
-      // and particle count). Skip the target loop to avoid unions being sent twice.
-      const bool is_self_leaf = source.vertex_range_initialized && target.vertex_range_initialized
-          && source.particle_min_index == target.particle_min_index
-          && source.n_particles == target.n_particles;
-      if (!is_self_leaf) {
-        for (int i = 0; i < target.n_particles; ++i) {
-          const Particle& tp = target.particles()[i];
-          if (tp.vertex_id == root->vertex_id) continue;
-          do_union(*root, tp);
-        }
+      for (int i = 0; i < target.n_particles; ++i) {
+        const Particle& tp = target.particles()[i];
+        if (tp.vertex_id == root->vertex_id) continue;
+        uint64_t tp_tip = lc->localFind(tp.vertex_id, dummy);
+        if (tp_tip == root_tip) continue;
+        auto key = std::make_pair(std::min(root_tip, tp_tip), std::max(root_tip, tp_tip));
+        if (!dedup_set.insert(key).second) continue;
+        do_union_tips(root_tip, tp_tip);
       }
       return;
     }
@@ -218,14 +186,15 @@ public:
       const Particle& tp = target.particles()[i];
       for (int j = 0; j < source.n_particles; ++j) {
         const Particle& sp = source.particles()[j];
-        // avoid union of same pair twice by comparing vertex_id instead of order
-        // This should be more effective since vertex_id has spatial locality
         if (sp.vertex_id >= tp.vertex_id) continue;
-        // squared distance (avoid sqrt)
         const Vector3D<Real> d = tp.position - sp.position + offset;
         const Real distSq = d.x*d.x + d.y*d.y + d.z*d.z;
         if (distSq < linkSq) {
-          do_union(sp, tp);
+          bool dummy;
+          uint64_t sp_tip = lc->localFind(sp.vertex_id, dummy);
+          auto key = std::make_pair(sp_tip, tp.vertex_id);
+          if (!dedup_set.insert(key).second) continue;
+          do_union_tips(sp_tip, tp.vertex_id);
         }
       }
     }
