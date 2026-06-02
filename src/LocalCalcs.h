@@ -92,7 +92,7 @@ struct LocalCalcs : public CBase_LocalCalcs<Data> {
       }
     }
     compress_count++;
-    CkPrintf("[LocalCalcs PE %d] compressLocal #%d\n", CkMyPe(), compress_count);
+    //CkPrintf("[LocalCalcs PE %d] compressLocal #%d\n", CkMyPe(), compress_count);
     cross_partition_union_count = 0;
   }
 
