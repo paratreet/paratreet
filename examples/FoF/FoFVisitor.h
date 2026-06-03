@@ -185,6 +185,19 @@ public:
       return;
     }
 
+    // Early skip: if all particles in both leaves share the same local tip they are
+    // already in the same component, so every distance-checked union would be a no-op.
+    if (source.n_particles > 0 && target.n_particles > 0) {
+      bool dummy;
+      uint64_t ref_tip = lc->localFind(source.particles()[0].vertex_id, dummy);
+      bool all_same = true;
+      for (int j = 1; j < source.n_particles && all_same; ++j)
+        if (lc->localFind(source.particles()[j].vertex_id, dummy) != ref_tip) all_same = false;
+      for (int i = 0; i < target.n_particles && all_same; ++i)
+        if (lc->localFind(target.particles()[i].vertex_id, dummy) != ref_tip) all_same = false;
+      if (all_same) return;
+    }
+
     for (int i = 0; i < target.n_particles; ++i) {
       const Particle& tp = target.particles()[i];
       for (int j = 0; j < source.n_particles; ++j) {
