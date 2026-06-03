@@ -32,7 +32,7 @@ private:
   Vector3D<Real> offset;
   int iter;
   CProxy_LocalCalcs<CentroidData> lc_proxy;
-  static constexpr int COMPRESS_THRESHOLD = 50000;
+  static constexpr int COMPRESS_THRESHOLD = 10000;
   std::unordered_set<std::pair<uint64_t,uint64_t>, PairHash> dedup_set;
 
 public:
@@ -144,7 +144,10 @@ public:
     if (lc->compress_count < LocalCalcs<CentroidData>::MAX_COMPRESSIONS) {
       bool trigger = (lc->compress_count == 0 && lc->cross_partition_union_count > 0)
                      || (lc->cross_partition_union_count >= COMPRESS_THRESHOLD);
-      if (trigger) lc->compressLocal();
+      if (trigger) {
+        lc->compressLocal();
+        dedup_set.clear();
+      }
     }
     const Real linkSq = linkingLength * linkingLength;
     const bool all_within = (aabb_max_distance_sq(source.data.box, target.data.box, offset) < linkSq);

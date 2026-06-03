@@ -15,7 +15,7 @@ struct LocalCalcs : public CBase_LocalCalcs<Data> {
 
   int cross_partition_union_count = 0;
   int compress_count = 0;
-  static constexpr int MAX_COMPRESSIONS = 5;
+  static constexpr int MAX_COMPRESSIONS = 50;
 
   LocalCalcs() {}
   LocalCalcs(CkMigrateMessage*) {}
