@@ -128,6 +128,7 @@ public:
     fof_union_request_count++;
     int pid1 = (int)(vid1 >> 32);
     int pid2 = (int)(vid2 >> 32);
+    //assumption: if pid1==pid2, this pe is the owner of both chares
     if (pid1 == pid2) {
       UnionFindLib* local_lib = libProxy[pid1].ckLocal();
       if (local_lib != nullptr) local_lib->union_request(vid1, vid2);

@@ -4,6 +4,7 @@
 #include "paratreet.decl.h"
 #include "Node.h"
 #include "unionFindLib.h"
+#include <mutex>
 #include <vector>
 #include <unordered_map>
 
@@ -102,6 +103,41 @@ struct LocalCalcs : public CBase_LocalCalcs<Data> {
     vertexArrays.clear();
     cross_partition_union_count = 0;
     compress_count = 0;
+  }
+};
+
+template <typename Data>
+struct LocalNodeCalcs : public CBase_LocalNodeCalcs<Data> {
+  std::unordered_map<int, std::pair<unionFindVertex*, int>> vertexArraysNode;
+  std::mutex mtx;
+
+  LocalNodeCalcs() : mtx() {}
+  LocalNodeCalcs(CkMigrateMessage*) : mtx() {}
+
+  void reset(CkCallback cb) {
+    std::lock_guard<std::mutex> lock(mtx);
+    vertexArraysNode.clear();
+    this->contribute(cb);
+  }
+
+  void depositVertexArraysNode(int partition_idx, unionFindVertex* verts, int count) {
+    std::lock_guard<std::mutex> lock(mtx);
+    vertexArraysNode[partition_idx] = {verts, count};
+  }
+
+  uint64_t localNodeFind(uint64_t vid, bool& is_actual_root) {
+    auto chareOf = [](uint64_t v) -> int { return (int)(v >> 32); };
+    auto idxOf   = [](uint64_t v) -> int { return (int)(v & 0xFFFFFFFF); };
+
+    uint64_t curr = vid;
+    while (true) {
+      auto it = vertexArraysNode.find(chareOf(curr));
+      if (it == vertexArraysNode.end()) { is_actual_root = false; break; }
+      int64_t par = it->second.first[idxOf(curr)].parent;
+      if (par == -1) { is_actual_root = true; break; }
+      curr = (uint64_t)par;
+    }
+    return curr;
   }
 };
 

@@ -4,6 +4,8 @@
 #include "unionFindLib.h"
 #include "FoFVisitor.h"
 #include "FoF.decl.h"
+#include "WorkMonitor.h"
+#include "IdleMonitor.h"
 
 /* readonly */ bool outputFileConfigured;
 /* readonly */ CProxy_UnionFindLib libProxy;
@@ -14,6 +16,18 @@
 int periodic;
 Vector3D<Real> fPeriod;
 bool verify;
+
+// Reducer type handle populated by initIdleReducer() at node startup.
+CkReduction::reducerType idleReportReducer;
+
+// Proxies for the idle-monitoring infrastructure; set during FoF::main().
+static CProxy_WorkMonitor            workMonitor;
+static CProxy_IdleMonitorCoordinator idleMonitor;
+
+// Called on every node before main() via the initnode declaration in FoF.ci.
+void initIdleReducer() {
+  idleReportReducer = CkReduction::addReducer(mergeIdleReports);
+}
 
 using namespace paratreet;
 
@@ -85,6 +99,19 @@ class FoF : public paratreet::Main<CentroidData> {
     CkPrintf("Linking length for friends-of-friends: %f\n", conf.linking_length);
     CkPrintf("Minimum vertices per group for friends-of-friends is strictly greater than: %d\n", minVerticesPerComponent);
     
+    // Create idle-monitoring infrastructure and wire it into Driver's traversal
+    // loop via the FoFHooks function pointers.
+    workMonitor = CProxy_WorkMonitor::ckNew();
+    idleMonitor = CProxy_IdleMonitorCoordinator::ckNew();
+    // Reset all PE idle accumulators first (synchronous broadcast), then start
+    // the monitoring cycle.  The lambda runs inside Driver::run() which is a
+    // [threaded] entry method, so CkCallbackResumeThread() is legal here.
+    paratreet::fof_start_idle_monitor = []() {
+        workMonitor.resetIdleTime(CkCallbackResumeThread());
+        idleMonitor.start(workMonitor);
+    };
+    paratreet::fof_stop_idle_monitor  = []() { idleMonitor.stop(); };
+
     // main::initializeDriver() will be run after main exits
     // After that main::run() is ran. See Paratreet.C::MainChare class
   }
@@ -116,7 +143,7 @@ class FoF : public paratreet::Main<CentroidData> {
     // The size of the starter pack of data loaded by the cache manager is
     // specified in Configuration.cache_share_depth
     proxy_pack.driver.loadCache(CkCallbackResumeThread());
-    
+
     // Store proxies as global variables for access
     libProxy = proxy_pack.libProxy;
     partitionProxy = proxy_pack.partition;

@@ -62,6 +62,8 @@ class CProxy_CacheManager;
 #ifdef FOF
 template <typename Data>
 class CProxy_LocalCalcs;
+template <typename Data>
+class CProxy_LocalNodeCalcs;
 #endif
 
 template <typename Data>
@@ -73,6 +75,7 @@ struct ProxyPack {
   CProxy_UnionFindLib libProxy;
 #ifdef FOF
   CProxy_LocalCalcs<Data> localCalcs;
+  CProxy_LocalNodeCalcs<Data> localNodeCalcs;
 #endif
 
   ProxyPack(CProxy_Driver<Data> d, CProxy_Subtree<Data> s, CProxy_Partition<Data> p, CProxy_CacheManager<Data> c, CProxy_UnionFindLib u)
@@ -86,6 +89,7 @@ struct ProxyPack {
     p | libProxy;
 #ifdef FOF
     p | localCalcs;
+    p | localNodeCalcs;
 #endif
   }
 };

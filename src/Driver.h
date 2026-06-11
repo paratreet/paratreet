@@ -26,6 +26,7 @@
 #include "unionFindLib.h"
 #ifdef FOF
 #include "LocalCalcs.h"
+#include "FoFHooks.h"
 #endif
 
 extern CProxy_Reader readers;
@@ -50,6 +51,7 @@ public:
   CProxy_UnionFindLib libProxy;
 #ifdef FOF
   CProxy_LocalCalcs<Data> localCalcs;
+  CProxy_LocalNodeCalcs<Data> localNodeCalcs;
 #endif
 
   Driver(CProxy_CacheManager<Data> cache_manager_, CProxy_Resumer<Data> resumer_, CProxy_TreeCanopy<Data> calculator_) :
@@ -71,6 +73,8 @@ public:
 #ifdef FOF
     localCalcs = CProxy_LocalCalcs<Data>::ckNew();
     CkPrintf("* Created LocalCalcs group.\n");
+    localNodeCalcs = CProxy_LocalNodeCalcs<Data>::ckNew();
+    CkPrintf("* Created LocalNodeCalcs nodegroup.\n");
 #endif
     decompose(0);
     cb.send();
@@ -227,6 +231,7 @@ public:
       #ifdef FOF
       ProxyPack<Data> proxy_pack (this->thisProxy, subtrees, partitions, cache_manager, libProxy);
       proxy_pack.localCalcs = localCalcs;
+      proxy_pack.localNodeCalcs = localNodeCalcs;
       #else
       ProxyPack<Data> proxy_pack (this->thisProxy, subtrees, partitions, cache_manager, NULL);
       #endif // FOF
@@ -257,7 +262,7 @@ public:
       }
         */
       // Deposit leaf bucket pointers and vertex arrays into LocalCalcs on each PE.
-      partitions.depositBucketPointers(localCalcs, CkCallbackResumeThread());
+      partitions.depositBucketPointers(localCalcs, localNodeCalcs, CkCallbackResumeThread());
       #endif // FOF
 
       // Perform traversals
@@ -267,9 +272,11 @@ public:
       if(iter!=0)
       {
         /*if(iter<2)*/ proxy_pack.partition.resetUnionRequestCounter(CkCallbackResumeThread());
+        if (paratreet::fof_start_idle_monitor) paratreet::fof_start_idle_monitor();
         paratreet::traversalFn(universe, proxy_pack, iter);
         CkWaitQD(); //for paratreet tree traversals
         libProxy[0].quiesce(CkCallbackResumeThread()); //flush htram buffers and wait for quiescence
+        if (paratreet::fof_stop_idle_monitor) paratreet::fof_stop_idle_monitor();
         CkPrintf("Tree traversal: %.3lf ms\n", (CkWallTimer() - start_time) * 1000);
         void* count_raw = nullptr;
         proxy_pack.partition.reportUnionRequestCount(CkCallbackResumeThread(count_raw));

@@ -136,6 +136,7 @@ namespace paratreet {
             CkIndex_Driver<T>::__register(__makeName("Driver"), sizeof(Driver<T>));
 #ifdef FOF
             CkIndex_LocalCalcs<T>::__register(__makeName("LocalCalcs"), sizeof(LocalCalcs<T>));
+            CkIndex_LocalNodeCalcs<T>::__register(__makeName("LocalNodeCalcs"), sizeof(LocalNodeCalcs<T>));
 #endif
 
             CkIndex_Reader::idx_request<T>( static_cast<void (Reader::*)(const CProxy_Subtree<T> &, int, int)>(NULL));

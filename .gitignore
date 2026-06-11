@@ -7,4 +7,6 @@ charmrun
 Gravity
 SPH
 Collision
+FoFApp
 VisitAll
+examples/*projections

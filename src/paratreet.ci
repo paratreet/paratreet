@@ -85,6 +85,13 @@ module paratreet {
     entry LocalCalcs();
     entry void doPhase0(const CkCallback& cb);
   };
+
+  template <typename Data>
+  nodegroup LocalNodeCalcs {
+    entry LocalNodeCalcs();
+    entry void reset(CkCallback cb);
+  };
+
   #endif
 
   template <typename Data>
@@ -114,7 +121,7 @@ module paratreet {
     
     // FoF functions
     #ifdef FOF
-    entry void depositBucketPointers(CProxy_LocalCalcs<Data> lc_proxy, const CkCallback& cb);
+    entry void depositBucketPointers(CProxy_LocalCalcs<Data> lc_proxy, CProxy_LocalNodeCalcs<Data> lnc_proxy, const CkCallback& cb);
     entry void initializeLibVertices(const CkCallback &cb);
     entry void propagateVertexIDRanges(const CkCallback &cb);
     entry void validateVertexIDRanges(const CkCallback &cb);

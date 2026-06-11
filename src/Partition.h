@@ -114,7 +114,7 @@ struct Partition : public CBase_Partition<Data> {
   void resetUnionRequestCounter(const CkCallback& cb);
   void reportUnionRequestCount(const CkCallback& cb);
 #ifdef FOF
-  void depositBucketPointers(CProxy_LocalCalcs<Data> lc_proxy, const CkCallback& cb);
+  void depositBucketPointers(CProxy_LocalCalcs<Data> lc_proxy, CProxy_LocalNodeCalcs<Data> lnc_proxy, const CkCallback& cb);
 #endif
 
   Real time_advanced = 0;
@@ -536,7 +536,7 @@ void Partition<Data>::doOutput(WriterProxy w, int n_total_particles, CkCallback 
 #ifdef FOF
 
 template <typename Data>
-void Partition<Data>::depositBucketPointers(CProxy_LocalCalcs<Data> lc_proxy, const CkCallback& cb) {
+void Partition<Data>::depositBucketPointers(CProxy_LocalCalcs<Data> lc_proxy, CProxy_LocalNodeCalcs<Data> lnc_proxy, const CkCallback& cb) {
   LocalCalcs<Data>* lc_local = lc_proxy.ckLocalBranch();
   lc_local->cross_partition_union_count = 0;
   lc_local->compress_count = 0;
@@ -546,7 +546,10 @@ void Partition<Data>::depositBucketPointers(CProxy_LocalCalcs<Data> lc_proxy, co
     nParticles += leaf->n_particles;
   }
   UnionFindLib* lib = libProxy[this->thisIndex].ckLocal();
-  if (lib) lc_local->depositVertexArray(this->thisIndex, lib->return_vertices(), nParticles);
+  if (lib) {
+    lc_local->depositVertexArray(this->thisIndex, lib->return_vertices(), nParticles);
+    lnc_proxy.ckLocalBranch()->depositVertexArraysNode(this->thisIndex, lib->return_vertices(), nParticles);
+  }
   this->contribute(cb);
 }
 

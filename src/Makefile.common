@@ -6,9 +6,9 @@ HTRAM_DIR = $(BASE_PATH)/../htram
 PREFIX_LIB_DIR = $(UNION_FIND_DIR)/prefixLib
 
 INCLUDES:=$(INCLUDES) -I$(STRUCTURE_PATH) -I$(PARATREET_PATH) -I$(PREFIX_LIB_DIR) -I$(UNION_FIND_DIR) -I$(HTRAM_DIR) -I.
-CHARM_HOME ?= $(HOME)/clean_charm/charm
+CHARM_HOME ?= $(HOME)/charm/ucx-linux-x86_64-smp-slurmpmi2
 
-LD_LIBS:=$(LD_LIBS) -L$(PARATREET_PATH) -lparatreet -L$(UNION_FIND_DIR) -lunionFind -L${PREFIX_LIB_DIR} -lprefix -L${HTRAM_DIR} -lhtram_group_unionfind #-tracemode projections
+LD_LIBS:=$(LD_LIBS) -L$(PARATREET_PATH) -lparatreet -L$(UNION_FIND_DIR) -lunionFind -L${PREFIX_LIB_DIR} -lprefix -L${HTRAM_DIR} -lhtram_group_unionfind -tracemode projections
 
 # XDR library for Tipsy file I/O
 XDR_PATH=$(BASE_PATH)/utility/xdr

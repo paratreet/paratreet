@@ -1,6 +1,9 @@
 #include "Paratreet.h"
 
 #include "Driver.h"
+#ifdef FOF
+#include "FoFHooks.h"
+#endif
 #include "Reader.h"
 #include "Splitter.h"
 #include "Subtree.h"
@@ -16,6 +19,13 @@
 /* readonly */ CProxy_TreeSpec treespec;
 /* readonly */ CProxy_ThreadStateHolder thread_state_holder;
 /* readonly */ int n_readers;
+
+#ifdef FOF
+namespace paratreet {
+    void (*fof_start_idle_monitor)() = nullptr;
+    void (*fof_stop_idle_monitor)()  = nullptr;
+}
+#endif
 
 using namespace paratreet;
 
