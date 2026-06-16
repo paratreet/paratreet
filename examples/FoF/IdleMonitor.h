@@ -44,6 +44,7 @@ struct IdleMonitorCoordinator : public CBase_IdleMonitorCoordinator {
                       this->thisProxy);
         monitor_proxy.reportIdleTime(cb, do_process_tips_next);
         if(do_process_tips_next) {
+            printf("Process tips was triggered\n");
             do_process_tips_next = false;
             process_tips_done = true;
         }
@@ -72,15 +73,20 @@ struct IdleMonitorCoordinator : public CBase_IdleMonitorCoordinator {
         if(!process_tips_done) {
             double total_idle = 0.0;
             int count = 0;
+            double max_idle = 0.0;
             for (int i = 0; i < n; i++) {
                 if (reports[i].idle_time >= 0.0) {
                     total_idle += reports[i].idle_time;
                     count++;
                 }
+                if (reports[i].idle_time > max_idle) {
+                    max_idle = reports[i].idle_time;
+                }
             }
             double avg_idle = (count > 0) ? total_idle / count : 0.0;
             //if the max idle time is 3x the average, set do_process_tips_next to true
-            if (avg_idle > 0.05 && total_idle / count > 3 * avg_idle) {
+            printf("[IdleMonitor t=%.3f] Average and max idle time across %d PEs: %.3f s, %.3f s\n", now, count, avg_idle, max_idle);
+            if (avg_idle > 0.05 && max_idle > 3 * avg_idle) {
                 do_process_tips_next = true;
             }
         }
