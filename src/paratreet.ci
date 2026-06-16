@@ -83,13 +83,13 @@ module paratreet {
   template <typename Data>
   group LocalCalcs {
     entry LocalCalcs();
+    entry LocalCalcs(CProxy_LocalNodeCalcs<Data> localNodeCalcs);
     entry void doPhase0(const CkCallback& cb);
   };
 
   template <typename Data>
   nodegroup LocalNodeCalcs {
     entry LocalNodeCalcs();
-    entry void reset(CkCallback cb);
   };
 
   #endif

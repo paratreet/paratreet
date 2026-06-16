@@ -44,6 +44,7 @@ struct WorkMonitor : public CBase_WorkMonitor {
     double idle_start = 0.0;     // wall time when the current idle period began
     double accumulated = 0.0;    // total idle time since last resetIdleTime()
     bool   in_idle = false;
+    CProxy_LocalCalcs<CentroidData> localCalcs;
 
     WorkMonitor() {
         // Permanent callbacks: fire on every scheduler idle/resume transition.
@@ -78,9 +79,16 @@ struct WorkMonitor : public CBase_WorkMonitor {
         contribute(0, nullptr, CkReduction::nop, cb);
     }
 
+    void setLocalCalcsProxy(CProxy_LocalCalcs<CentroidData> lc_proxy_) {
+        localCalcs = lc_proxy_;
+    }
+
     // Broadcast entry: snapshot the current accumulated idle time (including
     // any ongoing idle period) and contribute it to the reduction.
-    void reportIdleTime(CkCallback cb) {
+    void reportIdleTime(CkCallback cb, bool process_tips) {
+        if(process_tips){
+            localCalcs.ckLocalBranch()->doNodeTips();
+        }
         double total = accumulated;
         if (in_idle) total += CkWallTimer() - idle_start;
         IdleReport r = { CkMyPe(), total };

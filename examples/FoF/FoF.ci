@@ -20,7 +20,8 @@ mainmodule FoF {
     group WorkMonitor {
         entry WorkMonitor();
         entry void resetIdleTime(CkCallback cb);
-        entry void reportIdleTime(CkCallback cb);
+        entry void reportIdleTime(CkCallback cb, bool process_tips);
+        entry void setLocalCalcsProxy(CProxy_LocalCalcs<CentroidData> lc_proxy_);
     };
 
     // Singleton coordinator chare that drives the periodic
@@ -33,5 +34,4 @@ mainmodule FoF {
     };
 
     extern entry void Partition<CentroidData> startDown<FoFVisitor> (FoFVisitor v);
-    extern entry void LocalNodeCalcs<CentroidData> reset(CkCallback cb);
 }

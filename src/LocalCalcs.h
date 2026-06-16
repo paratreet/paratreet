@@ -13,12 +13,14 @@ struct LocalCalcs : public CBase_LocalCalcs<Data> {
   std::vector<Node<Data>*> buckets;
   // partition_idx -> {vertex array pointer, vertex count}
   std::unordered_map<int, std::pair<unionFindVertex*, int>> vertexArrays;
+  CProxy_LocalNodeCalcs<Data> localNodeCalcs;
 
   int cross_partition_union_count = 0;
   int compress_count = 0;
   static constexpr int MAX_COMPRESSIONS = 50;
 
   LocalCalcs() {}
+  LocalCalcs(CProxy_LocalNodeCalcs<Data> localNodeCalcs) : localNodeCalcs(localNodeCalcs) {}
   LocalCalcs(CkMigrateMessage*) {}
 
   void depositBucket(Node<Data>* bucket) {
@@ -104,6 +106,37 @@ struct LocalCalcs : public CBase_LocalCalcs<Data> {
     cross_partition_union_count = 0;
     compress_count = 0;
   }
+
+  void doNodeTips() {
+    for( auto& kv : vertexArrays) {
+      unionFindVertex* verts = kv.second.first;
+      int count = kv.second.second;
+      for (int i = 0; i < count; i++) {
+        if (verts[i].parent == -1) continue;
+       /*  uint64_t curr = (uint64_t)verts[i].parent;
+        while (true) {
+          auto it = vertexArrays.find((int)(curr >> 32));
+          if (it == vertexArrays.end()) break; // curr is remote gateway
+          int64_t par = it->second.first[(int)(curr & 0xFFFFFFFF)].parent;
+          if (par == -1) break;               // curr is local root
+          curr = (uint64_t)par;
+        } */
+        bool dummy;
+        verts[i].process_tip = localNodeCalcs.ckLocalBranch()->localNodeFind((uint64_t)verts[i].parent, dummy);
+      }
+    }
+    CmiNodeBarrier();
+    // Loop: for each vertex i on my PE, verts[i].parent = verts[i].process_tip;
+    for( auto& kv : vertexArrays) {
+      unionFindVertex* verts = kv.second.first;
+      int count = kv.second.second;
+      for (int i = 0; i < count; i++) {
+        if (verts[i].parent == -1) continue;
+        verts[i].parent = verts[i].process_tip;
+      }
+    }
+  }
+
 };
 
 template <typename Data>
@@ -113,12 +146,6 @@ struct LocalNodeCalcs : public CBase_LocalNodeCalcs<Data> {
 
   LocalNodeCalcs() : mtx() {}
   LocalNodeCalcs(CkMigrateMessage*) : mtx() {}
-
-  void reset(CkCallback cb) {
-    std::lock_guard<std::mutex> lock(mtx);
-    vertexArraysNode.clear();
-    this->contribute(cb);
-  }
 
   void depositVertexArraysNode(int partition_idx, unionFindVertex* verts, int count) {
     std::lock_guard<std::mutex> lock(mtx);

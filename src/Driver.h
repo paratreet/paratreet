@@ -71,10 +71,10 @@ public:
     // Useful particle keys
     CkPrintf("* Initialization\n");
 #ifdef FOF
-    localCalcs = CProxy_LocalCalcs<Data>::ckNew();
-    CkPrintf("* Created LocalCalcs group.\n");
     localNodeCalcs = CProxy_LocalNodeCalcs<Data>::ckNew();
     CkPrintf("* Created LocalNodeCalcs nodegroup.\n");
+    localCalcs = CProxy_LocalCalcs<Data>::ckNew(localNodeCalcs);
+    CkPrintf("* Created LocalCalcs group.\n");
 #endif
     decompose(0);
     cb.send();

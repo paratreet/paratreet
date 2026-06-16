@@ -157,6 +157,9 @@ class FoF : public paratreet::Main<CentroidData> {
   }
 
   void traversalFn(BoundingBox& universe, ProxyPack<CentroidData>& proxy_pack, int iter) override {
+
+    //give work monitor a proxy to local calcs so it can trigger doNodeTips if needed
+    workMonitor.setLocalCalcsProxy(proxy_pack.localCalcs);
     
     //only need to look at cubes that are almost touching (N=1)
     if(!periodic)
