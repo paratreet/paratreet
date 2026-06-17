@@ -268,6 +268,9 @@ public:
       // Perform traversals
       start_time = CkWallTimer();
 
+      //print traversal start time
+      CkPrintf("Starting tree traversal at time %.3f\n", start_time);
+
       #ifdef FOF
       if(iter!=0)
       {

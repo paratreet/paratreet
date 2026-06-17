@@ -563,6 +563,10 @@ inline void fof_reset_union_request_counter() {
   fof_union_request_count = 0;
   fof_count_reported = false;
 }
+
+inline long long fof_get_union_request_count() {
+  return fof_union_request_count;
+}
 /**
  * @brief Initializes an instance of unionFindLib by reading in all particles
  * stored on this partition. Must be called after partitions are initialized

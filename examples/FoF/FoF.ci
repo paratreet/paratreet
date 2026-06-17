@@ -12,7 +12,7 @@ mainmodule FoF {
 
     initnode void initialize(void);
 
-    // Registers the custom IdleReport reducer before any reduction runs.
+    // Registers the custom IdleStats reducer before any reduction runs.
     initnode void initIdleReducer(void);
 
     // One element per PE.  Receives point-to-point expedited messages from

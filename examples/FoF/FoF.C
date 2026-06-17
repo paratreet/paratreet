@@ -27,7 +27,7 @@ static CProxy_IdleMonitorCoordinator idleMonitor;
 
 // Called on every node before main() via the initnode declaration in FoF.ci.
 void initIdleReducer() {
-  idleReportReducer = CkReduction::addReducer(mergeIdleReports);
+  idleReportReducer = CkReduction::addReducer(mergeIdleStats);
 }
 
 using namespace paratreet;

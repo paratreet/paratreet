@@ -3,32 +3,32 @@
 
 // WorkMonitor.h must be included AFTER FoF.decl.h (for CBase_WorkMonitor).
 
-#include <cstring>
+#include <algorithm>
 
-// Per-PE report contributed to each monitoring reduction.
-struct IdleReport {
-    int    pe;
-    double idle_time;  // seconds idle since the last resetIdleTime() call
+// Aggregated statistics contributed by each PE and combined by the reducer.
+struct IdleStats {
+    double     sum_idle;           // total idle seconds summed across PEs
+    double     max_idle;           // maximum idle seconds across any PE
+    long long  sum_union_requests; // total union_request calls summed across PEs
 };
 
 // The reducer type handle, registered in initIdleReducer() (FoF.C).
 extern CkReduction::reducerType idleReportReducer;
 
-// Custom reducer: concatenate per-PE IdleReport structs into a single flat
-// array.  The coordinator receives the full array and logs each entry.
-static CkReductionMsg* mergeIdleReports(int nMsgs, CkReductionMsg** msgs) {
-    int total = 0;
-    for (int i = 0; i < nMsgs; i++)
-        total += msgs[i]->getSize() / sizeof(IdleReport);
-    CkReductionMsg* out = CkReductionMsg::buildNew(total * sizeof(IdleReport), nullptr);
-    IdleReport* dst = reinterpret_cast<IdleReport*>(out->getData());
-    int k = 0;
+// Declared in Partition.h; accessible here because WorkMonitor.h is compiled
+// as part of FoF.C, which includes Partition.h (via Paratreet.h) first.
+long long fof_get_union_request_count();
+
+// Custom reducer: combine per-PE IdleStats contributions into one aggregate.
+static CkReductionMsg* mergeIdleStats(int nMsgs, CkReductionMsg** msgs) {
+    IdleStats result = {0.0, 0.0, 0LL};
     for (int i = 0; i < nMsgs; i++) {
-        int n = msgs[i]->getSize() / sizeof(IdleReport);
-        std::memcpy(dst + k, msgs[i]->getData(), n * sizeof(IdleReport));
-        k += n;
+        IdleStats* s = reinterpret_cast<IdleStats*>(msgs[i]->getData());
+        result.sum_idle          += s->sum_idle;
+        result.max_idle           = std::max(result.max_idle, s->max_idle);
+        result.sum_union_requests += s->sum_union_requests;
     }
-    return out;
+    return CkReductionMsg::buildNew(sizeof(IdleStats), &result);
 }
 
 // One instance per PE.  Registers permanent CcdCallOnConditionKeep callbacks
@@ -86,13 +86,13 @@ struct WorkMonitor : public CBase_WorkMonitor {
     // Broadcast entry: snapshot the current accumulated idle time (including
     // any ongoing idle period) and contribute it to the reduction.
     void reportIdleTime(CkCallback cb, bool process_tips) {
-        if(process_tips){
+        if (process_tips) {
             localCalcs.ckLocalBranch()->doNodeTips();
         }
-        double total = accumulated;
-        if (in_idle) total += CkWallTimer() - idle_start;
-        IdleReport r = { CkMyPe(), total };
-        contribute(sizeof(IdleReport), &r, idleReportReducer, cb);
+        double idle = accumulated;
+        if (in_idle) idle += CkWallTimer() - idle_start;
+        IdleStats s = { idle, idle, fof_get_union_request_count() };
+        contribute(sizeof(IdleStats), &s, idleReportReducer, cb);
     }
 };
 

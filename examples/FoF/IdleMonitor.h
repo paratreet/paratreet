@@ -56,41 +56,25 @@ struct IdleMonitorCoordinator : public CBase_IdleMonitorCoordinator {
         double now = CkWallTimer();
         if (!active) { delete msg; return; }
 
-        int n = msg->getSize() / sizeof(IdleReport);
-        IdleReport* reports = reinterpret_cast<IdleReport*>(msg->getData());
-        /*
-        for (int i = 0; i < n; i++) {
-            if (reports[i].idle_time >= 0.0) {
-                CkPrintf("[IdleMonitor t=%.3f] PE %d idle %.3f s\n",
-                         now, reports[i].pe, reports[i].idle_time);
-            } else {
-                CkPrintf("[IdleMonitor t=%.3f] PE %d not yet started\n",
-                         now, reports[i].pe);
-            }
-        }
-        */
+        IdleStats* stats = reinterpret_cast<IdleStats*>(msg->getData());
+        double    sum_idle    = stats->sum_idle;
+        double    max_idle    = stats->max_idle;
+        long long sum_unions  = stats->sum_union_requests;
         delete msg;
 
-        //loop to calculate average idle time across all PEs
-        if(!process_tips_done) {
-            double total_idle = 0.0;
-            int count = 0;
-            double max_idle = 0.0;
-            for (int i = 0; i < n; i++) {
-                if (reports[i].idle_time >= 0.0) {
-                    total_idle += reports[i].idle_time;
-                    count++;
-                }
-                if (reports[i].idle_time > max_idle) {
-                    max_idle = reports[i].idle_time;
-                }
-            }
-            double avg_idle = (count > 0) ? total_idle / count : 0.0;
-            //if the max idle time is 3x the average, set do_process_tips_next to true
-            printf("[IdleMonitor t=%.3f] Average and max idle time across %d PEs: %.3f s, %.3f s\n", now, count, avg_idle, max_idle);
-            if (avg_idle > 0.05 && max_idle > 3 * avg_idle) {
+        if (!process_tips_done) {
+            int n_pes = CkNumPes();
+            double avg_idle = (n_pes > 0) ? sum_idle / n_pes : 0.0;
+            printf("[IdleMonitor t=%.3f] idle sum=%.3f s avg=%.3f s max=%.3f s  union_requests=%lld\n",
+                   now, sum_idle, avg_idle, max_idle, sum_unions);
+            if (avg_idle > 0.05 && max_idle > 1.5 * avg_idle) {
                 do_process_tips_next = true;
             }
+        }
+        else
+        {
+            //print union_requests after processing tips
+            printf("[IdleMonitor t=%.3f] union_requests after processing tips=%lld\n", now, sum_unions);
         }
 
         CcdCallFnAfter(scheduleNext, this, 200.0);
