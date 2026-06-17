@@ -32,19 +32,21 @@ private:
   Vector3D<Real> offset;
   int iter;
   CProxy_LocalCalcs<CentroidData> lc_proxy;
+  Real linkSq;
   static constexpr int COMPRESS_THRESHOLD = 10000;
   std::unordered_set<std::pair<uint64_t,uint64_t>, PairHash> dedup_set;
 
 public:
   static constexpr const bool CallSelfLeaf = true;
-  FoFVisitor() : offset(0, 0, 0), iter(0) {}
+  FoFVisitor() : offset(0, 0, 0), iter(0), linkSq(linkingLength * linkingLength) {}
   FoFVisitor(Vector3D<Real> offseti, int _iter, CProxy_LocalCalcs<CentroidData> lc)
-    : offset(offseti), iter(_iter), lc_proxy(lc) {}
+    : offset(offseti), iter(_iter), lc_proxy(lc), linkSq(linkingLength * linkingLength) {}
 
   void pup(PUP::er& p) {
     p | offset;
     p | iter;
     p | lc_proxy;
+    p | linkSq;
     // dedup_set intentionally not PUP'd (local traversal state, starts empty on each PE)
   }
 
@@ -85,7 +87,6 @@ public:
 
   bool open(const SpatialNode<CentroidData>& source, SpatialNode<CentroidData>& target) {
     // Cheap conservative reject using box-vs-box minimum distance.
-    const Real linkSq = linkingLength * linkingLength;
     Real minDistSq = aabb_min_distance_sq(source.data.box, target.data.box, offset);
     if (minDistSq > linkSq) return false;
 
@@ -150,7 +151,6 @@ public:
         dedup_set.clear();
       }
     }
-    const Real linkSq = linkingLength * linkingLength;
     const bool all_within = (aabb_max_distance_sq(source.data.box, target.data.box, offset) < linkSq);
 
     if (all_within && source.n_particles > 0 && target.n_particles > 0) {
