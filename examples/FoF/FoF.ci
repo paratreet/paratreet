@@ -15,20 +15,29 @@ mainmodule FoF {
     // Registers the custom IdleReport reducer before any reduction runs.
     initnode void initIdleReducer(void);
 
-    // One element per PE.  Receives a broadcast to report the idle time of
-    // this PE's thread, then contributes to a reduction back to the coordinator.
+    // One element per PE.  Receives point-to-point expedited messages from
+    // WorkMonitorRelay to report idle time and contribute to the reduction.
     group WorkMonitor {
         entry WorkMonitor();
         entry void resetIdleTime(CkCallback cb);
-        entry void reportIdleTime(CkCallback cb, bool process_tips);
+        entry [expedited] void reportIdleTime(CkCallback cb, bool process_tips);
         entry void setLocalCalcsProxy(CProxy_LocalCalcs<CentroidData> lc_proxy_);
+    };
+
+    // One element per node.  Receives an expedited broadcast from the
+    // coordinator and fans out point-to-point expedited sends to every
+    // WorkMonitor PE element on this node.
+    nodegroup WorkMonitorRelay {
+        entry WorkMonitorRelay();
+        entry void init(CProxy_WorkMonitor wm);
+        entry [expedited] void relayReport(CkCallback cb, bool process_tips);
     };
 
     // Singleton coordinator chare that drives the periodic
     // broadcast → reduction cycle during the FoF traversal phase.
     chare IdleMonitorCoordinator {
         entry IdleMonitorCoordinator();
-        entry void start(CProxy_WorkMonitor p);
+        entry void start(CProxy_WorkMonitor p, CProxy_WorkMonitorRelay relay);
         entry void stop();
         entry void receiveIdleTimes(CkReductionMsg* msg);
     };

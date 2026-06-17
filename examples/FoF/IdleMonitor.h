@@ -18,6 +18,7 @@
 //     → next receiveIdleTimes() or triggerCycle() sees !active and returns
 struct IdleMonitorCoordinator : public CBase_IdleMonitorCoordinator {
     CProxy_WorkMonitor monitor_proxy;
+    CProxy_WorkMonitorRelay relay_proxy;
     bool active = false;
     bool do_process_tips_next = false; //when to do doNodeTips
     bool process_tips_done = false;
@@ -25,8 +26,9 @@ struct IdleMonitorCoordinator : public CBase_IdleMonitorCoordinator {
     IdleMonitorCoordinator() {}
     IdleMonitorCoordinator(CkMigrateMessage*) {}
 
-    void start(CProxy_WorkMonitor p) {
+    void start(CProxy_WorkMonitor p, CProxy_WorkMonitorRelay relay) {
         monitor_proxy = p;
+        relay_proxy = relay;
         active = true;
         triggerCycle();
     }
@@ -42,7 +44,7 @@ struct IdleMonitorCoordinator : public CBase_IdleMonitorCoordinator {
         if (!active) return;
         CkCallback cb(CkIndex_IdleMonitorCoordinator::receiveIdleTimes(nullptr),
                       this->thisProxy);
-        monitor_proxy.reportIdleTime(cb, do_process_tips_next);
+        relay_proxy.relayReport(cb, do_process_tips_next);
         if(do_process_tips_next) {
             printf("Process tips was triggered\n");
             do_process_tips_next = false;

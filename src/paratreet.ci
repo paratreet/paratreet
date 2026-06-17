@@ -54,7 +54,7 @@ module paratreet {
   template <typename Data>
   group Resumer {
     entry Resumer();
-    entry [expedited] void process(Key);
+    entry void process(Key);
     entry void reset();
   };
 

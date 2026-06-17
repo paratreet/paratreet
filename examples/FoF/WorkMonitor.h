@@ -96,4 +96,33 @@ struct WorkMonitor : public CBase_WorkMonitor {
     }
 };
 
+// One instance per node.  Receives an expedited broadcast from
+// IdleMonitorCoordinator and sends a point-to-point expedited
+// reportIdleTime to every WorkMonitor element on this node.
+struct WorkMonitorRelay : public CBase_WorkMonitorRelay {
+    CProxy_WorkMonitor work_monitor;
+
+    WorkMonitorRelay() {}
+    WorkMonitorRelay(CkMigrateMessage*) {}
+
+    void init(CProxy_WorkMonitor wm) {
+        work_monitor = wm;
+    }
+
+    void relayReport(CkCallback cb, bool process_tips) {
+        int first  = CkNodeFirst(CkMyNode());
+        int n      = CkNodeSize(CkMyNode());
+        int myrank = CkMyRank();
+        // Send to all other PEs first, then to self last.
+        // The relay PE (self) cannot execute from CsdSchedQueue while it is
+        // running this entry method, so it is guaranteed not to be "late".
+        // Every other PE receives reportIdleTime while the relay is still
+        // looping — before they can drain their queue and fall through to
+        // CsdSchedQueue.
+        for (int r = 1; r < n; r++)
+            work_monitor[first + (myrank + r) % n].reportIdleTime(cb, process_tips);
+        work_monitor[first + myrank].reportIdleTime(cb, process_tips);
+    }
+};
+
 #endif // PARATREET_WORKMONITOR_H_
