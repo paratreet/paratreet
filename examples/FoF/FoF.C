@@ -129,12 +129,12 @@ class FoF : public paratreet::Main<CentroidData> {
     conf.num_iterations = 2; //just load balance in iteration 0
     conf.num_share_nodes = 0; // 3;
     conf.cache_share_depth = 3;
-    conf.pool_elem_size;
+    conf.pool_elem_size = 1024;
     conf.flush_period = 0;
     conf.flush_max_avg_ratio = 10.;
     conf.lb_period = 1;
     conf.request_pause_interval = 20;
-    conf.iter_pause_interval = 1000;
+    conf.iter_pause_interval = 32;
     conf.min_vertices_per_component = 2; // default from ChaNGa
     conf.linking_length = 0.2; // default from ChaNGa
   }
