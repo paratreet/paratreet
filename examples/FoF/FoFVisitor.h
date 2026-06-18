@@ -135,7 +135,7 @@ public:
       if (local_lib != nullptr) local_lib->union_request(vid1, vid2);
     } else {
       lc_proxy.ckLocalBranch()->cross_partition_union_count++;
-      int target_idx = ((pid2 < pid1) ^ (pid2 & 1)) ? pid2 : pid1;
+      int target_idx = std::min(pid1, pid2);
       UnionFindLib* local_lib = libProxy[target_idx].ckLocal();
       if (local_lib != nullptr) local_lib->union_request(vid1, vid2);
     }
@@ -209,9 +209,11 @@ public:
         if (distSq < linkSq) {
           bool dummy;
           uint64_t sp_tip = lc->localFind(sp.vertex_id, dummy);
-          auto key = std::make_pair(sp_tip, tp.vertex_id);
+          uint64_t tp_tip = lc->localFind(tp.vertex_id, dummy);
+          if (sp_tip == tp_tip) continue;
+          auto key = std::make_pair(std::min(sp_tip, tp_tip), std::max(sp_tip, tp_tip));
           if (!dedup_set.insert(key).second) continue;
-          do_union_tips(sp_tip, tp.vertex_id);
+          do_union_tips(sp_tip, tp_tip);
         }
       }
     }
