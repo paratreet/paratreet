@@ -22,6 +22,8 @@ struct IdleMonitorCoordinator : public CBase_IdleMonitorCoordinator {
     bool active = false;
     bool do_process_tips_next = false; //when to do doNodeTips
     bool process_tips_done = false;
+    double prev_trigger_time = 0.0;
+    double last_trigger_time = 0.0;
 
     IdleMonitorCoordinator() {}
     IdleMonitorCoordinator(CkMigrateMessage*) {}
@@ -42,6 +44,8 @@ struct IdleMonitorCoordinator : public CBase_IdleMonitorCoordinator {
     // from start() and from the CcdCallFnAfter callback on this PE.
     void triggerCycle() {
         if (!active) return;
+        prev_trigger_time = last_trigger_time;
+        last_trigger_time = CkWallTimer();
         CkCallback cb(CkIndex_IdleMonitorCoordinator::receiveIdleTimes(nullptr),
                       this->thisProxy);
         relay_proxy.relayReport(cb, do_process_tips_next);
@@ -67,7 +71,9 @@ struct IdleMonitorCoordinator : public CBase_IdleMonitorCoordinator {
             double avg_idle = (n_pes > 0) ? sum_idle / n_pes : 0.0;
             printf("[IdleMonitor t=%.3f] idle sum=%.3f s avg=%.3f s max=%.3f s  union_requests=%lld\n",
                    now, sum_idle, avg_idle, max_idle, sum_unions);
-            if (avg_idle > 0.05 && max_idle > 1.5 * avg_idle) {
+            double elapsed = last_trigger_time - prev_trigger_time;
+            if (prev_trigger_time > 0.0 && elapsed > 0.0 && (100.0 * avg_idle / elapsed) > 50.0) {
+                CkPrintf("(avg_idle / elapsed) = (%.3f / %.3f) = %.1f%% > 50%%, triggering process tips next cycle\n", avg_idle, elapsed, 100.0 * avg_idle / elapsed);
                 do_process_tips_next = true;
             }
         }
