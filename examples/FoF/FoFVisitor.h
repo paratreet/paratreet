@@ -6,6 +6,7 @@
 #include "Space.h"
 #include "CentroidData.h"
 #include <cmath>
+#include <functional>
 #include <vector>
 #include <queue>
 #include <unordered_set>
@@ -214,6 +215,74 @@ public:
           auto key = std::make_pair(std::min(sp_tip, tp_tip), std::max(sp_tip, tp_tip));
           if (!dedup_set.insert(key).second) continue;
           do_union_tips(sp_tip, tp_tip);
+        }
+      }
+    }
+  }
+  // Read-only variant of leaf() used by helper threads during the parallel
+  // traversal phase.  No parent pointer writes: pairs are appended to `out`
+  // for deferred application after CmiNodeBarrier.
+  // find_tip: read-only path walk (localNodeFind), no compression.
+  // dedup_set is used read-only (find only, no insert) so concurrent helpers
+  // reading the source PE's dedup_set simultaneously is safe.
+  void leafCollect(const SpatialNode<CentroidData>& source,
+                   SpatialNode<CentroidData>& target,
+                   std::vector<std::pair<uint64_t,uint64_t>>& out,
+                   const std::function<uint64_t(uint64_t)>& find_tip) {
+    const bool all_within = (aabb_max_distance_sq(source.data.box, target.data.box, offset) < linkSq);
+
+    if (all_within && source.n_particles > 0 && target.n_particles > 0) {
+      const Particle* root = &source.particles()[0];
+      for (int j = 1; j < source.n_particles; ++j)
+        if (source.particles()[j].vertex_id < root->vertex_id) root = &source.particles()[j];
+      for (int i = 0; i < target.n_particles; ++i)
+        if (target.particles()[i].vertex_id < root->vertex_id) root = &target.particles()[i];
+
+      uint64_t root_tip = find_tip(root->vertex_id);
+
+      for (int j = 0; j < source.n_particles; ++j) {
+        const Particle& sp = source.particles()[j];
+        if (sp.vertex_id == root->vertex_id) continue;
+        uint64_t sp_tip = find_tip(sp.vertex_id);
+        if (sp_tip == root_tip) continue;
+        auto key = std::make_pair(std::min(root_tip, sp_tip), std::max(root_tip, sp_tip));
+        if (dedup_set.find(key) != dedup_set.end()) continue;
+        out.push_back({root_tip, sp_tip});
+      }
+      for (int i = 0; i < target.n_particles; ++i) {
+        const Particle& tp = target.particles()[i];
+        if (tp.vertex_id == root->vertex_id) continue;
+        uint64_t tp_tip = find_tip(tp.vertex_id);
+        if (tp_tip == root_tip) continue;
+        auto key = std::make_pair(std::min(root_tip, tp_tip), std::max(root_tip, tp_tip));
+        if (dedup_set.find(key) != dedup_set.end()) continue;
+        out.push_back({root_tip, tp_tip});
+      }
+      return;
+    }
+
+    if (source.n_particles > 0 && target.n_particles > 0) {
+      uint64_t ref_tip = find_tip(source.particles()[0].vertex_id);
+      bool all_same = true;
+      for (int j = 1; j < source.n_particles && all_same; ++j)
+        if (find_tip(source.particles()[j].vertex_id) != ref_tip) all_same = false;
+      for (int i = 0; i < target.n_particles && all_same; ++i)
+        if (find_tip(target.particles()[i].vertex_id) != ref_tip) all_same = false;
+      if (all_same) return;
+    }
+
+    for (int i = 0; i < target.n_particles; ++i) {
+      const Particle& tp = target.particles()[i];
+      for (int j = 0; j < source.n_particles; ++j) {
+        const Particle& sp = source.particles()[j];
+        if (sp.vertex_id >= tp.vertex_id) continue;
+        const Vector3D<Real> d = tp.position - sp.position + offset;
+        const Real distSq = d.x*d.x + d.y*d.y + d.z*d.z;
+        if (distSq < linkSq) {
+          uint64_t sp_tip = find_tip(sp.vertex_id);
+          auto key = std::make_pair(sp_tip, tp.vertex_id);
+          if (dedup_set.find(key) != dedup_set.end()) continue;
+          out.push_back({sp_tip, tp.vertex_id});
         }
       }
     }

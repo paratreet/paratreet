@@ -3,6 +3,8 @@
 
 #include "common.h"
 #include "paratreet.decl.h"
+#include <atomic>
+#include <functional>
 #include <stack>
 #include <deque>
 #include <unordered_map>
@@ -81,6 +83,11 @@ inline bool handleRemoteNode(Node<Data>* node, size_t trav_idx, size_t part_idx,
 template <typename Data>
 class Traverser {
 public:
+  // Set by WorkMonitorRelay before a parallel help phase; read by
+  // Partition::resumeAfterPause to skip self-rescheduling while helpers
+  // are working on this traverser's queue.
+  bool parallel_phase_active = false;
+
   virtual ~Traverser() = default;
   virtual void resumeTrav() = 0;
   virtual void interact() = 0;
@@ -88,6 +95,7 @@ public:
   virtual bool isFinished() = 0;
   virtual bool wantsPause() const {return false;}
   virtual void resumeAfterPause() {}
+  virtual size_t pausedWorkSize() const { return 0; }
 };
 
 template <typename Data, typename Visitor>
@@ -138,6 +146,54 @@ public:
       }
     }
   }
+  // --- parallel traversal support ---
+  std::atomic<size_t> steal_cursor{0};
+
+  std::vector<std::pair<Node<Data>*, ABType>>& getPausedWork() { return paused_curr_nodes; }
+  virtual size_t pausedWorkSize() const override { return paused_curr_nodes.size(); }
+
+  // Read-only traversal used by helper threads during the parallel phase.
+  // Mirrors recurse() but: skips remote-node requests (already queued by the
+  // source PE), never updates curr_nodes/paused_curr_nodes/counters, and calls
+  // v.leafCollect() instead of v.leaf() so no parent pointers are written.
+  // find_tip is a read-only path-walk supplied by the caller (localNodeFind).
+  void recurseReadOnly(Node<Data>* node, const ABType& active_buckets,
+                       std::vector<std::pair<uint64_t,uint64_t>>& pairs,
+                       const std::function<uint64_t(uint64_t)>& find_tip) {
+    CkAssert(node);
+    ABType new_active_buckets(leaves.size(), 0);
+    bool continue_trav = false;
+    switch (node->type) {
+      case Node<Data>::Type::Leaf:
+      case Node<Data>::Type::CachedRemoteLeaf:
+        for (int bucket = 0; bucket < (int)leaves.size(); bucket++) {
+          if (active_buckets[bucket] &&
+              (Visitor::CallSelfLeaf || leaves[bucket]->key != node->key))
+            v.leafCollect(*node, *leaves[bucket], pairs, find_tip);
+        }
+        break;
+      case Node<Data>::Type::Internal:
+      case Node<Data>::Type::CachedBoundary:
+      case Node<Data>::Type::CachedRemote:
+        for (int bucket = 0; bucket < (int)leaves.size(); bucket++) {
+          if (!active_buckets[bucket]) continue;
+          bool should_open = doOpen(v, node, leaves[bucket], stats);
+          new_active_buckets[bucket] = should_open ? 1 : 0;
+          if (should_open) continue_trav = true;
+          else doNode(v, node, leaves[bucket], stats);
+        }
+        break;
+      default:
+        // Remote/Boundary: skip — source PE already holds these in curr_nodes
+        break;
+    }
+    if (continue_trav) {
+      for (int idx = 0; idx < node->n_children; idx++)
+        recurseReadOnly(node->getChild(idx), new_active_buckets, pairs, find_tip);
+    }
+  }
+  // --- end parallel traversal support ---
+
   virtual bool wantsPause() const override {return handle_count > iter_pause_interval || num_requested > request_pause_interval;}
   virtual void resumeAfterPause() override{
     num_requested = 0;

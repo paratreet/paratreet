@@ -15,6 +15,7 @@
 #include "unionFindLib.h"
 #ifdef FOF
 #include "LocalCalcs.h"
+#include "FoFHooks.h"
 #endif
 
 CkpvExtern(int, _lb_obj_index);
@@ -183,15 +184,31 @@ void Partition<Data>::startDown(Visitor v)
 {
   initLocalBranches();
   traversers.emplace_back(new TransposedDownTraverser<Data, Visitor>(v, traversers.size(), leaves, *this));
+#ifdef FOF
+  if (paratreet::fof_register_traverser)
+    paratreet::fof_register_traverser(traversers.back().get(),
+                                      this->thisIndex,
+                                      traversers.size() - 1);
+#endif
   startNewTraverser();
 }
 
 template <typename Data>
 void Partition<Data>::resumeAfterPause(size_t travIdx)
 {
+#ifdef FOF
+  if (paratreet::fof_on_resume)
+    paratreet::fof_on_resume(traversers[travIdx].get(), this->thisIndex, travIdx);
+  // If helpers are collectively working on this traverser's queue, skip:
+  // the source PE re-triggers resumeAfterPause after the parallel phase ends.
+  if (traversers[travIdx]->parallel_phase_active) return;
+#endif
   traversers[travIdx]->resumeAfterPause();
+#ifdef FOF
+  if (paratreet::fof_update_traversal_work)
+    paratreet::fof_update_traversal_work(traversers[travIdx]->pausedWorkSize());
+#endif
   if (traversers[travIdx]->wantsPause()) {
-    //CkPrintf("pausing trav %d\n", this->thisIndex);
     this->thisProxy[this->thisIndex].resumeAfterPause(travIdx);
   }
 }

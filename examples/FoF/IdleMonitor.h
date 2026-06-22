@@ -20,8 +20,9 @@ struct IdleMonitorCoordinator : public CBase_IdleMonitorCoordinator {
     CProxy_WorkMonitor monitor_proxy;
     CProxy_WorkMonitorRelay relay_proxy;
     bool active = false;
-    bool do_process_tips_next = false; //when to do doNodeTips
-    bool process_tips_done = false;
+    bool do_process_tips_next  = false;
+    bool process_tips_done     = false;
+    bool do_parallel_help_next = false;
     double prev_trigger_time = 0.0;
     double last_trigger_time = 0.0;
 
@@ -48,11 +49,15 @@ struct IdleMonitorCoordinator : public CBase_IdleMonitorCoordinator {
         last_trigger_time = CkWallTimer();
         CkCallback cb(CkIndex_IdleMonitorCoordinator::receiveIdleTimes(nullptr),
                       this->thisProxy);
-        relay_proxy.relayReport(cb, do_process_tips_next);
-        if(do_process_tips_next) {
+        relay_proxy.relayReport(cb, do_process_tips_next, do_parallel_help_next);
+        if (do_process_tips_next) {
             printf("Process tips was triggered\n");
             do_process_tips_next = false;
             process_tips_done = true;
+        }
+        if (do_parallel_help_next) {
+            printf("[IdleMonitor] parallel help triggered\n");
+            do_parallel_help_next = false;
         }
     }
 
@@ -76,14 +81,20 @@ struct IdleMonitorCoordinator : public CBase_IdleMonitorCoordinator {
                 CkPrintf("(avg_idle / elapsed) = (%.3f / %.3f) = %.1f%% > 50%%, triggering process tips next cycle\n", avg_idle, elapsed, 100.0 * avg_idle / elapsed);
                 do_process_tips_next = true;
             }
+            // Trigger shared-memory parallel traversal when most PEs are idle:
+            // a small number of busy PEs are bottlenecking the rest.
+            // Threshold: avg idle > 80% of the monitoring cycle (200ms).
+            constexpr double CYCLE_MS = 0.100;
+            if (avg_idle > 0.5 * CYCLE_MS && !do_parallel_help_next) {
+                do_parallel_help_next = true;
+            }
         }
         else
         {
-            //print union_requests after processing tips
             printf("[IdleMonitor t=%.3f] union_requests after processing tips=%lld\n", now, sum_unions);
         }
 
-        CcdCallFnAfter(scheduleNext, this, 200.0);
+        CcdCallFnAfter(scheduleNext, this, 100.0);
     }
 
     static void scheduleNext(void* p, double /*walltime*/) {

@@ -1,9 +1,14 @@
 #ifndef PARATREET_WORKMONITOR_H_
 #define PARATREET_WORKMONITOR_H_
 
-// WorkMonitor.h must be included AFTER FoF.decl.h (for CBase_WorkMonitor).
+// WorkMonitor.h must be included AFTER Traverser.h, FoFVisitor.h, LocalCalcs.h,
+// and FoF.decl.h.  All of those are pulled in transitively by Paratreet.h before
+// this header is reached in FoF.C.
 
 #include <algorithm>
+#include <atomic>
+#include <functional>
+#include <vector>
 
 // Aggregated statistics contributed by each PE and combined by the reducer.
 struct IdleStats {
@@ -16,7 +21,7 @@ struct IdleStats {
 extern CkReduction::reducerType idleReportReducer;
 
 // Declared in Partition.h; accessible here because WorkMonitor.h is compiled
-// as part of FoF.C, which includes Partition.h (via Paratreet.h) first.
+// as part of FoF.C which includes Partition.h (via Paratreet.h) first.
 long long fof_get_union_request_count();
 
 // Custom reducer: combine per-PE IdleStats contributions into one aggregate.
@@ -31,37 +36,51 @@ static CkReductionMsg* mergeIdleStats(int nMsgs, CkReductionMsg** msgs) {
     return CkReductionMsg::buildNew(sizeof(IdleStats), &result);
 }
 
+// Convenience alias for the concrete traverser type used by FoF.
+using FoFTraverser = TransposedDownTraverser<CentroidData, FoFVisitor>;
+
+// Process-global arrays indexed by CkMyRank().  All PEs in the same process
+// share these (SMP shared memory); no ckLocal() on element proxies needed.
+// Written only by the PE that owns the slot; read by the relay on any PE.
+static constexpr int MAX_LOCAL_PES = 128;
+static FoFTraverser*       g_trav_per_rank[MAX_LOCAL_PES]    = {};
+static std::atomic<size_t> g_work_per_rank[MAX_LOCAL_PES]    = {};
+static int                 g_part_idx_per_rank[MAX_LOCAL_PES]= {};
+static size_t              g_trav_idx_per_rank[MAX_LOCAL_PES]= {};
+// Per-rank K-trigger state.  Indexed by CkMyRank() so each PE owns its slot
+// with no races.  Kept here (not in WorkMonitor) so they work on every
+// process — WorkMonitor::ckLocalBranch() is null on non-main processes.
+static int                 g_resume_count[MAX_LOCAL_PES]     = {};
+static bool                g_help_armed[MAX_LOCAL_PES]       = {};
+// Set to true when the first PE on this process wins the K-trigger race.
+// Guards against two PEs simultaneously arming two different traversers.
+static std::atomic<bool>   g_parallel_triggered{false};
+
 // One instance per PE.  Registers permanent CcdCallOnConditionKeep callbacks
-// for CcdPROCESSOR_BEGIN_IDLE and CcdPROCESSOR_END_IDLE at construction time
-// so that the Charm++ scheduler notifies us on every idle/busy transition.
-//
-// resetIdleTime() zeros the accumulator at the start of each traversal phase
-// so that reported times are relative to traversal start, not program start.
-//
-// reportIdleTime() contributes the total idle time (including any ongoing idle
-// period) to a reduction back to IdleMonitorCoordinator.
+// for CcdPROCESSOR_BEGIN_IDLE and CcdPROCESSOR_END_IDLE at construction time.
+// Number of resumeAfterPause calls on a PE before it triggers parallel help.
+// K=1 fires on the very first call; increase to let the traversal get started.
+static constexpr int PARALLEL_HELP_K = 1500;
+
 struct WorkMonitor : public CBase_WorkMonitor {
-    double idle_start = 0.0;     // wall time when the current idle period began
-    double accumulated = 0.0;    // total idle time since last resetIdleTime()
-    bool   in_idle = false;
-    CProxy_LocalCalcs<CentroidData> localCalcs;
+    double idle_start  = 0.0;
+    double accumulated = 0.0;
+    bool   in_idle     = false;
+
+    CProxy_LocalCalcs<CentroidData>     localCalcs;
+    CProxy_LocalNodeCalcs<CentroidData> localNodeCalcs;
 
     WorkMonitor() {
-        // Permanent callbacks: fire on every scheduler idle/resume transition.
         CcdCallOnConditionKeep(CcdPROCESSOR_BEGIN_IDLE, onBeginIdle, this);
         CcdCallOnConditionKeep(CcdPROCESSOR_END_IDLE,   onEndIdle,   this);
     }
     WorkMonitor(CkMigrateMessage*) {}
 
-    // Called by the Converse scheduler when this PE's run queue empties.
-    // Both callbacks run on the same PE thread as the entry methods, so no
-    // locking is needed.
     static void onBeginIdle(void* p) {
         auto* self = reinterpret_cast<WorkMonitor*>(p);
         self->idle_start = CkWallTimer();
         self->in_idle    = true;
     }
-
     static void onEndIdle(void* p) {
         auto* self = reinterpret_cast<WorkMonitor*>(p);
         if (self->in_idle) {
@@ -70,58 +89,171 @@ struct WorkMonitor : public CBase_WorkMonitor {
         }
     }
 
-    // Broadcast entry: zero the accumulator so idle times are measured from
-    // the start of the current traversal phase.  If the PE is already idle
-    // when this fires, restart its idle clock from now.
     void resetIdleTime(CkCallback cb) {
         accumulated = 0.0;
         if (in_idle) idle_start = CkWallTimer();
         contribute(0, nullptr, CkReduction::nop, cb);
     }
 
-    void setLocalCalcsProxy(CProxy_LocalCalcs<CentroidData> lc_proxy_) {
-        localCalcs = lc_proxy_;
+    void setLocalCalcsProxy(CProxy_LocalCalcs<CentroidData> lc) {
+        localCalcs = lc;
     }
 
-    // Broadcast entry: snapshot the current accumulated idle time (including
-    // any ongoing idle period) and contribute it to the reduction.
-    void reportIdleTime(CkCallback cb, bool process_tips) {
+    void setLocalNodeCalcsProxy(CProxy_LocalNodeCalcs<CentroidData> lnc) {
+        localNodeCalcs = lnc;
+    }
+
+    // Called by the relay with do_parallel_help=true when idle imbalance is high.
+    // source_rank is the rank (within this process) of the PE whose paused work
+    // queue will be shared.  -1 means no live traverser was found; fall through
+    // to normal idle reporting.
+    // Entry point for the K-trigger path: fan-out from the winning PE.
+    // All local PEs receive this; they all call doParallelHelp so the
+    // CmiNodeBarrier inside has a matching call from every worker thread.
+    void helpSource(int source_rank) {
+        doParallelHelp(source_rank);
+    }
+
+    void reportIdleTime(CkCallback cb, bool process_tips,
+                        bool do_parallel_help, int source_rank) {
         if (process_tips) {
             localCalcs.ckLocalBranch()->doNodeTips();
+        }
+        // Only enter parallel help if the K-trigger hasn't already fired.
+        if (do_parallel_help && source_rank >= 0 && !g_parallel_triggered.load()) {
+            doParallelHelp(source_rank);
         }
         double idle = accumulated;
         if (in_idle) idle += CkWallTimer() - idle_start;
         IdleStats s = { idle, idle, fof_get_union_request_count() };
         contribute(sizeof(IdleStats), &s, idleReportReducer, cb);
     }
+
+    // All PEs on this process call this when a parallel phase is triggered.
+    // The PE identified by source_rank exposes its paused_curr_nodes; helpers
+    // steal chunks via an atomic cursor, run read-only traversal, and collect
+    // (vid1, vid2) pairs.  After CmiNodeBarrier each PE applies pairs whose
+    // owner chare is local to it.
+    void doParallelHelp(int source_rank) {
+        FoFTraverser* trav = g_trav_per_rank[source_rank];
+        if (!trav) return;
+
+        LocalNodeCalcs<CentroidData>* lnc = localNodeCalcs.ckLocalBranch();
+
+        // Build a read-only find_tip callable using the nodegroup's vertex map.
+        // localNodeFind walks the parent chain without compressing — safe from
+        // multiple concurrent threads since it only reads.
+        std::function<uint64_t(uint64_t)> find_tip = [lnc](uint64_t vid) -> uint64_t {
+            bool dummy;
+            return lnc ? lnc->localNodeFind(vid, dummy) : vid;
+        };
+
+        std::vector<std::pair<uint64_t,uint64_t>> deferred_pairs;
+
+        // Top barrier: wait until every PE on this process has entered
+        // doParallelHelp and therefore finished its current resumeAfterPause.
+        // This guarantees the source PE is no longer modifying its queue before
+        // any PE reads from it.  total must be captured after this barrier so
+        // every PE sees the stable, post-resumeAfterPause queue size.
+        CmiNodeBarrier();
+
+        auto& queue = trav->getPausedWork();
+        size_t total = queue.size();
+        constexpr size_t CHUNK = 16;
+
+        while (true) {
+            size_t my_start = trav->steal_cursor.fetch_add(CHUNK);
+            if (my_start >= total) break;
+            size_t my_end = std::min(my_start + CHUNK, total);
+            for (size_t i = my_start; i < my_end; i++) {
+                auto& [node, active_buckets] = queue[i];
+                for (int c = 0; c < node->n_children; c++)
+                    trav->recurseReadOnly(node->getChild(c), active_buckets,
+                                          deferred_pairs, find_tip);
+            }
+        }
+
+        // Bottom barrier: wait until every PE has finished reading the queue
+        // before the source PE erases the stolen prefix.
+        CmiNodeBarrier();
+
+        // Apply phase: mirrors FoFVisitor::leaf() — try both partition endpoints
+        // for local delivery (same heuristic), fall back to a remote send.
+        for (auto& [v1, v2] : deferred_pairs) {
+            if (v1 == v2) continue;
+            int pid1 = (int)(v1 >> 32);
+            int pid2 = (int)(v2 >> 32);
+            int target_idx = ((pid2 < pid1) ^ (pid2 & 1)) ? pid2 : pid1;
+            int other_idx  = (target_idx == pid1) ? pid2 : pid1;
+            UnionFindLib* lib = libProxy[target_idx].ckLocal();
+            if (!lib) lib = libProxy[other_idx].ckLocal();
+            if (lib) lib->union_request(v1, v2);
+            else     libProxy[target_idx].union_request(v1, v2);
+        }
+
+        // Source PE only: erase stolen items and re-trigger traversal.
+        if (CkMyRank() == source_rank) {
+            size_t stolen = std::min(trav->steal_cursor.load(), total);
+            queue.erase(queue.begin(), queue.begin() + stolen);
+            trav->parallel_phase_active = false;
+            if (!queue.empty()) {
+                partitionProxy[g_part_idx_per_rank[source_rank]]
+                    .resumeAfterPause(g_trav_idx_per_rank[source_rank]);
+            }
+        }
+
+        // Re-arm: allow the K-trigger to fire again if imbalance recurs later.
+        // All PEs reset their own state; the atomic flag is safe to set false here
+        // since all PEs are past the barrier and none can re-enter until their
+        // current entry method returns.
+        g_parallel_triggered.store(false);
+        g_help_armed[CkMyRank()] = false;
+        g_resume_count[CkMyRank()] = 0;
+    }
 };
 
-// One instance per node.  Receives an expedited broadcast from
-// IdleMonitorCoordinator and sends a point-to-point expedited
-// reportIdleTime to every WorkMonitor element on this node.
+// One instance per process (Charm++ node).  Receives an expedited broadcast
+// from IdleMonitorCoordinator and fans out point-to-point expedited sends to
+// every WorkMonitor element on this process.
 struct WorkMonitorRelay : public CBase_WorkMonitorRelay {
     CProxy_WorkMonitor work_monitor;
 
     WorkMonitorRelay() {}
     WorkMonitorRelay(CkMigrateMessage*) {}
 
-    void init(CProxy_WorkMonitor wm) {
-        work_monitor = wm;
-    }
+    void init(CProxy_WorkMonitor wm) { work_monitor = wm; }
 
-    void relayReport(CkCallback cb, bool process_tips) {
+    void relayReport(CkCallback cb, bool process_tips, bool do_parallel_help) {
         int first  = CkNodeFirst(CkMyNode());
         int n      = CkNodeSize(CkMyNode());
         int myrank = CkMyRank();
-        // Send to all other PEs first, then to self last.
-        // The relay PE (self) cannot execute from CsdSchedQueue while it is
-        // running this entry method, so it is guaranteed not to be "late".
-        // Every other PE receives reportIdleTime while the relay is still
-        // looping — before they can drain their queue and fall through to
-        // CsdSchedQueue.
+
+        // Identify the local PE rank (within this process) with the most
+        // pending traversal work, using the process-global arrays written by
+        // each PE's fof_register_traverser / fof_update_traversal_work hooks.
+        int    source_rank = -1;
+        size_t max_work    = 0;
+        if (do_parallel_help) {
+            for (int r = 0; r < n; r++) {
+                size_t w = g_work_per_rank[r].load();
+                if (w > max_work) { max_work = w; source_rank = r; }
+            }
+            if (source_rank >= 0) {
+                FoFTraverser* trav = g_trav_per_rank[source_rank];
+                if (trav) {
+                    trav->steal_cursor        = 0;
+                    trav->parallel_phase_active = true;
+                } else {
+                    source_rank = -1;
+                }
+            }
+        }
+
         for (int r = 1; r < n; r++)
-            work_monitor[first + (myrank + r) % n].reportIdleTime(cb, process_tips);
-        work_monitor[first + myrank].reportIdleTime(cb, process_tips);
+            work_monitor[first + (myrank + r) % n]
+                .reportIdleTime(cb, process_tips, do_parallel_help, source_rank);
+        work_monitor[first + myrank]
+            .reportIdleTime(cb, process_tips, do_parallel_help, source_rank);
     }
 };
 

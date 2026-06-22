@@ -22,8 +22,11 @@
 
 #ifdef FOF
 namespace paratreet {
-    void (*fof_start_idle_monitor)() = nullptr;
-    void (*fof_stop_idle_monitor)()  = nullptr;
+    void (*fof_start_idle_monitor)()                                    = nullptr;
+    void (*fof_stop_idle_monitor)()                                     = nullptr;
+    void (*fof_register_traverser)(void*, int, size_t)                  = nullptr;
+    void (*fof_update_traversal_work)(size_t)                           = nullptr;
+    void (*fof_on_resume)(void*, int, size_t)                           = nullptr;
 }
 #endif
 

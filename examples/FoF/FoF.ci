@@ -15,22 +15,32 @@ mainmodule FoF {
     // Registers the custom IdleStats reducer before any reduction runs.
     initnode void initIdleReducer(void);
 
+    // Sets fof_register_traverser / fof_update_traversal_work / fof_on_resume
+    // on every process so the K-trigger works on process 1 as well as process 0.
+    initnode void fofHooksInit(void);
+
+    readonly CProxy_WorkMonitor workMonitor;
+
     // One element per PE.  Receives point-to-point expedited messages from
     // WorkMonitorRelay to report idle time and contribute to the reduction.
     group WorkMonitor {
         entry WorkMonitor();
         entry void resetIdleTime(CkCallback cb);
-        entry [expedited] void reportIdleTime(CkCallback cb, bool process_tips);
+        entry [expedited] void reportIdleTime(CkCallback cb, bool process_tips,
+                                              bool do_parallel_help, int source_rank);
+        entry [expedited] void helpSource(int source_rank);
         entry void setLocalCalcsProxy(CProxy_LocalCalcs<CentroidData> lc_proxy_);
+        entry void setLocalNodeCalcsProxy(CProxy_LocalNodeCalcs<CentroidData> lnc_proxy_);
     };
 
-    // One element per node.  Receives an expedited broadcast from the
+    // One element per process.  Receives an expedited broadcast from the
     // coordinator and fans out point-to-point expedited sends to every
-    // WorkMonitor PE element on this node.
+    // WorkMonitor PE element on this process.
     nodegroup WorkMonitorRelay {
         entry WorkMonitorRelay();
         entry void init(CProxy_WorkMonitor wm);
-        entry [expedited] void relayReport(CkCallback cb, bool process_tips);
+        entry [expedited] void relayReport(CkCallback cb, bool process_tips,
+                                           bool do_parallel_help);
     };
 
     // Singleton coordinator chare that drives the periodic

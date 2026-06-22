@@ -20,10 +20,101 @@ bool verify;
 // Reducer type handle populated by initIdleReducer() at node startup.
 CkReduction::reducerType idleReportReducer;
 
-// Proxies for the idle-monitoring infrastructure; set during FoF::main().
-static CProxy_WorkMonitor            workMonitor;
+// workMonitor is a Charm++ readonly so it is broadcast to ALL PEs on ALL
+// processes after the main chare constructor completes.  fof_on_resume_impl
+// references it from every process, so it must not be file-static.
+/* readonly */ CProxy_WorkMonitor    workMonitor;
 static CProxy_WorkMonitorRelay       workMonitorRelay;
 static CProxy_IdleMonitorCoordinator idleMonitor;
+
+// ------------------------------------------------------------------
+// Named (non-lambda) implementations of the FoF hook function pointers.
+// Defined here so they can be registered via initnode fofHooksInit()
+// which runs on every OS process, not just the one that hosts the main chare.
+// ------------------------------------------------------------------
+static void fof_register_impl(void* trav_ptr, int part_idx, size_t trav_idx) {
+    int r = CkMyRank();
+    g_trav_per_rank[r]     = static_cast<FoFTraverser*>(trav_ptr);
+    g_part_idx_per_rank[r] = part_idx;
+    g_trav_idx_per_rank[r] = trav_idx;
+    g_work_per_rank[r].store(static_cast<FoFTraverser*>(trav_ptr)->pausedWorkSize());
+}
+
+static void fof_update_impl(size_t remaining) {
+    g_work_per_rank[CkMyRank()].store(remaining);
+}
+
+// Per-partition resume-count histogram, indexed by partition index (0..127).
+// Written only by the PE that owns the partition; no race since partitions
+// are pinned to PEs for the lifetime of a traversal.
+static int g_part_resume_count[256] = {};
+
+static void fof_on_resume_impl(void* trav_ptr, int part_idx, size_t trav_idx) {
+    int r = CkMyRank();
+    if (g_help_armed[r]) return;
+    int cnt = ++g_resume_count[r];
+    if (part_idx >= 0 && part_idx < 256) ++g_part_resume_count[part_idx];
+    // Print per-partition histogram at fixed count so the tail-partition
+    // distribution is visible even when the K-trigger never fires.
+    if (cnt == 900) {
+        // Collect top-5 per-partition resume counts on this process.
+        int top_idx[5] = {-1,-1,-1,-1,-1};
+        int top_cnt[5] = {0,0,0,0,0};
+        for (int p = 0; p < 256; p++) {
+            int c = g_part_resume_count[p];
+            if (c <= top_cnt[4]) continue;
+            top_cnt[4] = c; top_idx[4] = p;
+            for (int j = 3; j >= 0 && top_cnt[j+1] > top_cnt[j]; j--) {
+                std::swap(top_cnt[j], top_cnt[j+1]);
+                std::swap(top_idx[j], top_idx[j+1]);
+            }
+        }
+        printf("[part-hist] PE %d at cnt=%d top partitions:", CkMyPe(), cnt);
+        for (int j = 0; j < 5 && top_idx[j] >= 0; j++)
+            printf(" p%d=%d", top_idx[j], top_cnt[j]);
+        printf("\n");
+    }
+
+    if (cnt < PARALLEL_HELP_K) return;
+    bool expected = false;
+    if (!g_parallel_triggered.compare_exchange_strong(expected, true)) return;
+    int first = CkNodeFirst(CkMyNode());
+    int n     = CkNodeSize(CkMyNode());
+    FoFTraverser* trav = static_cast<FoFTraverser*>(trav_ptr);
+    g_trav_per_rank[r]     = trav;
+    g_part_idx_per_rank[r] = part_idx;
+    g_trav_idx_per_rank[r] = trav_idx;
+    g_work_per_rank[r].store(trav->pausedWorkSize());
+    int    source_rank = r;
+    size_t max_work    = g_work_per_rank[r].load();
+    for (int i = 0; i < n; i++) {
+        size_t w = g_work_per_rank[i].load();
+        if (w > max_work && g_trav_per_rank[i] != nullptr) {
+            max_work    = w;
+            source_rank = i;
+        }
+    }
+    FoFTraverser* src_trav = g_trav_per_rank[source_rank];
+    if (!src_trav || src_trav->getPausedWork().empty()) {
+        g_parallel_triggered.store(false);
+        return;
+    }
+    g_help_armed[r] = true;
+    src_trav->steal_cursor          = 0;
+    src_trav->parallel_phase_active = true;
+    for (int i = 0; i < n; i++)
+        workMonitor[first + i].helpSource(source_rank);
+    printf("[K-trigger] PE %d triggered: source rank %d (PE %d), work=%zu, count=%d\n",
+           CkMyPe(), source_rank, first + source_rank, max_work, cnt);
+}
+
+// Called by Charm++ on every process (initnode) before any PE threads start.
+// Sets function pointers so all processes have working hooks.
+void fofHooksInit() {
+    paratreet::fof_register_traverser    = fof_register_impl;
+    paratreet::fof_update_traversal_work = fof_update_impl;
+    paratreet::fof_on_resume             = fof_on_resume_impl;
+}
 
 // Called on every node before main() via the initnode declaration in FoF.ci.
 void initIdleReducer() {
@@ -161,8 +252,8 @@ class FoF : public paratreet::Main<CentroidData> {
 
   void traversalFn(BoundingBox& universe, ProxyPack<CentroidData>& proxy_pack, int iter) override {
 
-    //give work monitor a proxy to local calcs so it can trigger doNodeTips if needed
     workMonitor.setLocalCalcsProxy(proxy_pack.localCalcs);
+    workMonitor.setLocalNodeCalcsProxy(proxy_pack.localNodeCalcs);
     
     //only need to look at cubes that are almost touching (N=1)
     if(!periodic)
