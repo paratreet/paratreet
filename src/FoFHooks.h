@@ -12,7 +12,10 @@ namespace paratreet {
     // Called from Partition::startDown to register the active traverser pointer
     // and partition index with the local WorkMonitor.  void* avoids pulling
     // Traverser.h into the core library header.
-    extern void (*fof_register_traverser)(void* trav_ptr, int partition_idx, size_t trav_idx);
+    // proxy_hint is a void* pointing to the caller's CProxy_Partition<Data> so
+    // the FoF app can cache a valid partition proxy on every process without
+    // relying on the readonly partitionProxy (which is only updated on process 0).
+    extern void (*fof_register_traverser)(void* trav_ptr, int partition_idx, size_t trav_idx, void* proxy_hint);
     // Called from Partition::resumeAfterPause to keep WorkMonitor's work-remaining
     // counter current so the relay can identify the busiest local PE.
     extern void (*fof_update_traversal_work)(size_t remaining);

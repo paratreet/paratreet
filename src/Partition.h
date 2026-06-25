@@ -188,7 +188,8 @@ void Partition<Data>::startDown(Visitor v)
   if (paratreet::fof_register_traverser)
     paratreet::fof_register_traverser(traversers.back().get(),
                                       this->thisIndex,
-                                      traversers.size() - 1);
+                                      traversers.size() - 1,
+                                      static_cast<void*>(&this->thisProxy));
 #endif
   startNewTraverser();
 }

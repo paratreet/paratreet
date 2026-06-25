@@ -43,10 +43,14 @@ using FoFTraverser = TransposedDownTraverser<CentroidData, FoFVisitor>;
 // share these (SMP shared memory); no ckLocal() on element proxies needed.
 // Written only by the PE that owns the slot; read by the relay on any PE.
 static constexpr int MAX_LOCAL_PES = 128;
-static FoFTraverser*       g_trav_per_rank[MAX_LOCAL_PES]    = {};
-static std::atomic<size_t> g_work_per_rank[MAX_LOCAL_PES]    = {};
-static int                 g_part_idx_per_rank[MAX_LOCAL_PES]= {};
-static size_t              g_trav_idx_per_rank[MAX_LOCAL_PES]= {};
+static FoFTraverser*                      g_trav_per_rank[MAX_LOCAL_PES]    = {};
+static std::atomic<size_t>                g_work_per_rank[MAX_LOCAL_PES]    = {};
+static int                                g_part_idx_per_rank[MAX_LOCAL_PES]= {};
+static size_t                             g_trav_idx_per_rank[MAX_LOCAL_PES]= {};
+// Per-rank copy of the Partition array proxy, populated by fof_register_impl
+// from this->thisProxy (valid on every process).  Used instead of the
+// partitionProxy readonly, which is only updated on process 0.
+static CProxy_Partition<CentroidData>     g_partition_proxy_per_rank[MAX_LOCAL_PES]= {};
 // Per-rank K-trigger state.  Indexed by CkMyRank() so each PE owns its slot
 // with no races.  Kept here (not in WorkMonitor) so they work on every
 // process — WorkMonitor::ckLocalBranch() is null on non-main processes.
@@ -61,6 +65,9 @@ static std::atomic<bool>   g_parallel_triggered{false};
 // Number of resumeAfterPause calls on a PE before it triggers parallel help.
 // K=1 fires on the very first call; increase to let the traversal get started.
 static constexpr int PARALLEL_HELP_K = 2500;
+// After a help phase, suppress re-triggering for this many resume calls so the
+// source PE can do actual traversal work before help fires again.
+static constexpr int HELP_COOLDOWN = 5;
 
 struct WorkMonitor : public CBase_WorkMonitor {
     double idle_start  = 0.0;
@@ -195,10 +202,14 @@ struct WorkMonitor : public CBase_WorkMonitor {
             size_t stolen = std::min(trav->steal_cursor.load(), total);
             queue_ptr->erase(queue_ptr->begin(), queue_ptr->begin() + stolen);
             trav->parallel_phase_active = false;
-            if (!queue_ptr->empty()) {
-                partitionProxy[g_part_idx_per_rank[source_rank]]
-                    .resumeAfterPause(g_trav_idx_per_rank[source_rank]);
-            }
+            // Always call resumeAfterPause so the traversal framework can
+            // check isFinished() even when the queue was fully drained.
+            // Use g_partition_proxy_per_rank (set from this->thisProxy in
+            // fof_register_impl) rather than the global partitionProxy
+            // readonly, which is only valid on process 0.
+            g_partition_proxy_per_rank[source_rank]
+                [g_part_idx_per_rank[source_rank]]
+                .resumeAfterPause(g_trav_idx_per_rank[source_rank]);
         }
 
         // Re-arm: allow the K-trigger to fire again if imbalance recurs later.
@@ -207,7 +218,7 @@ struct WorkMonitor : public CBase_WorkMonitor {
         // current entry method returns.
         g_parallel_triggered.store(false);
         g_help_armed[CkMyRank()] = false;
-        g_resume_count[CkMyRank()] = 0;
+        g_resume_count[CkMyRank()] = -HELP_COOLDOWN;
     }
 };
 

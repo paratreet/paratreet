@@ -32,7 +32,7 @@ static CProxy_IdleMonitorCoordinator idleMonitor;
 // Defined here so they can be registered via initnode fofHooksInit()
 // which runs on every OS process, not just the one that hosts the main chare.
 // ------------------------------------------------------------------
-static void fof_register_impl(void* trav_ptr, int part_idx, size_t trav_idx) {
+static void fof_register_impl(void* trav_ptr, int part_idx, size_t trav_idx, void* proxy_hint) {
     int r = CkMyRank();
     g_trav_per_rank[r]     = static_cast<FoFTraverser*>(trav_ptr);
     g_part_idx_per_rank[r] = part_idx;
@@ -40,6 +40,11 @@ static void fof_register_impl(void* trav_ptr, int part_idx, size_t trav_idx) {
     g_work_per_rank[r].store(static_cast<FoFTraverser*>(trav_ptr)->pausedWorkSize());
     // Bug fix 2: reset per-traversal counter so K-trigger is scoped to one pass.
     g_resume_count[r] = 0;
+    // Cache a valid partition proxy for this rank.  The global partitionProxy
+    // readonly is only set on process 0; proxy_hint (this->thisProxy from
+    // Partition::startDown) is valid on every process.
+    if (proxy_hint)
+        g_partition_proxy_per_rank[r] = *static_cast<CProxy_Partition<CentroidData>*>(proxy_hint);
 }
 
 static void fof_traversal_done_impl(int part_idx, size_t trav_idx) {
@@ -68,6 +73,9 @@ static void fof_on_resume_impl(void* trav_ptr, int part_idx, size_t trav_idx) {
     int r = CkMyRank();
     if (g_help_armed[r]) return;
     int cnt = ++g_resume_count[r];
+    // Post-help cooldown: HELP_COOLDOWN resume calls must happen (doing real
+    // traversal work) before the trigger logic can fire again.
+    if (cnt <= 0) return;
     if (part_idx >= 0 && part_idx < 256) ++g_part_resume_count[part_idx];
     // Print per-partition histogram at fixed count so the tail-partition
     // distribution is visible even when the K-trigger never fires.
