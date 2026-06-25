@@ -27,6 +27,7 @@ namespace paratreet {
     void (*fof_register_traverser)(void*, int, size_t)                  = nullptr;
     void (*fof_update_traversal_work)(size_t)                           = nullptr;
     void (*fof_on_resume)(void*, int, size_t)                           = nullptr;
+    void (*fof_traversal_done)(int, size_t)                             = nullptr;
 }
 #endif
 

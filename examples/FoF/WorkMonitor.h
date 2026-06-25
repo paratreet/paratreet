@@ -60,7 +60,7 @@ static std::atomic<bool>   g_parallel_triggered{false};
 // for CcdPROCESSOR_BEGIN_IDLE and CcdPROCESSOR_END_IDLE at construction time.
 // Number of resumeAfterPause calls on a PE before it triggers parallel help.
 // K=1 fires on the very first call; increase to let the traversal get started.
-static constexpr int PARALLEL_HELP_K = 1500;
+static constexpr int PARALLEL_HELP_K = 2500;
 
 struct WorkMonitor : public CBase_WorkMonitor {
     double idle_start  = 0.0;
@@ -159,7 +159,7 @@ struct WorkMonitor : public CBase_WorkMonitor {
 
         auto& queue = trav->getPausedWork();
         size_t total = queue.size();
-        constexpr size_t CHUNK = 16;
+        constexpr size_t CHUNK = 32;
 
         while (true) {
             size_t my_start = trav->steal_cursor.fetch_add(CHUNK);

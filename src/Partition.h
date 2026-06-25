@@ -210,6 +210,11 @@ void Partition<Data>::resumeAfterPause(size_t travIdx)
 #endif
   if (traversers[travIdx]->wantsPause()) {
     this->thisProxy[this->thisIndex].resumeAfterPause(travIdx);
+#ifdef FOF
+  } else if (traversers[travIdx]->isFinished()) {
+    if (paratreet::fof_traversal_done)
+      paratreet::fof_traversal_done(this->thisIndex, travIdx);
+#endif
   }
 }
 

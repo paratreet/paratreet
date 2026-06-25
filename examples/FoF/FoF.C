@@ -38,6 +38,17 @@ static void fof_register_impl(void* trav_ptr, int part_idx, size_t trav_idx) {
     g_part_idx_per_rank[r] = part_idx;
     g_trav_idx_per_rank[r] = trav_idx;
     g_work_per_rank[r].store(static_cast<FoFTraverser*>(trav_ptr)->pausedWorkSize());
+    // Bug fix 2: reset per-traversal counter so K-trigger is scoped to one pass.
+    g_resume_count[r] = 0;
+}
+
+static void fof_traversal_done_impl(int /*part_idx*/, size_t /*trav_idx*/) {
+    int r = CkMyRank();
+    // Bug fix 1: clear the slot so sibling PEs know this PE has finished and
+    // don't count it as "active" in the last-PE-standing check.
+    g_trav_per_rank[r] = nullptr;
+    g_work_per_rank[r].store(0);
+    g_resume_count[r]  = 0;
 }
 
 static void fof_update_impl(size_t remaining) {
@@ -75,11 +86,34 @@ static void fof_on_resume_impl(void* trav_ptr, int part_idx, size_t trav_idx) {
         printf("\n");
     }
 
-    if (cnt < PARALLEL_HELP_K) return;
+    // Bug fix 3: primary trigger is "last PE standing" — I'm the only PE on
+    // this process that still has a registered (non-null) traverser.
+    // K-trigger is kept as a fallback in case fof_traversal_done is missed.
+    int n = CkNodeSize(CkMyNode());
+    int active = 0;
+    for (int i = 0; i < n; i++)
+        if (g_trav_per_rank[i] != nullptr) active++;
+    bool is_last_pe = (active <= 1);
+
+    // Don't fire unless we're alone or the K-trigger fallback has fired.
+    if (!is_last_pe && cnt < PARALLEL_HELP_K) return;
+
+    // Diagnostic: print once at the K-trigger threshold (whether or not we're
+    // the last PE) so we can see the queue depth and active count at that point.
+    if (cnt == PARALLEL_HELP_K) {
+        FoFTraverser* self_trav = static_cast<FoFTraverser*>(trav_ptr);
+        printf("[tail-check] PE %d rank %d cnt=%d: paused=%zu active_on_process=%d\n",
+               CkMyPe(), r, cnt, self_trav->pausedWorkSize(), active);
+    }
+
+    // Skip if the queue is too small to be worth the barrier overhead.
+    // Require at least one entry per PE so every helper can get work.
+    FoFTraverser* self_trav = static_cast<FoFTraverser*>(trav_ptr);
+    if (self_trav->pausedWorkSize() < (size_t)n) return;
+
     bool expected = false;
     if (!g_parallel_triggered.compare_exchange_strong(expected, true)) return;
     int first = CkNodeFirst(CkMyNode());
-    int n     = CkNodeSize(CkMyNode());
     FoFTraverser* trav = static_cast<FoFTraverser*>(trav_ptr);
     g_trav_per_rank[r]     = trav;
     g_part_idx_per_rank[r] = part_idx;
@@ -96,6 +130,10 @@ static void fof_on_resume_impl(void* trav_ptr, int part_idx, size_t trav_idx) {
     }
     FoFTraverser* src_trav = g_trav_per_rank[source_rank];
     if (!src_trav || src_trav->getPausedWork().empty()) {
+        printf("[tail-check] PE %d rank %d: trigger ABORTED — source rank %d paused=%zu (src_trav=%s)\n",
+               CkMyPe(), r, source_rank,
+               src_trav ? src_trav->getPausedWork().size() : 0,
+               src_trav ? "non-null" : "null");
         g_parallel_triggered.store(false);
         return;
     }
@@ -114,6 +152,7 @@ void fofHooksInit() {
     paratreet::fof_register_traverser    = fof_register_impl;
     paratreet::fof_update_traversal_work = fof_update_impl;
     paratreet::fof_on_resume             = fof_on_resume_impl;
+    paratreet::fof_traversal_done        = fof_traversal_done_impl;
 }
 
 // Called on every node before main() via the initnode declaration in FoF.ci.

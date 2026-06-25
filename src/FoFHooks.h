@@ -19,6 +19,10 @@ namespace paratreet {
     // Called at the TOP of Partition::resumeAfterPause (before the early-return
     // check) so WorkMonitor can count calls and trigger parallel help after K.
     extern void (*fof_on_resume)(void* trav_ptr, int partition_idx, size_t trav_idx);
+    // Called after resumeAfterPause drains the queue without re-pausing and the
+    // traverser reports isFinished() — no more pending work or remote requests.
+    // Clears the process-global slot so sibling PEs know this PE is done.
+    extern void (*fof_traversal_done)(int partition_idx, size_t trav_idx);
 }
 #endif
 
