@@ -42,13 +42,17 @@ static void fof_register_impl(void* trav_ptr, int part_idx, size_t trav_idx) {
     g_resume_count[r] = 0;
 }
 
-static void fof_traversal_done_impl(int /*part_idx*/, size_t /*trav_idx*/) {
+static void fof_traversal_done_impl(int part_idx, size_t trav_idx) {
     int r = CkMyRank();
-    // Bug fix 1: clear the slot so sibling PEs know this PE has finished and
-    // don't count it as "active" in the last-PE-standing check.
-    g_trav_per_rank[r] = nullptr;
-    g_work_per_rank[r].store(0);
-    g_resume_count[r]  = 0;
+    // Only clear the slot if this is the traversal currently registered in it.
+    // With multiple partition elements per PE the slot is overwritten by each
+    // new fof_register_impl call, so a stale completion must not wipe a newer
+    // partition's entry.
+    if (g_part_idx_per_rank[r] == part_idx && g_trav_idx_per_rank[r] == trav_idx) {
+        g_trav_per_rank[r] = nullptr;
+        g_work_per_rank[r].store(0);
+        g_resume_count[r]  = 0;
+    }
 }
 
 static void fof_update_impl(size_t remaining) {

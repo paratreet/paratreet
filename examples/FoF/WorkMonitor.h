@@ -135,46 +135,45 @@ struct WorkMonitor : public CBase_WorkMonitor {
     // (vid1, vid2) pairs.  After CmiNodeBarrier each PE applies pairs whose
     // owner chare is local to it.
     void doParallelHelp(int source_rank) {
-        FoFTraverser* trav = g_trav_per_rank[source_rank];
-        if (!trav) return;
-
         LocalNodeCalcs<CentroidData>* lnc = localNodeCalcs.ckLocalBranch();
-
-        // Build a read-only find_tip callable using the nodegroup's vertex map.
-        // localNodeFind walks the parent chain without compressing — safe from
-        // multiple concurrent threads since it only reads.
         std::function<uint64_t(uint64_t)> find_tip = [lnc](uint64_t vid) -> uint64_t {
             bool dummy;
             return lnc ? lnc->localNodeFind(vid, dummy) : vid;
         };
-
         std::vector<std::pair<uint64_t,uint64_t>> deferred_pairs;
 
-        // Top barrier: wait until every PE on this process has entered
-        // doParallelHelp and therefore finished its current resumeAfterPause.
-        // This guarantees the source PE is no longer modifying its queue before
-        // any PE reads from it.  total must be captured after this barrier so
-        // every PE sees the stable, post-resumeAfterPause queue size.
+        // Top barrier BEFORE the null check: every PE that received helpSource
+        // must arrive here regardless of trav's current value.  A race between
+        // helpSource delivery and fof_traversal_done_impl (which nulls the slot)
+        // could cause some PEs to see trav==null — if they returned early they
+        // would never reach the barrier, deadlocking the PEs that did.
         CmiNodeBarrier();
 
-        auto& queue = trav->getPausedWork();
-        size_t total = queue.size();
+        FoFTraverser* trav = g_trav_per_rank[source_rank];
         constexpr size_t CHUNK = 32;
+        // Declare queue/total at this scope so the source-PE cleanup below can
+        // reference them.  When trav is null (slot was cleared by a race with
+        // fof_traversal_done_impl) there is no work to steal or erase.
+        using QueueType = std::vector<std::pair<Node<CentroidData>*, FoFTraverser::ABType>>;
+        QueueType* queue_ptr = trav ? &trav->getPausedWork() : nullptr;
+        size_t total = queue_ptr ? queue_ptr->size() : 0;
 
-        while (true) {
-            size_t my_start = trav->steal_cursor.fetch_add(CHUNK);
-            if (my_start >= total) break;
-            size_t my_end = std::min(my_start + CHUNK, total);
-            for (size_t i = my_start; i < my_end; i++) {
-                auto& [node, active_buckets] = queue[i];
-                for (int c = 0; c < node->n_children; c++)
-                    trav->recurseReadOnly(node->getChild(c), active_buckets,
-                                          deferred_pairs, find_tip);
+        if (trav) {
+            while (true) {
+                size_t my_start = trav->steal_cursor.fetch_add(CHUNK);
+                if (my_start >= total) break;
+                size_t my_end = std::min(my_start + CHUNK, total);
+                for (size_t i = my_start; i < my_end; i++) {
+                    auto& [node, active_buckets] = (*queue_ptr)[i];
+                    for (int c = 0; c < node->n_children; c++)
+                        trav->recurseReadOnly(node->getChild(c), active_buckets,
+                                              deferred_pairs, find_tip);
+                }
             }
         }
 
-        // Bottom barrier: wait until every PE has finished reading the queue
-        // before the source PE erases the stolen prefix.
+        // Bottom barrier: all PEs reach this unconditionally so the source PE
+        // can safely erase the stolen prefix after every reader is done.
         CmiNodeBarrier();
 
         // Apply phase: mirrors FoFVisitor::leaf() — try both partition endpoints
@@ -192,11 +191,11 @@ struct WorkMonitor : public CBase_WorkMonitor {
         }
 
         // Source PE only: erase stolen items and re-trigger traversal.
-        if (CkMyRank() == source_rank) {
+        if (CkMyRank() == source_rank && trav && queue_ptr) {
             size_t stolen = std::min(trav->steal_cursor.load(), total);
-            queue.erase(queue.begin(), queue.begin() + stolen);
+            queue_ptr->erase(queue_ptr->begin(), queue_ptr->begin() + stolen);
             trav->parallel_phase_active = false;
-            if (!queue.empty()) {
+            if (!queue_ptr->empty()) {
                 partitionProxy[g_part_idx_per_rank[source_rank]]
                     .resumeAfterPause(g_trav_idx_per_rank[source_rank]);
             }
