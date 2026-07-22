@@ -19,7 +19,7 @@ endif
 
 # XDR library for Tipsy file I/O
 # First check for system RPC XDR library, then fall back to utility/xdr
-HAS_SYSTEM_XDR := $(shell echo '\#include <rpc/xdr.h>' | $(CC) -E - >/dev/null 2>&1 && echo yes)
+HAS_SYSTEM_XDR := $(shell printf '\043include <rpc/xdr.h>\n' | $(CC) -E - >/dev/null 2>&1 && echo yes)
 ifeq ($(HAS_SYSTEM_XDR),yes)
 	# Use system RPC XDR library
 	# Try different library names depending on the system
